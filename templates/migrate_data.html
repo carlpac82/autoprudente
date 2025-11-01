@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Migration - LocalStorage → Database</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-[#009cb6] mb-4">🔄 Data Migration</h1>
+            <p class="text-gray-600 mb-6">Migrate all localStorage data to database (Render-safe)</p>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <strong>Important:</strong> This will migrate data from localStorage to the database. 
+                            Run this once after deployment to ensure data persists across restarts.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2">📦 Data to Migrate:</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li class="flex items-center">
+                            <span class="w-4 h-4 rounded-full bg-[#009cb6] mr-2"></span>
+                            Vans Pricing (C3, C4, C5)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-4 h-4 rounded-full bg-[#009cb6] mr-2"></span>
+                            Automation Settings (excludeSuppliers, comissão)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-4 h-4 rounded-full bg-[#009cb6] mr-2"></span>
+                            Custom Days Configuration
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-4 h-4 rounded-full bg-[#f4ad0f] mr-2"></span>
+                            AI Learning Data (adjustments, patterns)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-4 h-4 rounded-full bg-[#f4ad0f] mr-2"></span>
+                            Automated Price Rules
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-4 h-4 rounded-full bg-[#f4ad0f] mr-2"></span>
+                            Pricing Strategies
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <button onclick="startMigration()" 
+                    id="migrateBtn"
+                    class="w-full bg-[#009cb6] hover:bg-[#007a8f] text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                🚀 Start Migration
+            </button>
+            
+            <div id="progress" class="mt-6 hidden">
+                <div class="bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div id="progressBar" class="bg-[#009cb6] h-4 transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-sm text-gray-600 mt-2 text-center"></p>
+            </div>
+            
+            <div id="results" class="mt-6 hidden">
+                <h3 class="font-semibold text-gray-900 mb-3">Migration Results:</h3>
+                <div id="resultsContent" class="space-y-2"></div>
+            </div>
+            
+            <div class="mt-6 text-center">
+                <a href="/price-automation" class="text-[#009cb6] hover:underline text-sm">
+                    ← Back to Price Automation
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function startMigration() {
+            const btn = document.getElementById('migrateBtn');
+            const progress = document.getElementById('progress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const results = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Migrating...';
+            progress.classList.remove('hidden');
+            results.classList.add('hidden');
+            resultsContent.innerHTML = '';
+            
+            const migrationResults = {
+                success: [],
+                errors: []
+            };
+            
+            let currentStep = 0;
+            const totalSteps = 6;
+            
+            function updateProgress(step, message) {
+                currentStep = step;
+                const percentage = (currentStep / totalSteps) * 100;
+                progressBar.style.width = percentage + '%';
+                progressText.textContent = message;
+            }
+            
+            // 1. Migrate Vans Pricing
+            updateProgress(1, 'Migrating Vans Pricing...');
+            try {
+                const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
+                if (Object.keys(vansPricing).length > 0) {
+                    const response = await fetch('/api/vans-pricing', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(vansPricing)
+                    });
+                    const data = await response.json();
+                    if (data.ok) {
+                        migrationResults.success.push('✅ Vans Pricing (C3, C4, C5)');
+                    } else {
+                        migrationResults.errors.push('❌ Vans Pricing: ' + data.error);
+                    }
+                } else {
+                    migrationResults.success.push('⏭️ Vans Pricing: No data to migrate');
+                }
+            } catch (e) {
+                migrationResults.errors.push('❌ Vans Pricing: ' + e.message);
+            }
+            
+            // 2. Migrate Automation Settings
+            updateProgress(2, 'Migrating Automation Settings...');
+            try {
+                const settings = JSON.parse(localStorage.getItem('priceAutomationSettings') || '{}');
+                if (Object.keys(settings).length > 0) {
+                    const response = await fetch('/api/automation-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(settings)
+                    });
+                    const data = await response.json();
+                    if (data.ok) {
+                        migrationResults.success.push('✅ Automation Settings');
+                    } else {
+                        migrationResults.errors.push('❌ Automation Settings: ' + data.error);
+                    }
+                } else {
+                    migrationResults.success.push('⏭️ Automation Settings: No data to migrate');
+                }
+            } catch (e) {
+                migrationResults.errors.push('❌ Automation Settings: ' + e.message);
+            }
+            
+            // 3. Migrate Custom Days
+            updateProgress(3, 'Migrating Custom Days...');
+            try {
+                const customDias = JSON.parse(localStorage.getItem('customDias') || '[]');
+                if (customDias.length > 0) {
+                    const response = await fetch('/api/custom-days', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ days: customDias })
+                    });
+                    const data = await response.json();
+                    if (data.ok) {
+                        migrationResults.success.push(`✅ Custom Days (${customDias.length} days)`);
+                    } else {
+                        migrationResults.errors.push('❌ Custom Days: ' + data.error);
+                    }
+                } else {
+                    migrationResults.success.push('⏭️ Custom Days: Using defaults');
+                }
+            } catch (e) {
+                migrationResults.errors.push('❌ Custom Days: ' + e.message);
+            }
+            
+            // 4. Check AI Learning Data
+            updateProgress(4, 'Checking AI Learning Data...');
+            try {
+                const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": []}');
+                const adjustmentsCount = aiData.adjustments?.length || 0;
+                if (adjustmentsCount > 0) {
+                    migrationResults.success.push(`ℹ️ AI Learning Data: ${adjustmentsCount} adjustments (will be migrated when API is ready)`);
+                } else {
+                    migrationResults.success.push('⏭️ AI Learning Data: No data');
+                }
+            } catch (e) {
+                migrationResults.errors.push('❌ AI Learning Data: ' + e.message);
+            }
+            
+            // 5. Check Automated Price Rules
+            updateProgress(5, 'Checking Automated Price Rules...');
+            try {
+                const rules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
+                const locationsCount = Object.keys(rules).length;
+                if (locationsCount > 0) {
+                    migrationResults.success.push(`ℹ️ Automated Price Rules: ${locationsCount} locations (export/import available)`);
+                } else {
+                    migrationResults.success.push('⏭️ Automated Price Rules: No data');
+                }
+            } catch (e) {
+                migrationResults.errors.push('❌ Automated Price Rules: ' + e.message);
+            }
+            
+            // 6. Check Pricing Strategies
+            updateProgress(6, 'Checking Pricing Strategies...');
+            try {
+                const strategies = JSON.parse(localStorage.getItem('pricingStrategies') || '{}');
+                const strategiesCount = Object.keys(strategies).length;
+                if (strategiesCount > 0) {
+                    migrationResults.success.push(`ℹ️ Pricing Strategies: ${strategiesCount} locations (export/import available)`);
+                } else {
+                    migrationResults.success.push('⏭️ Pricing Strategies: No data');
+                }
+            } catch (e) {
+                migrationResults.errors.push('❌ Pricing Strategies: ' + e.message);
+            }
+            
+            // Show results
+            updateProgress(totalSteps, 'Migration complete!');
+            
+            results.classList.remove('hidden');
+            
+            if (migrationResults.success.length > 0) {
+                migrationResults.success.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-start p-3 bg-green-50 border border-green-200 rounded';
+                    div.innerHTML = `<span class="text-green-700 text-sm">${msg}</span>`;
+                    resultsContent.appendChild(div);
+                });
+            }
+            
+            if (migrationResults.errors.length > 0) {
+                migrationResults.errors.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-start p-3 bg-red-50 border border-red-200 rounded';
+                    div.innerHTML = `<span class="text-red-700 text-sm">${msg}</span>`;
+                    resultsContent.appendChild(div);
+                });
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '✅ Migration Complete';
+            btn.classList.remove('bg-[#009cb6]', 'hover:bg-[#007a8f]');
+            btn.classList.add('bg-green-600', 'hover:bg-green-700');
+        }
+    </script>
+</body>
+</html>

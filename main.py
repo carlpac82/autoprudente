@@ -8273,6 +8273,18 @@ async def admin_price_automation_settings(request: Request):
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Erro: price_automation_settings.html não encontrado</h1>", status_code=500)
 
+@app.get("/admin/migrate-data", response_class=HTMLResponse)
+async def admin_migrate_data(request: Request):
+    """Página de migração de dados localStorage → Database"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "migrate_data.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: migrate_data.html não encontrado</h1>", status_code=500)
+
 # ============================================================
 # API ENDPOINTS - PRICE AUTOMATION SETTINGS PERSISTENCE
 # ============================================================
