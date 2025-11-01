@@ -2652,6 +2652,12 @@
             const automatedItem = allPricesData?.find(p => p.type === 'automated');
             const originalPrice = automatedItem ? automatedItem.price : 0;
             
+            // ✅ UPDATE THE AUTOMATED ITEM PRICE IN THE ARRAY
+            if (automatedItem) {
+                automatedItem.price = parseFloat(newPrice);
+                console.log(`✅ Updated automated price in array: ${automatedItem.price}€`);
+            }
+            
             // Update the table input field (RÁPIDO)
             const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
             if (inputAuto) {
@@ -2676,6 +2682,7 @@
                     if (allPricesData) {
                         allPricesData.sort((a, b) => a.price - b.price);
                         reRenderPriceList(grupo, day, allPricesData);
+                        console.log(`✅ Re-rendered visual list for ${grupo}/${day}d`);
                     }
                     
                     // Show notification APENAS ao finalizar
