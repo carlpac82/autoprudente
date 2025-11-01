@@ -3292,9 +3292,9 @@
         // ===== EXPORT / IMPORT SETTINGS =====
         
         function exportSettings() {
-            // Collect all settings
+            // Collect ALL settings from localStorage
             const allSettings = {
-                version: '1.0',
+                version: '2.0',
                 exportDate: new Date().toISOString(),
                 globalSettings: {
                     comissaoBroker: parseFloat(document.getElementById('comissaoBroker')?.value) || 0,
@@ -3305,7 +3305,13 @@
                     autoSaveHistory: document.getElementById('autoSaveHistory')?.value === 'true'
                 },
                 automatedPriceRules: JSON.parse(localStorage.getItem('automatedPriceRules') || '{}'),
-                strategiesData: strategiesData || {}
+                strategiesData: strategiesData || {},
+                // NEW: Include all localStorage data
+                priceAutomationSettings: JSON.parse(localStorage.getItem('priceAutomationSettings') || '{}'),
+                priceAIData: JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}'),
+                customDias: JSON.parse(localStorage.getItem('customDias') || '[1,2,3,4,5,6,7,8,9,14,22,28,31,60]'),
+                vansPricing: JSON.parse(localStorage.getItem('vansPricing') || '{}'),
+                pricingStrategies: JSON.parse(localStorage.getItem('pricingStrategies') || '{}')
             };
             
             // Create JSON file
@@ -3372,6 +3378,30 @@
                     // Apply strategies data
                     if (importedSettings.strategiesData) {
                         strategiesData = importedSettings.strategiesData;
+                    }
+                    
+                    // NEW: Apply all localStorage data
+                    if (importedSettings.priceAutomationSettings) {
+                        localStorage.setItem('priceAutomationSettings', JSON.stringify(importedSettings.priceAutomationSettings));
+                    }
+                    
+                    if (importedSettings.priceAIData) {
+                        localStorage.setItem('priceAIData', JSON.stringify(importedSettings.priceAIData));
+                        console.log(`✅ Imported ${importedSettings.priceAIData.adjustments?.length || 0} AI adjustments`);
+                    }
+                    
+                    if (importedSettings.customDias) {
+                        localStorage.setItem('customDias', JSON.stringify(importedSettings.customDias));
+                        console.log(`✅ Imported ${importedSettings.customDias.length} custom days`);
+                    }
+                    
+                    if (importedSettings.vansPricing) {
+                        localStorage.setItem('vansPricing', JSON.stringify(importedSettings.vansPricing));
+                        console.log('✅ Imported vans pricing (C3, C4, C5)');
+                    }
+                    
+                    if (importedSettings.pricingStrategies) {
+                        localStorage.setItem('pricingStrategies', JSON.stringify(importedSettings.pricingStrategies));
                     }
                     
                     showNotification('✅ Settings imported successfully! Reloading page...');
