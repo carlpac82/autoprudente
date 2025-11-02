@@ -10453,6 +10453,51 @@ async def export_automated_prices_excel(request: Request):
         # Data rows
         groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
         
+        # Price calculation logic based on periods
+        def calculate_price_for_day(group_prices, day):
+            """
+            Calculate price based on period rules:
+            - 1-7 days: NET total price
+            - 8-10 daily: NET price of 8 days / 8
+            - 11-12 daily: NET price of 9 days / 9  
+            - 13-14 daily: NET price of 14 days / 14
+            - 15-21 daily: NET price of 22 days / 22
+            - 22-28 daily: NET price of 28 days / 28
+            - 29-30 daily: NET price of 31 days / 31
+            - 31+ daily: NET price of 60 days / 60
+            """
+            if day <= 7:
+                # 1-7 days: use exact day price (NET total)
+                return group_prices.get(str(day), '')
+            elif 8 <= day <= 10:
+                # 8-10 daily: NET price of 8 days / 8
+                price_8 = group_prices.get('8', '')
+                return float(price_8) if price_8 else ''
+            elif 11 <= day <= 12:
+                # 11-12 daily: NET price of 9 days / 9
+                price_9 = group_prices.get('9', '')
+                return float(price_9) if price_9 else ''
+            elif 13 <= day <= 14:
+                # 13-14 daily: NET price of 14 days / 14
+                price_14 = group_prices.get('14', '')
+                return float(price_14) if price_14 else ''
+            elif 15 <= day <= 21:
+                # 15-21 daily: NET price of 22 days / 22
+                price_22 = group_prices.get('22', '')
+                return float(price_22) if price_22 else ''
+            elif 22 <= day <= 28:
+                # 22-28 daily: NET price of 28 days / 28
+                price_28 = group_prices.get('28', '')
+                return float(price_28) if price_28 else ''
+            elif 29 <= day <= 30:
+                # 29-30 daily: NET price of 31 days / 31
+                price_31 = group_prices.get('31', '')
+                return float(price_31) if price_31 else ''
+            else:
+                # 31+ daily: NET price of 60 days / 60
+                price_60 = group_prices.get('60', '')
+                return float(price_60) if price_60 else ''
+        
         for row_idx, group in enumerate(groups, start=4):
             # Group name
             ws[f'A{row_idx}'] = group
@@ -10466,7 +10511,7 @@ async def export_automated_prices_excel(request: Request):
                 col_letter = chr(64 + col_idx)
                 cell = ws[f'{col_letter}{row_idx}']
                 
-                price = group_prices.get(str(day), '')
+                price = calculate_price_for_day(group_prices, day)
                 if price:
                     cell.value = float(price)
                     cell.number_format = '0.00€'
