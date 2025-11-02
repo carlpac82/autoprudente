@@ -10408,10 +10408,29 @@ async def export_automated_prices_excel(request: Request):
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         prices = data.get('prices', {})  # { 'B1': { '1': 25.00, '2': 24.50, ... }, 'B2': {...}, ... }
         
+        # Car group mapping (SIPP codes to groups)
+        car_group_mapping = {
+            'MDMV': 'B1',  # Mini 4 Doors Manual
+            'MDMR': 'B2',  # Mini 4 Doors Manual
+            'EDMV': 'D',   # Economy Manual
+            'MDAR': 'E1',  # Mini Auto
+            'EDAV': 'E2',  # Economy Auto
+            'CFMR': 'F',   # Compact Manual
+            'MTMR': 'G',   # Mini Elite Manual
+            'CFMV': 'J1',  # Compact Manual
+            'MDMR_J2': 'J2',  # Mini 4 Doors Manual (duplicate for J2)
+            'CFAR': 'L1',  # Compact Auto
+            'CGAR': 'L1',  # Compact Auto (same group as CFAR)
+            'SVMR': 'M1',  # Standard Manual
+            'SVMD': 'M1',  # Standard Manual (same group as SVMR)
+            'SVAD': 'M2',  # Standard Auto
+            'LVMD': 'N'    # Large Manual
+        }
+        
         # Create workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = "Automated Prices"
+        ws.title = "Prices"
         
         # Styles
         header_fill = PatternFill(start_color="009cb6", end_color="009cb6", fill_type="solid")
@@ -10516,6 +10535,70 @@ async def export_automated_prices_excel(request: Request):
         for idx in range(2, 16):
             col_letter = chr(64 + idx)
             ws.column_dimensions[col_letter].width = 10
+        
+        # ===== CREATE SECOND SHEET: CAR GROUPS =====
+        ws2 = wb.create_sheet(title="Car Groups")
+        
+        # Header
+        ws2['A1'] = "SIPP Code"
+        ws2['A1'].fill = header_fill
+        ws2['A1'].font = header_font
+        ws2['A1'].alignment = header_alignment
+        ws2['A1'].border = border
+        
+        ws2['B1'] = "Group"
+        ws2['B1'].fill = header_fill
+        ws2['B1'].font = header_font
+        ws2['B1'].alignment = header_alignment
+        ws2['B1'].border = border
+        
+        ws2['C1'] = "Description"
+        ws2['C1'].fill = header_fill
+        ws2['C1'].font = header_font
+        ws2['C1'].alignment = header_alignment
+        ws2['C1'].border = border
+        
+        # Car descriptions
+        car_descriptions = {
+            'MDMV': 'Mini 4 Doors Manual',
+            'MDMR': 'Mini 4 Doors Manual',
+            'EDMV': 'Economy Manual',
+            'MDAR': 'Mini Auto',
+            'EDAV': 'Economy Auto',
+            'CFMR': 'Compact Manual',
+            'MTMR': 'Mini Elite Manual',
+            'CFMV': 'Compact Manual',
+            'MDMR_J2': 'Mini 4 Doors Manual',
+            'CFAR': 'Compact Auto',
+            'CGAR': 'Compact Auto',
+            'SVMR': 'Standard Manual',
+            'SVMD': 'Standard Manual',
+            'SVAD': 'Standard Auto',
+            'LVMD': 'Large Manual'
+        }
+        
+        # Fill data
+        row = 2
+        for sipp_code, group in sorted(car_group_mapping.items()):
+            ws2[f'A{row}'] = sipp_code
+            ws2[f'A{row}'].border = border
+            ws2[f'A{row}'].alignment = cell_alignment
+            
+            ws2[f'B{row}'] = group
+            ws2[f'B{row}'].border = border
+            ws2[f'B{row}'].alignment = cell_alignment
+            ws2[f'B{row}'].font = Font(bold=True, color="009cb6")
+            
+            ws2[f'C{row}'] = car_descriptions.get(sipp_code, '')
+            ws2[f'C{row}'].border = border
+            ws2[f'C{row}'].alignment = Alignment(horizontal="left", vertical="center")
+            
+            row += 1
+        
+        # Adjust column widths
+        ws2.column_dimensions['A'].width = 15
+        ws2.column_dimensions['B'].width = 10
+        ws2.column_dimensions['C'].width = 30
         
         # Save to BytesIO
         excel_file = io.BytesIO()
