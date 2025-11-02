@@ -10575,9 +10575,12 @@ async def export_automated_prices_excel(request: Request):
         abbycar_adjustment = _get_abbycar_adjustment()
         abbycar_low_deposit_adjustment = _get_abbycar_low_deposit_adjustment()
         
-        # Define Low Deposit groups (to be configured by user)
-        # User will specify which groups are Low Deposit
-        low_deposit_groups = []  # Will be populated based on user configuration
+        # Define Low Deposit groups
+        # SIPP codes: MCMV, NDMR, HDMV, MDAV, EDAR, DFMR, DFMV, IWMV, CFAV, SVMV, SVAR, LVMR
+        # Map to internal groups:
+        low_deposit_sipp_codes = ['MCMV', 'NDMR', 'HDMV', 'MDAV', 'EDAR', 'DFMR', 'DFMV', 'IWMV', 'CFAV', 'SVMV', 'SVAR', 'LVMR']
+        low_deposit_groups = list(set([car_group_mapping[sipp] for sipp in low_deposit_sipp_codes if sipp in car_group_mapping]))
+        # Result: ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'J1', 'J2', 'L1', 'M1', 'M2', 'N']
         
         for row_idx, internal_group in enumerate(internal_groups, start=4):
             # Station code
