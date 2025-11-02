@@ -10980,10 +10980,7 @@ async def fetch_car_photos(request: Request):
         print(f"📅 Dates: {dates}")
         print(f"📆 Days: {days_to_search}")
         
-        # Search each combination - Use TEST_MODE_LOCAL == 2 for mock data
-        original_test_mode = TEST_MODE_LOCAL
-        TEST_MODE_LOCAL = 2  # Force mock mode to get data quickly
-        
+        # Search each combination - Use mock data for quick testing
         for location in locations:
             for date in dates:
                 for days in days_to_search:
@@ -11061,9 +11058,6 @@ async def fetch_car_photos(request: Request):
                         import traceback
                         traceback.print_exc()
                         continue
-        
-        # Restore original test mode
-        TEST_MODE_LOCAL = original_test_mode
         
         return _no_store_json({
             "ok": True,
