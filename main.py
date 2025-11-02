@@ -10957,6 +10957,8 @@ async def fetch_car_photos(request: Request):
     try:
         import asyncio
         from datetime import datetime, timedelta
+        from carjet_direct import scrape_carjet_direct
+        import sys
         
         # Locations to search
         locations = [
@@ -10990,12 +10992,19 @@ async def fetch_car_photos(request: Request):
                         end_dt = start_dt + timedelta(days=days)
                         
                         # Call existing scraping function
+                        print(f"[PHOTOS] Calling scrape_carjet_direct for {location}, {days} days", file=sys.stderr, flush=True)
                         items = scrape_carjet_direct(location, start_dt, end_dt, quick=1)
+                        print(f"[PHOTOS] Received {len(items) if items else 0} items from scrape", file=sys.stderr, flush=True)
                         
                         # Apply normalizations to get 'group' field
-                        if items:
+                        if items and len(items) > 0:
+                            print(f"[PHOTOS] Applying normalizations...", file=sys.stderr, flush=True)
                             items = apply_price_adjustments(items, "https://www.carjet.com")
                             items = normalize_and_sort(items, supplier_priority=None)
+                            print(f"[PHOTOS] After normalization: {len(items)} items", file=sys.stderr, flush=True)
+                        else:
+                            print(f"[PHOTOS] ⚠️ No items returned from scrape", file=sys.stderr, flush=True)
+                            items = []
                         
                         # Extract photos from items
                         for item in items:
