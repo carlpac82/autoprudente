@@ -10508,7 +10508,7 @@ async def export_automated_prices_excel(request: Request):
         )
         
         # Header row 1: Title
-        ws.merge_cells('A1:P1')
+        ws.merge_cells('A1:Q1')
         ws['A1'] = f"AUTOMATED PRICES - {location} - {date}"
         ws['A1'].font = Font(bold=True, size=14, color="009cb6")
         ws['A1'].alignment = header_alignment
@@ -10516,14 +10516,23 @@ async def export_automated_prices_excel(request: Request):
         # Header row 2: Column names
         days_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28]
         
-        ws['A3'] = "Group"
+        # Determine station code based on location
+        station_code = "FAO" if "faro" in location.lower() else "ABF" if "albufeira" in location.lower() else "UNK"
+        
+        ws['A3'] = "Station"
         ws['A3'].fill = header_fill
         ws['A3'].font = header_font
         ws['A3'].alignment = header_alignment
         ws['A3'].border = border
         
-        for idx, day in enumerate(days_columns, start=2):
-            col_letter = chr(64 + idx)  # B, C, D, ...
+        ws['B3'] = "Group"
+        ws['B3'].fill = header_fill
+        ws['B3'].font = header_font
+        ws['B3'].alignment = header_alignment
+        ws['B3'].border = border
+        
+        for idx, day in enumerate(days_columns, start=3):
+            col_letter = chr(64 + idx)  # C, D, E, ...
             cell = ws[f'{col_letter}3']
             cell.value = f"{day} day{'s' if day > 1 else ''}"
             cell.fill = header_fill
@@ -10596,16 +10605,22 @@ async def export_automated_prices_excel(request: Request):
         low_deposit_groups = []  # Will be populated based on user configuration
         
         for row_idx, internal_group in enumerate(internal_groups, start=4):
-            # Group name - Use SIPP code instead of internal code
-            sipp_code = group_to_sipp.get(internal_group, internal_group)
-            ws[f'A{row_idx}'] = sipp_code
+            # Station code
+            ws[f'A{row_idx}'] = station_code
             ws[f'A{row_idx}'].font = Font(bold=True, color="009cb6")
             ws[f'A{row_idx}'].alignment = cell_alignment
             ws[f'A{row_idx}'].border = border
             
+            # Group name - Use SIPP code instead of internal code
+            sipp_code = group_to_sipp.get(internal_group, internal_group)
+            ws[f'B{row_idx}'] = sipp_code
+            ws[f'B{row_idx}'].font = Font(bold=True, color="009cb6")
+            ws[f'B{row_idx}'].alignment = cell_alignment
+            ws[f'B{row_idx}'].border = border
+            
             # Prices for each day - Use internal group code to get prices
             group_prices = prices.get(internal_group, {})
-            for col_idx, day in enumerate(days_columns, start=2):
+            for col_idx, day in enumerate(days_columns, start=3):
                 col_letter = chr(64 + col_idx)
                 cell = ws[f'{col_letter}{row_idx}']
                 
@@ -10628,8 +10643,9 @@ async def export_automated_prices_excel(request: Request):
                 cell.border = border
         
         # Adjust column widths
-        ws.column_dimensions['A'].width = 12
-        for idx in range(2, 16):
+        ws.column_dimensions['A'].width = 10  # Station
+        ws.column_dimensions['B'].width = 12  # Group
+        for idx in range(3, 17):
             col_letter = chr(64 + idx)
             ws.column_dimensions[col_letter].width = 10
         
