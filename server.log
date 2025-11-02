@@ -1,69 +1,14 @@
-INFO:     Will watch for changes in these directories: ['/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay']
-INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
-INFO:     Started reloader process [2976] using WatchFiles
-INFO:     Started server process [3045]
-INFO:     Waiting for application startup.
-========================================
-🚀 APP STARTUP - Rental Price Tracker
-========================================
-📊 Initializing database tables...
-   ✅ users table ready
-👥 Creating default users...
-✅ Default users ready (admin/admin)
-========================================
-INFO:     Application startup complete.
-INFO:     127.0.0.1:51118 - "GET /price-history HTTP/1.1" 303 See Other
-INFO:     127.0.0.1:51118 - "GET /login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /static/ap-logo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /static/ap-logo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "POST /login HTTP/1.1" 303 See Other
-Error loading supplier logos: no such table: suppliers
-INFO:     127.0.0.1:51118 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /healthz HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /price-history HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /api/price-history?location=&days=&category= HTTP/1.1" 200 OK
-Error loading supplier logos: no such table: suppliers
-INFO:     127.0.0.1:51118 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /healthz HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /price-automation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /api/user-settings/load?user_key=default HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /api/ai/learning/load HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /api/price-automation/rules/load HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /api/price-automation/settings/load HTTP/1.1" 200 OK
-INFO:     ✅ User settings saved: 2 keys for default
-INFO:     127.0.0.1:51118 - "POST /api/user-settings/save HTTP/1.1" 200 OK
-Error loading supplier logos: no such table: suppliers
-INFO:     127.0.0.1:51129 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51118 - "GET /healthz HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51176 - "GET /price-history HTTP/1.1" 303 See Other
-Error loading supplier logos: no such table: suppliers
-INFO:     127.0.0.1:51301 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51301 - "GET /static/manifest.webmanifest HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51302 - "GET /static/ap-heather.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51301 - "GET /uploads/profiles/carlpac82.PNG HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51302 - "GET /static/ap-heather.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51302 - "GET /static/ap-heather.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51301 - "GET /uploads/profiles/carlpac82.PNG HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51302 - "GET /static/ap-heather.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51301 - "GET /healthz HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51301 - "GET /price-history HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51302 - "GET /api/price-history?location=&days=&category= HTTP/1.1" 200 OK
-Error loading supplier logos: no such table: suppliers
-INFO:     127.0.0.1:51302 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51301 - "GET /healthz HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'backups/FULL_BACKUP_20251102_144945/test_carjet_parsing.py', 'backups/FULL_BACKUP_20251102_144945/test_price_debug.py', 'backups/FULL_BACKUP_20251102_144945/test_playwright_selectors.py', 'backups/FULL_BACKUP_20251102_144945/test_both_locations.py', 'backups/FULL_BACKUP_20251102_144945/main.py', 'backups/FULL_BACKUP_20251102_144945/migrate_localstorage_to_db.py', 'backups/FULL_BACKUP_20251102_144945/parse_carjet_html.py', 'backups/FULL_BACKUP_20251102_144945/diagnose_photos.py', 'backups/FULL_BACKUP_20251102_144945/create_suppliers_table.py', 'backups/FULL_BACKUP_20251102_144945/sync_photos_to_vehicles.py', 'backups/FULL_BACKUP_20251102_144945/generate_urls.py', 'backups/FULL_BACKUP_20251102_144945/clean_duplicate_photos.py', 'backups/FULL_BACKUP_20251102_144945/analyze_carjet_autoprudente.py', 'backups/FULL_BACKUP_20251102_144945/get_faro_url.py', 'backups/FULL_BACKUP_20251102_144945/test_carjet_autoprudente.py', 'backups/FULL_BACKUP_20251102_144945/find_faro_code.py', 'backups/FULL_BACKUP_20251102_144945/get_faro_simple.py', 'backups/FULL_BACKUP_20251102_144945/process_brokers_data.py', 'backups/FULL_BACKUP_20251102_144945/init_db.py', 'backups/FULL_BACKUP_20251102_144945/test_api.py', 'backups/FULL_BACKUP_20251102_144945/download_db.py', 'backups/FULL_BACKUP_20251102_144945/gerar_url_rapido.py', 'backups/FULL_BACKUP_20251102_144945/test_vehicles_direct.py', 'backups/FULL_BACKUP_20251102_144945/generate_missing_mappings.py', 'backups/FULL_BACKUP_20251102_144945/restore_vehicles.py', 'backups/FULL_BACKUP_20251102_144945/test_api_groups.py', 'backups/FULL_BACKUP_20251102_144945/gerar_url_faro.py', 'backups/FULL_BACKUP_20251102_144945/ai_pricing_assistant.py', 'backups/FULL_BACKUP_20251102_144945/test_group_mapping.py', 'backups/FULL_BACKUP_20251102_144945/test_autoprudente_api.py', 'backups/FULL_BACKUP_20251102_144945/gerar_url_manual.py', 'backups/FULL_BACKUP_20251102_144945/test_albufeira.py', 'backups/FULL_BACKUP_20251102_144945/fix_photo_urls.py', 'backups/FULL_BACKUP_20251102_144945/test_api_autoprudente.py', 'backups/FULL_BACKUP_20251102_144945/test_vehicles_endpoint.py', 'backups/FULL_BACKUP_20251102_144945/process_brokers_final.py', 'backups/FULL_BACKUP_20251102_144945/carjet_direct.py', 'backups/FULL_BACKUP_20251102_144945/read_brokers_excel.py', 'backups/FULL_BACKUP_20251102_144945/read_excel.py', 'backups/FULL_BACKUP_20251102_144945/price_sources.py', 'backups/FULL_BACKUP_20251102_144945/download_all_photos.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3045]
-INFO:     Started server process [3955]
-INFO:     Waiting for application startup.
-========================================
-🚀 APP STARTUP - Rental Price Tracker
-========================================
-📊 Initializing database tables...
-   ✅ users table ready
-👥 Creating default users...
-✅ Default users ready (admin/admin)
-========================================
-INFO:     Application startup complete.
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:499: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:9189: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/i18n.js"></script>
+    <script src="/static/notifications.js"></script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .language-option {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .language-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 156, 182, 0.2);
+        }
+        .language-option.selected {
+            border-color: #009cb6;
+            background-color: #f0f9fb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                </svg>
+                <span data-i18n="settings.language">Idioma</span>
+            </h2>
+            
+            <p class="text-sm text-gray-600 mb-6">
+                <span data-i18n="language.description">Escolha o idioma da interface do website</span>
+            </p>
+
+            <!-- Language Options -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <!-- Portuguese -->
+                <div id="lang-pt" class="language-option border-2 border-gray-200 rounded-lg p-6 text-center" onclick="selectLanguage('pt')">
+                    <div class="flex items-center justify-center mb-3">
+                        <svg class="w-16 h-16 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Português</h3>
+                    <p class="text-sm text-gray-600">Idioma padrão</p>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <svg id="check-pt" class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span id="label-pt" class="text-sm font-medium text-[#009cb6]" style="display: none;">Selecionado</span>
+                    </div>
+                </div>
+
+                <!-- English -->
+                <div id="lang-en" class="language-option border-2 border-gray-200 rounded-lg p-6 text-center" onclick="selectLanguage('en')">
+                    <div class="flex items-center justify-center mb-3">
+                        <svg class="w-16 h-16 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">English</h3>
+                    <p class="text-sm text-gray-600">Default language</p>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <svg id="check-en" class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span id="label-en" class="text-sm font-medium text-[#009cb6]" style="display: none;">Selected</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-[#f0f9fb] border border-[#009cb6] rounded p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm text-gray-800">
+                            <strong class="text-[#009cb6]" data-i18n="language.tip">Dica</strong>: 
+                            <span data-i18n="language.tipText">O idioma será aplicado automaticamente em todo o website. A página será recarregada para aplicar as alterações.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function selectLanguage(lang) {
+            console.log('Selecting language:', lang);
+            
+            // Update UI
+            document.querySelectorAll('.language-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            document.querySelectorAll('[id^="check-"]').forEach(check => {
+                check.style.display = 'none';
+            });
+            document.querySelectorAll('[id^="label-"]').forEach(label => {
+                label.style.display = 'none';
+            });
+            
+            // Mark selected
+            document.getElementById(`lang-${lang}`).classList.add('selected');
+            document.getElementById(`check-${lang}`).style.display = 'block';
+            document.getElementById(`label-${lang}`).style.display = 'block';
+            
+            // Save language directly to localStorage
+            localStorage.setItem('siteLanguage', lang);
+            console.log('Language saved to localStorage:', lang);
+            
+            // Show notification
+            const message = lang === 'pt' ? 'Idioma alterado para Português!' : 'Language changed to English!';
+            showNotification(message, 'success');
+            
+            // Trigger language change event
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
+            
+            // Reload parent window after 1.5 seconds
+            setTimeout(() => {
+                if (window.parent && window.parent !== window) {
+                    window.parent.location.reload();
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+        }
+        
+        function loadCurrentLanguage() {
+            const currentLang = localStorage.getItem('siteLanguage') || 'pt';
+            console.log('Current language:', currentLang);
+            
+            document.getElementById(`lang-${currentLang}`).classList.add('selected');
+            document.getElementById(`check-${currentLang}`).style.display = 'block';
+            document.getElementById(`label-${currentLang}`).style.display = 'block';
+        }
+        
+        // Load current language on page load
+        document.addEventListener('DOMContentLoaded', loadCurrentLanguage);
+    </script>
+</body>
+</html>

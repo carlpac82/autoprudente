@@ -8448,6 +8448,66 @@ async def admin_price_automation_settings(request: Request):
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Erro: price_automation_settings.html não encontrado</h1>", status_code=500)
 
+@app.get("/admin/customization/branding", response_class=HTMLResponse)
+async def admin_customization_branding(request: Request):
+    """Página de configuração de branding"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_branding.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: customization_branding.html não encontrado</h1>", status_code=500)
+
+@app.get("/admin/customization/appearance", response_class=HTMLResponse)
+async def admin_customization_appearance(request: Request):
+    """Página de configuração de aparência"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_appearance.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: customization_appearance.html não encontrado</h1>", status_code=500)
+
+@app.get("/admin/customization/company-info", response_class=HTMLResponse)
+async def admin_customization_company_info(request: Request):
+    """Página de informações da empresa"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_company_info.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: customization_company_info.html não encontrado</h1>", status_code=500)
+
+@app.get("/admin/customization/language", response_class=HTMLResponse)
+async def admin_customization_language(request: Request):
+    """Página de configuração de idioma"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_language.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: customization_language.html não encontrado</h1>", status_code=500)
+
+@app.get("/admin/customization/email", response_class=HTMLResponse)
+async def admin_customization_email(request: Request):
+    """Página de configuração de notificações por email"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_email.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: customization_email.html não encontrado</h1>", status_code=500)
+
 @app.get("/admin/migrate-data", response_class=HTMLResponse)
 async def admin_migrate_data(request: Request):
     """Página de migração de dados localStorage → Database"""
@@ -10757,45 +10817,39 @@ async def export_automated_prices_excel(request: Request):
             
             # Column 1: Stations
             ws.cell(row_num, 1).value = station_code
-            ws.cell(row_num, 1).border = border
             ws.cell(row_num, 1).alignment = cell_alignment
-            if low_deposit_fill:
+            if is_low_deposit_group:
                 ws.cell(row_num, 1).fill = low_deposit_fill
             
             # Column 2: Start Date (EMPTY - only filled when downloading by period)
             ws.cell(row_num, 2).value = ''
-            ws.cell(row_num, 2).border = border
             ws.cell(row_num, 2).alignment = cell_alignment
-            if low_deposit_fill:
+            if is_low_deposit_group:
                 ws.cell(row_num, 2).fill = low_deposit_fill
             
             # Column 3: End Date (EMPTY - only filled when downloading by period)
             ws.cell(row_num, 3).value = ''
-            ws.cell(row_num, 3).border = border
             ws.cell(row_num, 3).alignment = cell_alignment
-            if low_deposit_fill:
+            if is_low_deposit_group:
                 ws.cell(row_num, 3).fill = low_deposit_fill
             
             # Column 4: Group (SIPP Code)
             ws.cell(row_num, 4).value = sipp_code
-            ws.cell(row_num, 4).border = border
             ws.cell(row_num, 4).alignment = cell_alignment
             ws.cell(row_num, 4).font = Font(bold=True, color="f4ad0f" if is_low_deposit_group else "009cb6")
-            if low_deposit_fill:
+            if is_low_deposit_group:
                 ws.cell(row_num, 4).fill = low_deposit_fill
             
             # Column 5: Model Example (optional)
             ws.cell(row_num, 5).value = model_example
-            ws.cell(row_num, 5).border = border
             ws.cell(row_num, 5).alignment = Alignment(horizontal="left", vertical="center")
-            if low_deposit_fill:
+            if is_low_deposit_group:
                 ws.cell(row_num, 5).fill = low_deposit_fill
             
             # Column 6: CURRENCY
             ws.cell(row_num, 6).value = "EUR"
-            ws.cell(row_num, 6).border = border
             ws.cell(row_num, 6).alignment = cell_alignment
-            if low_deposit_fill:
+            if is_low_deposit_group:
                 ws.cell(row_num, 6).fill = low_deposit_fill
             
             # Columns 7-18: Prices (1 day fixed through 22-28 daily)
@@ -10836,9 +10890,8 @@ async def export_automated_prices_excel(request: Request):
                     # Leave empty if: no price OR (Low Deposit group AND disabled)
                     ws.cell(row_num, col_idx).value = ''
                 
-                ws.cell(row_num, col_idx).border = border
                 ws.cell(row_num, col_idx).alignment = cell_alignment
-                if low_deposit_fill:
+                if is_low_deposit_group:
                     ws.cell(row_num, col_idx).fill = low_deposit_fill
             
             row_num += 1
@@ -11174,3 +11227,443 @@ async def fetch_car_photos(request: Request):
     except Exception as e:
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+# ============================================================
+# API ENDPOINTS - UNIVERSAL SETTINGS SYNC (ANTI DATA-LOSS)
+# ============================================================
+
+@app.post("/api/settings/sync")
+async def sync_all_settings(request: Request):
+    """Sync ALL localStorage settings to database - prevents data loss on Render"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        logging.info(f"🔄 Syncing {len(data)} setting keys to database")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for key, value in data.items():
+                    # Store as JSON string
+                    value_str = value if isinstance(value, str) else json.dumps(value)
+                    
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO price_automation_settings (key, value, updated_at)
+                        VALUES (?, ?, CURRENT_TIMESTAMP)
+                        """,
+                        (key, value_str)
+                    )
+                
+                conn.commit()
+                logging.info(f"✅ Synced {len(data)} settings to database")
+                return JSONResponse({"ok": True, "synced": len(data)})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error syncing settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/settings/load-all")
+async def load_all_settings(request: Request):
+    """Load ALL settings from database - restores data after Render restart"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("SELECT key, value FROM price_automation_settings")
+                rows = cursor.fetchall()
+                
+                settings = {}
+                for row in rows:
+                    key, value = row[0], row[1]
+                    # Try to parse as JSON, fallback to string
+                    try:
+                        settings[key] = json.loads(value) if value else None
+                    except:
+                        settings[key] = value
+                
+                logging.info(f"📥 Loaded {len(settings)} settings from database")
+                return JSONResponse({"ok": True, "settings": settings})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error loading settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# ============================================================
+# API ENDPOINTS - OAUTH2 EMAIL INTEGRATION
+# ============================================================
+
+@app.get("/api/oauth/gmail/authorize")
+async def oauth_gmail_authorize(request: Request):
+    """Initiate Gmail OAuth2 flow - REAL Google OAuth"""
+    require_auth(request)
+    
+    # Google OAuth2 configuration
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', 'YOUR_CLIENT_ID_HERE')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE')
+    REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/api/oauth/gmail/callback')
+    
+    # Check if credentials are configured
+    if GOOGLE_CLIENT_ID == 'YOUR_CLIENT_ID_HERE':
+        # Show setup instructions if not configured
+        html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Gmail OAuth</title>
+        <style>
+            body {
+                font-family: 'Outfit', sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+                background: #f0f9fb;
+            }
+            .container {
+                text-align: center;
+                padding: 2rem;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .icon {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 1rem;
+                color: #009cb6;
+            }
+            h1 {
+                color: #009cb6;
+                margin-bottom: 1rem;
+            }
+            p {
+                color: #666;
+                margin-bottom: 1.5rem;
+            }
+            button {
+                background: #009cb6;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+            }
+            button:hover {
+                background: #007a91;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <h1>Conectar Gmail</h1>
+            <p>Esta é uma <strong>demonstração</strong> do fluxo OAuth2.</p>
+            <p style="font-size: 14px; color: #666; margin: 1rem 0;">Para conectar ao Gmail real, é necessário:</p>
+            <ul style="text-align: left; font-size: 13px; color: #666; margin: 0 auto; max-width: 400px; line-height: 1.8;">
+                <li>Registar app no <a href="https://console.cloud.google.com" target="_blank" style="color: #009cb6;">Google Cloud Console</a></li>
+                <li>Obter Client ID e Client Secret</li>
+                <li>Configurar OAuth2 redirect URLs</li>
+                <li>Implementar fluxo OAuth completo</li>
+            </ul>
+            <p style="font-size: 12px; color: #999; margin-top: 1rem;">Por agora, clique abaixo para simular a conexão:</p>
+            <button onclick="simulateOAuth()">Simular Conexão Gmail</button>
+        </div>
+        <script>
+            function simulateOAuth() {
+                // Simulate successful OAuth
+                const data = {
+                    type: 'oauth-success',
+                    provider: 'gmail',
+                    email: 'seu-email@gmail.com',
+                    token: 'mock_access_token_' + Date.now(),
+                    refreshToken: 'mock_refresh_token',
+                    expiresAt: Date.now() + 3600000
+                };
+                
+                // Send message to parent window
+                if (window.opener) {
+                    window.opener.postMessage(data, '*');
+                    window.close();
+                } else {
+                    alert('Erro: Janela pai não encontrada');
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+        return HTMLResponse(content=html)
+    
+    # Real OAuth2 flow - redirect to Google
+    import urllib.parse
+    
+    # OAuth2 parameters
+    auth_params = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email',
+        'access_type': 'offline',
+        'prompt': 'consent'
+    }
+    
+    # Build authorization URL
+    auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(auth_params)
+    
+    # Redirect to Google OAuth
+    return RedirectResponse(url=auth_url)
+
+@app.get("/api/oauth/gmail/callback")
+async def oauth_gmail_callback(request: Request, code: str = None, error: str = None):
+    """Handle Gmail OAuth2 callback"""
+    require_auth(request)
+    
+    if error:
+        return HTMLResponse(f"<h1>Error: {error}</h1><p>OAuth authorization failed.</p>")
+    
+    if not code:
+        return HTMLResponse("<h1>Error</h1><p>No authorization code received.</p>")
+    
+    # Exchange code for tokens
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+    REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', 'http://127.0.0.1:8000/api/oauth/gmail/callback')
+    
+    import urllib.parse
+    import httpx
+    import time
+    
+    token_params = {
+        'code': code,
+        'client_id': GOOGLE_CLIENT_ID,
+        'client_secret': GOOGLE_CLIENT_SECRET,
+        'redirect_uri': REDIRECT_URI,
+        'grant_type': 'authorization_code'
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Exchange code for tokens
+            token_response = await client.post(
+                'https://oauth2.googleapis.com/token',
+                data=token_params
+            )
+            token_data = token_response.json()
+            
+            if 'error' in token_data:
+                return HTMLResponse(f"<h1>Error</h1><p>{token_data.get('error_description', 'Token exchange failed')}</p>")
+            
+            # Get user email
+            access_token = token_data.get('access_token')
+            userinfo_response = await client.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+            userinfo = userinfo_response.json()
+            user_email = userinfo.get('email', 'unknown@gmail.com')
+            
+            # Return success page
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Gmail Connected</title>
+                <style>
+                    body {{
+                        font-family: 'Outfit', sans-serif;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100vh;
+                        margin: 0;
+                        background: #f0f9fb;
+                    }}
+                    .container {{
+                        text-align: center;
+                        padding: 2rem;
+                        background: white;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    }}
+                    .icon {{
+                        width: 64px;
+                        height: 64px;
+                        margin: 0 auto 1rem;
+                        color: #009cb6;
+                    }}
+                    h1 {{
+                        color: #009cb6;
+                        margin-bottom: 1rem;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h1>Gmail Conectado!</h1>
+                    <p>Conta: <strong>{user_email}</strong></p>
+                    <p style="color: #666; font-size: 14px;">Esta janela vai fechar automaticamente...</p>
+                </div>
+                <script>
+                    const data = {{
+                        type: 'oauth-success',
+                        provider: 'gmail',
+                        email: '{user_email}',
+                        token: '{access_token}',
+                        refreshToken: '{token_data.get("refresh_token", "")}',
+                        expiresAt: {int(time.time()) + token_data.get('expires_in', 3600)} * 1000
+                    }};
+                    
+                    if (window.opener) {{
+                        window.opener.postMessage(data, '*');
+                        setTimeout(() => window.close(), 2000);
+                    }}
+                </script>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html)
+            
+    except Exception as e:
+        logging.error(f"OAuth callback error: {str(e)}")
+        return HTMLResponse(f"<h1>Error</h1><p>Failed to complete OAuth: {str(e)}</p>")
+
+@app.post("/api/email/test-oauth")
+async def test_email_oauth(request: Request):
+    """Send test email using OAuth token"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        provider = data.get('provider')
+        email = data.get('email')
+        access_token = data.get('accessToken')
+        recipients = data.get('recipients', '')
+        
+        # Parse recipients (one per line)
+        recipient_list = [r.strip() for r in recipients.split('\n') if r.strip()]
+        
+        if not recipient_list:
+            return JSONResponse({"ok": False, "error": "Nenhum destinatário especificado"})
+        
+        # For now, return success (real implementation would use Gmail API)
+        # In production, you would use the access_token to send via Gmail API
+        logging.info(f"Test email requested from {email} to {recipient_list}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": f"Email de teste seria enviado para {len(recipient_list)} destinatário(s)",
+            "note": "Implementação completa requer Gmail API client"
+        })
+        
+    except Exception as e:
+        logging.error(f"Test email error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/oauth/outlook/authorize")
+async def oauth_outlook_authorize(request: Request):
+    """Initiate Outlook OAuth2 flow"""
+    require_auth(request)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Outlook OAuth</title>
+        <style>
+            body {
+                font-family: 'Outfit', sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+                background: #f0f9fb;
+            }
+            .container {
+                text-align: center;
+                padding: 2rem;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .icon {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 1rem;
+                color: #009cb6;
+            }
+            h1 {
+                color: #009cb6;
+                margin-bottom: 1rem;
+            }
+            p {
+                color: #666;
+                margin-bottom: 1.5rem;
+            }
+            button {
+                background: #009cb6;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+            }
+            button:hover {
+                background: #007a91;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <h1>Conectar Outlook</h1>
+            <p>Esta é uma <strong>demonstração</strong> do fluxo OAuth2.</p>
+            <p style="font-size: 14px; color: #666; margin: 1rem 0;">Para conectar ao Outlook real, é necessário:</p>
+            <ul style="text-align: left; font-size: 13px; color: #666; margin: 0 auto; max-width: 400px; line-height: 1.8;">
+                <li>Registar app no <a href="https://portal.azure.com" target="_blank" style="color: #009cb6;">Azure Portal</a></li>
+                <li>Obter Application ID e Secret</li>
+                <li>Configurar Microsoft OAuth2 redirect URLs</li>
+                <li>Implementar fluxo OAuth completo</li>
+            </ul>
+            <p style="font-size: 12px; color: #999; margin-top: 1rem;">Por agora, clique abaixo para simular a conexão:</p>
+            <button onclick="simulateOAuth()">Simular Conexão Outlook</button>
+        </div>
+        <script>
+            function simulateOAuth() {
+                const data = {
+                    type: 'oauth-success',
+                    provider: 'outlook',
+                    email: 'seu-email@outlook.com',
+                    token: 'mock_access_token_' + Date.now(),
+                    refreshToken: 'mock_refresh_token',
+                    expiresAt: Date.now() + 3600000
+                };
+                
+                if (window.opener) {
+                    window.opener.postMessage(data, '*');
+                    window.close();
+                } else {
+                    alert('Erro: Janela pai não encontrada');
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html)

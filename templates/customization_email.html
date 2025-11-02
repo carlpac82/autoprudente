@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Notifications</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/i18n.js"></script>
+    <script src="/static/notifications.js"></script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .provider-card {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .provider-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 156, 182, 0.2);
+        }
+        .provider-card.selected {
+            border-color: #009cb6;
+            background-color: #f0f9fb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Notificações por Email
+            </h2>
+            
+            <p class="text-sm text-gray-600 mb-6">
+                Configure uma conta de email para receber notificações automáticas sobre alterações de preços, alertas e relatórios.
+            </p>
+
+            <!-- Email Provider Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Fornecedor de Email</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div id="provider-gmail" class="provider-card border-2 border-gray-200 rounded-lg p-4 text-center" onclick="selectProvider('gmail')">
+                        <svg class="w-8 h-8 mx-auto mb-2 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-sm font-medium">Gmail</p>
+                    </div>
+                    <div id="provider-outlook" class="provider-card border-2 border-gray-200 rounded-lg p-4 text-center" onclick="selectProvider('outlook')">
+                        <svg class="w-8 h-8 mx-auto mb-2 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-sm font-medium">Outlook</p>
+                    </div>
+                    <div id="provider-custom" class="provider-card border-2 border-gray-200 rounded-lg p-4 text-center" onclick="selectProvider('custom')">
+                        <svg class="w-8 h-8 mx-auto mb-2 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <p class="text-sm font-medium">Custom SMTP</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Configuration (hidden when OAuth is used) -->
+            <div id="manualEmailConfig" class="space-y-4 mb-6" style="display: none;">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="emailAddress" placeholder="seu-email@gmail.com" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                    <p class="text-xs text-gray-500 mt-1">Endereço de email que será usado para enviar notificações</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password / App Password</label>
+                    <input type="password" id="emailPassword" placeholder="••••••••••••••••" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                    <p class="text-xs text-gray-500 mt-1">Para Gmail, use uma <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-[#009cb6] hover:underline">App Password</a></p>
+                </div>
+
+                <!-- SMTP Settings (hidden by default, shown for custom) -->
+                <div id="smtpSettings" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">SMTP Server</label>
+                            <input type="text" id="smtpServer" placeholder="smtp.gmail.com" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">SMTP Port</label>
+                            <input type="number" id="smtpPort" placeholder="587" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Recipients (always visible) -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Destinatários das Notificações</label>
+                <textarea id="notificationRecipients" rows="3" placeholder="email1@example.com&#10;email2@example.com&#10;email3@example.com" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded"></textarea>
+                <p class="text-xs text-gray-500 mt-1">Um email por linha. Estes emails receberão as notificações.</p>
+            </div>
+
+            <!-- Notification Types -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Tipos de Notificações</label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="notifyPriceChanges" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                        <span class="text-sm text-gray-700">Alterações de preços significativas</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="notifyDailyReport" class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                        <span class="text-sm text-gray-700">Relatório diário de preços</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="notifyWeeklyReport" class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                        <span class="text-sm text-gray-700">Relatório semanal</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="notifyErrors" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                        <span class="text-sm text-gray-700">Erros e alertas do sistema</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Test Email Button -->
+            <div class="flex gap-3 mb-6">
+                <button onclick="testEmail()" class="px-4 py-2 border border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Enviar Email de Teste
+                    </div>
+                </button>
+                <button onclick="saveEmailSettings()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors">
+                    Guardar Configurações
+                </button>
+            </div>
+
+            <!-- OAuth Connection -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Conectar Conta</label>
+                <div class="flex gap-3">
+                    <button onclick="connectGmail()" class="flex items-center gap-2 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Conectar Gmail
+                    </button>
+                    <button onclick="connectOutlook()" class="flex items-center gap-2 px-4 py-2 border border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Conectar Outlook
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Conecte a sua conta de forma segura usando OAuth2. Não é necessário inserir a password.</p>
+            </div>
+
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="mb-6" style="display: none;">
+                <div class="flex items-center gap-3 p-4 bg-[#f0f9fb] border border-[#009cb6] rounded-lg">
+                    <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">Conta conectada</p>
+                        <p id="connectedEmail" class="text-xs text-gray-600"></p>
+                    </div>
+                    <button onclick="disconnectAccount()" class="text-sm text-[#009cb6] hover:underline">Desconectar</button>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-[#f0f9fb] border border-[#009cb6] rounded p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm text-gray-800">
+                            <strong class="text-[#009cb6]">Segurança:</strong> A conexão é feita através de OAuth2, o método mais seguro. As suas credenciais nunca são armazenadas no nosso sistema.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentProvider = 'gmail';
+        let isConnected = false;
+
+        function connectGmail() {
+            // Open OAuth2 popup
+            const width = 600;
+            const height = 700;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+            
+            const popup = window.open(
+                '/api/oauth/gmail/authorize',
+                'Gmail OAuth',
+                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+            );
+            
+            // Listen for OAuth callback
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'oauth-success' && event.data.provider === 'gmail') {
+                    handleOAuthSuccess(event.data);
+                    popup.close();
+                }
+            });
+        }
+
+        function connectOutlook() {
+            const width = 600;
+            const height = 700;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+            
+            const popup = window.open(
+                '/api/oauth/outlook/authorize',
+                'Outlook OAuth',
+                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+            );
+            
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'oauth-success' && event.data.provider === 'outlook') {
+                    handleOAuthSuccess(event.data);
+                    popup.close();
+                }
+            });
+        }
+
+        function handleOAuthSuccess(data) {
+            isConnected = true;
+            
+            // Save OAuth token
+            localStorage.setItem('emailOAuthToken', JSON.stringify({
+                provider: data.provider,
+                email: data.email,
+                token: data.token,
+                refreshToken: data.refreshToken,
+                expiresAt: data.expiresAt
+            }));
+            
+            // Update UI
+            document.getElementById('connectedEmail').textContent = data.email;
+            document.getElementById('connectionStatus').style.display = 'block';
+            
+            // Use global notification system (no emoji)
+            if (typeof showNotification === 'function') {
+                showNotification('Conta conectada com sucesso!', 'success');
+            }
+        }
+
+        function disconnectAccount() {
+            isConnected = false;
+            localStorage.removeItem('emailOAuthToken');
+            document.getElementById('connectionStatus').style.display = 'none';
+            
+            // Use global notification system
+            if (typeof showNotification === 'function') {
+                showNotification('Conta desconectada', 'info');
+            }
+        }
+
+        function selectProvider(provider) {
+            currentProvider = provider;
+            
+            // Update UI
+            document.querySelectorAll('.provider-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById(`provider-${provider}`).classList.add('selected');
+            
+            // Show/hide SMTP settings
+            const smtpSettings = document.getElementById('smtpSettings');
+            if (provider === 'custom') {
+                smtpSettings.style.display = 'block';
+            } else {
+                smtpSettings.style.display = 'none';
+                
+                // Set default SMTP settings
+                if (provider === 'gmail') {
+                    document.getElementById('smtpServer').value = 'smtp.gmail.com';
+                    document.getElementById('smtpPort').value = '587';
+                } else if (provider === 'outlook') {
+                    document.getElementById('smtpServer').value = 'smtp-mail.outlook.com';
+                    document.getElementById('smtpPort').value = '587';
+                }
+            }
+        }
+
+        function saveEmailSettings() {
+            // Check if using OAuth (connected)
+            if (isConnected) {
+                const settings = {
+                    provider: currentProvider,
+                    recipients: document.getElementById('notificationRecipients').value,
+                    notifyPriceChanges: document.getElementById('notifyPriceChanges').checked,
+                    notifyDailyReport: document.getElementById('notifyDailyReport').checked,
+                    notifyWeeklyReport: document.getElementById('notifyWeeklyReport').checked,
+                    notifyErrors: document.getElementById('notifyErrors').checked,
+                    useOAuth: true
+                };
+                
+                localStorage.setItem('emailSettings', JSON.stringify(settings));
+                showNotification('Configurações de email guardadas!', 'success');
+                return;
+            }
+            
+            // Manual email config
+            const settings = {
+                provider: currentProvider,
+                email: document.getElementById('emailAddress').value,
+                password: document.getElementById('emailPassword').value,
+                smtpServer: document.getElementById('smtpServer').value,
+                smtpPort: document.getElementById('smtpPort').value,
+                recipients: document.getElementById('notificationRecipients').value,
+                notifyPriceChanges: document.getElementById('notifyPriceChanges').checked,
+                notifyDailyReport: document.getElementById('notifyDailyReport').checked,
+                notifyWeeklyReport: document.getElementById('notifyWeeklyReport').checked,
+                notifyErrors: document.getElementById('notifyErrors').checked,
+                useOAuth: false
+            };
+            
+            // Validate
+            if (!settings.email) {
+                showNotification('Por favor, insira um endereço de email', 'warning');
+                return;
+            }
+            
+            if (!settings.password) {
+                showNotification('Por favor, insira a password', 'warning');
+                return;
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('emailSettings', JSON.stringify(settings));
+            showNotification('Configurações de email guardadas!', 'success');
+        }
+
+        async function testEmail() {
+            // Check if connected via OAuth
+            if (!isConnected) {
+                showNotification('Por favor, conecte uma conta Gmail ou Outlook primeiro', 'warning');
+                return;
+            }
+            
+            // Get recipients
+            const recipients = document.getElementById('notificationRecipients').value;
+            if (!recipients || recipients.trim() === '') {
+                showNotification('Por favor, adicione pelo menos um destinatário', 'warning');
+                return;
+            }
+            
+            // Get OAuth token
+            const oauthToken = localStorage.getItem('emailOAuthToken');
+            if (!oauthToken) {
+                showNotification('Token OAuth não encontrado. Por favor, reconecte a conta.', 'error');
+                return;
+            }
+            
+            showNotification('A enviar email de teste...', 'info');
+            
+            try {
+                const token = JSON.parse(oauthToken);
+                const response = await fetch('/api/email/test-oauth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        provider: token.provider,
+                        email: token.email,
+                        accessToken: token.token,
+                        recipients: recipients
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    showNotification('Email de teste enviado com sucesso!', 'success');
+                } else {
+                    showNotification(`Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao enviar email de teste', 'error');
+                console.error('Test email error:', error);
+            }
+        }
+
+        function loadEmailSettings() {
+            // Check OAuth connection
+            const oauthToken = localStorage.getItem('emailOAuthToken');
+            if (oauthToken) {
+                try {
+                    const token = JSON.parse(oauthToken);
+                    isConnected = true;
+                    document.getElementById('connectedEmail').textContent = token.email;
+                    document.getElementById('connectionStatus').style.display = 'block';
+                } catch (e) {
+                    console.error('Error loading OAuth token:', e);
+                }
+            }
+            
+            const saved = localStorage.getItem('emailSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    
+                    selectProvider(settings.provider || 'gmail');
+                    document.getElementById('emailAddress').value = settings.email || '';
+                    document.getElementById('emailPassword').value = settings.password || '';
+                    document.getElementById('smtpServer').value = settings.smtpServer || 'smtp.gmail.com';
+                    document.getElementById('smtpPort').value = settings.smtpPort || '587';
+                    document.getElementById('notificationRecipients').value = settings.recipients || '';
+                    document.getElementById('notifyPriceChanges').checked = settings.notifyPriceChanges !== false;
+                    document.getElementById('notifyDailyReport').checked = settings.notifyDailyReport || false;
+                    document.getElementById('notifyWeeklyReport').checked = settings.notifyWeeklyReport || false;
+                    document.getElementById('notifyErrors').checked = settings.notifyErrors !== false;
+                } catch (e) {
+                    console.error('Error loading email settings:', e);
+                }
+            }
+        }
+        
+        // Load settings on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEmailSettings();
+            selectProvider('gmail'); // Default
+        });
+    </script>
+</body>
+</html>

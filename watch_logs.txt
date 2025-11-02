@@ -1,0 +1,52 @@
+================================================================================
+🔍 OBSERVADOR DE AÇÕES DO USUÁRIO
+================================================================================
+
+🚀 A ABRIR CHROME AUTOMATICAMENTE...
+
+INSTRUÇÕES:
+1. O Chrome vai abrir AGORA
+2. Faz TUDO manualmente como se fosses um utilizador normal:
+   ✅ Aceita o 1º cookie
+   ✅ Preenche a localização (Albufeira Cidade)
+   ✅ Seleciona no dropdown
+   ✅ Preenche as datas
+   ✅ Aceita o 2º cookie (se aparecer)
+   ✅ Clica em Buscar
+3. Vou registar o TEMPO de cada ação
+
+
+[SETUP] Iniciando Chrome...
+[  0.00s] 🌐 Abrindo CarJet...
+[  1.56s] ✓ Página carregada!
+
+================================================================================
+👉 AGORA É CONTIGO! Faz as seguintes ações:
+================================================================================
+[  1.57s] URL inicial: https://www.carjet.com/aluguel-carros/index.htm
+[  2.08s] 🍪 1º POPUP DE COOKIE APARECEU!
+[  2.08s]    - ID: cookieOptions, Classes: modalbox active
+[  2.08s]    - ID: cookieSettings, Classes: modalbox 
+[  2.08s] 📅 Data RECOLHA preenchida: 03/11/2025
+[  2.59s] 🍪🍪 2º POPUP DE COOKIE APARECEU!
+[  2.59s]    - ID: cookieOptions, Classes: modalbox active
+[  2.59s]    - ID: cookieSettings, Classes: modalbox 
+[  4.30s] 🔄 URL mudou: https://www.carjet.com/aluguel-carros/index.htm#
+[ 14.29s] 🔄 URL mudou: https://www.carjet.com/do/list/pt?s=c3fa1ca0-7744-4ad7-8d63-3af1d0475ee0&b=2c8eb1dd-f943-45f4-97c9-3c5638dc1618
+[ 14.29s] 🎯 CHEGOU À PÁGINA DE RESULTADOS!
+[ 17.29s] ✅ PROCESSO COMPLETO!
+
+================================================================================
+📊 RESUMO FINAL:
+================================================================================
+[ 17.29s] URL final: https://www.carjet.com/do/list/pt?s=c3fa1ca0-7744-4ad7-8d63-3af1d0475ee0&b=2c8eb1dd-f943-45f4-97c9-3c5638dc1618
+[ 17.29s] Tempo total: 17.29s
+================================================================================
+
+⏳ Aguardando 10 segundos antes de fechar...
+[ 27.29s] 🔒 Fechando Chrome...
+[ 27.46s] ✓ Concluído!
+
+================================================================================
+Agora vou implementar o que observei no código principal!
+================================================================================

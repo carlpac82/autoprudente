@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulas & Calculations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/notifications.js"></script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .formula-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                Formulas & Calculations
+            </h2>
+            
+            <!-- Broker Commission -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Broker Commission (%)</label>
+                <input type="number" id="brokerCommission" value="13.66" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">Commission percentage applied by the broker (e.g., CarJet)</p>
+                <div class="formula-box mt-2">
+                    <strong>Formula:</strong> NET Price = Final Price / (1 + commission/100)
+                </div>
+            </div>
+
+            <!-- Default Margin -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Default Margin (%)</label>
+                <input type="number" id="defaultMargin" value="0" step="0.1" min="-100" max="100" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">Default margin when no specific rule exists (0% = no margin)</p>
+                <div class="formula-box mt-2">
+                    <strong>Formula:</strong> Final Price = Base Price × (1 + margin/100)
+                </div>
+            </div>
+
+            <!-- Rounding -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Price Rounding</label>
+                <select id="priceRounding" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                    <option value="0.01">Cents (0.01€) - Exact</option>
+                    <option value="0.50">Half Euro (0.50€)</option>
+                    <option value="1.00" selected>Euro (1.00€) - Recommended</option>
+                    <option value="5.00">5 Euros (5.00€)</option>
+                    <option value="10.00">10 Euros (10.00€)</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Round final prices to nearest value</p>
+            </div>
+
+            <!-- Min Price Per Day -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Price Per Day (€)</label>
+                <input type="number" id="minPricePerDay" value="" step="0.01" min="0" placeholder="No minimum" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">Global minimum price per day (leave empty for no minimum)</p>
+            </div>
+
+            <!-- Min Price Per Month -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Price Per Month (€)</label>
+                <input type="number" id="minPricePerMonth" value="" step="0.01" min="0" placeholder="No minimum" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">Global minimum price for 30+ day rentals</p>
+            </div>
+
+            <!-- Tax Rate -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tax Rate / VAT (%)</label>
+                <input type="number" id="taxRate" value="23" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">VAT or tax rate (Portugal = 23%)</p>
+                <div class="formula-box mt-2">
+                    <strong>Formula:</strong> Price with Tax = Price × (1 + tax/100)
+                </div>
+            </div>
+
+            <!-- Currency -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
+                <select id="defaultCurrency" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                    <option value="EUR" selected>EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="BRL">BRL (R$)</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Currency used for all calculations</p>
+            </div>
+
+            <div class="bg-[#f0f9fb] border border-[#009cb6] rounded p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm text-gray-800"><strong class="text-[#009cb6]">Tip:</strong> These formulas are applied globally to all price calculations. You can override them with specific rules in the Automation Settings.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadSettings() {
+            const saved = localStorage.getItem('formulaSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    if (settings.brokerCommission !== undefined) document.getElementById('brokerCommission').value = settings.brokerCommission;
+                    if (settings.defaultMargin !== undefined) document.getElementById('defaultMargin').value = settings.defaultMargin;
+                    if (settings.priceRounding) document.getElementById('priceRounding').value = settings.priceRounding;
+                    if (settings.minPricePerDay) document.getElementById('minPricePerDay').value = settings.minPricePerDay;
+                    if (settings.minPricePerMonth) document.getElementById('minPricePerMonth').value = settings.minPricePerMonth;
+                    if (settings.taxRate !== undefined) document.getElementById('taxRate').value = settings.taxRate;
+                    if (settings.defaultCurrency) document.getElementById('defaultCurrency').value = settings.defaultCurrency;
+                } catch (e) {
+                    console.error('Error loading settings:', e);
+                }
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                brokerCommission: parseFloat(document.getElementById('brokerCommission').value),
+                defaultMargin: parseFloat(document.getElementById('defaultMargin').value),
+                priceRounding: document.getElementById('priceRounding').value,
+                minPricePerDay: document.getElementById('minPricePerDay').value ? parseFloat(document.getElementById('minPricePerDay').value) : null,
+                minPricePerMonth: document.getElementById('minPricePerMonth').value ? parseFloat(document.getElementById('minPricePerMonth').value) : null,
+                taxRate: parseFloat(document.getElementById('taxRate').value),
+                defaultCurrency: document.getElementById('defaultCurrency').value
+            };
+            
+            localStorage.setItem('formulaSettings', JSON.stringify(settings));
+            showNotification('✅ Formula settings saved!', 'success');
+        }
+
+        // showNotification is now loaded from /static/notifications.js
+
+        ['brokerCommission', 'defaultMargin', 'priceRounding', 'minPricePerDay', 'minPricePerMonth', 'taxRate', 'defaultCurrency'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', saveSettings);
+            }
+        });
+
+        loadSettings();
+    </script>
+</body>
+</html>

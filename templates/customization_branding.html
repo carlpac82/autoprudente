@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branding Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/branding.js"></script>
+    <script src="/static/i18n.js"></script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                </svg>
+                Brand Identity
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                    <input type="text" id="companyName" value="AutoPrudente" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                    <p class="text-xs text-gray-500 mt-1">Displayed in navigation and throughout the platform</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Default Supplier/Brand</label>
+                    <input type="text" id="defaultSupplier" value="AutoPrudente" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                    <p class="text-xs text-gray-500 mt-1">Your main rent-a-car brand (used in "Real" column)</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Company Logo URL</label>
+                <input type="url" id="logoUrl" placeholder="https://example.com/logo.png" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">URL to your company logo (PNG, SVG, or JPG recommended)</p>
+                <div class="mt-3 p-4 bg-gray-50 rounded border border-gray-200">
+                    <p class="text-xs text-gray-600 mb-2">Logo Preview:</p>
+                    <img id="logoPreview" src="" alt="Logo Preview" class="h-12 object-contain" style="display: none;">
+                    <p id="logoPlaceholder" class="text-xs text-gray-400 italic">No logo set - using default</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Favicon URL</label>
+                <input type="url" id="faviconUrl" placeholder="https://example.com/favicon.ico" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                <p class="text-xs text-gray-500 mt-1">Browser tab icon (.ico, .png, or .svg)</p>
+            </div>
+
+            <div class="bg-[#f0f9fb] border border-[#009cb6] rounded p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm text-gray-800"><strong class="text-[#009cb6]">White-Label Ready:</strong> Customize all branding to match your company identity. Perfect for reselling the platform to other rent-a-car businesses.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/notifications.js"></script>
+    <script>
+        function loadBrandingSettings() {
+            const saved = localStorage.getItem('brandingSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    if (settings.companyName) document.getElementById('companyName').value = settings.companyName;
+                    if (settings.defaultSupplier) document.getElementById('defaultSupplier').value = settings.defaultSupplier;
+                    if (settings.logoUrl) {
+                        document.getElementById('logoUrl').value = settings.logoUrl;
+                        updateLogoPreview(settings.logoUrl);
+                    }
+                    if (settings.faviconUrl) document.getElementById('faviconUrl').value = settings.faviconUrl;
+                } catch (e) {
+                    console.error('Error loading branding settings:', e);
+                }
+            }
+        }
+
+        function saveBrandingSettings() {
+            const saved = localStorage.getItem('brandingSettings') || '{}';
+            const settings = JSON.parse(saved);
+            
+            settings.companyName = document.getElementById('companyName').value;
+            settings.defaultSupplier = document.getElementById('defaultSupplier').value;
+            settings.logoUrl = document.getElementById('logoUrl').value;
+            settings.faviconUrl = document.getElementById('faviconUrl').value;
+            
+            localStorage.setItem('brandingSettings', JSON.stringify(settings));
+            window.dispatchEvent(new Event('brandingUpdated'));
+            if (typeof window.applyBranding === 'function') window.applyBranding();
+            showNotification('✅ Branding settings saved!', 'success');
+        }
+
+        function updateLogoPreview(url) {
+            const preview = document.getElementById('logoPreview');
+            const placeholder = document.getElementById('logoPlaceholder');
+            
+            if (url && url.trim() !== '') {
+                preview.src = url;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                preview.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+        }
+
+        // showNotification is now loaded from /static/notifications.js
+
+        document.getElementById('logoUrl').addEventListener('blur', (e) => {
+            updateLogoPreview(e.target.value);
+            saveBrandingSettings();
+        });
+
+        ['companyName', 'defaultSupplier', 'faviconUrl'].forEach(id => {
+            document.getElementById(id).addEventListener('blur', saveBrandingSettings);
+        });
+
+        loadBrandingSettings();
+    </script>
+</body>
+</html>

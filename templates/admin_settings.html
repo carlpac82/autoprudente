@@ -10,6 +10,35 @@
       img[alt="Profile"], img[src*="profile"], .profile-picture {
         border-radius: 50% !important;
       }
+      
+      /* Alertas consistentes com layout do site */
+      .alert-success {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #009cb6;
+        background-color: #eff6ff;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .alert-error {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #ef4444;
+        background-color: #fef2f2;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .alert-warning {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #f4ad0f;
+        background-color: #fffbeb;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
     </style>
     <script>
       if (window.location.search.includes("iframe=1")) {
@@ -17,7 +46,7 @@
           const header = document.querySelector("header");
           if (header) header.style.display = "none";
           
-          // Esconder também os botões de navegação dentro do iframe
+          // ESCONDER menu de navegação no iframe
           const navButtons = document.querySelector("main > div > div.flex.items-center.gap-2");
           if (navButtons) navButtons.style.display = "none";
         });
@@ -48,10 +77,26 @@
         </div>
       </div>
       {% if saved %}
-      <div class="mb-4 p-3 rounded border border-green-300 text-green-800 bg-green-50">Saved.</div>
+      <div class="mb-4 p-4 rounded-lg border-l-4 border-[#009cb6] bg-blue-50 flex items-start gap-3">
+        <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="font-semibold text-[#009cb6]">Configurações guardadas com sucesso!</p>
+          <p class="text-sm text-gray-600 mt-1">As alterações foram aplicadas.</p>
+        </div>
+      </div>
       {% endif %}
       {% if error %}
-      <div class="mb-4 p-3 rounded border border-red-300 text-red-800 bg-red-50">{{ error }}</div>
+      <div class="mb-4 p-4 rounded-lg border-l-4 border-red-500 bg-red-50 flex items-start gap-3">
+        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="font-semibold text-red-800">Erro ao guardar</p>
+          <p class="text-sm text-red-700 mt-1">{{ error }}</p>
+        </div>
+      </div>
       {% endif %}
       <form method="post" class="bg-white rounded shadow p-4 space-y-4">
         <div>
@@ -104,6 +149,40 @@
                 Este valor é somado ao ajuste geral acima.<br>
                 Exemplo: Geral 3% + Low Deposit 2% = 5% total para esses grupos.<br>
                 Default: 0.00% (sem ajuste adicional)
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- UI Settings -->
+        <div class="border-t pt-4 mt-6">
+          <h3 class="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+            Interface & Appearance
+          </h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Theme Color</label>
+              <div class="flex items-center gap-3">
+                <input type="color" name="ui_theme_color" value="{{ ui_theme_color }}" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" />
+                <input type="text" name="ui_theme_color" value="{{ ui_theme_color }}" placeholder="#3b82f6" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              </div>
+              <p class="text-xs text-gray-500 mt-1">
+                Cor principal do tema (botões, links, etc).<br>
+                Default: <strong>#3b82f6</strong> (azul)
+              </p>
+            </div>
+            
+            <div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="ui_icons_monochrome" value="1" {% if ui_icons_monochrome %}checked{% endif %} class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]" />
+                <span class="text-sm font-medium text-gray-700">Ícones Monocromáticos (Grayscale)</span>
+              </label>
+              <p class="text-xs text-gray-500 mt-1 ml-6">
+                Quando ativado, todos os ícones de carros ficam em tons de cinza.<br>
+                Quando desativado, ícones mantêm as cores originais.
               </p>
             </div>
           </div>

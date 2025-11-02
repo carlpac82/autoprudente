@@ -11,6 +11,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="/static/notifications.js"></script>
+    <!-- Global Branding System -->
+    <script src="/static/branding.js"></script>
+    <!-- Auto-Sync System (prevents data loss on Render) -->
+    <script src="/static/auto-sync.js"></script>
     <style>
         * { font-family: 'Outfit', sans-serif; }
         
@@ -1321,6 +1325,38 @@
         let stopSearchFlag = false;
         let stopGenerateFlag = false;
 
+        function getMinDaysForLocation(location) {
+            const saved = localStorage.getItem('priceAutomationSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    const isFaro = location.toLowerCase().includes('faro');
+                    if (isFaro) {
+                        return settings.minDaysFaro || 5;
+                    } else {
+                        return settings.minDaysAlbufeira || 1;
+                    }
+                } catch (e) {
+                    console.error('Error parsing settings:', e);
+                }
+            }
+            // Default: Faro = 5 days, Albufeira = 1 day
+            return location.toLowerCase().includes('faro') ? 5 : 1;
+        }
+        
+        function getExcludedSuppliers() {
+            const saved = localStorage.getItem('priceAutomationSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    return (settings.excludeSuppliers || []).map(s => s.toLowerCase());
+                } catch (e) {
+                    console.error('Error parsing settings:', e);
+                }
+            }
+            return ['autoprudente']; // Default: exclude AutoPrudente
+        }
+        
         function getMaxAlternativeDays() {
             const saved = localStorage.getItem('priceAutomationSettings');
             if (saved) {
@@ -1332,20 +1368,6 @@
                 }
             }
             return 3; // Padrão
-        }
-        
-        function getExcludedSuppliers() {
-            const saved = localStorage.getItem('priceAutomationSettings');
-            if (saved) {
-                try {
-                    const settings = JSON.parse(saved);
-                    // Return array of excluded suppliers, default: ['autoprudente']
-                    return settings.excludeSuppliers || ['autoprudente'];
-                } catch (e) {
-                    return ['autoprudente'];
-                }
-            }
-            return ['autoprudente']; // Padrão
         }
         
         function getMinimumPriceForDays(days, dayConfig) {
@@ -2618,17 +2640,30 @@
                 const isFirst = index === 0;
                 
                 if (item.type === 'automated') {
-                    // Get AutoPrudente car from this group for the photo (ONLY AutoPrudente)
-                    const autoprudenteItem = allPricesData.find(p => p.type === 'autoprudente');
-                    const sampleCar = autoprudenteItem ? autoprudenteItem.car : { car: grupo, group: grupo, supplier: 'AutoPrudente' };
+                    // Get the CHEAPEST car from search results for this group (like homepage does)
+                    const competitorCars = allPricesData.filter(p => 
+                        (p.type === 'competitor' || p.type === 'autoprudente') && 
+                        p.car && 
+                        p.car.group === grupo
+                    );
                     
-                    // DEBUG: Log car info
-                    if (grupo === 'B1' || grupo === 'D') {
+                    // Sort by price and get the cheapest one
+                    competitorCars.sort((a, b) => a.price - b.price);
+                    const sampleCar = competitorCars.length > 0 
+                        ? competitorCars[0].car 
+                        : { car: grupo, group: grupo, supplier: 'Search' };
+                    
+                    // DEBUG: Log car info to verify correct photo from search
+                    if (grupo === 'M1' || grupo === 'B1' || grupo === 'D') {
                         console.log(`🚗 AUTOMATED PRICE ${grupo}/${day}d:`, {
-                            hasAutoPrudente: !!autoprudenteItem,
+                            competitorCount: competitorCars.length,
+                            firstCompetitor: competitorCars[0],
                             sampleCar: sampleCar,
                             carName: sampleCar.car,
-                            imageUrl: getCarImage(sampleCar, 'automated')
+                            carSupplier: sampleCar.supplier,
+                            carGroup: sampleCar.group,
+                            imageUrl: getCarImage(sampleCar, 'automated'),
+                            mappedUrl: imageUrlFor(sampleCar)
                         });
                     }
                     
@@ -2695,7 +2730,7 @@
                                      class="w-12 h-8 object-cover rounded flex-shrink-0"
                                      onerror="this.style.display='none'">
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-xs font-semibold text-purple-600">AI SUGGESTION</div>
+                                    <div class="text-xs font-semibold text-purple-600">AI</div>
                                     <div class="text-xs text-gray-600 truncate">Group ${grupo}</div>
                                 </div>
                                 <div class="flex flex-col items-end gap-1">
@@ -3099,16 +3134,16 @@
             'B2': 'https://www.carjet.com/cdn/img/cars/M/car_C30.jpg',  // Fiat Panda
             'D': 'https://www.carjet.com/cdn/img/cars/M/car_C60.jpg',   // Peugeot 208
             'E1': 'https://www.carjet.com/cdn/img/cars/M/car_C59.jpg',  // Kia Picanto
-            'E2': 'https://www.carjet.com/cdn/img/cars/M/car_C08.jpg',  // Opel Corsa
-            'F': 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg',  // Seat Arona
+            'E2': 'https://www.carjet.com/cdn/img/cars/M/car_A03.jpg',  // Opel Corsa (branco)
+            'F': 'https://www.carjet.com/cdn/img/cars/M/car_F29.jpg',  // Seat Arona (branco)
             'G': 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg',  // Fiat 500 Cabrio
             'J1': 'https://www.carjet.com/cdn/img/cars/M/car_F91.jpg',  // Peugeot 2008
-            'J2': 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg',  // Peugeot 308 SW
+            'J2': 'https://www.carjet.com/cdn/img/cars/M/car_S100.jpg',  // Peugeot 308 SW (branco)
             'L1': 'https://www.carjet.com/cdn/img/cars/M/car_A782.jpg', // Citroen C3 Aircross
-            'L2': 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg',  // Peugeot 308 SW
-            'M1': 'https://www.carjet.com/cdn/img/cars/M/car_A1027.jpg', // Dacia Jogger
+            'L2': 'https://www.carjet.com/cdn/img/cars/M/car_S100.jpg',  // Peugeot 308 SW Auto (branco)
+            'M1': 'https://www.carjet.com/cdn/img/cars/M/car_A1028.jpg', // Dacia Jogger (branco)
             'M2': 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg', // Citroen C4 Grand Picasso
-            'N': 'https://www.carjet.com/cdn/img/cars/M/car_A1026.jpg'  // Toyota Proace
+            'N': 'https://www.carjet.com/cdn/img/cars/M/car_A1029.jpg'  // Toyota Proace (branco)
         };
         
         function imageUrlFor(it) {
@@ -3172,6 +3207,72 @@
             if (/^nissan\s*qashqai/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F24.jpg';
             if (/^skoda\s*kamiq/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
             if (/^dacia\s*sandero/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C75.jpg';
+            if (/^hyundai\s*(kauai|kaua[ií])/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg';
+            if (/^mitsubishi\s*asx/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg';
+            if (/^hyundai\s*kona/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F191.jpg';
+            if (/^toyota\s*c-?hr(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A301.jpg';
+            if (/^ford\s*(eco\s*sport|ecosport)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A606.jpg';
+            if (/^opel\s*crossland\s*x(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A444.jpg';
+            if (/^(vw|volkswagen)\s*tiguan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg';
+            if (/^skoda\s*karoq(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A822.jpg';
+            if (/^cupra\s*leon\s*(sw|st|estate|sport[-\s]*tourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1426.jpg';
+            if (/^toyota\s*corolla\s*(sw|touring\s*sports|estate)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A590.jpg';
+            if (/^dacia\s*lodgy\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M117.jpg';
+            if (/^opel\s*zafira\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M05.jpg';
+            if (/^ford\s*tourneo\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M44.jpg';
+            if (/^(vw|volkswagen)\s*sharan\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M56.jpg';
+            if (/^(vw|volkswagen)\s*multivan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A406.jpg';
+            if (/^renault\s*grand\s*scenic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M15.jpg';
+            if (/(^citroen|^citroën)\s*(c4\s*)?grand\s*picasso(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg';
+            if (/^mercedes\s*glb(\b.*)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_GZ399.jpg';
+            if (/^(vw|volkswagen)\s*caddy(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A295.jpg';
+            if (/(^citroen|^citroën)\s*c5\s*aircross(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A640.jpg';
+            if (/^ds\s*4(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1637.jpg';
+            if (/^cupra\s*formentor(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1185.jpg';
+            if (/^jeep\s*renegade(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A222.jpg';
+            if (/^renault\s*arkana(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1159.jpg';
+            if (/^toyota\s*rav\s*?4(\s*4x4)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1000.jpg';
+            if (/^hyundai\s*tucson/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
+            if (/^renault\s*austral/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F430.jpg';
+            if (/^seat\s*ateca/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F154.jpg';
+            if (/^peugeot\s*5008/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M27.jpg';
+            if (/^toyota\s*hilux(\s*4x4)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg';
+            if (/^peugeot\s*308\s*sw(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S100.jpg';
+            if (/^opel\s*corsa(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A03.jpg';
+            if (/^dacia\s*jogger/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1028.jpg';
+            if (/^seat\s*(leon|león)\b(?!.*\b(sw|st|estate|sport[-\s]*tourer)\b).*$/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F39.jpg';
+            if (/^toyota\s*corolla\s*auto/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A623.jpg';
+            if (/(^mini|^miny)\s*(cooper\s*)?countryman(\s*(auto|automatic))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F209.jpg';
+            if (/^ford\s*puma(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A999.jpg';
+            if (/^fiat\s*talento/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M49.jpg';
+            if (/^peugeot\s*rifter(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M124.jpg';
+            if (/(^citroen\s*c4\s*grand\s*spacetourer|^citroën\s*c4\s*grand\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1430.jpg';
+            if (/^opel\s*vivaro/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg';
+            if (/^seat\s*arona(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F29.jpg';
+            if (/^toyota\s*proace/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1029.jpg';
+            if (/(^citroen\s*c4\s*picasso\s*auto|^citroën\s*c4\s*picasso\s*auto)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A522.jpg';
+            if (/^ford\s*transit/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg';
+            if (/^ford\s*galaxy/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M03.jpg';
+            if (/(^citroen\s*spacetourer|^citroën\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A261.jpg';
+            if (/^renault\s*trafic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A581.jpg';
+            if (/^peugeot\s*traveller\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M86.jpg';
+            if (/^(vw|volkswagen)\s*transporter\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M08.jpg';
+            if (/^mercedes(\s*benz)?\s*vito(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A230.jpg';
+            if (/^(vw|volkswagen)\s*caravelle\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M63.jpg';
+            if (/^mercedes(\s*benz)?\s*v\s*class(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1336.jpg';
+            if (/(^citroen\s*c4\s*cactus|^citroën\s*c4\s*cactus)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C51.jpg';
+            if (/^renault\s*clio\s*sw/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C54.jpg';
+            if (/(^mazda\s*cx[- ]?3)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F179.jpg';
+            if (/^skoda\s*octavia\b(\s*(sw|combi|estate))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I12.jpg';
+            if (/^skoda\s*fabia\b\s*(sw|combi|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S34.jpg';
+            if (/^(vw|volkswagen)\s*passat\b(\s*(variant|estate|sw))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg';
+            if (/^fiat\s*tipo\b\s*(sw|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F72.jpg';
+            if (/^peugeot\s*508\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F65.jpg';
+            if (/^seat\s*leon\s*(sw|st|estate|sport[-\s]*tourer)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F46.jpg';
+            if (/^(vw|volkswagen)\s*beetle\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L44.jpg';
+            if (/^(mini|miny)\s*(cooper|one)\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L118.jpg';
+            if (/^skoda\s*scala/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C166.jpg';
+            if (/^fiat\s*500l/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C43.jpg';
             
             // Fallback to photo field
             return it.photo || '';
@@ -3180,13 +3281,37 @@
         function getCarImage(carItem, supplierType = 'competitor') {
             const itemGroup = carItem.group || extractGroup(carItem.car || '');
             
-            // PRIORITY 1: Use GROUP_IMAGES for AutoPrudente, Automated, and AI prices
-            if ((supplierType === 'autoprudente' || supplierType === 'automated' || supplierType === 'ai') && itemGroup && GROUP_IMAGES[itemGroup]) {
-                console.log(`📸 Using GROUP_IMAGES for ${itemGroup}: ${GROUP_IMAGES[itemGroup]}`);
+            // PRIORITY 1: For automated prices, use imageUrlFor (car name mapping) like homepage does
+            if (supplierType === 'automated') {
+                const mappedUrl = imageUrlFor(carItem);
+                
+                // DEBUG: Log image resolution for key groups
+                if (itemGroup === 'M1' || itemGroup === 'B1' || itemGroup === 'D') {
+                    console.log(`📸 getCarImage ${itemGroup}:`, {
+                        carName: carItem.car,
+                        supplier: carItem.supplier,
+                        itemGroup,
+                        mappedUrl,
+                        willUseMapped: !!(mappedUrl && mappedUrl !== ''),
+                        fallbackGroupImage: GROUP_IMAGES[itemGroup]
+                    });
+                }
+                
+                if (mappedUrl && mappedUrl !== '') {
+                    return mappedUrl;
+                }
+                // Fallback to GROUP_IMAGES if no specific mapping found
+                if (itemGroup && GROUP_IMAGES[itemGroup]) {
+                    return GROUP_IMAGES[itemGroup];
+                }
+            }
+            
+            // PRIORITY 2: Use GROUP_IMAGES for AutoPrudente and AI prices
+            if ((supplierType === 'autoprudente' || supplierType === 'ai') && itemGroup && GROUP_IMAGES[itemGroup]) {
                 return GROUP_IMAGES[itemGroup];
             }
             
-            // PRIORITY 2: Use imageUrlFor mapping function (same as index.html)
+            // PRIORITY 3: Use imageUrlFor mapping function (same as index.html)
             const mappedUrl = imageUrlFor(carItem);
             
             if (mappedUrl && mappedUrl !== '') {
@@ -3388,13 +3513,20 @@
                             const minPrice = competitorPrices.length > 0 ? Math.min(...competitorPrices) : item.price;
                             const maxPrice = competitorPrices.length > 0 ? Math.max(...competitorPrices) : item.price;
                             
-                            // Get AutoPrudente car from this group for the photo (ONLY AutoPrudente)
-                            const autoprudenteItem = allPrices.find(p => p.type === 'autoprudente');
-                            const sampleCar = autoprudenteItem ? autoprudenteItem.car : { car: grupo, group: grupo, supplier: 'AutoPrudente' };
+                            // Get the CHEAPEST car from search results for this group (like homepage does)
+                            const competitorCars = allPrices.filter(p => 
+                                (p.type === 'competitor' || p.type === 'autoprudente') && 
+                                p.car && 
+                                p.car.group === grupo
+                            );
+                            competitorCars.sort((a, b) => a.price - b.price);
+                            const sampleCar = competitorCars.length > 0 
+                                ? competitorCars[0].car 
+                                : { car: grupo, group: grupo, supplier: 'Search' };
                             
                             // DEBUG: Log car info for price list
                             console.log(`🎨 PRICE LIST ${grupo}/${day}d:`, {
-                                hasAutoPrudente: !!autoprudenteItem,
+                                competitorCount: competitorCars.length,
                                 sampleCar: sampleCar,
                                 carName: sampleCar?.car,
                                 imageUrl: getCarImage(sampleCar, 'automated')
@@ -3460,7 +3592,7 @@
                                          class="w-12 h-8 object-cover rounded flex-shrink-0"
                                          onerror="this.style.display='none'">
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-xs font-semibold text-purple-600">AI SUGGESTION</div>
+                                        <div class="text-xs font-semibold text-purple-600">AI</div>
                                         <div class="text-xs text-gray-600 truncate">Group ${grupo}</div>
                                     </div>
                                     <div class="flex items-center gap-2">
@@ -3584,6 +3716,10 @@
                     if (stopGenerateFlag) {
                         break;
                     }
+                    
+                    // Check if we should skip AutoPrudente for this location/day based on settings
+                    const minDays = getMinDaysForLocation(currentLocation);
+                    const skipAutoPrudenteForThisDay = day < minDays;
 
                     progressText.textContent = `Searching ${day} days...`;
                     progressPercent.textContent = `${Math.round((completed / total) * 100)}%`;
@@ -3645,7 +3781,27 @@
                                 
                                 console.log(`${day} days - ${autoprudenteItems.length} AUTOPRUDENTE cars found`);
                                 
-                                if (autoprudenteItems.length > 0) {
+                                // Skip AutoPrudente processing if below minimum days
+                                if (skipAutoPrudenteForThisDay) {
+                                    console.log(`⏭️ Skipping AutoPrudente for ${day} days in ${currentLocation} (minimum ${minDays} days)`);
+                                    // Mark all Real cells as N/A for this day
+                                    grupos.forEach(grupo => {
+                                        const inputReal = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
+                                        if (inputReal) {
+                                            inputReal.value = 'N/A';
+                                            inputReal.classList.add('bg-gray-100');
+                                            inputReal.disabled = true;
+                                            inputReal.title = `AutoPrudente não opera para menos de ${minDays} dias em ${currentLocation}`;
+                                        }
+                                    });
+                                    // Don't break - continue to next day (allCarsByDay is already populated for automated prices)
+                                } else if (autoprudenteItems.length === 0) {
+                                    console.warn(`⚠️ NO AUTOPRUDENTE CARS FOUND for ${day} days in ${currentLocation}`);
+                                    console.warn(`   This is normal if AutoPrudente doesn't operate in this location.`);
+                                    console.warn(`   Automated prices will still work using competitor data.`);
+                                }
+                                
+                                if (autoprudenteItems.length > 0 && !skipAutoPrudenteForThisDay) {
                                     // RULE: Group by car group and choose LOWEST PRICE
                                     const precosPorGrupo = {};
                                     autoprudenteItems.forEach(item => {
@@ -3721,9 +3877,15 @@
                 const date = new Date(pickupDate);
                 const month = date.getMonth() + 1; // 1-12
                 
-                console.log(`📋 Loading strategies from automatedPriceRules for ${currentLocation}, month ${month}`);
+                console.log(`\n${'='.repeat(80)}`);
+                console.log(`📋 LOADING STRATEGIES FOR AUTOMATED PRICES`);
+                console.log(`${'='.repeat(80)}`);
+                console.log(`📍 Current Location: "${currentLocation}"`);
+                console.log(`📅 Month: ${month}`);
+                console.log(`📂 Available locations in automatedRules:`, Object.keys(automatedRules));
                 console.log(`📂 Full automatedRules:`, automatedRules);
-                console.log(`📍 Rules for ${currentLocation}:`, automatedRules[currentLocation]);
+                console.log(`📍 Rules for "${currentLocation}":`, automatedRules[currentLocation]);
+                console.log(`${'='.repeat(80)}\n`);
                 
                 let autoPricesGenerated = 0;
                 
