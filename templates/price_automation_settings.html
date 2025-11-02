@@ -196,6 +196,22 @@
                     <p class="text-xs text-gray-500 mt-2">
                         💡 <strong>Tip:</strong> You can define multiple dependencies per group. For example, D can be set to be ≥ both B1 and B2.
                     </p>
+                    
+                    <!-- Copy Hierarchy to Other Months -->
+                    <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Copy Hierarchy to Other Months</p>
+                                <p class="text-xs text-gray-600">Apply current hierarchy rules to all months</p>
+                            </div>
+                            <button onclick="copyHierarchyToAllMonths()" class="px-4 py-2 bg-[#009cb6] text-white text-sm rounded hover:bg-[#007a91] transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                Copy to All Months
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1045,6 +1061,65 @@
             }
         }
         
+        // Copy Hierarchy to All Months
+        function copyHierarchyToAllMonths() {
+            if (!confirm('📋 Copy current Group Hierarchy rules to ALL months?\n\nThis will apply the same hierarchy configuration across all 12 months.')) {
+                return;
+            }
+            
+            // Group Hierarchy is global (not per month), so just save it
+            saveSettings();
+            showNotification('✅ Group Hierarchy is already applied to all months!', 'success');
+        }
+        
+        // Copy Min Prices to All Months
+        function copyMinPricesToAllMonths(location, grupo) {
+            const minPriceDay = document.getElementById(`minPriceDay_${location}_${grupo}`)?.value;
+            const minPriceMonth = document.getElementById(`minPriceMonth_${location}_${grupo}`)?.value;
+            
+            if (!minPriceDay && !minPriceMonth) {
+                showNotification('⚠️ No minimum prices set to copy', 'warning');
+                return;
+            }
+            
+            if (!confirm(`📋 Copy Min Prices for ${grupo} to ALL months?\n\nMin Price/Day: ${minPriceDay || 'not set'}€\nMin Price/Month: ${minPriceMonth || 'not set'}€`)) {
+                return;
+            }
+            
+            // Get existing rules
+            const saved = localStorage.getItem('automatedPriceRules');
+            const rules = saved ? JSON.parse(saved) : {};
+            
+            if (!rules[location]) rules[location] = {};
+            if (!rules[location][grupo]) rules[location][grupo] = { months: {} };
+            
+            // Copy to all 12 months
+            for (let month = 1; month <= 12; month++) {
+                if (!rules[location][grupo].months[month]) {
+                    rules[location][grupo].months[month] = { days: {} };
+                }
+                
+                // Copy min prices to all days in this month
+                for (const day in rules[location][grupo].months[month].days) {
+                    if (!rules[location][grupo].months[month].days[day]) {
+                        rules[location][grupo].months[month].days[day] = {};
+                    }
+                    
+                    if (minPriceDay) {
+                        rules[location][grupo].months[month].days[day].minPriceDay = parseFloat(minPriceDay);
+                    }
+                    if (minPriceMonth) {
+                        rules[location][grupo].months[month].days[day].minPriceMonth = parseFloat(minPriceMonth);
+                    }
+                }
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            
+            showNotification(`✅ Min Prices copied to all months for ${grupo}!`, 'success');
+        }
+        
         // Validate Group Hierarchy Prices
         function validateGroupHierarchy(prices) {
             const settings = JSON.parse(localStorage.getItem('priceAutomationSettings') || '{}');
@@ -1605,7 +1680,17 @@
                         
                         <!-- Minimum Prices by Day and Month -->
                         <div class="border-t pt-3 mt-3">
-                            <label class="block text-xs font-medium text-gray-700 mb-2">Minimum Prices (Optional)</label>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs font-medium text-gray-700">Minimum Prices (Optional)</label>
+                                <button onclick="copyMinPricesToAllMonths('${location}', '${grupo}')" 
+                                        class="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors flex items-center gap-1"
+                                        title="Copy to all months">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                    Copy to All Months
+                                </button>
+                            </div>
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div>
                                     <label class="text-gray-600">Min Price/Day (€)</label>
