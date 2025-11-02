@@ -336,6 +336,7 @@
         let allVehicles = [];
         let uncategorizedVehicles = [];
         let currentTab = 'all';
+        let photoTimestamp = Date.now(); // Global timestamp for cache busting
         let editingVehicle = null;
         
         // Notification functions are loaded from /static/notifications.js
@@ -386,7 +387,7 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error loading vehicles: ' + error.message);
+                showNotification('Error loading vehicles: ' + error.message, 'error');
             }
         }
         
@@ -471,13 +472,12 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${brandVehicles.map(v => {
                                 const group = categoryToGroup[v.category] || '—';
-                                const photoUrl = '/api/vehicles/' + encodeURIComponent(v.clean) + '/photo?t=' + Date.now();
-                                const fallbackSvg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2760%27 height=%2740%27%3E%3Crect width=%2760%27 height=%2740%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 fill=%27%23999%27 font-size=%2712%27%3E🚗%3C/text%3E%3C/svg%3E';
+                                const photoUrl = '/api/vehicles/' + encodeURIComponent(v.clean) + '/photo?t=' + photoTimestamp;
                                 return `
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-6 py-4">
                                             <img src="${photoUrl}" 
-                                                 onerror="this.src='${fallbackSvg}'" 
+                                                 onerror="this.onerror=null; this.src='/api/vehicles/placeholder.svg'" 
                                                  alt="${v.clean}" 
                                                  class="h-12 w-auto rounded border shadow-sm">
                                         </td>
@@ -514,21 +514,32 @@
         }
         
         function editVehicle(vehicle) {
+            console.log('🔧 editVehicle called:', vehicle);
             editingVehicle = vehicle;
-            document.getElementById('editOriginalName').value = vehicle.original;
-            document.getElementById('editCleanName').value = vehicle.clean;
-            document.getElementById('editCategory').value = vehicle.category;
-            document.getElementById('editGroup').value = categoryToGroup[vehicle.category] || 'D';
             
-            // Detectar transmission baseado na categoria ou nome
-            const isAuto = vehicle.category.toLowerCase().includes('auto') || 
-                          vehicle.clean.toLowerCase().includes('auto');
-            document.getElementById('editTransmission').value = isAuto ? 'Automatic' : 'Manual';
-            
-            // Carregar foto se existir
-            loadVehiclePhoto(vehicle.clean);
-            
-            document.getElementById('editModal').classList.remove('hidden');
+            try {
+                document.getElementById('editOriginalName').value = vehicle.original || '';
+                document.getElementById('editCleanName').value = vehicle.clean || '';
+                document.getElementById('editCategory').value = vehicle.category || 'Unknown';
+                document.getElementById('editGroup').value = categoryToGroup[vehicle.category] || 'D';
+                
+                // Detectar transmission baseado na categoria ou nome
+                const categoryLower = (vehicle.category || '').toLowerCase();
+                const cleanLower = (vehicle.clean || '').toLowerCase();
+                const isAuto = categoryLower.includes('auto') || cleanLower.includes('auto');
+                document.getElementById('editTransmission').value = isAuto ? 'Automatic' : 'Manual';
+                
+                // Carregar foto se existir
+                loadVehiclePhoto(vehicle.clean);
+                
+                const modal = document.getElementById('editModal');
+                console.log('📦 Modal element:', modal);
+                modal.classList.remove('hidden');
+                console.log('✅ Modal should be visible now');
+            } catch (error) {
+                console.error('❌ Error in editVehicle:', error);
+                showNotification('Error opening edit modal: ' + error.message, 'error');
+            }
         }
         
         async function loadVehiclePhoto(vehicleName) {
@@ -580,21 +591,21 @@
                 
                 const data = await response.json();
                 if (data.ok) {
-                    alert('✅ Photo uploaded!');
+                    showNotification('Photo uploaded successfully!', 'success');
                     await loadVehiclePhoto(editingVehicle.clean);
                     renderVehicles(); // Atualizar tabela
                 } else {
-                    alert('❌ Error: ' + data.error);
+                    showNotification('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                showNotification('Error: ' + error.message, 'error');
             }
         }
         
         async function downloadPhotoFromUrl() {
             const url = document.getElementById('photoUrl').value.trim();
             if (!url || !editingVehicle) {
-                alert('Enter a valid URL!');
+                showNotification('Enter a valid URL!', 'error');
                 return;
             }
             
@@ -607,14 +618,14 @@
                 
                 const data = await response.json();
                 if (data.ok) {
-                    alert('✅ Photo downloaded!');
+                    showNotification('Photo downloaded successfully!', 'success');
                     await loadVehiclePhoto(editingVehicle.clean);
                     renderVehicles(); // Atualizar tabela
                 } else {
-                    alert('❌ Error: ' + data.error);
+                    showNotification('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                showNotification('Error: ' + error.message, 'error');
             }
         }
         
@@ -634,7 +645,7 @@
             const category = document.getElementById('editCategory').value;
             
             if (!cleanName || !category) {
-                alert('Fill in clean name and category!');
+                showNotification('Fill in clean name and category!', 'error');
                 return;
             }
             
@@ -652,14 +663,14 @@
                 const data = await response.json();
                 
                 if (data.ok) {
-                    alert('✅ Vehicle saved!\n\ncarjet_direct.py updated automatically.\nChanges will appear in next search.');
+                    showNotification('Vehicle saved successfully! Changes will appear in next search.', 'success');
                     closeEditModal();
                     await loadVehicles();
                 } else {
-                    alert('❌ Error: ' + data.error);
+                    showNotification('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                showNotification('Error: ' + error.message, 'error');
             }
         }
         
@@ -674,7 +685,7 @@
         function saveNewCategory() {
             const name = document.getElementById('newCategoryName').value.trim();
             if (!name) {
-                alert('Enter a category name!');
+                showNotification('Enter a category name!', 'error');
                 return;
             }
             
@@ -684,7 +695,7 @@
             option.textContent = name;
             select.appendChild(option);
             
-            alert(`✅ Category "${name}" created!`);
+            showNotification(`Category "${name}" created successfully!`, 'success');
             closeNewCategoryModal();
         }
         
@@ -701,7 +712,7 @@
             const name = document.getElementById('newGroupName').value.trim();
             
             if (!code || !name) {
-                alert('Fill in code and name!');
+                showNotification('Fill in code and name!', 'error');
                 return;
             }
             
@@ -711,7 +722,7 @@
             option.textContent = `${code} - ${name}`;
             select.appendChild(option);
             
-            alert(`✅ Group "${code} - ${name}" created!`);
+            showNotification(`Group "${code} - ${name}" created successfully!`, 'success');
             closeNewGroupModal();
         }
         
@@ -777,14 +788,18 @@
                 progressModal.classList.add('hidden');
                 
                 if (data.ok) {
+                    const totalPhotos = (data.downloaded || 0) + (data.skipped || 0);
                     showNotification(
-                        `Photo fetch completed! Found ${Object.keys(data.photos).length} car photos.`,
+                        `Photo fetch completed! Found ${totalPhotos} car photos (${data.downloaded || 0} downloaded, ${data.skipped || 0} already existed).`,
                         'success'
                     );
                     
-                    console.log('📸 Photos found:', data.photos);
+                    console.log('📸 Photos result:', data);
                     
-                    // Reload vehicles
+                    // Update photo timestamp to force reload of all images
+                    photoTimestamp = Date.now();
+                    
+                    // Reload vehicles with new photos
                     await loadVehicles();
                 } else {
                     showNotification('Error: ' + data.error, 'error');
@@ -822,9 +837,9 @@
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                alert('✅ Configuration exported successfully!\nIncludes: vehicles, photos, categories');
+                showNotification('Configuration exported successfully! Includes: vehicles, photos, categories', 'success');
             } catch (error) {
-                alert('❌ Export error: ' + error.message);
+                showNotification('Export error: ' + error.message, 'error');
             }
         }
         
@@ -849,15 +864,15 @@
                 const data = await response.json();
                 
                 if (data.ok) {
-                    alert(`✅ Import completed!\n\nVehicles: ${data.vehicles_count}\nPhotos: ${data.photos_imported || 0}`);
+                    showNotification(`Import completed! Vehicles: ${data.vehicles_count}, Photos: ${data.photos_imported || 0}`, 'success');
                     
                     // Recarregar dados
                     await loadVehicles();
                 } else {
-                    alert('❌ Error: ' + data.error);
+                    showNotification('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                alert('❌ Import error: ' + error.message);
+                showNotification('Import error: ' + error.message, 'error');
             } finally {
                 event.target.value = '';
             }

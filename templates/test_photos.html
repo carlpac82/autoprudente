@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Photos</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .car { margin: 10px; padding: 10px; border: 1px solid #ccc; }
+        img { max-width: 200px; border: 1px solid #000; }
+    </style>
+</head>
+<body>
+    <h1>Test Vehicle Photos</h1>
+    <p>Timestamp: <span id="timestamp"></span></p>
+    
+    <div class="car">
+        <h3>Fiat 500</h3>
+        <img src="/api/vehicles/fiat%20500/photo" onerror="this.style.border='3px solid red'">
+    </div>
+    
+    <div class="car">
+        <h3>Audi A1</h3>
+        <img src="/api/vehicles/audi%20a1/photo" onerror="this.style.border='3px solid red'">
+    </div>
+    
+    <div class="car">
+        <h3>Toyota C-HR Auto</h3>
+        <img src="/api/vehicles/toyota%20c-hr%20auto/photo" onerror="this.style.border='3px solid red'">
+    </div>
+    
+    <div class="car">
+        <h3>Mazda CX-3</h3>
+        <img src="/api/vehicles/mazda%20cx-3/photo" onerror="this.style.border='3px solid red'">
+    </div>
+    
+    <div class="car">
+        <h3>VW Polo</h3>
+        <img src="/api/vehicles/volkswagen%20polo/photo" onerror="this.style.border='3px solid red'">
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+        
+        // Force reload all images
+        window.addEventListener('load', function() {
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                const src = img.src;
+                img.src = src + '?t=' + Date.now();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+===================================================================================
+INSTRUÇÕES: Como Adicionar os 154 Mapeamentos de Fotos Restantes
+===================================================================================
+
+PASSO 1: Gerar os mapeamentos
+------------------------------
+Execute no terminal:
+
+    python3 generate_missing_mappings.py > mapeamentos_novos.txt
+
+Isto cria um ficheiro com código Python pronto para copiar.
+
+
+PASSO 2: Abrir o main.py
+-------------------------
+Abrir o ficheiro main.py e ir para a linha ~9676 onde está:
+
+    image_mappings = {
+        # MINI / B1 / B2
+        'fiat 500 cabrio': 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg',
+        ...
+
+
+PASSO 3: Adicionar os novos mapeamentos
+----------------------------------------
+Copiar o conteúdo de mapeamentos_novos.txt e adicionar ANTES do último }
+
+Exemplo:
+    image_mappings = {
+        # MINI / B1 / B2 (existentes)
+        'fiat 500 cabrio': 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg',
+        'fiat 500': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
+        ...
+        
+        # NOVOS MAPEAMENTOS (adicionar aqui)
+        'citroen c4': 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg',
+        'seat arona': 'https://www.carjet.com/cdn/img/cars/M/car_F194.jpg',
+        ... (resto dos 154 mapeamentos)
+    }
+
+
+PASSO 4: Executar correção
+---------------------------
+Depois de adicionar ao main.py, executar:
+
+    python3 fix_photo_urls.py
+
+Isto vai atualizar a base de dados car_images.db com as novas URLs.
+
+
+PASSO 5: Verificar resultado
+-----------------------------
+    python3 diagnose_photos.py
+
+Deverá mostrar algo como:
+    🖼️  Registos com fotos: 256
+    ❌ Registos sem fotos: 25
+
+
+PASSO 6: Forçar download das imagens (opcional)
+------------------------------------------------
+Se o servidor estiver a correr:
+
+    curl -X POST http://localhost:8000/api/vehicles/images/download
+
+Isto faz download de todas as imagens para a base de dados.
+
+
+===================================================================================
+ALTERNATIVA RÁPIDA: Copiar e Colar Direto
+===================================================================================
+
+Se preferir, pode copiar o output do generate_missing_mappings.py diretamente
+e colar no main.py sem criar ficheiro intermédio:
+
+1. python3 generate_missing_mappings.py
+2. Copiar todo o output entre as linhas "# Adicionar ao IMAGE_MAPPINGS"
+3. Colar no main.py linha ~9676 dentro do dicionário image_mappings
+4. python3 fix_photo_urls.py
+5. python3 diagnose_photos.py
+
+
+===================================================================================
+RESULTADO ESPERADO
+===================================================================================
+
+Antes:  102 fotos válidas, 179 com placeholder
+Depois: 256 fotos válidas, 25 com placeholder
+
+Cobertura: 91% ✅
+
+
+===================================================================================
+NOTAS
+===================================================================================
+
+- Os mapeamentos gerados usam códigos inferidos de modelos similares
+- Algumas fotos podem não ser 100% exatas mas são do mesmo tipo de carro
+- Para modelos muito específicos, pode ser necessário encontrar o código
+  manualmente no site do CarJet
+- A base de dados car_images.db é atualizada automaticamente durante o scraping
+
+
+===================================================================================
+TROUBLESHOOTING
+===================================================================================
+
+Se após adicionar os mapeamentos as fotos ainda não aparecerem:
+
+1. Verificar se main.py foi guardado corretamente
+2. Reiniciar o servidor (se estiver a correr)
+3. Executar fix_photo_urls.py novamente
+4. Verificar logs: tail -f server.log | grep PHOTOS
+5. Testar uma foto específica:
+   curl http://localhost:8000/api/vehicles/fiat%20500/photo -o test.jpg
+
+
+===================================================================================
