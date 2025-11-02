@@ -10608,7 +10608,12 @@ async def export_automated_prices_excel(request: Request):
             'LVMR': 'Opel Vivaro'
         }
         
-        internal_groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
+        # Use SIPP codes in the EXACT order from original Abbycar.xlsx
+        sipp_codes_order = [
+            'MDMV', 'MDMR', 'MCMV', 'NDMR', 'EDMV', 'HDMV', 'MDAR', 'EDAV', 'MDAV', 'EDAR',
+            'CFMR', 'DFMR', 'MTMR', 'CFMV', 'IWMR', 'DFMV', 'IWMV', 'CFAR', 'CGAR', 'CFAV',
+            'SVMR', 'SVMD', 'SVAD', 'SVMV', 'SVAR', 'LVMD', 'LVMR'
+        ]
         
         # Price calculation logic based on periods
         def calculate_price_for_day(group_prices, day):
@@ -10634,8 +10639,9 @@ async def export_automated_prices_excel(request: Request):
         
         # Fill data rows - EXACT format from original
         row_num = 2
-        for internal_group in internal_groups:
-            sipp_code = group_to_sipp.get(internal_group, internal_group)
+        for sipp_code in sipp_codes_order:
+            # Get internal group from SIPP code
+            internal_group = car_group_mapping.get(sipp_code, sipp_code)
             model_example = sipp_to_model.get(sipp_code, '')
             group_prices = prices.get(internal_group, {})
             
