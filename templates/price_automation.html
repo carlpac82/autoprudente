@@ -729,6 +729,17 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Download Excel Button -->
+        <div class="bg-white shadow p-4 mt-4 flex justify-end">
+            <button onclick="downloadAutomatedPricesExcel()" 
+                    class="px-6 py-3 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8c] transition-colors font-medium flex items-center gap-2 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Download Excel (Abbycar Format)
+            </button>
+        </div>
 
         </div>
 
@@ -2382,6 +2393,70 @@
                 c4_1day: 152, c4_2days: 170, c4_3days: 210,
                 c5_1day: 175, c5_2days: 190, c5_3days: 240
             };
+        }
+        
+        // ===== DOWNLOAD EXCEL (ABBYCAR FORMAT) =====
+        
+        async function downloadAutomatedPricesExcel() {
+            try {
+                showNotification('📊 Generating Excel file...', 'info');
+                
+                // Get location and date
+                const location = document.getElementById('locationAuto')?.value || 'Unknown';
+                const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+                
+                // Collect prices from table (only AUTO column)
+                const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+                const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+                
+                const prices = {};
+                
+                groups.forEach(group => {
+                    prices[group] = {};
+                    days.forEach(day => {
+                        const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
+                        if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                            prices[group][day] = parseFloat(inputAuto.value);
+                        }
+                    });
+                });
+                
+                console.log('📊 Collected prices:', prices);
+                
+                // Send to backend
+                const response = await fetch('/api/export-automated-prices-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: location,
+                        date: date,
+                        prices: prices
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate Excel file');
+                }
+                
+                // Download file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification('✅ Excel file downloaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error downloading Excel:', error);
+                showNotification('❌ Error generating Excel file: ' + error.message, 'error');
+            }
         }
         
         // ===== HISTÓRICO =====

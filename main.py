@@ -10393,6 +10393,117 @@ async def download_export_history(request: Request, export_id: int):
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
+@app.post("/api/export-automated-prices-excel")
+async def export_automated_prices_excel(request: Request):
+    """Export automated prices to Excel (Abbycar format)"""
+    require_auth(request)
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from datetime import datetime
+        import io
+        
+        data = await request.json()
+        location = data.get('location', 'Unknown')
+        date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
+        prices = data.get('prices', {})  # { 'B1': { '1': 25.00, '2': 24.50, ... }, 'B2': {...}, ... }
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Automated Prices"
+        
+        # Styles
+        header_fill = PatternFill(start_color="009cb6", end_color="009cb6", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        cell_alignment = Alignment(horizontal="center", vertical="center")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Header row 1: Title
+        ws.merge_cells('A1:P1')
+        ws['A1'] = f"AUTOMATED PRICES - {location} - {date}"
+        ws['A1'].font = Font(bold=True, size=14, color="009cb6")
+        ws['A1'].alignment = header_alignment
+        
+        # Header row 2: Column names
+        days_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60]
+        
+        ws['A3'] = "Group"
+        ws['A3'].fill = header_fill
+        ws['A3'].font = header_font
+        ws['A3'].alignment = header_alignment
+        ws['A3'].border = border
+        
+        for idx, day in enumerate(days_columns, start=2):
+            col_letter = chr(64 + idx)  # B, C, D, ...
+            cell = ws[f'{col_letter}3']
+            cell.value = f"{day} day{'s' if day > 1 else ''}"
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+            cell.border = border
+        
+        # Data rows
+        groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
+        
+        for row_idx, group in enumerate(groups, start=4):
+            # Group name
+            ws[f'A{row_idx}'] = group
+            ws[f'A{row_idx}'].font = Font(bold=True, color="009cb6")
+            ws[f'A{row_idx}'].alignment = cell_alignment
+            ws[f'A{row_idx}'].border = border
+            
+            # Prices for each day
+            group_prices = prices.get(group, {})
+            for col_idx, day in enumerate(days_columns, start=2):
+                col_letter = chr(64 + col_idx)
+                cell = ws[f'{col_letter}{row_idx}']
+                
+                price = group_prices.get(str(day), '')
+                if price:
+                    cell.value = float(price)
+                    cell.number_format = '0.00€'
+                else:
+                    cell.value = ''
+                
+                cell.alignment = cell_alignment
+                cell.border = border
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 12
+        for idx in range(2, 16):
+            col_letter = chr(64 + idx)
+            ws.column_dimensions[col_letter].width = 10
+        
+        # Save to BytesIO
+        excel_file = io.BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        # Generate filename
+        filename = f"AutomatedPrices_{location.replace(' ', '_')}_{date}.xlsx"
+        
+        from starlette.responses import Response
+        return Response(
+            content=excel_file.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Cache-Control": "no-cache"
+            }
+        )
+        
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
 # ============================================================
 # API ENDPOINTS - LOCALSTORAGE MIGRATION
 # ============================================================
