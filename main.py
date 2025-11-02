@@ -10511,7 +10511,7 @@ async def export_automated_prices_excel(request: Request):
         # Create workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = "Prices"
+        ws.title = "IMPORT"
         
         # Styles
         header_fill = PatternFill(start_color="009cb6", end_color="009cb6", fill_type="solid")
@@ -10526,40 +10526,39 @@ async def export_automated_prices_excel(request: Request):
             bottom=Side(style='thin')
         )
         
-        # Header row 1: Title
-        ws.merge_cells('A1:Q1')
-        ws['A1'] = f"AUTOMATED PRICES - {location} - {date}"
-        ws['A1'].font = Font(bold=True, size=14, color="009cb6")
-        ws['A1'].alignment = header_alignment
-        
-        # Header row 2: Column names
-        days_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28]
-        
         # Determine station code based on location
         station_code = "FAO" if "faro" in location.lower() else "ABF" if "albufeira" in location.lower() else "UNK"
         
-        ws['A3'] = "Station"
-        ws['A3'].fill = header_fill
-        ws['A3'].font = header_font
-        ws['A3'].alignment = header_alignment
-        ws['A3'].border = border
+        # Header row - EXACT format from original Abbycar.xlsx
+        headers = [
+            "Stations",
+            "Start Date",
+            "End Date",
+            "Group",
+            "Model Example (optional)",
+            "CURRENCY",
+            "1 day fixed",
+            "2 days fixed",
+            "3 days fixed",
+            "4 days fixed",
+            "5 days fixed",
+            "6 days fixed",
+            "7 days fixed",
+            "8-10 daily",
+            "11-12 daily",
+            "13-14 daily",
+            "15-21 daily",
+            "22-28 daily"
+        ]
         
-        ws['B3'] = "Group"
-        ws['B3'].fill = header_fill
-        ws['B3'].font = header_font
-        ws['B3'].alignment = header_alignment
-        ws['B3'].border = border
-        
-        for idx, day in enumerate(days_columns, start=3):
-            col_letter = chr(64 + idx)  # C, D, E, ...
-            cell = ws[f'{col_letter}3']
-            cell.value = f"{day} day{'s' if day > 1 else ''}"
+        for col_idx, header in enumerate(headers, start=1):
+            cell = ws.cell(1, col_idx)
+            cell.value = header
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = header_alignment
             cell.border = border
         
-        # Data rows - Use original SIPP codes as group names
         # Map internal group codes to primary SIPP code for display
         group_to_sipp = {
             'B1': 'MDMV',
@@ -10576,6 +10575,37 @@ async def export_automated_prices_excel(request: Request):
             'M1': 'SVMR',
             'M2': 'SVAD',
             'N': 'LVMD'
+        }
+        
+        # Model examples from original Abbycar.xlsx
+        sipp_to_model = {
+            'MDMV': 'Peugeot 108',
+            'MDMR': 'Fiat Panda',
+            'MCMV': 'Citroen C1',
+            'NDMR': 'Toyota Aygo',
+            'EDMV': 'Opel Corsa',
+            'HDMV': 'Ford Fiesta',
+            'MDAR': 'Kia Picanto',
+            'EDAV': 'Citroen C3/Opel Corsa',
+            'MDAV': 'Toyota Aygo',
+            'EDAR': 'Opel Corsa',
+            'CFMR': 'Seat Arona',
+            'DFMR': 'Kia Stonic',
+            'MTMR': 'Fiat 500 Cabrio',
+            'CFMV': 'Peugeot 2008',
+            'IWMR': 'Peugeot 308 SW',
+            'DFMV': 'Citroen C4',
+            'IWMV': 'Opel Astra STW',
+            'CFAR': 'Seat Arona',
+            'CGAR': 'Citroen C3 Aircross',
+            'CFAV': 'VW T-Cross',
+            'SVMR': 'Dacia Jogger SL Extreme',
+            'SVMD': 'Citroen Grand C4',
+            'SVAD': 'Citroen Grand C4 Automatic',
+            'SVMV': 'Peugeot Rifter',
+            'SVAR': 'Peugeot Rifter Automatic',
+            'LVMD': 'Fiat Talento',
+            'LVMR': 'Opel Vivaro'
         }
         
         internal_groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
@@ -10604,27 +10634,63 @@ async def export_automated_prices_excel(request: Request):
             low_deposit_groups = list(set([car_group_mapping[sipp] for sipp in low_deposit_sipp_codes if sipp in car_group_mapping]))
             # Result: ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'J1', 'J2', 'L1', 'M1', 'M2', 'N']
         
-        for row_idx, internal_group in enumerate(internal_groups, start=4):
-            # Station code
-            ws[f'A{row_idx}'] = station_code
-            ws[f'A{row_idx}'].font = Font(bold=True, color="009cb6")
-            ws[f'A{row_idx}'].alignment = cell_alignment
-            ws[f'A{row_idx}'].border = border
-            
-            # Group name - Use SIPP code instead of internal code
+        # Fill data rows - EXACT format from original
+        row_num = 2
+        for internal_group in internal_groups:
             sipp_code = group_to_sipp.get(internal_group, internal_group)
-            ws[f'B{row_idx}'] = sipp_code
-            ws[f'B{row_idx}'].font = Font(bold=True, color="009cb6")
-            ws[f'B{row_idx}'].alignment = cell_alignment
-            ws[f'B{row_idx}'].border = border
-            
-            # Prices for each day - Use internal group code to get prices
+            model_example = sipp_to_model.get(sipp_code, '')
             group_prices = prices.get(internal_group, {})
-            for col_idx, day in enumerate(days_columns, start=3):
-                col_letter = chr(64 + col_idx)
-                cell = ws[f'{col_letter}{row_idx}']
-                
-                price = calculate_price_for_day(group_prices, day)
+            
+            # Column 1: Stations
+            ws.cell(row_num, 1).value = station_code
+            ws.cell(row_num, 1).border = border
+            ws.cell(row_num, 1).alignment = cell_alignment
+            
+            # Column 2: Start Date (EMPTY - only filled when downloading by period)
+            ws.cell(row_num, 2).value = ''
+            ws.cell(row_num, 2).border = border
+            ws.cell(row_num, 2).alignment = cell_alignment
+            
+            # Column 3: End Date (EMPTY - only filled when downloading by period)
+            ws.cell(row_num, 3).value = ''
+            ws.cell(row_num, 3).border = border
+            ws.cell(row_num, 3).alignment = cell_alignment
+            
+            # Column 4: Group (SIPP Code)
+            ws.cell(row_num, 4).value = sipp_code
+            ws.cell(row_num, 4).border = border
+            ws.cell(row_num, 4).alignment = cell_alignment
+            ws.cell(row_num, 4).font = Font(bold=True, color="009cb6")
+            
+            # Column 5: Model Example (optional)
+            ws.cell(row_num, 5).value = model_example
+            ws.cell(row_num, 5).border = border
+            ws.cell(row_num, 5).alignment = Alignment(horizontal="left", vertical="center")
+            
+            # Column 6: CURRENCY
+            ws.cell(row_num, 6).value = "EUR"
+            ws.cell(row_num, 6).border = border
+            ws.cell(row_num, 6).alignment = cell_alignment
+            
+            # Columns 7-18: Prices (1 day fixed through 22-28 daily)
+            # Map: 1-7 days fixed, then 8-10, 11-12, 13-14, 15-21, 22-28 daily
+            price_columns = [
+                ('1', 7),   # 1 day fixed
+                ('2', 8),   # 2 days fixed
+                ('3', 9),   # 3 days fixed
+                ('4', 10),  # 4 days fixed
+                ('5', 11),  # 5 days fixed
+                ('6', 12),  # 6 days fixed
+                ('7', 13),  # 7 days fixed
+                ('8', 14),  # 8-10 daily
+                ('9', 15),  # 11-12 daily
+                ('14', 16), # 13-14 daily
+                ('22', 17), # 15-21 daily
+                ('28', 18)  # 22-28 daily
+            ]
+            
+            for day_key, col_idx in price_columns:
+                price = calculate_price_for_day(group_prices, int(day_key))
                 if price:
                     # Apply Abbycar adjustment percentage
                     total_adjustment = abbycar_adjustment
@@ -10634,119 +10700,25 @@ async def export_automated_prices_excel(request: Request):
                         total_adjustment += abbycar_low_deposit_adjustment
                     
                     adjusted_price = float(price) * (1 + total_adjustment / 100)
-                    cell.value = adjusted_price
-                    cell.number_format = '0.00€'
+                    ws.cell(row_num, col_idx).value = adjusted_price
+                    ws.cell(row_num, col_idx).number_format = '0.00'
                 else:
-                    cell.value = ''
+                    ws.cell(row_num, col_idx).value = ''
                 
-                cell.alignment = cell_alignment
-                cell.border = border
+                ws.cell(row_num, col_idx).border = border
+                ws.cell(row_num, col_idx).alignment = cell_alignment
+            
+            row_num += 1
         
         # Adjust column widths
-        ws.column_dimensions['A'].width = 10  # Station
-        ws.column_dimensions['B'].width = 12  # Group
-        for idx in range(3, 17):
-            col_letter = chr(64 + idx)
-            ws.column_dimensions[col_letter].width = 10
-        
-        # ===== CREATE SECOND SHEET: CAR GROUPS =====
-        ws2 = wb.create_sheet(title="Car Groups")
-        
-        # Header
-        ws2['A1'] = "SIPP Code"
-        ws2['A1'].fill = header_fill
-        ws2['A1'].font = header_font
-        ws2['A1'].alignment = header_alignment
-        ws2['A1'].border = border
-        
-        ws2['B1'] = "Group"
-        ws2['B1'].fill = header_fill
-        ws2['B1'].font = header_font
-        ws2['B1'].alignment = header_alignment
-        ws2['B1'].border = border
-        
-        ws2['C1'] = "Description"
-        ws2['C1'].fill = header_fill
-        ws2['C1'].font = header_font
-        ws2['C1'].alignment = header_alignment
-        ws2['C1'].border = border
-        
-        ws2['D1'] = "StartDate"
-        ws2['D1'].fill = header_fill
-        ws2['D1'].font = header_font
-        ws2['D1'].alignment = header_alignment
-        ws2['D1'].border = border
-        
-        ws2['E1'] = "EndDate"
-        ws2['E1'].fill = header_fill
-        ws2['E1'].font = header_font
-        ws2['E1'].alignment = header_alignment
-        ws2['E1'].border = border
-        
-        # Car descriptions
-        car_descriptions = {
-            'MDMV': 'Mini 4 Doors Manual',
-            'MCMV': 'Mini Coupe Manual',
-            'EDMV': 'Economy Manual',
-            'NDMR': 'Economy 4 Doors Manual',
-            'MDMR': 'Mini 4 Doors Manual',
-            'HDMV': 'Mini Elite 4 Doors Manual',
-            'MDAR': 'Mini Auto',
-            'MDAV': 'Mini 4 Doors Auto',
-            'EDAV': 'Economy Auto',
-            'EDAR': 'Economy Auto',
-            'CFMR': 'Compact Manual',
-            'DFMR': 'Compact 4 Doors Manual',
-            'MTMR': 'Mini Elite Manual',
-            'CFMV': 'Compact Manual',
-            'DFMV': 'Compact 4 Doors Manual',
-            'IWMR': 'Intermediate Wagon Manual',
-            'IWMV': 'Intermediate Wagon Manual',
-            'CFAR': 'Compact Auto',
-            'CGAR': 'Compact Auto',
-            'CFAV': 'Compact Auto',
-            'SVMR': 'Standard Manual',
-            'SVMD': 'Standard Manual',
-            'SVMV': 'Standard Manual',
-            'SVAD': 'Standard Auto',
-            'SVAR': 'Standard Auto',
-            'LVMD': 'Large Manual',
-            'LVMR': 'Large Manual'
-        }
-        
-        # Fill data
-        row = 2
-        for sipp_code, group in sorted(car_group_mapping.items()):
-            ws2[f'A{row}'] = sipp_code
-            ws2[f'A{row}'].border = border
-            ws2[f'A{row}'].alignment = cell_alignment
-            
-            ws2[f'B{row}'] = group
-            ws2[f'B{row}'].border = border
-            ws2[f'B{row}'].alignment = cell_alignment
-            ws2[f'B{row}'].font = Font(bold=True, color="009cb6")
-            
-            ws2[f'C{row}'] = car_descriptions.get(sipp_code, '')
-            ws2[f'C{row}'].border = border
-            ws2[f'C{row}'].alignment = Alignment(horizontal="left", vertical="center")
-            
-            # StartDate and EndDate - LEAVE EMPTY (only filled when downloading by period)
-            ws2[f'D{row}'] = ''
-            ws2[f'D{row}'].border = border
-            ws2[f'D{row}'].alignment = cell_alignment
-            
-            ws2[f'E{row}'] = ''
-            ws2[f'E{row}'].border = border
-            ws2[f'E{row}'].alignment = cell_alignment
-            
-            row += 1
-        
-        # Adjust column widths
-        ws2.column_dimensions['A'].width = 15
-        ws2.column_dimensions['B'].width = 10
-        ws2.column_dimensions['C'].width = 30
-        ws2.column_dimensions['D'].width = 15
-        ws2.column_dimensions['E'].width = 15
+        ws.column_dimensions['A'].width = 10   # Stations
+        ws.column_dimensions['B'].width = 12   # Start Date
+        ws.column_dimensions['C'].width = 12   # End Date
+        ws.column_dimensions['D'].width = 10   # Group
+        ws.column_dimensions['E'].width = 25   # Model Example
+        ws.column_dimensions['F'].width = 10   # CURRENCY
+        for col_idx in range(7, 19):
+            ws.column_dimensions[chr(64 + col_idx)].width = 12
         
         # Save to BytesIO
         excel_file = io.BytesIO()
