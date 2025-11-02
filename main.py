@@ -10531,8 +10531,26 @@ async def export_automated_prices_excel(request: Request):
             cell.alignment = header_alignment
             cell.border = border
         
-        # Data rows
-        groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
+        # Data rows - Use original SIPP codes as group names
+        # Map internal group codes to primary SIPP code for display
+        group_to_sipp = {
+            'B1': 'MDMV',
+            'B2': 'EDMV',
+            'D': 'MDMR',
+            'E1': 'MDAR',
+            'E2': 'EDAV',
+            'F': 'CFMR',
+            'G': 'MTMR',
+            'J1': 'CFMV',
+            'J2': 'IWMR',
+            'L1': 'CFAR',
+            'L2': 'CGAR',
+            'M1': 'SVMR',
+            'M2': 'SVAD',
+            'N': 'LVMD'
+        }
+        
+        internal_groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
         
         # Price calculation logic based on periods
         def calculate_price_for_day(group_prices, day):
@@ -10577,15 +10595,16 @@ async def export_automated_prices_excel(request: Request):
         # User will specify which groups are Low Deposit
         low_deposit_groups = []  # Will be populated based on user configuration
         
-        for row_idx, group in enumerate(groups, start=4):
-            # Group name
-            ws[f'A{row_idx}'] = group
+        for row_idx, internal_group in enumerate(internal_groups, start=4):
+            # Group name - Use SIPP code instead of internal code
+            sipp_code = group_to_sipp.get(internal_group, internal_group)
+            ws[f'A{row_idx}'] = sipp_code
             ws[f'A{row_idx}'].font = Font(bold=True, color="009cb6")
             ws[f'A{row_idx}'].alignment = cell_alignment
             ws[f'A{row_idx}'].border = border
             
-            # Prices for each day
-            group_prices = prices.get(group, {})
+            # Prices for each day - Use internal group code to get prices
+            group_prices = prices.get(internal_group, {})
             for col_idx, day in enumerate(days_columns, start=2):
                 col_letter = chr(64 + col_idx)
                 cell = ws[f'{col_letter}{row_idx}']
@@ -10596,7 +10615,7 @@ async def export_automated_prices_excel(request: Request):
                     total_adjustment = abbycar_adjustment
                     
                     # Add Low Deposit adjustment if group is in Low Deposit list
-                    if group in low_deposit_groups:
+                    if internal_group in low_deposit_groups:
                         total_adjustment += abbycar_low_deposit_adjustment
                     
                     adjusted_price = float(price) * (1 + total_adjustment / 100)
