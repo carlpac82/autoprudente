@@ -877,11 +877,17 @@
                         <button onclick="switchHistoryTab('automated')" id="historyTabAutomated" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
                             Automated Prices
                         </button>
-                        <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                            📥 Downloads
+                        <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                            </svg>
+                            Downloads
                         </button>
-                        <button onclick="switchHistoryTab('calendar')" id="historyTabCalendar" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                            📅 Calendar Scans
+                        <button onclick="switchHistoryTab('calendar')" id="historyTabCalendar" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            Calendar Scans
                         </button>
                     </nav>
                 </div>
@@ -2686,7 +2692,7 @@
                                     <div class="text-xs font-semibold text-purple-600">AI SUGGESTION</div>
                                     <div class="text-xs text-gray-600 truncate">Group ${grupo}</div>
                                 </div>
-                                <div>
+                                <div class="flex flex-col items-end gap-1">
                                     <div class="font-bold text-sm text-purple-600">${item.price.toFixed(2)}€</div>
                                     <svg class="w-4 h-4 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
