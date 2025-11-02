@@ -10625,14 +10625,12 @@ async def export_automated_prices_excel(request: Request):
         abbycar_low_deposit_enabled = _get_abbycar_low_deposit_enabled()
         abbycar_low_deposit_adjustment = _get_abbycar_low_deposit_adjustment()
         
-        # Define Low Deposit groups (only if enabled)
+        # Define Low Deposit groups (ALWAYS defined, but only filled if enabled)
         # SIPP codes: MCMV, NDMR, HDMV, MDAV, EDAR, DFMR, DFMV, IWMV, CFAV, SVMV, SVAR, LVMR
         # Map to internal groups:
-        low_deposit_groups = []
-        if abbycar_low_deposit_enabled:
-            low_deposit_sipp_codes = ['MCMV', 'NDMR', 'HDMV', 'MDAV', 'EDAR', 'DFMR', 'DFMV', 'IWMV', 'CFAV', 'SVMV', 'SVAR', 'LVMR']
-            low_deposit_groups = list(set([car_group_mapping[sipp] for sipp in low_deposit_sipp_codes if sipp in car_group_mapping]))
-            # Result: ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'J1', 'J2', 'L1', 'M1', 'M2', 'N']
+        low_deposit_sipp_codes = ['MCMV', 'NDMR', 'HDMV', 'MDAV', 'EDAR', 'DFMR', 'DFMV', 'IWMV', 'CFAV', 'SVMV', 'SVAR', 'LVMR']
+        low_deposit_groups = list(set([car_group_mapping[sipp] for sipp in low_deposit_sipp_codes if sipp in car_group_mapping]))
+        # Result: ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'J1', 'J2', 'L1', 'M1', 'M2', 'N']
         
         # Fill data rows - EXACT format from original
         row_num = 2
@@ -10691,18 +10689,24 @@ async def export_automated_prices_excel(request: Request):
             
             for day_key, col_idx in price_columns:
                 price = calculate_price_for_day(group_prices, int(day_key))
-                if price:
+                
+                # Check if this is a Low Deposit group and if it's disabled
+                is_low_deposit_group = internal_group in low_deposit_groups
+                should_skip_price = is_low_deposit_group and not abbycar_low_deposit_enabled
+                
+                if price and not should_skip_price:
                     # Apply Abbycar adjustment percentage
                     total_adjustment = abbycar_adjustment
                     
-                    # Add Low Deposit adjustment if group is in Low Deposit list
-                    if internal_group in low_deposit_groups:
+                    # Add Low Deposit adjustment if group is in Low Deposit list AND enabled
+                    if is_low_deposit_group and abbycar_low_deposit_enabled:
                         total_adjustment += abbycar_low_deposit_adjustment
                     
                     adjusted_price = float(price) * (1 + total_adjustment / 100)
                     ws.cell(row_num, col_idx).value = adjusted_price
                     ws.cell(row_num, col_idx).number_format = '0.00'
                 else:
+                    # Leave empty if: no price OR (Low Deposit group AND disabled)
                     ws.cell(row_num, col_idx).value = ''
                 
                 ws.cell(row_num, col_idx).border = border
