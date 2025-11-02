@@ -10645,36 +10645,52 @@ async def export_automated_prices_excel(request: Request):
             model_example = sipp_to_model.get(sipp_code, '')
             group_prices = prices.get(internal_group, {})
             
+            # Check if this is a Low Deposit group for highlighting
+            is_low_deposit_group = internal_group in low_deposit_groups
+            low_deposit_fill = PatternFill(start_color="FFF9E6", end_color="FFF9E6", fill_type="solid") if is_low_deposit_group else None
+            
             # Column 1: Stations
             ws.cell(row_num, 1).value = station_code
             ws.cell(row_num, 1).border = border
             ws.cell(row_num, 1).alignment = cell_alignment
+            if low_deposit_fill:
+                ws.cell(row_num, 1).fill = low_deposit_fill
             
             # Column 2: Start Date (EMPTY - only filled when downloading by period)
             ws.cell(row_num, 2).value = ''
             ws.cell(row_num, 2).border = border
             ws.cell(row_num, 2).alignment = cell_alignment
+            if low_deposit_fill:
+                ws.cell(row_num, 2).fill = low_deposit_fill
             
             # Column 3: End Date (EMPTY - only filled when downloading by period)
             ws.cell(row_num, 3).value = ''
             ws.cell(row_num, 3).border = border
             ws.cell(row_num, 3).alignment = cell_alignment
+            if low_deposit_fill:
+                ws.cell(row_num, 3).fill = low_deposit_fill
             
             # Column 4: Group (SIPP Code)
             ws.cell(row_num, 4).value = sipp_code
             ws.cell(row_num, 4).border = border
             ws.cell(row_num, 4).alignment = cell_alignment
-            ws.cell(row_num, 4).font = Font(bold=True, color="009cb6")
+            ws.cell(row_num, 4).font = Font(bold=True, color="f4ad0f" if is_low_deposit_group else "009cb6")
+            if low_deposit_fill:
+                ws.cell(row_num, 4).fill = low_deposit_fill
             
             # Column 5: Model Example (optional)
             ws.cell(row_num, 5).value = model_example
             ws.cell(row_num, 5).border = border
             ws.cell(row_num, 5).alignment = Alignment(horizontal="left", vertical="center")
+            if low_deposit_fill:
+                ws.cell(row_num, 5).fill = low_deposit_fill
             
             # Column 6: CURRENCY
             ws.cell(row_num, 6).value = "EUR"
             ws.cell(row_num, 6).border = border
             ws.cell(row_num, 6).alignment = cell_alignment
+            if low_deposit_fill:
+                ws.cell(row_num, 6).fill = low_deposit_fill
             
             # Columns 7-18: Prices (1 day fixed through 22-28 daily)
             # Map: 1-7 days fixed, then 8-10, 11-12, 13-14, 15-21, 22-28 daily
@@ -10697,7 +10713,6 @@ async def export_automated_prices_excel(request: Request):
                 price = calculate_price_for_day(group_prices, int(day_key))
                 
                 # Check if this is a Low Deposit group and if it's disabled
-                is_low_deposit_group = internal_group in low_deposit_groups
                 should_skip_price = is_low_deposit_group and not abbycar_low_deposit_enabled
                 
                 if price and not should_skip_price:
@@ -10717,6 +10732,8 @@ async def export_automated_prices_excel(request: Request):
                 
                 ws.cell(row_num, col_idx).border = border
                 ws.cell(row_num, col_idx).alignment = cell_alignment
+                if low_deposit_fill:
+                    ws.cell(row_num, col_idx).fill = low_deposit_fill
             
             row_num += 1
         
