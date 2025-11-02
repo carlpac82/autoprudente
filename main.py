@@ -10990,12 +10990,12 @@ async def fetch_car_photos(request: Request):
                         end_dt = start_dt + timedelta(days=days)
                         
                         # Call existing scraping function
-                        items = await _scrape_carjet_with_playwright(
-                            location=location,
-                            start_dt=start_dt,
-                            end_dt=end_dt,
-                            quick=1  # Fast mode
-                        )
+                        items = scrape_carjet_direct(location, start_dt, end_dt, quick=1)
+                        
+                        # Apply normalizations to get 'group' field
+                        if items:
+                            items = apply_price_adjustments(items, "https://www.carjet.com")
+                            items = normalize_and_sort(items, supplier_priority=None)
                         
                         # Extract photos from items
                         for item in items:
