@@ -11002,9 +11002,13 @@ async def fetch_car_photos(request: Request):
                             car_name = item.get('car', '').strip().lower()
                             photo_url = item.get('photo', '')
                             
+                            # Clean car name (remove "ou similar" and extra spaces)
+                            if ' ou similar' in car_name:
+                                car_name = car_name.split(' ou similar')[0].strip()
+                            
                             if car_name and photo_url and car_name not in all_photos:
                                 all_photos[car_name] = photo_url
-                                print(f"  📸 Found photo for: {car_name}")
+                                print(f"  📸 Found photo for: {car_name} -> {photo_url}")
                         
                         print(f"✅ Search completed: {len(items)} cars found, total photos: {len(all_photos)}")
                         
