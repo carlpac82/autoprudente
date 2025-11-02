@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/notifications.js"></script>
 </head>
 <body class="bg-gray-50">
     <!-- Header -->
@@ -305,86 +306,7 @@
         let currentTab = 'all';
         let editingVehicle = null;
         
-        // Custom Notification System
-        let confirmResolve = null;
-        
-        function showNotification(message, type = 'info') {
-            const container = document.getElementById('notificationContainer');
-            const notification = document.createElement('div');
-            
-            const icons = {
-                success: '<svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-                error: '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-                warning: '<svg class="w-6 h-6 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
-                info: '<svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
-            };
-            
-            notification.className = 'bg-white rounded-lg shadow-lg p-4 flex items-start gap-3 min-w-[300px] max-w-md transform transition-all duration-300 translate-x-full';
-            notification.innerHTML = `
-                ${icons[type]}
-                <div class="flex-1">
-                    <p class="text-sm text-gray-800">${message}</p>
-                </div>
-                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            `;
-            
-            container.appendChild(notification);
-            
-            // Animate in
-            setTimeout(() => {
-                notification.classList.remove('translate-x-full');
-            }, 10);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                notification.classList.add('translate-x-full');
-                setTimeout(() => notification.remove(), 300);
-            }, 5000);
-        }
-        
-        function customConfirm(title, message, type = 'info') {
-            return new Promise((resolve) => {
-                confirmResolve = resolve;
-                
-                const modal = document.getElementById('customConfirmModal');
-                const iconContainer = document.getElementById('confirmIcon');
-                const titleElement = document.getElementById('confirmTitle');
-                const messageElement = document.getElementById('confirmMessage');
-                const confirmButton = document.getElementById('confirmButton');
-                
-                const icons = {
-                    info: '<svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-                    warning: '<svg class="w-8 h-8 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
-                    search: '<svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'
-                };
-                
-                iconContainer.innerHTML = icons[type] || icons.info;
-                titleElement.textContent = title;
-                messageElement.textContent = message;
-                
-                // Set button color based on type
-                if (type === 'warning') {
-                    confirmButton.className = 'px-4 py-2 bg-[#f4ad0f] text-white rounded-lg hover:bg-[#e39e0e] transition-colors';
-                } else {
-                    confirmButton.className = 'px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors';
-                }
-                
-                modal.classList.remove('hidden');
-            });
-        }
-        
-        function resolveConfirm(result) {
-            const modal = document.getElementById('customConfirmModal');
-            modal.classList.add('hidden');
-            if (confirmResolve) {
-                confirmResolve(result);
-                confirmResolve = null;
-            }
-        }
+        // Notification functions are loaded from /static/notifications.js
         
         const categoryToGroup = {
             'MINI 4 Lugares': 'B1',
