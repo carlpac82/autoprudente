@@ -10461,20 +10461,32 @@ async def export_automated_prices_excel(request: Request):
         # Car group mapping (SIPP codes to groups)
         car_group_mapping = {
             'MDMV': 'B1',  # Mini 4 Doors Manual
+            'MCMV': 'B1',  # Mini Coupe Manual (same group)
             'EDMV': 'B2',  # Economy Manual
+            'NDMR': 'B2',  # Economy 4 Doors Manual (same group)
             'MDMR': 'D',   # Mini 4 Doors Manual
+            'HDMV': 'D',   # Mini Elite 4 Doors Manual (same group)
             'MDAR': 'E1',  # Mini Auto
+            'MDAV': 'E1',  # Mini 4 Doors Auto (same group)
             'EDAV': 'E2',  # Economy Auto
+            'EDAR': 'E2',  # Economy Auto (same group)
             'CFMR': 'F',   # Compact Manual
+            'DFMR': 'F',   # Compact 4 Doors Manual (same group)
             'MTMR': 'G',   # Mini Elite Manual
             'CFMV': 'J1',  # Compact Manual
+            'DFMV': 'J1',  # Compact 4 Doors Manual (same group)
             'IWMR': 'J2',  # Intermediate Wagon Manual
+            'IWMV': 'J2',  # Intermediate Wagon Manual (same group)
             'CFAR': 'L1',  # Compact Auto
-            'CGAR': 'L1',  # Compact Auto (same group as CFAR)
+            'CGAR': 'L1',  # Compact Auto (same group)
+            'CFAV': 'L1',  # Compact Auto (same group)
             'SVMR': 'M1',  # Standard Manual
-            'SVMD': 'M1',  # Standard Manual (same group as SVMR)
+            'SVMD': 'M1',  # Standard Manual (same group)
+            'SVMV': 'M1',  # Standard Manual (same group)
             'SVAD': 'M2',  # Standard Auto
-            'LVMD': 'N'    # Large Manual
+            'SVAR': 'M2',  # Standard Auto (same group)
+            'LVMD': 'N',   # Large Manual
+            'LVMR': 'N'    # Large Manual (same group)
         }
         
         # Create workbook
@@ -10627,20 +10639,32 @@ async def export_automated_prices_excel(request: Request):
         # Car descriptions
         car_descriptions = {
             'MDMV': 'Mini 4 Doors Manual',
+            'MCMV': 'Mini Coupe Manual',
             'EDMV': 'Economy Manual',
+            'NDMR': 'Economy 4 Doors Manual',
             'MDMR': 'Mini 4 Doors Manual',
+            'HDMV': 'Mini Elite 4 Doors Manual',
             'MDAR': 'Mini Auto',
+            'MDAV': 'Mini 4 Doors Auto',
             'EDAV': 'Economy Auto',
+            'EDAR': 'Economy Auto',
             'CFMR': 'Compact Manual',
+            'DFMR': 'Compact 4 Doors Manual',
             'MTMR': 'Mini Elite Manual',
             'CFMV': 'Compact Manual',
+            'DFMV': 'Compact 4 Doors Manual',
             'IWMR': 'Intermediate Wagon Manual',
+            'IWMV': 'Intermediate Wagon Manual',
             'CFAR': 'Compact Auto',
             'CGAR': 'Compact Auto',
+            'CFAV': 'Compact Auto',
             'SVMR': 'Standard Manual',
             'SVMD': 'Standard Manual',
+            'SVMV': 'Standard Manual',
             'SVAD': 'Standard Auto',
-            'LVMD': 'Large Manual'
+            'SVAR': 'Standard Auto',
+            'LVMD': 'Large Manual',
+            'LVMR': 'Large Manual'
         }
         
         # Fill data
