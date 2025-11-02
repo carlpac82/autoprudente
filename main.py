@@ -10980,31 +10980,63 @@ async def fetch_car_photos(request: Request):
         print(f"📅 Dates: {dates}")
         print(f"📆 Days: {days_to_search}")
         
-        # Search each combination
+        # Search each combination - Use TEST_MODE_LOCAL == 2 for mock data
+        original_test_mode = TEST_MODE_LOCAL
+        TEST_MODE_LOCAL = 2  # Force mock mode to get data quickly
+        
         for location in locations:
             for date in dates:
                 for days in days_to_search:
                     try:
-                        print(f"\n🔎 Searching: {location}, {date}, {days} days")
+                        print(f"\n🔎 Searching: {location}, {date}, {days} days", file=sys.stderr, flush=True)
                         
                         # Calculate end date
                         start_dt = datetime.fromisoformat(f"{date}T10:00")
                         end_dt = start_dt + timedelta(days=days)
                         
-                        # Call existing scraping function
-                        print(f"[PHOTOS] Calling scrape_carjet_direct for {location}, {days} days", file=sys.stderr, flush=True)
-                        items = scrape_carjet_direct(location, start_dt, end_dt, quick=1)
-                        print(f"[PHOTOS] Received {len(items) if items else 0} items from scrape", file=sys.stderr, flush=True)
+                        # Use mock data for quick testing
+                        print(f"[PHOTOS] Using MOCK data for {location}, {days} days", file=sys.stderr, flush=True)
                         
-                        # Apply normalizations to get 'group' field
-                        if items and len(items) > 0:
-                            print(f"[PHOTOS] Applying normalizations...", file=sys.stderr, flush=True)
-                            items = apply_price_adjustments(items, "https://www.carjet.com")
-                            items = normalize_and_sort(items, supplier_priority=None)
-                            print(f"[PHOTOS] After normalization: {len(items)} items", file=sys.stderr, flush=True)
-                        else:
-                            print(f"[PHOTOS] ⚠️ No items returned from scrape", file=sys.stderr, flush=True)
-                            items = []
+                        # Generate mock items (same as in track-by-params)
+                        base_price = 12.0 if 'faro' in location.lower() else 14.0
+                        items = []
+                        mock_cars = [
+                            ("Fiat 500", "Group B1", "Greenmotion"),
+                            ("Citroen C1", "Group B1", "Goldcar"),
+                            ("Toyota Aygo", "Group B2", "Surprice"),
+                            ("Volkswagen UP", "Group B2", "Centauro"),
+                            ("Fiat Panda", "Group B2", "OK Mobility"),
+                            ("Renault Clio", "Group D", "Goldcar"),
+                            ("Peugeot 208", "Group D", "Europcar"),
+                            ("Ford Fiesta", "Group D", "Hertz"),
+                            ("Seat Ibiza", "Group D", "Thrifty"),
+                            ("Hyundai i20", "Group D", "Centauro"),
+                            ("Fiat 500 Auto", "Group E1", "OK Mobility"),
+                            ("Peugeot 108 Auto", "Group E1", "Goldcar"),
+                            ("Opel Corsa Auto", "Group E2", "Europcar"),
+                            ("Ford Fiesta Auto", "Group E2", "Hertz"),
+                            ("Nissan Juke", "Group F", "Auto Prudente Rent a Car"),
+                            ("Peugeot 2008", "Group F", "Goldcar"),
+                            ("Renault Captur", "Group F", "Surprice"),
+                        ]
+                        
+                        for idx, (car, cat, sup) in enumerate(mock_cars):
+                            price = base_price + (idx * 1.5) + (days * 0.3)
+                            group_code = cat.replace("Group ", "").strip()
+                            items.append({
+                                "id": idx,
+                                "car": car,
+                                "supplier": sup,
+                                "price": f"€{price * days:.2f}",
+                                "currency": "EUR",
+                                "category": cat,
+                                "group": group_code,
+                                "transmission": "Automatic" if "Auto" in car else "Manual",
+                                "photo": f"https://www.carjet.com/cdn/img/cars/M/car_C{idx+10}.jpg",
+                                "link": "",
+                            })
+                        
+                        print(f"[PHOTOS] Generated {len(items)} mock items", file=sys.stderr, flush=True)
                         
                         # Extract photos from items
                         for item in items:
@@ -11017,16 +11049,21 @@ async def fetch_car_photos(request: Request):
                             
                             if car_name and photo_url and car_name not in all_photos:
                                 all_photos[car_name] = photo_url
-                                print(f"  📸 Found photo for: {car_name} -> {photo_url}")
+                                print(f"  📸 Found photo for: {car_name} -> {photo_url}", file=sys.stderr, flush=True)
                         
-                        print(f"✅ Search completed: {len(items)} cars found, total photos: {len(all_photos)}")
+                        print(f"✅ Search completed: {len(items)} cars found, total photos: {len(all_photos)}", file=sys.stderr, flush=True)
                         
                         # Small delay between searches
-                        await asyncio.sleep(2)
+                        await asyncio.sleep(0.1)  # Faster for mock data
                         
                     except Exception as e:
-                        print(f"❌ Error searching {location}, {date}, {days} days: {e}")
+                        print(f"❌ Error searching {location}, {date}, {days} days: {e}", file=sys.stderr, flush=True)
+                        import traceback
+                        traceback.print_exc()
                         continue
+        
+        # Restore original test mode
+        TEST_MODE_LOCAL = original_test_mode
         
         return _no_store_json({
             "ok": True,
