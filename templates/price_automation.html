@@ -877,6 +877,9 @@
                         <button onclick="switchHistoryTab('automated')" id="historyTabAutomated" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
                             Automated Prices
                         </button>
+                        <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                            📥 Downloads
+                        </button>
                         <button onclick="switchHistoryTab('calendar')" id="historyTabCalendar" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
                             📅 Calendar Scans
                         </button>
@@ -894,6 +897,13 @@
                 <div id="historyContentAutomated" class="hidden">
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsAutomated">
                         <!-- Meses serão gerados dinamicamente -->
+                    </div>
+                </div>
+                
+                <!-- Downloads History -->
+                <div id="historyContentDownloads" class="hidden">
+                    <div class="space-y-3" id="historyDownloadsList">
+                        <!-- Downloads serão gerados dinamicamente -->
                     </div>
                 </div>
                 
@@ -2038,6 +2048,9 @@
             
             XLSX.writeFile(wb, filename);
             
+            // Save to downloads history
+            saveDownloadToHistory(filename, broker, location);
+            
             // Guardar no histórico
             saveToHistory();
         }
@@ -2177,6 +2190,10 @@
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
+            
+            // Save to downloads history
+            const location = document.getElementById('location').value;
+            saveDownloadToHistory(filename, 'way2rentals', location);
             
             console.log(`✅ Way2Rentals CSV exported: ${filename}`);
             showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
@@ -2440,11 +2457,15 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
+                const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
+                a.download = filename;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+                
+                // Save to downloads history
+                saveDownloadToHistory(filename, 'abbycar', location);
                 
                 showNotification('✅ Excel file downloaded successfully!', 'success');
                 
@@ -2499,17 +2520,21 @@
         function switchHistoryTab(tab) {
             const historyTabCurrent = document.getElementById('historyTabCurrent');
             const historyTabAutomated = document.getElementById('historyTabAutomated');
+            const historyTabDownloads = document.getElementById('historyTabDownloads');
             const historyTabCalendar = document.getElementById('historyTabCalendar');
             const historyContentCurrent = document.getElementById('historyContentCurrent');
             const historyContentAutomated = document.getElementById('historyContentAutomated');
+            const historyContentDownloads = document.getElementById('historyContentDownloads');
             const historyContentCalendar = document.getElementById('historyContentCalendar');
             
             // Reset all history tabs
             historyTabCurrent.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             historyTabAutomated.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
+            historyTabDownloads.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             historyTabCalendar.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             historyContentCurrent.classList.add('hidden');
             historyContentAutomated.classList.add('hidden');
+            historyContentDownloads.classList.add('hidden');
             historyContentCalendar.classList.add('hidden');
             
             // Activate selected history tab
@@ -2519,6 +2544,10 @@
             } else if (tab === 'automated') {
                 historyTabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentAutomated.classList.remove('hidden');
+            } else if (tab === 'downloads') {
+                historyTabDownloads.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
+                historyContentDownloads.classList.remove('hidden');
+                loadDownloadsHistory();
             } else if (tab === 'calendar') {
                 historyTabCalendar.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentCalendar.classList.remove('hidden');
@@ -4213,6 +4242,8 @@
         function downloadExcelAuto(format) {
             if (format === 'way2rentals') {
                 exportWay2RentalsCSVFromAuto();
+            } else if (format === 'abbycar') {
+                downloadAutomatedPricesExcel();
             } else {
                 showNotification('Excel download for automated prices will be implemented soon', 'info');
             }
@@ -4355,6 +4386,10 @@
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
+            
+            // Save to downloads history
+            const locationAuto = document.getElementById('locationAuto').value;
+            saveDownloadToHistory(filename, 'way2rentals', locationAuto);
             
             console.log(`✅ Way2Rentals CSV exported: ${filename}`);
             showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
@@ -6243,6 +6278,133 @@ Continue?`);
             
             loadCalendarScansHistory();
             showNotification('Calendar scan deleted', 'success');
+        }
+        
+        // ===== DOWNLOADS HISTORY =====
+        
+        function loadDownloadsHistory() {
+            const container = document.getElementById('historyDownloadsList');
+            const history = JSON.parse(localStorage.getItem('downloadsHistory') || '[]');
+            
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="text-lg font-medium">No downloads yet</p>
+                        <p class="text-sm mt-2">Download Excel files to see history here</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort by date (most recent first)
+            const sortedHistory = history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            container.innerHTML = sortedHistory.map(download => {
+                const date = new Date(download.timestamp);
+                const formattedDate = date.toLocaleString('pt-PT', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                const formatName = download.format === 'abbycar' ? 'Abbycar' : download.format === 'way2rentals' ? 'Way2Rentals' : 'AutoPrudente';
+                
+                // SVG icons monocromáticos na cor do website
+                let formatIcon = '';
+                if (download.format === 'abbycar') {
+                    formatIcon = `
+                        <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    `;
+                } else if (download.format === 'way2rentals') {
+                    formatIcon = `
+                        <svg class="w-6 h-6 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    `;
+                } else {
+                    formatIcon = `
+                        <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                    `;
+                }
+                
+                return `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    ${formatIcon}
+                                    <h4 class="font-semibold text-gray-900">${download.filename}</h4>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm text-gray-600 mt-2">
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        ${formattedDate}
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        ${download.location}
+                                    </span>
+                                    <span class="text-xs text-gray-500">
+                                        • ${formatName}
+                                    </span>
+                                </div>
+                            </div>
+                            <button onclick="deleteDownload('${download.id}')" class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function saveDownloadToHistory(filename, format, location) {
+            const history = JSON.parse(localStorage.getItem('downloadsHistory') || '[]');
+            
+            const download = {
+                id: Date.now().toString(),
+                filename: filename,
+                format: format,
+                location: location,
+                timestamp: new Date().toISOString()
+            };
+            
+            history.unshift(download);
+            
+            // Keep only last 50 downloads
+            if (history.length > 50) {
+                history.splice(50);
+            }
+            
+            localStorage.setItem('downloadsHistory', JSON.stringify(history));
+            console.log(`📥 Download saved to history: ${filename}`);
+        }
+        
+        function deleteDownload(downloadId) {
+            if (!confirm('Delete this download from history?')) {
+                return;
+            }
+            
+            let history = JSON.parse(localStorage.getItem('downloadsHistory') || '[]');
+            history = history.filter(d => d.id !== downloadId);
+            localStorage.setItem('downloadsHistory', JSON.stringify(history));
+            
+            loadDownloadsHistory();
+            showNotification('Download deleted from history', 'success');
         }
 
         // ===== DATE SELECTION FOR AUTOMATED PRICES =====
