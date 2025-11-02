@@ -104,6 +104,30 @@
         </div>
     </main>
     
+    <!-- Custom Notification Container -->
+    <div id="notificationContainer" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+    
+    <!-- Custom Confirm Modal -->
+    <div id="customConfirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <div class="flex items-start gap-3 mb-4">
+                <div id="confirmIcon" class="flex-shrink-0"></div>
+                <div class="flex-1">
+                    <h3 id="confirmTitle" class="text-lg font-semibold text-gray-900 mb-2"></h3>
+                    <p id="confirmMessage" class="text-sm text-gray-600 whitespace-pre-line"></p>
+                </div>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button onclick="resolveConfirm(false)" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="resolveConfirm(true)" id="confirmButton" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Modal Nova Categoria -->
     <div id="newCategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg max-w-md w-full p-6">
@@ -280,6 +304,87 @@
         let uncategorizedVehicles = [];
         let currentTab = 'all';
         let editingVehicle = null;
+        
+        // Custom Notification System
+        let confirmResolve = null;
+        
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            
+            const icons = {
+                success: '<svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                error: '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                warning: '<svg class="w-6 h-6 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
+                info: '<svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            };
+            
+            notification.className = 'bg-white rounded-lg shadow-lg p-4 flex items-start gap-3 min-w-[300px] max-w-md transform transition-all duration-300 translate-x-full';
+            notification.innerHTML = `
+                ${icons[type]}
+                <div class="flex-1">
+                    <p class="text-sm text-gray-800">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 10);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+        
+        function customConfirm(title, message, type = 'info') {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                
+                const modal = document.getElementById('customConfirmModal');
+                const iconContainer = document.getElementById('confirmIcon');
+                const titleElement = document.getElementById('confirmTitle');
+                const messageElement = document.getElementById('confirmMessage');
+                const confirmButton = document.getElementById('confirmButton');
+                
+                const icons = {
+                    info: '<svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                    warning: '<svg class="w-8 h-8 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
+                    search: '<svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'
+                };
+                
+                iconContainer.innerHTML = icons[type] || icons.info;
+                titleElement.textContent = title;
+                messageElement.textContent = message;
+                
+                // Set button color based on type
+                if (type === 'warning') {
+                    confirmButton.className = 'px-4 py-2 bg-[#f4ad0f] text-white rounded-lg hover:bg-[#e39e0e] transition-colors';
+                } else {
+                    confirmButton.className = 'px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors';
+                }
+                
+                modal.classList.remove('hidden');
+            });
+        }
+        
+        function resolveConfirm(result) {
+            const modal = document.getElementById('customConfirmModal');
+            modal.classList.add('hidden');
+            if (confirmResolve) {
+                confirmResolve(result);
+                confirmResolve = null;
+            }
+        }
         
         const categoryToGroup = {
             'MINI 4 Lugares': 'B1',
@@ -658,7 +763,13 @@
         
         // Fetch Car Photos from CarJet (replaces downloadAllPhotos)
         async function fetchCarPhotos() {
-            if (!confirm('🔍 This will search CarJet for car photos across multiple locations and dates.\n\nThis may take 5-10 minutes. Continue?')) {
+            const confirmed = await customConfirm(
+                'Fetch Car Photos',
+                'This will search CarJet for car photos across multiple locations and dates.\n\nThis may take 5-10 minutes. Continue?',
+                'search'
+            );
+            
+            if (!confirmed) {
                 return;
             }
             
@@ -678,7 +789,10 @@
                 const data = await response.json();
                 
                 if (data.ok) {
-                    alert(`✅ Photo fetch completed!\n\nFound ${Object.keys(data.photos).length} car photos\n\n${data.message}`);
+                    showNotification(
+                        `Photo fetch completed! Found ${Object.keys(data.photos).length} car photos. ${data.message}`,
+                        'success'
+                    );
                     
                     // TODO: Update vehicle database with photos
                     console.log('📸 Photos found:', data.photos);
@@ -686,10 +800,10 @@
                     // Reload vehicles
                     await loadVehicles();
                 } else {
-                    alert('❌ Error: ' + data.error);
+                    showNotification('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                showNotification('Error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
