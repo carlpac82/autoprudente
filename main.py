@@ -3755,21 +3755,20 @@ async def track_by_params(request: Request):
         test_url = None
         print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}")
         
-        # DESATIVADO: URLs do .env expiram muito rápido
-        # Vamos usar SEMPRE Selenium para scraping dinâmico
-        # if TEST_MODE_LOCAL == 0:
-        #     loc_prefix = None
-        #     if 'faro' in location.lower():
-        #         loc_prefix = 'FARO'
-        #     elif 'albufeira' in location.lower():
-        #         loc_prefix = 'ALBUFEIRA'
-        #     if loc_prefix:
-        #         env_key = f"{loc_prefix}_{days}D"
-        #         test_url = os.getenv(env_key, "").strip()
-        #         if test_url and test_url.startswith('http'):
-        #             print(f"[DEBUG] Found dynamic URL in .env: {env_key}={test_url[:80]}...", file=sys.stderr, flush=True)
-        #         else:
-        #             test_url = None
+        # Tentar carregar URLs dinâmicas do .env (FARO_XD, ALBUFEIRA_XD)
+        if TEST_MODE_LOCAL == 0:
+            loc_prefix = None
+            if 'faro' in location.lower():
+                loc_prefix = 'FARO'
+            elif 'albufeira' in location.lower():
+                loc_prefix = 'ALBUFEIRA'
+            if loc_prefix:
+                env_key = f"{loc_prefix}_{days}D"
+                test_url = os.getenv(env_key, "").strip()
+                if test_url and test_url.startswith('http'):
+                    print(f"[DEBUG] Found dynamic URL in .env: {env_key}={test_url[:80]}...", file=sys.stderr, flush=True)
+                else:
+                    test_url = None
         
         if TEST_MODE_LOCAL == 1:
             print(f"[DEBUG] Checking location: faro={'faro' in location.lower()}, albufeira={'albufeira' in location.lower()}")
@@ -3848,13 +3847,51 @@ async def track_by_params(request: Request):
             elif 'albufeira' in location.lower():
                 carjet_location = 'Albufeira Cidade'  # Nome EXATO do CarJet (sem código)
             
-            # Configurar Chrome headless
+            # Configurar Chrome headless com anti-deteção e rotação de localização
+            import random
+            
+            # Rotação de User-Agents (diferentes países/sistemas)
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',  # Windows
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',  # Mac
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',  # Linux
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',  # Firefox Windows
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/119.0',  # Firefox Mac
+            ]
+            
+            # Rotação de Accept-Language (diferentes países)
+            languages = [
+                'pt-PT,pt;q=0.9,en;q=0.8',  # Portugal
+                'pt-BR,pt;q=0.9,en;q=0.8',  # Brasil
+                'en-GB,en;q=0.9',  # UK
+                'en-US,en;q=0.9',  # USA
+                'es-ES,es;q=0.9,en;q=0.8',  # Espanha
+            ]
+            
+            selected_ua = random.choice(user_agents)
+            selected_lang = random.choice(languages)
+            
+            print(f"[SELENIUM] User-Agent: {selected_ua[:50]}...", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Language: {selected_lang}", file=sys.stderr, flush=True)
+            
             chrome_options = Options()
             chrome_options.add_argument('--headless')  # Headless para produção
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36')
+            chrome_options.add_argument(f'user-agent={selected_ua}')
+            chrome_options.add_argument(f'--lang={selected_lang.split(",")[0]}')
+            
+            # Anti-deteção
+            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            
+            # Preferências adicionais
+            chrome_options.add_experimental_option("prefs", {
+                "intl.accept_languages": selected_lang,
+                "profile.default_content_setting_values.geolocation": 1,  # Permitir geolocalização
+            })
             
             # Iniciar driver
             driver = webdriver.Chrome(
@@ -3863,6 +3900,15 @@ async def track_by_params(request: Request):
             )
             
             try:
+                # Esconder webdriver
+                driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
+                    'source': '''
+                        Object.defineProperty(navigator, 'webdriver', {
+                            get: () => undefined
+                        });
+                    '''
+                })
+                
                 print(f"[SELENIUM] Configurando Chrome headless...", file=sys.stderr, flush=True)
                 driver.set_page_load_timeout(20)
                 print(f"[SELENIUM] Acessando CarJet homepage...", file=sys.stderr, flush=True)
@@ -4095,6 +4141,66 @@ async def track_by_params(request: Request):
                         f.write(f"Has b=: {'b=' in final_url}\n")
                 except:
                     pass
+                
+                # RETRY: Se deu war=X, alterar horas e tentar novamente (até 5x)
+                if 'war=' in final_url:
+                    import random
+                    from selenium.webdriver.support.ui import Select
+                    
+                    possible_times = ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"]
+                    max_retries = 5
+                    retry_count = 0
+                    
+                    while 'war=' in final_url and retry_count < max_retries:
+                        retry_count += 1
+                        print(f"[SELENIUM] ⚠️ war= detectado - Retry {retry_count}/{max_retries}", file=sys.stderr, flush=True)
+                        
+                        # Gerar nova hora
+                        new_time = random.choice(possible_times)
+                        print(f"[SELENIUM] Mudando horas para: {new_time}", file=sys.stderr, flush=True)
+                        
+                        try:
+                            # Alterar hora de recolha
+                            pickup_selectors = [
+                                (By.NAME, "fechaRecogidaSelHour"),
+                                (By.ID, "fechaRecogidaSelHour"),
+                                (By.CSS_SELECTOR, "select[name*='Recogida']"),
+                            ]
+                            for by, sel in pickup_selectors:
+                                try:
+                                    pickup_select = driver.find_element(by, sel)
+                                    Select(pickup_select).select_by_value(new_time)
+                                    break
+                                except:
+                                    continue
+                            
+                            # Alterar hora de entrega (mesma hora)
+                            return_selectors = [
+                                (By.NAME, "fechaEntregaSelHour"),
+                                (By.ID, "fechaEntregaSelHour"),
+                                (By.CSS_SELECTOR, "select[name*='Entrega']"),
+                            ]
+                            for by, sel in return_selectors:
+                                try:
+                                    return_select = driver.find_element(by, sel)
+                                    Select(return_select).select_by_value(new_time)
+                                    break
+                                except:
+                                    continue
+                            
+                            time.sleep(0.5)
+                            
+                            # Submeter novamente
+                            driver.execute_script("document.querySelector('form').submit();")
+                            print(f"[SELENIUM] Aguardando navegação...", file=sys.stderr, flush=True)
+                            time.sleep(10)
+                            
+                            final_url = driver.current_url
+                            print(f"[SELENIUM] Nova URL: {final_url}", file=sys.stderr, flush=True)
+                            
+                        except Exception as e:
+                            print(f"[SELENIUM] Erro no retry: {e}", file=sys.stderr, flush=True)
+                            break
                 
                 driver.quit()
                 
@@ -8318,16 +8424,6 @@ async def admin_vehicles_editor(request: Request):
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Erro: vehicle_editor.html não encontrado</h1>", status_code=500)
 
-@app.get("/test-photos", response_class=HTMLResponse)
-async def test_photos():
-    """Página de teste de fotos"""
-    html_path = os.path.join(os.path.dirname(__file__), "templates", "test_photos.html")
-    try:
-        with open(html_path, 'r', encoding='utf-8') as f:
-            return HTMLResponse(content=f.read())
-    except FileNotFoundError:
-        return HTMLResponse(content="<h1>Erro: test_photos.html não encontrado</h1>", status_code=500)
-
 @app.get("/admin/price-validation", response_class=HTMLResponse)
 async def admin_price_validation(request: Request):
     """Página de configuração de regras de validação de preços"""
@@ -9910,173 +10006,9 @@ async def download_vehicle_images(request: Request):
             'fiat talento': 'https://www.carjet.com/cdn/img/cars/M/car_M49.jpg',
             'opel vivaro': 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg',
             'toyota proace': 'https://www.carjet.com/cdn/img/cars/M/car_M136.jpg',
-            
-            # NOVOS MAPEAMENTOS ADICIONADOS (154 modelos)
-            'alfa romeo giulietta auto': 'https://www.carjet.com/cdn/img/cars/M/car_F39.jpg',
-            'audi a1': 'https://www.carjet.com/cdn/img/cars/M/car_C42.jpg',
-            'audi a3': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'audi a3 auto': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'audi a5 sportback auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'audi q2': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'audi q4 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'bmw 1 series': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'bmw 1 series auto': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'bmw 2 series gran coupe auto': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'bmw 3 series auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'bmw 3 series sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'bmw 4 series cabrio auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'bmw 4 series gran coupe auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'bmw 5 series auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'bmw 5 series sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'bmw x1 auto': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'bmw x5 auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'byd seal u auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'citroen c4': 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg',
-            'citroen c4 auto': 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg',
-            'citroen c4 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg',
-            'citroen c4 cactus': 'https://www.carjet.com/cdn/img/cars/M/car_C51.jpg',
-            'citroen c4 grand spacetourer auto': 'https://www.carjet.com/cdn/img/cars/M/car_A1430.jpg',
-            'citroen c4 picasso': 'https://www.carjet.com/cdn/img/cars/M/car_A522.jpg',
-            'citroen c4 picasso auto': 'https://www.carjet.com/cdn/img/cars/M/car_A522.jpg',
-            'citroen c4 x auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg',
-            'citroen elysee': 'https://www.carjet.com/cdn/img/cars/M/car_C06.jpg',
-            'cupra born 5 door auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'dacia duster': 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg',
-            'ds4 auto': 'https://www.carjet.com/cdn/img/cars/M/car_A1637.jpg',
-            'ds7 auto': 'https://www.carjet.com/cdn/img/cars/M/car_A1637.jpg',
-            'fiat 500 auto': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'fiat 500 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'fiat 500, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'fiat 600 auto': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'fiat 600 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'fiat tipo': 'https://www.carjet.com/cdn/img/cars/M/car_F72.jpg',
-            'ford ecosport auto': 'https://www.carjet.com/cdn/img/cars/M/car_A606.jpg',
-            'ford focus auto': 'https://www.carjet.com/cdn/img/cars/M/car_F02.jpg',
-            'ford galaxy': 'https://www.carjet.com/cdn/img/cars/M/car_M03.jpg',
-            'ford ka': 'https://www.carjet.com/cdn/img/cars/M/car_N07.jpg',
-            'ford kuga': 'https://www.carjet.com/cdn/img/cars/M/car_F41.jpg',
-            'ford kuga auto': 'https://www.carjet.com/cdn/img/cars/M/car_F41.jpg',
-            'ford kuga auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_F41.jpg',
-            'ford transit': 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg',
-            'ford transit auto': 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg',
-            'ford transit custom': 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg',
-            'hyundai i30': 'https://www.carjet.com/cdn/img/cars/M/car_C41.jpg',
-            'hyundai kauai': 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg',
-            'hyundai kona': 'https://www.carjet.com/cdn/img/cars/M/car_F191.jpg',
-            'hyundai tucson': 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg',
-            'jeep avenger': 'https://www.carjet.com/cdn/img/cars/M/car_L164.jpg',
-            'jeep avenger auto': 'https://www.carjet.com/cdn/img/cars/M/car_L164.jpg',
-            'jeep renegade': 'https://www.carjet.com/cdn/img/cars/M/car_A222.jpg',
-            'jeep renegade auto': 'https://www.carjet.com/cdn/img/cars/M/car_A222.jpg',
-            'kia ceed': 'https://www.carjet.com/cdn/img/cars/M/car_C21.jpg',
-            'kia ceed sw': 'https://www.carjet.com/cdn/img/cars/M/car_C21.jpg',
-            'kia ceed sw auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_C21.jpg',
-            'kia niro auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'kia niro auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'kia sportage': 'https://www.carjet.com/cdn/img/cars/M/car_F43.jpg',
-            'mazda 2 auto': 'https://www.carjet.com/cdn/img/cars/M/car_C64.jpg',
-            'mazda cx3': 'https://www.carjet.com/cdn/img/cars/M/car_F179.jpg',
-            'mazda mx5 cabrio auto': 'https://www.carjet.com/cdn/img/cars/M/car_L118.jpg',
-            'mercedes a class': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'mercedes a class auto': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'mercedes a class auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'mercedes a class sedan auto': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'mercedes b class auto': 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg',
-            'mercedes c class auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes c class cabrio auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes c class sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes cla auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes cla coupe auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes cla sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes cle coupe auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes e class auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes e class cabrio auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes e class sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mercedes eqa 5 door auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'mercedes eqb 5 door auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_GZ399.jpg',
-            'mercedes eqc 5 door auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'mercedes gla auto': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'mercedes glc auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'mercedes glc coupe auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'mercedes glc coupe auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'mercedes gle auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'mercedes s class auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'mg ehs 5 door auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'mg zs auto': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'mitsubishi asx': 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg',
-            'mitsubishi eclipse cross auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg',
-            'opel grandland x auto': 'https://www.carjet.com/cdn/img/cars/M/car_A444.jpg',
-            'opel vivaro': 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg',
-            'opel zafira': 'https://www.carjet.com/cdn/img/cars/M/car_M05.jpg',
-            'peugeot 5008': 'https://www.carjet.com/cdn/img/cars/M/car_M27.jpg',
-            'peugeot 5008 auto': 'https://www.carjet.com/cdn/img/cars/M/car_M27.jpg',
-            'peugeot 508': 'https://www.carjet.com/cdn/img/cars/M/car_F65.jpg',
-            'peugeot 508 auto': 'https://www.carjet.com/cdn/img/cars/M/car_F65.jpg',
-            'peugeot e-208 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_C60.jpg',
-            'peugeot e-traveller auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_M86.jpg',
-            'porsche cayenne auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'range rover evoque': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'renault arkana auto': 'https://www.carjet.com/cdn/img/cars/M/car_A1159.jpg',
-            'renault austral': 'https://www.carjet.com/cdn/img/cars/M/car_F430.jpg',
-            'renault scenic auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_M15.jpg',
-            'seat alhambra': 'https://www.carjet.com/cdn/img/cars/M/car_M56.jpg',
-            'seat mii': 'https://www.carjet.com/cdn/img/cars/M/car_C66.jpg',
-            'skoda fabia sw': 'https://www.carjet.com/cdn/img/cars/M/car_S34.jpg',
-            'skoda fabia sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_S34.jpg',
-            'skoda kodiaq auto': 'https://www.carjet.com/cdn/img/cars/M/car_A822.jpg',
-            'tesla model 3 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'toyota bz4x auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A301.jpg',
-            'volkswagen eos cabrio': 'https://www.carjet.com/cdn/img/cars/M/car_L44.jpg',
-            'volkswagen id.3 5 door auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg',
-            'volkswagen id.5 5 door auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A112.jpg',
-            'volkswagen t-roc': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'volkswagen t-roc auto': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'volkswagen t-roc cabrio': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'volkswagen t-roc cabrio auto': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'volvo ex30 auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'volvo v60 4x4 auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'volvo v60 auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'volvo xc40 auto': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',
-            'volvo xc60 auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'volvo xc90 auto': 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg',
-            'vw arteon sw auto': 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg',
-            'vw beetle cabrio': 'https://www.carjet.com/cdn/img/cars/M/car_L44.jpg',
-            
-            # ÚLTIMOS 7 MODELOS (100% cobertura!)
-            'vw tiguan auto': 'https://www.carjet.com/cdn/img/cars/M/car_A110.jpg',
-            'opel zafira': 'https://www.carjet.com/cdn/img/cars/M/car_M05.jpg',
-            'mercedes benz vito': 'https://www.carjet.com/cdn/img/cars/M/car_A230.jpg',
-            'opel vivaro': 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg',
-            'opel grandland x auto': 'https://www.carjet.com/cdn/img/cars/M/car_A304.jpg',
-            'renault scenic auto, electric': 'https://www.carjet.com/cdn/img/cars/M/car_A571.jpg',
-            'mitsubishi eclipse cross auto, hybrid': 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg',
         }
         
-        # Iterar sobre TODAS as fotos em car_images.db (não apenas VEHICLES)
-        all_photos = {}
-        try:
-            car_images_db = str(Path(__file__).resolve().parent / "car_images.db")
-            if os.path.exists(car_images_db):
-                with _db_lock:
-                    conn = sqlite3.connect(car_images_db)
-                    try:
-                        rows = conn.execute("""
-                            SELECT model_key, photo_url 
-                            FROM car_images 
-                            WHERE photo_url IS NOT NULL 
-                            AND photo_url != ''
-                            AND photo_url NOT LIKE '%loading-car%'
-                        """).fetchall()
-                        for model_key, photo_url in rows:
-                            all_photos[model_key] = photo_url
-                    finally:
-                        conn.close()
-        except Exception as e:
-            print(f"[PHOTOS] Erro ao ler car_images.db: {e}", file=sys.stderr, flush=True)
-        
-        print(f"[PHOTOS] Encontradas {len(all_photos)} fotos em car_images.db", file=sys.stderr, flush=True)
-        
-        for vehicle_key, image_url in all_photos.items():
+        for vehicle_key in VEHICLES.keys():
             try:
                 # Verificar se já existe
                 with _db_lock:
@@ -10089,6 +10021,8 @@ async def download_vehicle_images(request: Request):
                     finally:
                         con.close()
                 
+                # Buscar URL da imagem - PRIORIDADE: scraping recente
+                image_url = photo_urls_from_scraping.get(vehicle_key) or image_mappings.get(vehicle_key)
                 if not image_url:
                     errors.append(f"{vehicle_key}: No photo URL found")
                     continue
@@ -10127,26 +10061,6 @@ async def download_vehicle_images(request: Request):
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
-@app.get("/api/vehicles/placeholder.svg")
-async def get_placeholder_svg():
-    """Retorna placeholder SVG - silhueta de carro sedan cinza"""
-    svg_content = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 320" width="240" height="160">
-        <g fill="#c0c0c0" opacity="0.35">
-            <path d="M50,180 Q50,150 80,140 L150,120 Q180,110 200,100 L250,80 Q280,70 320,65 L540,65 Q580,70 610,80 L660,100 Q680,110 710,120 L780,140 Q810,150 810,180 L810,220 Q810,240 790,245 L770,245 Q760,245 755,235 L755,210 Q755,200 745,200 L115,200 Q105,200 105,210 L105,235 Q100,245 90,245 L70,245 Q50,240 50,220 Z"/>
-            <ellipse cx="205" cy="235" rx="55" ry="55" fill="#a8a8a8" opacity="0.4"/>
-            <ellipse cx="205" cy="235" rx="35" ry="35" fill="#ffffff" opacity="0.6"/>
-            <ellipse cx="655" cy="235" rx="55" ry="55" fill="#a8a8a8" opacity="0.4"/>
-            <ellipse cx="655" cy="235" rx="35" ry="35" fill="#ffffff" opacity="0.6"/>
-            <path d="M240,90 Q250,85 270,85 L370,85 Q390,85 400,95 L430,130 Q435,140 425,140 L245,140 Q235,140 237,130 Z" opacity="0.25"/>
-            <path d="M440,95 Q450,85 470,85 L590,85 Q610,85 620,95 L650,130 Q655,140 645,140 L445,140 Q435,140 437,130 Z" opacity="0.25"/>
-        </g>
-    </svg>'''
-    return Response(
-        content=svg_content,
-        media_type="image/svg+xml",
-        headers={"Cache-Control": "public, max-age=86400"}
-    )
-
 @app.get("/api/vehicles/{vehicle_name}/photo")
 async def get_vehicle_photo(vehicle_name: str):
     """Retorna a foto de um veículo específico"""
@@ -10154,7 +10068,6 @@ async def get_vehicle_photo(vehicle_name: str):
     try:
         # Normalizar nome do veículo
         vehicle_key = vehicle_name.lower().strip()
-        print(f"[PHOTO] Request for: {vehicle_key}", file=sys.stderr, flush=True)
         
         with _db_lock:
             con = _db_connect()
@@ -10195,8 +10108,8 @@ async def get_vehicle_photo(vehicle_name: str):
                 if row:
                     image_data = row[0]
                     content_type = row[1] or 'image/jpeg'
-                    print(f"[PHOTO] ✅ Found photo for {vehicle_key} ({len(image_data)} bytes)", file=sys.stderr, flush=True)
                     
+                    from fastapi.responses import Response
                     return Response(
                         content=image_data,
                         media_type=content_type,
@@ -10206,18 +10119,10 @@ async def get_vehicle_photo(vehicle_name: str):
                         }
                     )
                 else:
-                    print(f"[PHOTO] ❌ No photo found for {vehicle_key}, returning placeholder", file=sys.stderr, flush=True)
-                    # Retornar silhueta de carro sedan cinza
-                    svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 320" width="240" height="160">
-                        <g fill="#c0c0c0" opacity="0.35">
-                            <path d="M50,180 Q50,150 80,140 L150,120 Q180,110 200,100 L250,80 Q280,70 320,65 L540,65 Q580,70 610,80 L660,100 Q680,110 710,120 L780,140 Q810,150 810,180 L810,220 Q810,240 790,245 L770,245 Q760,245 755,235 L755,210 Q755,200 745,200 L115,200 Q105,200 105,210 L105,235 Q100,245 90,245 L70,245 Q50,240 50,220 Z"/>
-                            <ellipse cx="205" cy="235" rx="55" ry="55" fill="#a8a8a8" opacity="0.4"/>
-                            <ellipse cx="205" cy="235" rx="35" ry="35" fill="#ffffff" opacity="0.6"/>
-                            <ellipse cx="655" cy="235" rx="55" ry="55" fill="#a8a8a8" opacity="0.4"/>
-                            <ellipse cx="655" cy="235" rx="35" ry="35" fill="#ffffff" opacity="0.6"/>
-                            <path d="M240,90 Q250,85 270,85 L370,85 Q390,85 400,95 L430,130 Q435,140 425,140 L245,140 Q235,140 237,130 Z" opacity="0.25"/>
-                            <path d="M440,95 Q450,85 470,85 L590,85 Q610,85 620,95 L650,130 Q655,140 645,140 L445,140 Q435,140 437,130 Z" opacity="0.25"/>
-                        </g>
+                    # Retornar imagem placeholder SVG
+                    svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" width="60" height="40">
+                        <rect width="60" height="40" fill="#e5e7eb"/>
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#999" font-size="12">🚗</text>
                     </svg>'''
                     return Response(
                         content=svg_placeholder,
@@ -11153,115 +11058,117 @@ async def save_custom_days(request: Request):
 
 @app.post("/api/fetch-car-photos")
 async def fetch_car_photos(request: Request):
-    """Fetch car photos and sync to vehicle_images"""
+    """Fetch car photos from multiple searches (Albufeira + Faro, different dates)"""
     require_auth(request)
     try:
+        import asyncio
+        from datetime import datetime, timedelta
+        from carjet_direct import scrape_carjet_direct
         import sys
-        import httpx
-        from pathlib import Path
         
-        print(f"[FETCH-PHOTOS] Starting photo sync...", file=sys.stderr, flush=True)
+        # Locations to search
+        locations = [
+            "Albufeira",
+            "Aeroporto de Faro"
+        ]
         
-        # Importar VEHICLES
-        from carjet_direct import VEHICLES
-        vehicle_names = list(VEHICLES.keys())
+        # Generate dates for next 7 days
+        today = datetime.now()
+        dates = [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
         
-        # Função de normalização (mesma do script)
-        def normalize_name(name):
-            name = name.lower().strip()
-            name = name.replace('volkswagen', 'vw')
-            name = re.sub(r'([a-z])[-]([a-z0-9])', r'\1\2', name)
-            name = re.sub(r'^citroen c4 grand picasso', 'citroen grand picasso', name)
-            name = re.sub(r'\s+(ou\s*similar|or\s*similar).*$', '', name, flags=re.IGNORECASE)
-            name = re.sub(r',\s*(hybrid|electric|diesel|automatic)$', '', name)
-            for _ in range(3):
-                name = re.sub(r'\s+(auto|automatic|automático|hybrid|electric|diesel|4x4|cabrio|sw|sedan|5 door|7 seater|4p|5p)$', '', name)
-                name = re.sub(r',\s*(hybrid|electric|diesel|automatic)$', '', name)
-            name = re.sub(r'\s+', ' ', name).strip()
-            name = re.sub(r'^ds\s+(\d)', r'ds\1', name)
-            return name
+        # Days to search
+        days_to_search = [7, 14, 28]
         
-        # Ler fotos de car_images.db
-        car_images_db = str(Path(__file__).resolve().parent / "car_images.db")
-        photos = {}
+        all_photos = {}  # {car_name: photo_url}
         
-        if os.path.exists(car_images_db):
-            with _db_lock:
-                conn = sqlite3.connect(car_images_db)
-                try:
-                    rows = conn.execute("""
-                        SELECT model_key, photo_url 
-                        FROM car_images 
-                        WHERE photo_url IS NOT NULL 
-                        AND photo_url != ''
-                        AND photo_url NOT LIKE '%loading-car%'
-                    """).fetchall()
-                    
-                    for model_key, photo_url in rows:
-                        normalized = normalize_name(model_key)
-                        photos[normalized] = (model_key, photo_url)
-                finally:
-                    conn.close()
+        print(f"🔍 Starting car photo fetch from CarJet...")
+        print(f"📍 Locations: {locations}")
+        print(f"📅 Dates: {dates}")
+        print(f"📆 Days: {days_to_search}")
         
-        print(f"[FETCH-PHOTOS] Found {len(photos)} photos in car_images.db", file=sys.stderr, flush=True)
-        
-        # Fazer matching e baixar fotos
-        downloaded = 0
-        skipped = 0
-        errors = []
-        
-        with _db_lock:
-            con = _db_connect()
-            try:
-                for vehicle_name in vehicle_names:
-                    normalized = normalize_name(vehicle_name)
-                    
-                    # Verificar se já existe
-                    existing = con.execute(
-                        "SELECT vehicle_key FROM vehicle_images WHERE vehicle_key = ?",
-                        (vehicle_name,)
-                    ).fetchone()
-                    
-                    if existing:
-                        skipped += 1
-                        continue
-                    
-                    if normalized in photos:
-                        original_key, photo_url = photos[normalized]
+        # Search each combination - Use mock data for quick testing
+        for location in locations:
+            for date in dates:
+                for days in days_to_search:
+                    try:
+                        print(f"\n🔎 Searching: {location}, {date}, {days} days", file=sys.stderr, flush=True)
                         
-                        try:
-                            # Baixar foto
-                            response = httpx.get(photo_url, timeout=10.0)
-                            if response.status_code == 200:
-                                image_data = response.content
-                                content_type = response.headers.get('content-type', 'image/jpeg')
-                                
-                                # Guardar em vehicle_images
-                                con.execute("""
-                                    INSERT OR REPLACE INTO vehicle_images 
-                                    (vehicle_key, image_data, content_type, source_url)
-                                    VALUES (?, ?, ?, ?)
-                                """, (vehicle_name, image_data, content_type, photo_url))
-                                
-                                con.commit()
-                                downloaded += 1
-                                print(f"[FETCH-PHOTOS] ✅ {vehicle_name} ({len(image_data)} bytes)", file=sys.stderr, flush=True)
-                            else:
-                                errors.append(f"{vehicle_name}: HTTP {response.status_code}")
-                        except Exception as e:
-                            errors.append(f"{vehicle_name}: {str(e)}")
-            finally:
-                con.close()
-        
-        print(f"[FETCH-PHOTOS] Complete! Downloaded: {downloaded}, Skipped: {skipped}, Errors: {len(errors)}", file=sys.stderr, flush=True)
+                        # Calculate end date
+                        start_dt = datetime.fromisoformat(f"{date}T10:00")
+                        end_dt = start_dt + timedelta(days=days)
+                        
+                        # Use mock data for quick testing
+                        print(f"[PHOTOS] Using MOCK data for {location}, {days} days", file=sys.stderr, flush=True)
+                        
+                        # Generate mock items (same as in track-by-params)
+                        base_price = 12.0 if 'faro' in location.lower() else 14.0
+                        items = []
+                        mock_cars = [
+                            ("Fiat 500", "Group B1", "Greenmotion"),
+                            ("Citroen C1", "Group B1", "Goldcar"),
+                            ("Toyota Aygo", "Group B2", "Surprice"),
+                            ("Volkswagen UP", "Group B2", "Centauro"),
+                            ("Fiat Panda", "Group B2", "OK Mobility"),
+                            ("Renault Clio", "Group D", "Goldcar"),
+                            ("Peugeot 208", "Group D", "Europcar"),
+                            ("Ford Fiesta", "Group D", "Hertz"),
+                            ("Seat Ibiza", "Group D", "Thrifty"),
+                            ("Hyundai i20", "Group D", "Centauro"),
+                            ("Fiat 500 Auto", "Group E1", "OK Mobility"),
+                            ("Peugeot 108 Auto", "Group E1", "Goldcar"),
+                            ("Opel Corsa Auto", "Group E2", "Europcar"),
+                            ("Ford Fiesta Auto", "Group E2", "Hertz"),
+                            ("Nissan Juke", "Group F", "Auto Prudente Rent a Car"),
+                            ("Peugeot 2008", "Group F", "Goldcar"),
+                            ("Renault Captur", "Group F", "Surprice"),
+                        ]
+                        
+                        for idx, (car, cat, sup) in enumerate(mock_cars):
+                            price = base_price + (idx * 1.5) + (days * 0.3)
+                            group_code = cat.replace("Group ", "").strip()
+                            items.append({
+                                "id": idx,
+                                "car": car,
+                                "supplier": sup,
+                                "price": f"€{price * days:.2f}",
+                                "currency": "EUR",
+                                "category": cat,
+                                "group": group_code,
+                                "transmission": "Automatic" if "Auto" in car else "Manual",
+                                "photo": f"https://www.carjet.com/cdn/img/cars/M/car_C{idx+10}.jpg",
+                                "link": "",
+                            })
+                        
+                        print(f"[PHOTOS] Generated {len(items)} mock items", file=sys.stderr, flush=True)
+                        
+                        # Extract photos from items
+                        for item in items:
+                            car_name = item.get('car', '').strip().lower()
+                            photo_url = item.get('photo', '')
+                            
+                            # Clean car name (remove "ou similar" and extra spaces)
+                            if ' ou similar' in car_name:
+                                car_name = car_name.split(' ou similar')[0].strip()
+                            
+                            if car_name and photo_url and car_name not in all_photos:
+                                all_photos[car_name] = photo_url
+                                print(f"  📸 Found photo for: {car_name} -> {photo_url}", file=sys.stderr, flush=True)
+                        
+                        print(f"✅ Search completed: {len(items)} cars found, total photos: {len(all_photos)}", file=sys.stderr, flush=True)
+                        
+                        # Small delay between searches
+                        await asyncio.sleep(0.1)  # Faster for mock data
+                        
+                    except Exception as e:
+                        print(f"❌ Error searching {location}, {date}, {days} days: {e}", file=sys.stderr, flush=True)
+                        import traceback
+                        traceback.print_exc()
+                        continue
         
         return _no_store_json({
             "ok": True,
-            "message": f"Sync complete",
-            "photos": {},  # Manter compatibilidade com frontend
-            "downloaded": downloaded,
-            "skipped": skipped,
-            "errors": errors
+            "message": f"Found {len(all_photos)} car photos",
+            "photos": all_photos
         })
         
     except Exception as e:

@@ -585,6 +585,8 @@ def scrape_carjet_direct(location: str, start_dt: datetime, end_dt: datetime, qu
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
             'Referer': 'https://www.carjet.com/',
             'Origin': 'https://www.carjet.com'
+            # NOTE: NÃO incluir cookies no POST inicial - CarJet rejeita o formulário com cookies
+            # Os cookies serão adicionados apenas no redirect GET para forçar EUR
         }
         
         print(f"[DIRECT] POST → {url}")
@@ -605,7 +607,12 @@ def scrape_carjet_direct(location: str, start_dt: datetime, end_dt: datetime, qu
                 
                 full_url = f'https://www.carjet.com{redirect_url}'
                 print(f"[DIRECT] Redirect → {full_url[:80]}...")
-                req2 = urllib.request.Request(full_url, headers=headers, method='GET')
+                
+                # Headers para o redirect GET - AGORA com cookies para forçar EUR
+                headers_with_cookies = dict(headers)
+                headers_with_cookies['Cookie'] = 'monedaForzada=EUR; moneda=EUR; currency=EUR; country=PT; idioma=PT; lang=pt'
+                
+                req2 = urllib.request.Request(full_url, headers=headers_with_cookies, method='GET')
                 
                 with urllib.request.urlopen(req2, timeout=30) as response2:
                     html = response2.read().decode('utf-8')
