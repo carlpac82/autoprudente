@@ -10949,3 +10949,78 @@ async def save_custom_days(request: Request):
     except Exception as e:
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.post("/api/fetch-car-photos")
+async def fetch_car_photos(request: Request):
+    """Fetch car photos from multiple searches (Albufeira + Faro, different dates)"""
+    require_auth(request)
+    try:
+        import asyncio
+        from datetime import datetime, timedelta
+        
+        # Locations to search
+        locations = [
+            "Albufeira",
+            "Aeroporto de Faro"
+        ]
+        
+        # Generate dates for next 7 days
+        today = datetime.now()
+        dates = [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+        
+        # Days to search
+        days_to_search = [7, 14, 28]
+        
+        all_photos = {}  # {car_name: photo_url}
+        
+        print(f"🔍 Starting car photo fetch from CarJet...")
+        print(f"📍 Locations: {locations}")
+        print(f"📅 Dates: {dates}")
+        print(f"📆 Days: {days_to_search}")
+        
+        # Search each combination
+        for location in locations:
+            for date in dates:
+                for days in days_to_search:
+                    try:
+                        print(f"\n🔎 Searching: {location}, {date}, {days} days")
+                        
+                        # Calculate end date
+                        start_dt = datetime.fromisoformat(f"{date}T10:00")
+                        end_dt = start_dt + timedelta(days=days)
+                        
+                        # Call existing scraping function
+                        items = await _scrape_carjet_with_playwright(
+                            location=location,
+                            start_dt=start_dt,
+                            end_dt=end_dt,
+                            quick=1  # Fast mode
+                        )
+                        
+                        # Extract photos from items
+                        for item in items:
+                            car_name = item.get('car', '').strip().lower()
+                            photo_url = item.get('photo', '')
+                            
+                            if car_name and photo_url and car_name not in all_photos:
+                                all_photos[car_name] = photo_url
+                                print(f"  📸 Found photo for: {car_name}")
+                        
+                        print(f"✅ Search completed: {len(items)} cars found, total photos: {len(all_photos)}")
+                        
+                        # Small delay between searches
+                        await asyncio.sleep(2)
+                        
+                    except Exception as e:
+                        print(f"❌ Error searching {location}, {date}, {days} days: {e}")
+                        continue
+        
+        return _no_store_json({
+            "ok": True,
+            "message": f"Found {len(all_photos)} car photos",
+            "photos": all_photos
+        })
+        
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
