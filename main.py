@@ -10564,40 +10564,12 @@ async def export_automated_prices_excel(request: Request):
         # Price calculation logic based on periods
         def calculate_price_for_day(group_prices, day):
             """
-            Calculate DAILY price based on period rules:
-            - 1-7 days: Total price / number of days (to get daily rate)
-            - 8-10 daily: Price of 8 days / 8
-            - 11-12 daily: Price of 9 days / 9
-            - 13-14 daily: Price of 14 days / 14
-            - 15-21 daily: Price of 22 days / 22
-            - 22-28 daily: Price of 28 days / 28
+            Get exact price for each period - NO division, use values as-is
+            These are FIXED prices per period (1 day fixed, 2 days fixed, etc.)
             """
-            if day <= 7:
-                # 1-7 days: divide total price by number of days to get daily rate
-                price_total = group_prices.get(str(day), '')
-                if price_total:
-                    return float(price_total) / day
-                return ''
-            elif 8 <= day <= 10:
-                # 8-10 daily: Price of 8 days / 8
-                price_8 = group_prices.get('8', '')
-                return float(price_8) / 8 if price_8 else ''
-            elif 11 <= day <= 12:
-                # 11-12 daily: Price of 9 days / 9
-                price_9 = group_prices.get('9', '')
-                return float(price_9) / 9 if price_9 else ''
-            elif 13 <= day <= 14:
-                # 13-14 daily: Price of 14 days / 14
-                price_14 = group_prices.get('14', '')
-                return float(price_14) / 14 if price_14 else ''
-            elif 15 <= day <= 21:
-                # 15-21 daily: Price of 22 days / 22
-                price_22 = group_prices.get('22', '')
-                return float(price_22) / 22 if price_22 else ''
-            else:  # 22-28 days
-                # 22-28 daily: Price of 28 days / 28
-                price_28 = group_prices.get('28', '')
-                return float(price_28) / 28 if price_28 else ''
+            # Simply return the exact price for the day period
+            price = group_prices.get(str(day), '')
+            return float(price) if price else ''
         
         # Get Abbycar price adjustments
         abbycar_adjustment = _get_abbycar_adjustment()
