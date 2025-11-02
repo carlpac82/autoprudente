@@ -10441,14 +10441,14 @@ async def export_automated_prices_excel(request: Request):
         # Car group mapping (SIPP codes to groups)
         car_group_mapping = {
             'MDMV': 'B1',  # Mini 4 Doors Manual
-            'MDMR': 'B2',  # Mini 4 Doors Manual
-            'EDMV': 'D',   # Economy Manual
+            'EDMV': 'B2',  # Economy Manual
+            'MDMR': 'D',   # Mini 4 Doors Manual
             'MDAR': 'E1',  # Mini Auto
             'EDAV': 'E2',  # Economy Auto
             'CFMR': 'F',   # Compact Manual
             'MTMR': 'G',   # Mini Elite Manual
             'CFMV': 'J1',  # Compact Manual
-            'MDMR_J2': 'J2',  # Mini 4 Doors Manual (duplicate for J2)
+            'IWMR': 'J2',  # Intermediate Wagon Manual
             'CFAR': 'L1',  # Compact Auto
             'CGAR': 'L1',  # Compact Auto (same group as CFAR)
             'SVMR': 'M1',  # Standard Manual
@@ -10596,14 +10596,14 @@ async def export_automated_prices_excel(request: Request):
         # Car descriptions
         car_descriptions = {
             'MDMV': 'Mini 4 Doors Manual',
-            'MDMR': 'Mini 4 Doors Manual',
             'EDMV': 'Economy Manual',
+            'MDMR': 'Mini 4 Doors Manual',
             'MDAR': 'Mini Auto',
             'EDAV': 'Economy Auto',
             'CFMR': 'Compact Manual',
             'MTMR': 'Mini Elite Manual',
             'CFMV': 'Compact Manual',
-            'MDMR_J2': 'Mini 4 Doors Manual',
+            'IWMR': 'Intermediate Wagon Manual',
             'CFAR': 'Compact Auto',
             'CGAR': 'Compact Auto',
             'SVMR': 'Standard Manual',
