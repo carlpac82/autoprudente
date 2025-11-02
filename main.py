@@ -75,6 +75,17 @@ def _get_carjet_adjustment() -> Tuple[float, float]:
     """
     return 0.0, 0.0
 
+def _get_abbycar_adjustment() -> float:
+    """
+    Get Abbycar Excel export price adjustment percentage
+    Returns: Percentage adjustment (e.g., 5.0 for +5%, -3.0 for -3%)
+    """
+    try:
+        val = _get_setting("abbycar_pct")
+        return float(val) if val else 0.0
+    except Exception:
+        return 0.0
+
 def apply_price_adjustments(items: List[Dict[str, Any]], base_url: str) -> List[Dict[str, Any]]:
     try:
         if not items:
@@ -2117,10 +2128,18 @@ async def admin_settings_page(request: Request):
     except HTTPException:
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     cj_pct, cj_off = _get_carjet_adjustment()
-    return templates.TemplateResponse("admin_settings.html", {"request": request, "carjet_pct": cj_pct, "carjet_off": cj_off, "saved": False, "error": None})
+    abbycar_pct = _get_abbycar_adjustment()
+    return templates.TemplateResponse("admin_settings.html", {
+        "request": request, 
+        "carjet_pct": cj_pct, 
+        "carjet_off": cj_off, 
+        "abbycar_pct": abbycar_pct,
+        "saved": False, 
+        "error": None
+    })
 
 @app.post("/admin/settings", response_class=HTMLResponse)
-async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carjet_off: str = Form("")):
+async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carjet_off: str = Form(""), abbycar_pct: str = Form("")):
     try:
         require_admin(request)
     except HTTPException:
@@ -2129,13 +2148,24 @@ async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carj
     try:
         pct_val = float((carjet_pct or "0").replace(",", "."))
         off_val = float((carjet_off or "0").replace(",", "."))
+        abbycar_pct_val = float((abbycar_pct or "0").replace(",", "."))
         _set_setting("carjet_pct", str(pct_val))
         _set_setting("carjet_off", str(off_val))
+        _set_setting("abbycar_pct", str(abbycar_pct_val))
         cj_pct, cj_off = pct_val, off_val
+        abbycar_pct_result = abbycar_pct_val
     except Exception as e:
         err = str(e)
         cj_pct, cj_off = _get_carjet_adjustment()
-    return templates.TemplateResponse("admin_settings.html", {"request": request, "carjet_pct": cj_pct, "carjet_off": cj_off, "saved": err is None, "error": err})
+        abbycar_pct_result = _get_abbycar_adjustment()
+    return templates.TemplateResponse("admin_settings.html", {
+        "request": request, 
+        "carjet_pct": cj_pct, 
+        "carjet_off": cj_off, 
+        "abbycar_pct": abbycar_pct_result,
+        "saved": err is None, 
+        "error": err
+    })
 
 @app.post("/admin/users/{user_id}/toggle-enabled")
 async def admin_users_toggle_enabled(request: Request, user_id: int):
@@ -10507,6 +10537,9 @@ async def export_automated_prices_excel(request: Request):
                 price_28 = group_prices.get('28', '')
                 return float(price_28) if price_28 else ''
         
+        # Get Abbycar price adjustment
+        abbycar_adjustment = _get_abbycar_adjustment()
+        
         for row_idx, group in enumerate(groups, start=4):
             # Group name
             ws[f'A{row_idx}'] = group
@@ -10522,7 +10555,9 @@ async def export_automated_prices_excel(request: Request):
                 
                 price = calculate_price_for_day(group_prices, day)
                 if price:
-                    cell.value = float(price)
+                    # Apply Abbycar adjustment percentage
+                    adjusted_price = float(price) * (1 + abbycar_adjustment / 100)
+                    cell.value = adjusted_price
                     cell.number_format = '0.00€'
                 else:
                     cell.value = ''
