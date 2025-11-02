@@ -79,9 +79,22 @@ def _get_abbycar_adjustment() -> float:
     """
     Get Abbycar Excel export price adjustment percentage
     Returns: Percentage adjustment (e.g., 5.0 for +5%, -3.0 for -3%)
+    Default: 3.0%
     """
     try:
         val = _get_setting("abbycar_pct")
+        return float(val) if val else 3.0
+    except Exception:
+        return 3.0
+
+def _get_abbycar_low_deposit_adjustment() -> float:
+    """
+    Get Low Deposit groups additional adjustment percentage
+    Returns: Additional percentage adjustment for Low Deposit groups
+    Default: 0.0%
+    """
+    try:
+        val = _get_setting("abbycar_low_deposit_pct")
         return float(val) if val else 0.0
     except Exception:
         return 0.0
@@ -2129,17 +2142,19 @@ async def admin_settings_page(request: Request):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     cj_pct, cj_off = _get_carjet_adjustment()
     abbycar_pct = _get_abbycar_adjustment()
+    abbycar_low_deposit_pct = _get_abbycar_low_deposit_adjustment()
     return templates.TemplateResponse("admin_settings.html", {
         "request": request, 
         "carjet_pct": cj_pct, 
         "carjet_off": cj_off, 
         "abbycar_pct": abbycar_pct,
+        "abbycar_low_deposit_pct": abbycar_low_deposit_pct,
         "saved": False, 
         "error": None
     })
 
 @app.post("/admin/settings", response_class=HTMLResponse)
-async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carjet_off: str = Form(""), abbycar_pct: str = Form("")):
+async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carjet_off: str = Form(""), abbycar_pct: str = Form(""), abbycar_low_deposit_pct: str = Form("")):
     try:
         require_admin(request)
     except HTTPException:
@@ -2148,21 +2163,26 @@ async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carj
     try:
         pct_val = float((carjet_pct or "0").replace(",", "."))
         off_val = float((carjet_off or "0").replace(",", "."))
-        abbycar_pct_val = float((abbycar_pct or "0").replace(",", "."))
+        abbycar_pct_val = float((abbycar_pct or "3").replace(",", "."))
+        abbycar_low_deposit_pct_val = float((abbycar_low_deposit_pct or "0").replace(",", "."))
         _set_setting("carjet_pct", str(pct_val))
         _set_setting("carjet_off", str(off_val))
         _set_setting("abbycar_pct", str(abbycar_pct_val))
+        _set_setting("abbycar_low_deposit_pct", str(abbycar_low_deposit_pct_val))
         cj_pct, cj_off = pct_val, off_val
         abbycar_pct_result = abbycar_pct_val
+        abbycar_low_deposit_pct_result = abbycar_low_deposit_pct_val
     except Exception as e:
         err = str(e)
         cj_pct, cj_off = _get_carjet_adjustment()
         abbycar_pct_result = _get_abbycar_adjustment()
+        abbycar_low_deposit_pct_result = _get_abbycar_low_deposit_adjustment()
     return templates.TemplateResponse("admin_settings.html", {
         "request": request, 
         "carjet_pct": cj_pct, 
         "carjet_off": cj_off, 
         "abbycar_pct": abbycar_pct_result,
+        "abbycar_low_deposit_pct": abbycar_low_deposit_pct_result,
         "saved": err is None, 
         "error": err
     })
@@ -10537,8 +10557,13 @@ async def export_automated_prices_excel(request: Request):
                 price_28 = group_prices.get('28', '')
                 return float(price_28) if price_28 else ''
         
-        # Get Abbycar price adjustment
+        # Get Abbycar price adjustments
         abbycar_adjustment = _get_abbycar_adjustment()
+        abbycar_low_deposit_adjustment = _get_abbycar_low_deposit_adjustment()
+        
+        # Define Low Deposit groups (to be configured by user)
+        # User will specify which groups are Low Deposit
+        low_deposit_groups = []  # Will be populated based on user configuration
         
         for row_idx, group in enumerate(groups, start=4):
             # Group name
@@ -10556,7 +10581,13 @@ async def export_automated_prices_excel(request: Request):
                 price = calculate_price_for_day(group_prices, day)
                 if price:
                     # Apply Abbycar adjustment percentage
-                    adjusted_price = float(price) * (1 + abbycar_adjustment / 100)
+                    total_adjustment = abbycar_adjustment
+                    
+                    # Add Low Deposit adjustment if group is in Low Deposit list
+                    if group in low_deposit_groups:
+                        total_adjustment += abbycar_low_deposit_adjustment
+                    
+                    adjusted_price = float(price) * (1 + total_adjustment / 100)
                     cell.value = adjusted_price
                     cell.number_format = '0.00€'
                 else:

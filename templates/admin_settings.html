@@ -73,14 +73,32 @@
             </svg>
             Abbycar Excel Export Adjustment
           </h3>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Price Adjustment Abbycar (%)</label>
-            <input type="text" name="abbycar_pct" value="{{ '%.2f' % abbycar_pct if abbycar_pct is not none else '0.00' }}" placeholder="0.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
-            <p class="text-xs text-gray-500 mt-1">
-              Aplica ajuste percentual a TODOS os preços no Excel Abbycar.<br>
-              Exemplo: 5% aumenta todos os preços em 5%, -3% diminui 3%.<br>
-              Default: 0.00% (sem ajuste)
-            </p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Price Adjustment Abbycar (%)</label>
+              <input type="text" name="abbycar_pct" value="{{ '%.2f' % abbycar_pct if abbycar_pct is not none else '3.00' }}" placeholder="3.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              <p class="text-xs text-gray-500 mt-1">
+                Aplica ajuste percentual a TODOS os preços no Excel Abbycar.<br>
+                Exemplo: 5% aumenta todos os preços em 5%, -3% diminui 3%.<br>
+                Default: <strong>3.00%</strong>
+              </p>
+            </div>
+            
+            <div class="border-l-4 border-[#f4ad0f] pl-4">
+              <label class="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                <svg class="w-4 h-4 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Low Deposit Groups Adjustment (%)
+              </label>
+              <input type="text" name="abbycar_low_deposit_pct" value="{{ '%.2f' % abbycar_low_deposit_pct if abbycar_low_deposit_pct is not none else '0.00' }}" placeholder="0.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#f4ad0f] focus:ring-2 focus:ring-[#f4ad0f]" />
+              <p class="text-xs text-gray-500 mt-1">
+                Ajuste ADICIONAL apenas para grupos Low Deposit.<br>
+                Este valor é somado ao ajuste geral acima.<br>
+                Exemplo: Geral 3% + Low Deposit 2% = 5% total para esses grupos.<br>
+                Default: 0.00% (sem ajuste adicional)
+              </p>
+            </div>
           </div>
         </div>
         
