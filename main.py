@@ -10671,6 +10671,18 @@ async def export_automated_prices_excel(request: Request):
         ws2['C1'].alignment = header_alignment
         ws2['C1'].border = border
         
+        ws2['D1'] = "StartDate"
+        ws2['D1'].fill = header_fill
+        ws2['D1'].font = header_font
+        ws2['D1'].alignment = header_alignment
+        ws2['D1'].border = border
+        
+        ws2['E1'] = "EndDate"
+        ws2['E1'].fill = header_fill
+        ws2['E1'].font = header_font
+        ws2['E1'].alignment = header_alignment
+        ws2['E1'].border = border
+        
         # Car descriptions
         car_descriptions = {
             'MDMV': 'Mini 4 Doors Manual',
@@ -10718,12 +10730,23 @@ async def export_automated_prices_excel(request: Request):
             ws2[f'C{row}'].border = border
             ws2[f'C{row}'].alignment = Alignment(horizontal="left", vertical="center")
             
+            # StartDate and EndDate - LEAVE EMPTY (only filled when downloading by period)
+            ws2[f'D{row}'] = ''
+            ws2[f'D{row}'].border = border
+            ws2[f'D{row}'].alignment = cell_alignment
+            
+            ws2[f'E{row}'] = ''
+            ws2[f'E{row}'].border = border
+            ws2[f'E{row}'].alignment = cell_alignment
+            
             row += 1
         
         # Adjust column widths
         ws2.column_dimensions['A'].width = 15
         ws2.column_dimensions['B'].width = 10
         ws2.column_dimensions['C'].width = 30
+        ws2.column_dimensions['D'].width = 15
+        ws2.column_dimensions['E'].width = 15
         
         # Save to BytesIO
         excel_file = io.BytesIO()
