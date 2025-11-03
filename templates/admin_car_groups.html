@@ -10,17 +10,23 @@
       // Listen for language changes from parent window or localStorage
       window.addEventListener('storage', function(e) {
         if (e.key === 'siteLanguage') {
+          console.log('Storage event detected, reloading...');
           window.location.reload();
         }
       });
       
       // Listen for messages from parent window
       window.addEventListener('message', function(e) {
+        console.log('Message received in iframe:', e.data);
         if (e.data && e.data.type === 'languageChange') {
+          console.log('Language change message received, new language:', e.data.language);
           localStorage.setItem('siteLanguage', e.data.language);
           window.location.reload();
         }
       });
+      
+      // Log current language on load
+      console.log('Iframe loaded with language:', localStorage.getItem('siteLanguage') || 'pt');
     </script>
     <style>
       * { font-family: 'Outfit', sans-serif; }

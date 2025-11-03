@@ -164,17 +164,20 @@
             // Update button text
             document.getElementById('currentLang').textContent = newLang.toUpperCase();
             
-            // Notify all iframes about language change
-            document.querySelectorAll('iframe').forEach(iframe => {
-                try {
-                    iframe.contentWindow.postMessage({
-                        type: 'languageChange',
-                        language: newLang
-                    }, '*');
-                } catch (e) {
-                    console.log('Could not send message to iframe:', e);
-                }
-            });
+            // Notify all iframes about language change with a small delay
+            setTimeout(() => {
+                document.querySelectorAll('iframe').forEach(iframe => {
+                    try {
+                        console.log('Sending language change to iframe:', newLang);
+                        iframe.contentWindow.postMessage({
+                            type: 'languageChange',
+                            language: newLang
+                        }, '*');
+                    } catch (e) {
+                        console.log('Could not send message to iframe:', e);
+                    }
+                });
+            }, 100);
         }
         
         // Initialize language button on page load
