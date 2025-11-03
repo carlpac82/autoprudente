@@ -182,6 +182,10 @@ const translations = {
         'automation.threePlusApplies': '3+ dias aplica-se a todos os períodos ≥3 dias (mesma tarifa)',
         'automation.pricesIncluded': 'Preços são automaticamente incluídos nas exportações CSV Way2Rentals',
         'automation.savedInDatabase': 'Guardado na base de dados (persiste entre deployments)',
+        'automation.noDownloadsYet': 'Ainda sem downloads',
+        'automation.downloadExcelToSee': 'Descarregue ficheiros Excel para ver o histórico aqui',
+        'automation.noCalendarScansYet': 'Ainda sem scans de calendário',
+        'automation.runCalendarScan': 'Execute um Calendar Scan a partir de AI Insights para ver o histórico aqui',
         
         // Email Notifications
         'emailNotifications.title': 'Notificações por Email',
@@ -617,6 +621,10 @@ const translations = {
         'automation.threePlusApplies': '3+ days pricing applies to all periods ≥3 days (same rate)',
         'automation.pricesIncluded': 'Prices are automatically included in Way2Rentals CSV exports',
         'automation.savedInDatabase': 'Saved in database (persists across deployments)',
+        'automation.noDownloadsYet': 'No downloads yet',
+        'automation.downloadExcelToSee': 'Download Excel files to see history here',
+        'automation.noCalendarScansYet': 'No calendar scans yet',
+        'automation.runCalendarScan': 'Run a Calendar Scan from AI Insights to see history here',
         
         // Email Notifications
         'emailNotifications.title': 'Email Notifications',
