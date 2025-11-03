@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Mobile Scraping - Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🧪 Mobile Scraping Test - Live View</h1>
+        
+        <!-- Test Controls -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test Configuration</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Location</label>
+                    <select id="location" class="w-full border rounded px-3 py-2">
+                        <option value="Albufeira">Albufeira</option>
+                        <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">Days</label>
+                    <select id="days" class="w-full border rounded px-3 py-2">
+                        <option value="3">3 days</option>
+                        <option value="7">7 days</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="startTest()" id="testBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                🚀 Start Mobile Scraping Test
+            </button>
+        </div>
+        
+        <!-- Device Info -->
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">📱 Simulated Device</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="font-semibold text-gray-700">Device:</p>
+                    <p class="text-gray-600">iPhone 13 Pro</p>
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-700">User Agent:</p>
+                    <p class="text-gray-600 text-xs">Safari 16.6 / iOS 16.6</p>
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-700">Viewport:</p>
+                    <p class="text-gray-600">390x844 (Retina 3x)</p>
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-700">Features:</p>
+                    <p class="text-gray-600">Touch, Mobile, pt-PT</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Live Logs -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">📊 Live Logs</h2>
+            <div id="logs" class="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
+                <p class="text-gray-500">Waiting for test to start...</p>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">🎯 Results</h2>
+            <div id="results" class="text-gray-600">
+                <p>No results yet. Click "Start Test" to begin.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'info': 'text-blue-400',
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'warning': 'text-yellow-400'
+            };
+            const color = colors[type] || 'text-gray-400';
+            
+            const logEntry = document.createElement('p');
+            logEntry.className = color;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+        
+        async function startTest() {
+            const btn = document.getElementById('testBtn');
+            const location = document.getElementById('location').value;
+            const days = document.getElementById('days').value;
+            const resultsDiv = document.getElementById('results');
+            
+            // Clear previous
+            document.getElementById('logs').innerHTML = '';
+            resultsDiv.innerHTML = '<p class="text-blue-600">🔄 Testing in progress...</p>';
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Testing...';
+            
+            try {
+                addLog('🚀 Starting mobile scraping test...', 'info');
+                addLog(`📍 Location: ${location}`, 'info');
+                addLog(`📅 Days: ${days}`, 'info');
+                addLog('📱 Device: iPhone 13 Pro (390x844, Retina 3x)', 'info');
+                addLog('🌐 User Agent: Safari 16.6 / iOS 16.6', 'info');
+                
+                const startTime = Date.now();
+                
+                // Calculate dates
+                const today = new Date();
+                const pickup = new Date(today);
+                pickup.setDate(today.getDate() + 7);
+                const pickupDate = pickup.toISOString().split('T')[0];
+                
+                addLog(`📆 Pickup Date: ${pickupDate}`, 'info');
+                addLog('🔧 Preparing request...', 'info');
+                
+                // Make API call
+                const response = await fetch('/api/track-carjet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pickupDate: pickupDate,
+                        pickupTime: '15:00',
+                        durations: [parseInt(days)],
+                        locations: [
+                            { name: location, template: '' }
+                        ],
+                        lang: 'pt',
+                        currency: 'EUR'
+                    })
+                });
+                
+                const elapsed = Date.now() - startTime;
+                addLog(`⏱️ Response time: ${elapsed}ms`, 'info');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    addLog('✅ Scraping successful!', 'success');
+                    addLog(`🚗 Found ${data.results?.length || 0} location results`, 'success');
+                    
+                    // Display results
+                    let html = '<div class="space-y-4">';
+                    
+                    if (data.results && data.results.length > 0) {
+                        data.results.forEach((loc, i) => {
+                            html += `
+                                <div class="border rounded-lg p-4">
+                                    <h3 class="font-semibold text-lg mb-2">📍 ${loc.location}</h3>
+                                    <p class="text-sm text-gray-600 mb-2">Durations: ${loc.durations?.length || 0}</p>
+                            `;
+                            
+                            if (loc.durations && loc.durations.length > 0) {
+                                loc.durations.forEach(dur => {
+                                    html += `
+                                        <div class="ml-4 mb-2">
+                                            <p class="font-medium">${dur.days} days - ${dur.vehicles?.length || 0} vehicles</p>
+                                    `;
+                                    
+                                    if (dur.vehicles && dur.vehicles.length > 0) {
+                                        html += '<div class="ml-4 text-sm text-gray-600">';
+                                        dur.vehicles.slice(0, 3).forEach(v => {
+                                            html += `<p>• ${v.car} - ${v.price_per_day || 'N/A'}</p>`;
+                                        });
+                                        if (dur.vehicles.length > 3) {
+                                            html += `<p class="text-gray-500">... and ${dur.vehicles.length - 3} more</p>`;
+                                        }
+                                        html += '</div>';
+                                    }
+                                    
+                                    html += '</div>';
+                                });
+                            }
+                            
+                            html += '</div>';
+                        });
+                    }
+                    
+                    html += '</div>';
+                    resultsDiv.innerHTML = html;
+                    
+                } else {
+                    addLog(`❌ Error: ${data.error || 'Unknown error'}`, 'error');
+                    resultsDiv.innerHTML = `<p class="text-red-600">❌ Error: ${data.error || 'Unknown error'}</p>`;
+                }
+                
+            } catch (error) {
+                addLog(`❌ Exception: ${error.message}`, 'error');
+                resultsDiv.innerHTML = `<p class="text-red-600">❌ Error: ${error.message}</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Start Mobile Scraping Test';
+                addLog('✅ Test completed', 'success');
+            }
+        }
+    </script>
+</body>
+</html>

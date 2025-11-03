@@ -2454,6 +2454,11 @@ async def test_carjet_mobile(request: Request):
     """CarJet Mobile Scraping Test Page"""
     return templates.TemplateResponse("carjet_mobile_test.html", {"request": request})
 
+@app.get("/test/mobile-scraping-live", response_class=HTMLResponse)
+async def test_mobile_scraping_live(request: Request):
+    """Live Mobile Scraping Test with Real API"""
+    return templates.TemplateResponse("test_mobile_scraping_live.html", {"request": request})
+
 @app.post("/api/test-mobile-scraping")
 async def test_mobile_scraping(request: Request):
     """Test mobile scraping endpoint"""
