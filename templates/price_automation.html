@@ -102,12 +102,12 @@
         }
         
         .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }
-        .mobile-menu { display: none; position: fixed; inset: 0; background: #009cb6; z-index: 9999; }
-        .mobile-menu.active { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; }
-        .mobile-menu a { color: white; font-size: 20px; padding: 16px; width: 100%; text-align: center; border-radius: 8px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; }
-        .mobile-menu a:hover { background: rgba(255,255,255,0.1); }
-        .mobile-menu a svg { color: #f4ad0f; width: 24px; height: 24px; }
-        .mobile-menu-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #f4ad0f; font-size: 32px; cursor: pointer; }
+        .mobile-menu { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; backdrop-filter: blur(4px); }
+        .mobile-menu.active { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
+        .mobile-menu a { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: #1f2937; font-size: 18px; padding: 16px; width: 100%; max-width: 400px; text-align: center; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .mobile-menu a:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .mobile-menu a svg { color: #009cb6; width: 24px; height: 24px; }
+        .mobile-menu-close { position: absolute; top: 20px; right: 20px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; color: #1f2937; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         
         img[alt="Profile"], img[src*="profile"], .profile-picture { border-radius: 50% !important; }
         .drag-drop-area {
