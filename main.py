@@ -7838,32 +7838,67 @@ async def track_carjet(request: Request):
 
         async def run():
             results: List[Dict[str, Any]] = []
+            
+            # Device rotation for better WAF evasion
+            devices = [
+                {
+                    "name": "iPhone 13 Pro",
+                    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+                    "viewport": {"width": 390, "height": 844},
+                    "scale": 3
+                },
+                {
+                    "name": "iPhone 14",
+                    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                    "viewport": {"width": 390, "height": 844},
+                    "scale": 3
+                },
+                {
+                    "name": "Samsung Galaxy S21",
+                    "user_agent": "Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+                    "viewport": {"width": 360, "height": 800},
+                    "scale": 3
+                },
+                {
+                    "name": "iPad Air",
+                    "user_agent": "Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+                    "viewport": {"width": 820, "height": 1180},
+                    "scale": 2
+                }
+            ]
+            
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
-                # Use mobile user agent and viewport to avoid WAF detection
-                context = await browser.new_context(
-                    user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-                    viewport={"width": 390, "height": 844},  # iPhone 13 Pro
-                    device_scale_factor=3,
-                    is_mobile=True,
-                    has_touch=True,
-                    locale="pt-PT"
-                )
-                # Mobile headers
-                default_headers = {
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
-                    "Accept-Encoding": "gzip, deflate, br",
-                }
-                await context.set_extra_http_headers(default_headers)
-                # Allow all resources to ensure CarJet JS initializes correctly
-                await context.route("**/*", lambda route: route.continue_())
-                page = await context.new_page()
-                page.set_default_navigation_timeout(10000)
-                page.set_default_timeout(8000)
+                
                 for loc in locations:
                     name = loc.get("name", "")
                     template = loc.get("template", "")
+                    
+                    # Select random device for this location
+                    device = random.choice(devices)
+                    print(f"[DEVICE_ROTATION] Location: {name}, Device: {device['name']}")
+                    
+                    # Create new context with random device (clears cache/history)
+                    context = await browser.new_context(
+                        user_agent=device["user_agent"],
+                        viewport=device["viewport"],
+                        device_scale_factor=device["scale"],
+                        is_mobile=True,
+                        has_touch=True,
+                        locale="pt-PT"
+                    )
+                    
+                    # Mobile headers
+                    default_headers = {
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
+                        "Accept-Encoding": "gzip, deflate, br",
+                    }
+                    await context.set_extra_http_headers(default_headers)
+                    await context.route("**/*", lambda route: route.continue_())
+                    page = await context.new_page()
+                    page.set_default_navigation_timeout(10000)
+                    page.set_default_timeout(8000)
                     
                     # Apply date rotation per location for more variation
                     rotated_pickup_date = pickup_date
@@ -7876,10 +7911,28 @@ async def track_carjet(request: Request):
                     else:
                         print(f"[DATE_ROTATION] Location: {name}, Disabled, using original date: {pickup_date}")
                     
+                    # Randomize pickup time between 14:30 and 17:00
+                    hour = random.randint(14, 16)
+                    if hour == 14:
+                        minute = random.choice([30, 45])
+                    elif hour == 16:
+                        minute = random.choice([0, 15, 30, 45])
+                    else:  # hour == 15
+                        minute = random.choice([0, 15, 30, 45])
+                    
+                    # If hour is 16 and minute > 0, cap at 17:00
+                    if hour == 16 and minute > 0:
+                        if random.random() < 0.5:
+                            hour = 17
+                            minute = 0
+                    
+                    rotated_pickup_time = f"{hour:02d}:{minute:02d}"
+                    print(f"[TIME_ROTATION] Location: {name}, Original: {pickup_time}, Rotated: {rotated_pickup_time}")
+                    
                     loc_block = {"location": name, "durations": []}
                     for d in durations:
                         try:
-                            start_dt = datetime.fromisoformat(rotated_pickup_date + "T" + pickup_time)
+                            start_dt = datetime.fromisoformat(rotated_pickup_date + "T" + rotated_pickup_time)
                             end_dt = start_dt + timedelta(days=int(d))
                             # Try direct POST to CarJet first (faster, no headless)
                             html = try_direct_carjet(name, start_dt, end_dt, lang=lang, currency=currency)
@@ -7902,6 +7955,12 @@ async def track_carjet(request: Request):
                                 "items": [],
                             })
                     results.append(loc_block)
+                    
+                    # Close context to clear cache/cookies/history before next location
+                    await page.close()
+                    await context.close()
+                    print(f"[CACHE_CLEAR] Location: {name}, Context closed - cache/history cleared")
+                    
                 await browser.close()
             return results
 
