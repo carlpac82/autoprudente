@@ -2442,6 +2442,90 @@ async def test_carjet_mobile(request: Request):
     """CarJet Mobile Scraping Test Page"""
     return templates.TemplateResponse("carjet_mobile_test.html", {"request": request})
 
+@app.post("/api/test-mobile-scraping")
+async def test_mobile_scraping(request: Request):
+    """Test mobile scraping endpoint"""
+    import time
+    import httpx
+    from datetime import datetime, timedelta
+    
+    try:
+        data = await request.json()
+        location = data.get('location', 'albufeira')
+        days = int(data.get('days', 3))
+        
+        # Build mobile URL
+        today = datetime.now()
+        pickup = today + timedelta(days=7)
+        dropoff = pickup + timedelta(days=days)
+        
+        location_codes = {
+            'albufeira': 'albufeira-pt',
+            'faro-airport': 'faro-airport-pt'
+        }
+        
+        pickup_str = pickup.strftime('%Y-%m-%d')
+        dropoff_str = dropoff.strftime('%Y-%m-%d')
+        loc_code = location_codes.get(location, 'albufeira-pt')
+        
+        mobile_url = f"https://m.carjet.com/en/car-hire/{loc_code}/{pickup_str}/{dropoff_str}/"
+        
+        # Mobile user agent
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+        }
+        
+        start_time = time.time()
+        
+        # Fetch mobile page
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(mobile_url, headers=headers)
+            html = response.text
+        
+        response_time = int((time.time() - start_time) * 1000)
+        
+        # Simple parsing to count vehicles (we'll improve this)
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Try to find vehicle cards (adjust selectors based on actual mobile HTML)
+        vehicles = []
+        vehicle_cards = soup.find_all(['div', 'article'], class_=lambda x: x and ('car' in x.lower() or 'vehicle' in x.lower() or 'result' in x.lower()))
+        
+        for card in vehicle_cards[:5]:  # Get first 5 as sample
+            try:
+                # Try to extract basic info
+                name_elem = card.find(['h2', 'h3', 'h4', 'span'], class_=lambda x: x and ('name' in x.lower() or 'title' in x.lower() or 'model' in x.lower()))
+                price_elem = card.find(['span', 'div'], class_=lambda x: x and ('price' in x.lower() or 'cost' in x.lower()))
+                
+                vehicle = {
+                    'name': name_elem.get_text(strip=True) if name_elem else 'Unknown',
+                    'price': price_elem.get_text(strip=True) if price_elem else 'N/A'
+                }
+                vehicles.append(vehicle)
+            except:
+                continue
+        
+        return {
+            "success": True,
+            "url": mobile_url,
+            "vehicleCount": len(vehicle_cards),
+            "responseTime": response_time,
+            "vehicles": vehicles,
+            "htmlLength": len(html),
+            "statusCode": response.status_code
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @app.get("/admin/backup", response_class=HTMLResponse)
 async def admin_backup(request: Request):
     """Backup & Restore page"""
