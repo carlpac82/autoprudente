@@ -208,13 +208,13 @@
         .suppliers-grid { grid-template-columns: repeat(2, 1fr) !important; max-height: 300px; }
       }
       
-      /* Mobile menu - Blue gradient design matching website */
+      /* Mobile menu - White background with blue/yellow accents */
       .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }
       .mobile-menu { 
         display: none; 
         position: fixed; 
         inset: 0; 
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: white;
         z-index: 9999;
         overflow-y: auto;
       }
@@ -230,71 +230,73 @@
         justify-content: flex-end;
         padding: 10px 0;
         margin-bottom: 30px;
+        border-bottom: 2px solid #e5e7eb;
       }
       .mobile-menu-section {
         margin-bottom: 24px;
       }
       .mobile-menu-section-title {
         font-size: 11px;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.6);
+        font-weight: 700;
+        color: #6b7280;
         text-transform: uppercase;
         letter-spacing: 0.1em;
         padding: 8px 16px;
         margin-bottom: 8px;
       }
       .mobile-menu a { 
-        color: white;
-        font-size: 18px;
-        padding: 16px 20px;
+        color: #009cb6;
+        font-size: 17px;
+        padding: 14px 16px;
         width: 100%;
         text-align: left;
-        border-radius: 12px;
-        transition: all 0.3s;
+        border-radius: 10px;
+        transition: all 0.2s;
         display: flex;
         align-items: center;
-        gap: 16px;
-        font-weight: 400;
+        gap: 14px;
+        font-weight: 500;
       }
       .mobile-menu a:hover { 
-        background: rgba(255, 255, 255, 0.15);
-        transform: translateX(4px);
+        background: #f0f9ff;
+        color: #0077b6;
       }
       .mobile-menu a svg { 
-        color: white;
-        width: 24px;
-        height: 24px;
+        color: #009cb6;
+        width: 22px;
+        height: 22px;
         flex-shrink: 0;
-        opacity: 0.9;
       }
       .mobile-menu-close { 
-        background: rgba(255, 255, 255, 0.2);
+        background: #009cb6;
         border: none;
         color: white;
-        font-size: 28px;
+        font-size: 26px;
         cursor: pointer;
         padding: 0;
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
         transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(0, 156, 182, 0.3);
       }
       .mobile-menu-close:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: #0077b6;
+        transform: scale(1.05);
       }
       .mobile-menu-logout {
         margin-top: auto;
         padding-top: 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        border-top: 2px solid #e5e7eb;
       }
       .mobile-menu-logout a {
-        color: #fecaca;
+        color: #dc2626;
       }
       .mobile-menu-logout a svg {
-        color: #fecaca;
+        color: #dc2626;
       }
     </style>
   </head>
