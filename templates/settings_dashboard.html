@@ -136,7 +136,7 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <span data-i18n="settings.title">Settings</span>
         </a>
-        <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\"/logout\"]').submit();" class="flex items-center justify-center gap-3" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 10px;">
+        <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\'/logout\']').submit();" class="flex items-center justify-center gap-3" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 10px;">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             <span>Logout</span>
         </a>
@@ -266,17 +266,36 @@
     </div>
 
     <script>
+        // Cache de iframes para evitar recarregamentos
+        const iframeCache = {};
+        let currentSection = null;
+        
         function loadSection(section) {
             console.log('[LOAD] Section:', section);
             
             // Update active menu item
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-            
-            // Show loading
             const contentArea = document.getElementById('content-area');
+            
+            // Se já está carregado, apenas mostrar
+            if (currentSection === section && iframeCache[section]) {
+                return;
+            }
+            
+            // Esconder todos os iframes
+            Object.keys(iframeCache).forEach(key => {
+                if (iframeCache[key]) {
+                    iframeCache[key].style.display = 'none';
+                }
+            });
+            
+            // Se já existe no cache, apenas mostrar
+            if (iframeCache[section]) {
+                iframeCache[section].style.display = 'block';
+                currentSection = section;
+                return;
+            }
+            
+            // Show loading state apenas na primeira vez
             contentArea.innerHTML = `
                 <div class="flex items-center justify-center h-64">
                     <div class="text-center">
@@ -308,8 +327,27 @@
                 return;
             }
             
-            // Load content via iframe (fixed height, no onload to avoid loops)
-            contentArea.innerHTML = `<iframe src="${url}" class="w-full border-0" style="height: 85vh; width: 100%;"></iframe>`;
+            // Criar iframe com loading lazy
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.className = 'w-full border-0';
+            iframe.style.cssText = 'height: 85vh; width: 100%;';
+            iframe.loading = 'lazy';
+            
+            // Remover loading quando carregar
+            iframe.onload = function() {
+                const loading = contentArea.querySelector('.animate-spin');
+                if (loading) {
+                    loading.parentElement.parentElement.remove();
+                }
+            };
+            
+            // Adicionar ao cache
+            iframeCache[section] = iframe;
+            currentSection = section;
+            
+            // Adicionar ao DOM
+            contentArea.appendChild(iframe);
         }
         
         // Users already loaded in HTML, no need for DOMContentLoaded
