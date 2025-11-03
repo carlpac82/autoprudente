@@ -546,16 +546,11 @@
                         </div>
                     </div>
                     <div class="flex items-end gap-2">
-                        <button id="btnGenerateAuto" onclick="generateAutomatedPrices()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Generate automated prices">
+                        <button id="btnGenerateAuto" onclick="toggleGenerateAuto()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Generate automated prices">
                             <svg class="w-6 h-6 text-[#f4ad0f] generate-icon" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
-                            <svg class="w-6 h-6 text-[#f4ad0f] loading-icon-auto hidden animate-spin" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                        </button>
-                        <button id="btnStopGenerate" onclick="stopGenerating()" class="hidden p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded transition-colors border border-red-200" title="Stop generating prices">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-6 h-6 text-red-600 stop-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
                             </svg>
@@ -1320,22 +1315,30 @@
         // Variáveis de controle para parar operações
         let stopSearchFlag = false;
         let stopGenerateFlag = false;
+        let isGenerating = false;
+        
+        function toggleGenerateAuto() {
+            if (isGenerating) {
+                stopGenerating();
+            } else {
+                generateAutomatedPrices();
+            }
+        }
         
         function stopGenerating() {
             stopGenerateFlag = true;
+            isGenerating = false;
             
             // Immediately reset UI
             const btn = document.getElementById('btnGenerateAuto');
-            const btnStop = document.getElementById('btnStopGenerate');
             const generateIcon = btn.querySelector('.generate-icon');
-            const loadingIcon = btn.querySelector('.loading-icon-auto');
+            const stopIcon = btn.querySelector('.stop-icon');
             const progressBar = document.getElementById('progressBarAuto');
             
             // Reset button states immediately
             generateIcon.classList.remove('hidden');
-            loadingIcon.classList.add('hidden');
-            btn.disabled = false;
-            btnStop.classList.add('hidden');
+            stopIcon.classList.add('hidden');
+            btn.title = 'Generate automated prices';
             progressBar.classList.add('hidden');
             
             // Show notification
@@ -3682,19 +3685,18 @@
         // ===== AUTOMATED PRICES FUNCTIONS =====
         
         async function generateAutomatedPrices() {
-            // Reset stop flag
+            // Reset stop flag and set generating state
             stopGenerateFlag = false;
+            isGenerating = true;
 
             const btn = document.getElementById('btnGenerateAuto');
-            const btnStop = document.getElementById('btnStopGenerate');
             const generateIcon = btn.querySelector('.generate-icon');
-            const loadingIcon = btn.querySelector('.loading-icon-auto');
+            const stopIcon = btn.querySelector('.stop-icon');
             
-            // Show loading animation
+            // Change button to stop mode
             generateIcon.classList.add('hidden');
-            loadingIcon.classList.remove('hidden');
-            btn.disabled = true;
-            btnStop.classList.remove('hidden');
+            stopIcon.classList.remove('hidden');
+            btn.title = 'Stop generating prices';
             
             // Ensure table is initialized
             initTableAuto();
@@ -3714,10 +3716,10 @@
                 
                 if (!pickupDate) {
                     showNotification('Please select a pickup date first', 'warning');
-                    loadingIcon.classList.add('hidden');
+                    stopIcon.classList.add('hidden');
                     generateIcon.classList.remove('hidden');
-                    btn.disabled = false;
-                    btnStop.classList.add('hidden');
+                    btn.title = 'Generate automated prices';
+                    isGenerating = false;
                     progressBar.classList.add('hidden');
                     return;
                 }
@@ -3997,11 +3999,11 @@
                 showNotification('Error generating prices: ' + error.message, 'error');
                 progressBar.classList.add('hidden');
             } finally {
-                // Hide loading animation
-                loadingIcon.classList.add('hidden');
+                // Reset button to generate mode
+                stopIcon.classList.add('hidden');
                 generateIcon.classList.remove('hidden');
-                btn.disabled = false;
-                btnStop.classList.add('hidden');
+                btn.title = 'Generate automated prices';
+                isGenerating = false;
             }
         }
         
