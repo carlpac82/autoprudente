@@ -358,17 +358,13 @@
                         <input type="date" id="pickupDate" class="px-3 py-2 border border-gray-300 rounded">
                     </div>
                     <div class="flex items-end gap-2">
-                        <button id="btnSearchAll" onclick="searchAllPrices()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Search all prices">
+                        <button id="btnSearchAll" onclick="toggleSearch()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Search all prices">
                             <svg class="w-6 h-6 text-[#f4ad0f] search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
-                            <svg class="w-6 h-6 text-[#f4ad0f] loading-icon hidden animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                        </button>
-                        <button id="btnStopSearch" onclick="stopSearch()" class="p-2 hover:bg-gray-100 rounded transition-colors hidden" title="Stop search">
-                            <svg class="w-6 h-6 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            <svg class="w-6 h-6 text-red-600 stop-search-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
                             </svg>
                         </button>
                     </div>
@@ -1316,6 +1312,15 @@
         let stopSearchFlag = false;
         let stopGenerateFlag = false;
         let isGenerating = false;
+        let isSearching = false;
+        
+        function toggleSearch() {
+            if (isSearching) {
+                stopSearch();
+            } else {
+                searchAllPrices();
+            }
+        }
         
         function toggleGenerateAuto() {
             if (isGenerating) {
@@ -1323,6 +1328,26 @@
             } else {
                 generateAutomatedPrices();
             }
+        }
+        
+        function stopSearch() {
+            stopSearchFlag = true;
+            isSearching = false;
+            
+            // Immediately reset UI
+            const btn = document.getElementById('btnSearchAll');
+            const searchIcon = btn.querySelector('.search-icon');
+            const stopIcon = btn.querySelector('.stop-search-icon');
+            const progressBar = document.getElementById('progressBar');
+            
+            // Reset button states immediately
+            searchIcon.classList.remove('hidden');
+            stopIcon.classList.add('hidden');
+            btn.title = 'Search all prices';
+            progressBar.classList.add('hidden');
+            
+            // Show notification
+            showNotification('⏹️ Search stopped by user', 'warning');
         }
         
         function stopGenerating() {
@@ -1756,19 +1781,18 @@
                 return;
             }
 
-            // Reset stop flag
+            // Reset stop flag and set searching state
             stopSearchFlag = false;
+            isSearching = true;
 
-            // Animação do botão
+            // Change button to stop mode
             const btn = document.getElementById('btnSearchAll');
-            const btnStop = document.getElementById('btnStopSearch');
             const searchIcon = btn.querySelector('.search-icon');
-            const loadingIcon = btn.querySelector('.loading-icon');
+            const stopIcon = btn.querySelector('.stop-search-icon');
             
             searchIcon.classList.add('hidden');
-            loadingIcon.classList.remove('hidden');
-            btn.disabled = true;
-            btnStop.classList.remove('hidden');
+            stopIcon.classList.remove('hidden');
+            btn.title = 'Stop search';
 
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
@@ -1795,6 +1819,11 @@
                 
                 // Tentar data original e até X dias à frente (configurável)
                 for (let dateOffset = 0; dateOffset <= maxDays && !foundPrices; dateOffset++) {
+                    // Check stop flag
+                    if (stopSearchFlag) {
+                        return;
+                    }
+                    
                     const searchDate = new Date(pickupDate);
                     searchDate.setDate(searchDate.getDate() + dateOffset);
                     
@@ -1967,11 +1996,11 @@
             progressPercent.textContent = '100%';
             progressFill.style.width = '100%';
 
-            // Restaurar botão
-            loadingIcon.classList.add('hidden');
+            // Reset button to search mode
+            stopIcon.classList.add('hidden');
             searchIcon.classList.remove('hidden');
-            btn.disabled = false;
-            btnStop.classList.add('hidden');
+            btn.title = 'Search all prices';
+            isSearching = false;
 
             // Guardar automaticamente no histórico após pesquisa
             const savedCount = saveToHistory();
