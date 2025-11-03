@@ -188,6 +188,24 @@ const translations = {
         'automation.noCalendarScansYet': 'Ainda sem scans de calendário',
         'automation.runCalendarScan': 'Execute um Calendar Scan a partir de AI Insights para ver o histórico aqui',
         
+        // Vehicles Management
+        'vehicles.title': 'Gestão de Veículos',
+        'vehicles.subtitle': 'Gerir grupos de veículos, categorias e especificações',
+        'vehicles.newVehicle': 'Novo Veículo',
+        'vehicles.uncategorized': 'Sem Categoria',
+        'vehicles.active': 'Ativo',
+        'vehicles.disabled': 'Desativado',
+        'vehicles.seats': 'lugares',
+        'vehicles.doors': 'portas',
+        'vehicles.automatic': 'Automático',
+        'vehicles.manual': 'Manual',
+        'vehicles.edit': 'Editar',
+        'vehicles.delete': 'Eliminar',
+        'vehicles.noVehiclesYet': 'Ainda sem veículos',
+        'vehicles.getStarted': 'Comece por adicionar o seu primeiro veículo ao sistema.',
+        'vehicles.addFirstVehicle': 'Adicionar Primeiro Veículo',
+        'vehicles.deleteConfirm': 'Eliminar este veículo?',
+        
         // Email Notifications
         'emailNotifications.title': 'Notificações por Email',
         'emailNotifications.description': 'Configure uma conta de email para receber notificações automáticas sobre alterações de preços, alertas e relatórios.',
@@ -627,6 +645,24 @@ const translations = {
         'automation.downloadExcelToSee': 'Download Excel files to see history here',
         'automation.noCalendarScansYet': 'No calendar scans yet',
         'automation.runCalendarScan': 'Run a Calendar Scan from AI Insights to see history here',
+        
+        // Vehicles Management
+        'vehicles.title': 'Vehicles Management',
+        'vehicles.subtitle': 'Manage vehicle groups, categories and specifications',
+        'vehicles.newVehicle': 'New Vehicle',
+        'vehicles.uncategorized': 'Uncategorized',
+        'vehicles.active': 'Active',
+        'vehicles.disabled': 'Disabled',
+        'vehicles.seats': 'seats',
+        'vehicles.doors': 'doors',
+        'vehicles.automatic': 'Automatic',
+        'vehicles.manual': 'Manual',
+        'vehicles.edit': 'Edit',
+        'vehicles.delete': 'Delete',
+        'vehicles.noVehiclesYet': 'No vehicles yet',
+        'vehicles.getStarted': 'Get started by adding your first vehicle to the system.',
+        'vehicles.addFirstVehicle': 'Add First Vehicle',
+        'vehicles.deleteConfirm': 'Delete this vehicle?',
         
         // Email Notifications
         'emailNotifications.title': 'Email Notifications',
