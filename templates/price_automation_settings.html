@@ -3404,12 +3404,16 @@
         }
         
         function fillMissingStrategies() {
+            console.log('🔄 fillMissingStrategies() called');
+            console.log('📦 Current strategiesData keys:', Object.keys(strategiesData).length);
+            
             // Fill ALL missing days/months with default strategy (Lowest -1.5%)
             const locations = ['Albufeira', 'Aeroporto de Faro'];
             const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             const days = Array.from({length: 31}, (_, i) => i + 1);
             
             let addedCount = 0;
+            console.log(`🔍 Checking ${locations.length} locations × ${grupos.length} grupos × ${months.length} months × ${days.length} days`);
             
             locations.forEach(location => {
                 grupos.forEach(grupo => {
