@@ -934,10 +934,48 @@ DEBUG_DIR = Path(os.environ.get("DEBUG_DIR", BASE_DIR / "static" / "debug"))
 DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Admin/Users: DB helpers ---
+class PostgreSQLConnectionWrapper:
+    """Wrapper para adicionar método execute() à conexão PostgreSQL"""
+    def __init__(self, conn):
+        self._conn = conn
+        self._cursor = None
+    
+    def execute(self, query, params=None):
+        """Execute query usando cursor"""
+        self._cursor = self._conn.cursor()
+        if params:
+            self._cursor.execute(query, params)
+        else:
+            self._cursor.execute(query)
+        return self._cursor
+    
+    def commit(self):
+        return self._conn.commit()
+    
+    def rollback(self):
+        return self._conn.rollback()
+    
+    def close(self):
+        if self._cursor:
+            self._cursor.close()
+        return self._conn.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.rollback()
+        self.close()
+
 def _db_connect():
     """Database connection - supports both PostgreSQL and SQLite"""
     if _USE_NEW_DB:
-        return _db_connect_new()
+        conn = _db_connect_new()
+        # Wrap PostgreSQL connection to add execute() method
+        if hasattr(conn, 'cursor') and not hasattr(conn, 'row_factory'):
+            return PostgreSQLConnectionWrapper(conn)
+        return conn
     else:
         return sqlite3.connect(str(DB_PATH))
 
