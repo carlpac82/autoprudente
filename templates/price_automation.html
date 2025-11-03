@@ -847,7 +847,7 @@
                         <table class="w-full border-collapse border border-gray-300">
                             <thead>
                                 <tr class="bg-[#009cb6]/10">
-                                    <th class="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900" data-i18n="automation.days">Days</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900" data-i18n="automation.daysCapital">Days</th>
                                     <th class="border border-gray-300 px-4 py-2 text-center font-semibold text-[#009cb6]">C3 (€/day)</th>
                                     <th class="border border-gray-300 px-4 py-2 text-center font-semibold text-[#009cb6]">C4 (€/day)</th>
                                     <th class="border border-gray-300 px-4 py-2 text-center font-semibold text-[#009cb6]">C5 (€/day)</th>
@@ -2522,9 +2522,11 @@
                 const c4_price = d === 1 ? c4_1 / 1 : d === 2 ? c4_2 / 2 : c4_3 / 3;
                 const c5_price = d === 1 ? c5_1 / 1 : d === 2 ? c5_2 / 2 : c5_3 / 3;
                 
+                const dayText = d === 1 ? t('automation.day', 'day') : t('automation.days', 'days');
+                
                 const row = `
                     <tr class="hover:bg-[#009cb6]/5">
-                        <td class="border border-gray-300 px-4 py-2 font-medium">${d} ${d === 1 ? 'day' : 'days'}</td>
+                        <td class="border border-gray-300 px-4 py-2 font-medium">${d} ${dayText}</td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-[#009cb6] font-semibold">${c3_price.toFixed(2)}€</td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-[#009cb6] font-semibold">${c4_price.toFixed(2)}€</td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-[#009cb6] font-semibold">${c5_price.toFixed(2)}€</td>
