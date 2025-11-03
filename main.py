@@ -7887,7 +7887,7 @@ async def track_carjet(request: Request):
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
                 
-                for loc in locations:
+                for loc_index, loc in enumerate(locations):
                     name = loc.get("name", "")
                     template = loc.get("template", "")
                     
@@ -7962,7 +7962,6 @@ async def track_carjet(request: Request):
                     for d in durations:
                         try:
                             # Random delay between duration searches (0.5-2 seconds)
-                            import asyncio
                             delay = random.uniform(0.5, 2.0)
                             print(f"[DELAY] Waiting {delay:.2f}s before next search...")
                             await asyncio.sleep(delay)
@@ -8007,8 +8006,7 @@ async def track_carjet(request: Request):
                     print(f"[CACHE_CLEAR] Location: {name}, Context closed - cache/history cleared")
                     
                     # Random delay between locations (2-5 seconds) - simulate human behavior
-                    if locations.index(loc) < len(locations) - 1:  # Not the last location
-                        import asyncio
+                    if loc_index < len(locations) - 1:  # Not the last location
                         location_delay = random.uniform(2.0, 5.0)
                         print(f"[LOCATION_DELAY] Waiting {location_delay:.2f}s before next location...")
                         await asyncio.sleep(location_delay)
