@@ -3077,12 +3077,20 @@
         
         function renderStrategiesList(location, grupo, month, day) {
             const key = `${location}_${grupo}_${month}_${day}`;
+            console.log(`🎨 renderStrategiesList called: ${key}`);
+            console.log(`📊 strategiesData for key:`, strategiesData[key]);
+            console.log(`📦 All strategiesData keys:`, Object.keys(strategiesData).filter(k => k.includes(location) && k.includes(grupo)).slice(0, 5));
+            
             const container = document.getElementById(`strategiesList_${location}_${grupo}`);
-            if (!container) return;
+            if (!container) {
+                console.error(`❌ Container not found: strategiesList_${location}_${grupo}`);
+                return;
+            }
             
             container.innerHTML = '';
             
             const strategies = strategiesData[key] || [];
+            console.log(`📋 Strategies found: ${strategies.length}`);
             
             if (strategies.length === 0) {
                 container.innerHTML = '<p class="text-xs text-gray-500 italic">No strategies added yet. Click "+ Add Strategy" to start.</p>';
