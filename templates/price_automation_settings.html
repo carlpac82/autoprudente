@@ -3397,13 +3397,6 @@
         
         function createDefaultStrategies() {
             // Default strategy: Lowest -1.5% for all days, months, and years
-            const defaultStrategy = {
-                type: 'lowest',
-                operation: 'subtract',
-                value: 1.5,
-                typeLabel: '%'
-            };
-            
             const locations = ['Albufeira', 'Aeroporto de Faro'];
             const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             const days = Array.from({length: 31}, (_, i) => i + 1);
@@ -3413,7 +3406,18 @@
                     months.forEach(month => {
                         days.forEach(day => {
                             const key = `${location}_${grupo}_${month}_${day}`;
-                            strategiesData[key] = [{ ...defaultStrategy }];
+                            const strategyId = Date.now() + Math.random(); // Unique ID
+                            
+                            strategiesData[key] = [{
+                                id: strategyId,
+                                type: 'follow_lowest',
+                                name: 'Follow Lowest Price',
+                                config: {
+                                    operation: 'subtract',
+                                    value: 1.5,
+                                    typeLabel: '%'
+                                }
+                            }];
                         });
                     });
                 });
@@ -3421,6 +3425,19 @@
             
             // Save to database
             saveStrategies();
+            
+            // Re-render current view if any
+            const currentLocation = document.querySelector('.location-tab.active')?.dataset?.location;
+            if (currentLocation) {
+                grupos.forEach(grupo => {
+                    const currentDay = getCurrentSelectedDay(currentLocation, grupo);
+                    const currentMonth = getCurrentSelectedMonth(currentLocation, grupo);
+                    if (currentDay && currentMonth) {
+                        renderStrategiesList(currentLocation, grupo, currentMonth.number, currentDay);
+                    }
+                });
+            }
+            
             showNotification('✅ Default strategies created: Lowest -1.5% for all configurations', 'success');
         }
         
