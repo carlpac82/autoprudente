@@ -17,7 +17,7 @@
       .alert-success {
         padding: 1rem;
         border-radius: 0.5rem;
-        border-left: 4px solid #009cb6;
+        border-left: 4px solid #2563eb;
         background-color: #eff6ff;
         display: flex;
         align-items: flex-start;
@@ -35,7 +35,7 @@
       .alert-warning {
         padding: 1rem;
         border-radius: 0.5rem;
-        border-left: 4px solid #f4ad0f;
+        border-left: 4px solid #1d4ed8;
         background-color: #fffbeb;
         display: flex;
         align-items: flex-start;
@@ -131,20 +131,20 @@
               </p>
             </div>
             
-            <div class="border-l-4 border-[#f4ad0f] pl-4">
+            <div class="border-l-4 border-[#1d4ed8] pl-4">
               <div class="flex items-center justify-between mb-2">
                 <label class="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <svg class="w-4 h-4 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 text-[#1d4ed8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                   </svg>
                   Low Deposit Groups Adjustment
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" name="abbycar_low_deposit_enabled" value="1" {% if abbycar_low_deposit_enabled %}checked{% endif %} class="w-4 h-4 text-[#f4ad0f] border-gray-300 rounded focus:ring-[#f4ad0f]" />
+                  <input type="checkbox" name="abbycar_low_deposit_enabled" value="1" {% if abbycar_low_deposit_enabled %}checked{% endif %} class="w-4 h-4 text-[#1d4ed8] border-gray-300 rounded focus:ring-[#1d4ed8]" />
                   <span class="text-sm font-medium text-gray-700">Ativar</span>
                 </label>
               </div>
-              <input type="text" name="abbycar_low_deposit_pct" value="{{ '%.2f' % abbycar_low_deposit_pct if abbycar_low_deposit_pct is not none else '0.00' }}" placeholder="0.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#f4ad0f] focus:ring-2 focus:ring-[#f4ad0f]" />
+              <input type="text" name="abbycar_low_deposit_pct" value="{{ '%.2f' % abbycar_low_deposit_pct if abbycar_low_deposit_pct is not none else '0.00' }}" placeholder="0.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]" />
               <p class="text-xs text-gray-500 mt-1">
                 Ajuste ADICIONAL apenas para grupos Low Deposit (12 grupos).<br>
                 <strong>Grupos afetados:</strong> MCMV, NDMR, HDMV, MDAV, EDAR, DFMR, DFMV, IWMV, CFAV, SVMV, SVAR, LVMR<br>
@@ -156,36 +156,67 @@
           </div>
         </div>
         
-        <!-- UI Settings -->
+        <!-- Website Export Adjustment -->
         <div class="border-t pt-4 mt-6">
           <h3 class="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
             </svg>
-            Interface & Appearance
+            <span>Ajuste de Exportação Website</span>
           </h3>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Theme Color</label>
-              <div class="flex items-center gap-3">
-                <input type="color" name="ui_theme_color" value="{{ ui_theme_color }}" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" />
-                <input type="text" name="ui_theme_color" value="{{ ui_theme_color }}" placeholder="#3b82f6" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
-              </div>
+              <label class="block text-sm font-medium text-gray-700">Ajuste de Preços Website (%)</label>
+              <input type="text" name="website_pct" value="{{ '%.2f' % website_pct if website_pct is not none else '14.00' }}" placeholder="14.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-2 focus:ring-green-600" />
               <p class="text-xs text-gray-500 mt-1">
-                Cor principal do tema (botões, links, etc).<br>
-                Default: <strong>#3b82f6</strong> (azul)
+                Aplica ajuste percentual a TODOS os preços no Excel Website (exceto C3, C4, C5).<br>
+                Exemplo: 5% aumenta todos os preços em 5%, -3% diminui 3%.<br>
+                Default: 14.00%
               </p>
             </div>
-            
+          </div>
+        </div>
+        
+        <!-- SMTP Email Settings -->
+        <div class="border-t pt-4 mt-6">
+          <h3 class="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Email Notifications (SMTP)
+          </h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">SMTP Host</label>
+              <input type="text" name="smtp_host" value="{{ smtp_host }}" placeholder="smtp.gmail.com" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              <p class="text-xs text-gray-500 mt-1">Servidor SMTP para envio de emails</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">SMTP Port</label>
+              <input type="text" name="smtp_port" value="{{ smtp_port }}" placeholder="587" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              <p class="text-xs text-gray-500 mt-1">Porta SMTP (587 para TLS, 465 para SSL)</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">SMTP Username</label>
+              <input type="text" name="smtp_username" value="{{ smtp_username }}" placeholder="your-email@gmail.com" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              <p class="text-xs text-gray-500 mt-1">Email ou username para autenticação</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">SMTP Password</label>
+              <input type="password" name="smtp_password" value="{{ smtp_password }}" placeholder="••••••••" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              <p class="text-xs text-gray-500 mt-1">Password ou App Password</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">From Email</label>
+              <input type="text" name="smtp_from" value="{{ smtp_from }}" placeholder="no-reply@example.com" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+              <p class="text-xs text-gray-500 mt-1">Email que aparece como remetente</p>
+            </div>
             <div>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="ui_icons_monochrome" value="1" {% if ui_icons_monochrome %}checked{% endif %} class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]" />
-                <span class="text-sm font-medium text-gray-700" data-i18n="priceAdjustment.grayscaleIcons">Ícones Monocromáticos (Grayscale)</span>
+                <input type="checkbox" name="smtp_tls" value="1" {% if smtp_tls %}checked{% endif %} class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]" />
+                <span class="text-sm font-medium text-gray-700">Use TLS</span>
               </label>
-              <p class="text-xs text-gray-500 mt-1 ml-6">
-                Quando ativado, todos os ícones de carros ficam em tons de cinza.<br>
-                Quando desativado, ícones mantêm as cores originais.
-              </p>
+              <p class="text-xs text-gray-500 mt-1 ml-6">Ativar TLS (recomendado para porta 587)</p>
             </div>
           </div>
         </div>

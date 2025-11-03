@@ -9,7 +9,7 @@
 <body class="bg-gray-50 p-6">
     <div class="max-w-4xl mx-auto">
         <div class="bg-white rounded-lg shadow-lg p-6">
-            <h1 class="text-2xl font-bold text-[#009cb6] mb-4">🔄 Data Migration</h1>
+            <h1 class="text-2xl font-bold text-[#009cb6] mb-4">Data Migration</h1>
             <p class="text-gray-600 mb-6">Migrate all localStorage data to database (Render-safe)</p>
             
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
@@ -45,15 +45,15 @@
                             Custom Days Configuration
                         </li>
                         <li class="flex items-center">
-                            <span class="w-4 h-4 rounded-full bg-[#f4ad0f] mr-2"></span>
+                            <span class="w-4 h-4 rounded-full bg-[#1d4ed8] mr-2"></span>
                             AI Learning Data (adjustments, patterns)
                         </li>
                         <li class="flex items-center">
-                            <span class="w-4 h-4 rounded-full bg-[#f4ad0f] mr-2"></span>
+                            <span class="w-4 h-4 rounded-full bg-[#1d4ed8] mr-2"></span>
                             Automated Price Rules
                         </li>
                         <li class="flex items-center">
-                            <span class="w-4 h-4 rounded-full bg-[#f4ad0f] mr-2"></span>
+                            <span class="w-4 h-4 rounded-full bg-[#1d4ed8] mr-2"></span>
                             Pricing Strategies
                         </li>
                     </ul>
@@ -96,7 +96,7 @@
             const resultsContent = document.getElementById('resultsContent');
             
             btn.disabled = true;
-            btn.textContent = '⏳ Migrating...';
+            btn.textContent = 'Migrating...';
             progress.classList.remove('hidden');
             results.classList.add('hidden');
             resultsContent.innerHTML = '';
@@ -128,15 +128,15 @@
                     });
                     const data = await response.json();
                     if (data.ok) {
-                        migrationResults.success.push('✅ Vans Pricing (C3, C4, C5)');
+                        migrationResults.success.push('Vans Pricing (C3, C4, C5)');
                     } else {
-                        migrationResults.errors.push('❌ Vans Pricing: ' + data.error);
+                        migrationResults.errors.push('Vans Pricing: ' + data.error);
                     }
                 } else {
                     migrationResults.success.push('⏭️ Vans Pricing: No data to migrate');
                 }
             } catch (e) {
-                migrationResults.errors.push('❌ Vans Pricing: ' + e.message);
+                migrationResults.errors.push('Vans Pricing: ' + e.message);
             }
             
             // 2. Migrate Automation Settings
@@ -151,15 +151,15 @@
                     });
                     const data = await response.json();
                     if (data.ok) {
-                        migrationResults.success.push('✅ Automation Settings');
+                        migrationResults.success.push('Automation Settings');
                     } else {
-                        migrationResults.errors.push('❌ Automation Settings: ' + data.error);
+                        migrationResults.errors.push('Automation Settings: ' + data.error);
                     }
                 } else {
                     migrationResults.success.push('⏭️ Automation Settings: No data to migrate');
                 }
             } catch (e) {
-                migrationResults.errors.push('❌ Automation Settings: ' + e.message);
+                migrationResults.errors.push('Automation Settings: ' + e.message);
             }
             
             // 3. Migrate Custom Days
@@ -174,15 +174,15 @@
                     });
                     const data = await response.json();
                     if (data.ok) {
-                        migrationResults.success.push(`✅ Custom Days (${customDias.length} days)`);
+                        migrationResults.success.push(`Custom Days (${customDias.length} days)`);
                     } else {
-                        migrationResults.errors.push('❌ Custom Days: ' + data.error);
+                        migrationResults.errors.push('Custom Days: ' + data.error);
                     }
                 } else {
                     migrationResults.success.push('⏭️ Custom Days: Using defaults');
                 }
             } catch (e) {
-                migrationResults.errors.push('❌ Custom Days: ' + e.message);
+                migrationResults.errors.push('Custom Days: ' + e.message);
             }
             
             // 4. Check AI Learning Data
@@ -196,7 +196,7 @@
                     migrationResults.success.push('⏭️ AI Learning Data: No data');
                 }
             } catch (e) {
-                migrationResults.errors.push('❌ AI Learning Data: ' + e.message);
+                migrationResults.errors.push('AI Learning Data: ' + e.message);
             }
             
             // 5. Check Automated Price Rules
@@ -210,7 +210,7 @@
                     migrationResults.success.push('⏭️ Automated Price Rules: No data');
                 }
             } catch (e) {
-                migrationResults.errors.push('❌ Automated Price Rules: ' + e.message);
+                migrationResults.errors.push('Automated Price Rules: ' + e.message);
             }
             
             // 6. Check Pricing Strategies
@@ -224,7 +224,7 @@
                     migrationResults.success.push('⏭️ Pricing Strategies: No data');
                 }
             } catch (e) {
-                migrationResults.errors.push('❌ Pricing Strategies: ' + e.message);
+                migrationResults.errors.push('Pricing Strategies: ' + e.message);
             }
             
             // Show results
@@ -251,7 +251,7 @@
             }
             
             btn.disabled = false;
-            btn.textContent = '✅ Migration Complete';
+            btn.textContent = 'Migration Complete';
             btn.classList.remove('bg-[#009cb6]', 'hover:bg-[#007a8f]');
             btn.classList.add('bg-green-600', 'hover:bg-green-700');
         }

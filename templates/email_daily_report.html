@@ -14,9 +14,9 @@
                     
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #2563eb 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-                                📊 Relatório Diário de Preços
+                                Relatório Diário de Preços
                             </h1>
                             <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">
                                 {{ date }} - Comparação com {{ comparison_period }}
@@ -30,15 +30,15 @@
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td width="50%" style="padding-right: 10px;">
-                                        <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; border-radius: 4px;">
+                                        <div style="background: #f0f9fb; border-left: 4px solid #2563eb; padding: 15px; border-radius: 4px;">
                                             <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Total de Ofertas</div>
-                                            <div style="font-size: 28px; font-weight: 700; color: #009cb6;">{{ total_offers }}</div>
+                                            <div style="font-size: 28px; font-weight: 700; color: #2563eb;">{{ total_offers }}</div>
                                         </div>
                                     </td>
                                     <td width="50%" style="padding-left: 10px;">
-                                        <div style="background: #fff7ed; border-left: 4px solid #f4ad0f; padding: 15px; border-radius: 4px;">
+                                        <div style="background: #fff7ed; border-left: 4px solid #1d4ed8; padding: 15px; border-radius: 4px;">
                                             <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Alertas Disparados</div>
-                                            <div style="font-size: 28px; font-weight: 700; color: #f4ad0f;">{{ total_alerts }}</div>
+                                            <div style="font-size: 28px; font-weight: 700; color: #1d4ed8;">{{ total_alerts }}</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -49,7 +49,7 @@
                     <!-- Faro Section -->
                     <tr>
                         <td style="padding: 0 20px 20px 20px;">
-                            <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
                                 ✈️ Aeroporto de Faro
                             </h2>
                             
@@ -108,8 +108,8 @@
 
                             <!-- Faro Alerts -->
                             {% if faro_alerts %}
-                            <div style="margin-top: 15px; background: #fef3c7; border-left: 4px solid #f4ad0f; padding: 12px; border-radius: 4px;">
-                                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 5px;">⚠️ Alertas Disparados</div>
+                            <div style="margin-top: 15px; background: #fef3c7; border-left: 4px solid #1d4ed8; padding: 12px; border-radius: 4px;">
+                                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 5px;">Alertas Disparados</div>
                                 <div style="font-size: 12px; color: #78350f;">
                                     {{ faro_alerts }}
                                 </div>
@@ -121,7 +121,7 @@
                     <!-- Albufeira Section -->
                     <tr>
                         <td style="padding: 0 20px 20px 20px;">
-                            <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
                                 🏖️ Albufeira
                             </h2>
                             
@@ -180,8 +180,8 @@
 
                             <!-- Albufeira Alerts -->
                             {% if albufeira_alerts %}
-                            <div style="margin-top: 15px; background: #fef3c7; border-left: 4px solid #f4ad0f; padding: 12px; border-radius: 4px;">
-                                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 5px;">⚠️ Alertas Disparados</div>
+                            <div style="margin-top: 15px; background: #fef3c7; border-left: 4px solid #1d4ed8; padding: 12px; border-radius: 4px;">
+                                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 5px;">Alertas Disparados</div>
                                 <div style="font-size: 12px; color: #78350f;">
                                     {{ albufeira_alerts }}
                                 </div>
@@ -196,7 +196,7 @@
                             <p style="margin: 0 0 10px 0; font-size: 13px; color: #64748b;">
                                 Este relatório foi gerado automaticamente pelo sistema de monitorização de preços
                             </p>
-                            <a href="{{ dashboard_url }}" style="display: inline-block; background: #009cb6; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                            <a href="{{ dashboard_url }}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600;">
                                 Ver Dashboard Completo
                             </a>
                             <p style="margin: 15px 0 0 0; font-size: 11px; color: #94a3b8;">

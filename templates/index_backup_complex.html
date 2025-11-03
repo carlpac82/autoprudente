@@ -15,9 +15,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       :root {
-        --brand-yellow: #f4ad0f;
+        --brand-yellow: #1d4ed8;
         --brand-yellow-50: rgba(244, 173, 15, 0.2);
-        --brand-teal: #009cb6;
+        --brand-teal: #2563eb;
         --brand-teal-20: rgba(0, 156, 182, 0.2);
         --brand-header: #7ec6e0; /* header blue; send your brand hex and I'll update */
       }
@@ -69,10 +69,10 @@
       @media (min-width: 768px) { .accordion-content { max-height: none; overflow: visible; } }
       /* Inline form styling resembling Carjet */
       .seg { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; height:48px; }
-      .seg-badge { background:#009cb6; color:#fff; font-weight:700; border-radius:6px; padding:4px 8px; line-height:1; min-width:26px; text-align:center; flex-shrink:0; }
+      .seg-badge { background:#2563eb; color:#fff; font-weight:700; border-radius:6px; padding:4px 8px; line-height:1; min-width:26px; text-align:center; flex-shrink:0; }
       .seg input, .seg select { background:#fff; border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:14px; line-height:1.4; height:32px; }
       .seg .label { font-size:12px; color:#374151; margin-right:4px; }
-      .btn-search { background:#009cb6; color:#fff; font-weight:600; border-radius:8px; padding:10px 16px; }
+      .btn-search { background:#2563eb; color:#fff; font-weight:600; border-radius:8px; padding:10px 16px; }
       .btn-search:hover, .btn-search:focus { background: var(--brand-yellow); color:#fff; }
       button:hover, button:focus { background-color: var(--brand-yellow); color:#fff; }
       .lowest-badge { background: var(--brand-header); color:#fff; padding:2px 8px; border-radius:9999px; font-size:10px; line-height:1; }
@@ -91,7 +91,7 @@
         }
       }
       .bar { display:block; height:6px; border-radius:3px; }
-      .bar-blue { background:#009cb6; width:36px; }
+      .bar-blue { background:#2563eb; width:36px; }
       .bar-yellow { background: var(--brand-yellow); width:28px; }
       /* Progress bar fixed yellow (no color animation) */
       #loadingModal .progress .bar { background: var(--brand-yellow); }
@@ -163,8 +163,8 @@
           <!-- Botões -->
           <div class="md:col-span-12 flex gap-3 items-center flex-wrap">
             <button id="fetchAllBtn" type="button" class="btn-search">Pesquisar</button>
-            <button id="fetchAllDaysBtn" type="button" class="px-4 py-2.5 text-sm font-semibold bg-[#f4ad0f] text-white rounded-lg hover:bg-[#009cb6] transition-colors">
-              📊 Fetch All (Todos os Dias)
+            <button id="fetchAllDaysBtn" type="button" class="px-4 py-2.5 text-sm font-semibold bg-[#1d4ed8] text-white rounded-lg hover:bg-[#009cb6] transition-colors">
+              Fetch All (Todos os Dias)
             </button>
             <span id="fetchAllStatus" class="text-xs text-gray-500"></span>
           </div>
@@ -895,8 +895,8 @@
           const cacheKey = getCacheKey(location, delivery_date, d);
           const isCached = location && delivery_date && cachedResults[cacheKey];
           
-          btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ' + (isSelected ? 'bg-[#f4ad0f] text-white border-[#f4ad0f]' : (isCached ? 'bg-white text-[#009cb6] border-gray-300 hover:bg-[#f4ad0f]/10' : 'bg-white text-gray-700 border-gray-300 hover:bg-[#f4ad0f]/10'));
-          btn.innerHTML = d + 'd' + (isCached ? (isSelected ? ' <span style="color: #fff; font-weight: 700;">✓</span>' : ' <span style="color: #009cb6; font-weight: 700;">✓</span>') : '');
+          btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ' + (isSelected ? 'bg-[#1d4ed8] text-white border-[#1d4ed8]' : (isCached ? 'bg-white text-[#009cb6] border-gray-300 hover:bg-[#008a9e]/10' : 'bg-white text-gray-700 border-gray-300 hover:bg-[#008a9e]/10'));
+          btn.innerHTML = d + 'd' + (isCached ? (isSelected ? ' <span style="color: #fff; font-weight: 700;">✓</span>' : ' <span style="color: #2563eb; font-weight: 700;">✓</span>') : '');
           btn.title = isCached ? 'Pré-carregado (instantâneo)' : 'Clique para carregar';
           btn.addEventListener('click', async (e) => { 
             e.preventDefault();
@@ -949,10 +949,10 @@
             section.className = 'rounded-md border';
             
             const html = [];
-            html.push(`<div class="px-4 py-2 bg-gray-50 text-sm font-medium">${d} day(s) — ${escapeHtml(loc)} <span class="text-blue-600 ml-2">⚡ Cache</span></div>`);
+            html.push(`<div class="px-4 py-2 bg-gray-50 text-sm font-medium">${d} day(s) — ${escapeHtml(loc)} <span class="text-[#009cb6] ml-2">⚡ Cache</span></div>`);
             
             if (items.length === 0) {
-              html.push(`<div class="px-4 py-3 text-center text-gray-600"><p class="mb-2">⚠️ Nenhum resultado encontrado</p></div>`);
+              html.push(`<div class="px-4 py-3 text-center text-gray-600"><p class="mb-2">Nenhum resultado encontrado</p></div>`);
             } else {
               console.log('[RENDER] Primeiro carro:', items[0]?.car, 'Preço:', items[0]?.price);
               console.log('[RENDER] Último carro:', items[items.length-1]?.car, 'Preço:', items[items.length-1]?.price);
@@ -972,10 +972,10 @@
               Array.from(chipsCont.children).forEach((btn, idx) => {
                 const dayValue = daysList[idx];
                 if (dayValue === d) {
-                  btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors bg-[#f4ad0f] text-white border-[#f4ad0f]';
+                  btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors bg-[#1d4ed8] text-white border-[#1d4ed8]';
                 } else {
                   const isCached = cachedResults[getCacheKey(loc, date, dayValue)];
-                  btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ' + (isCached ? 'bg-white text-[#009cb6] border-gray-300 hover:bg-[#f4ad0f]/10' : 'bg-white text-gray-700 border-gray-300 hover:bg-[#f4ad0f]/10');
+                  btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ' + (isCached ? 'bg-white text-[#009cb6] border-gray-300 hover:bg-[#008a9e]/10' : 'bg-white text-gray-700 border-gray-300 hover:bg-[#008a9e]/10');
                 }
               });
             }
@@ -990,7 +990,7 @@
       window.runBulkFetch = async function runBulkFetch(e){
         if (e && e.preventDefault) e.preventDefault();
         if (fetchInFlight) {
-          console.log('⚠️ Fetch já em andamento, ignorando...');
+          console.log('Fetch já em andamento, ignorando...');
           return;
         }
         const status = document.getElementById('status');
@@ -1027,10 +1027,10 @@
           const section = document.createElement('div');
           section.className = 'rounded-md border';
           const inner = [];
-          inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">${(data.days ?? '-')} day(s) — ${escapeHtml(data.location || '-')} <span class=\"text-blue-600 ml-2\">⚡ Cache</span><\/div>`);
+          inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">${(data.days ?? '-')} day(s) — ${escapeHtml(data.location || '-')} <span class=\"text-[#009cb6] ml-2\">⚡ Cache</span><\/div>`);
           
           if (items.length === 0) {
-            inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\"><p class="mb-2">⚠️ Nenhum resultado encontrado</p><\/div>`);
+            inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\"><p class="mb-2">Nenhum resultado encontrado</p><\/div>`);
           } else {
             inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
             inner.push(renderCategoryBlocks(items));
@@ -1123,7 +1123,7 @@
           
           if (items.length === 0) {
             inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\">
-              <p class="mb-2">⚠️ Nenhum resultado encontrado</p>
+              <p class="mb-2">Nenhum resultado encontrado</p>
               <p class="text-sm">A sessão pode ter expirado. Por favor, tente novamente.</p>
             <\/div>`);
           } else {
@@ -1173,7 +1173,7 @@
           const start_time = stEl && (stEl.value || '10:00') || '10:00';
           
           if (!location || !delivery_date) {
-            if (fetchAllStatus) fetchAllStatus.textContent = '⚠️ Preencha local e data primeiro';
+            if (fetchAllStatus) fetchAllStatus.textContent = 'Preencha local e data primeiro';
             return;
           }
           
@@ -1181,11 +1181,11 @@
           
           try {
             fetchAllDaysBtn.disabled = true;
-            fetchAllDaysBtn.textContent = '⏳ Carregando...';
+            fetchAllDaysBtn.textContent = 'Carregando...';
             if (fetchAllStatus) {
               fetchAllStatus.textContent = 'Carregando 0/' + daysList.length;
               fetchAllStatus.className = 'text-xs font-medium';
-              fetchAllStatus.style.color = '#009cb6';
+              fetchAllStatus.style.color = '#2563eb';
             }
             
             let completed = 0;
@@ -1223,24 +1223,24 @@
                 
                 completed++;
                 if (fetchAllStatus) {
-                  fetchAllStatus.innerHTML = `<span style="background: #f4ad0f; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos carregados`;
-                  fetchAllStatus.style.color = '#009cb6';
+                  fetchAllStatus.innerHTML = `<span style="background: #1d4ed8; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos carregados`;
+                  fetchAllStatus.style.color = '#2563eb';
                 }
               } catch (err) {
-                console.error(`❌ Erro ao carregar ${days}d:`, err);
+                console.error(`Erro ao carregar ${days}d:`, err);
                 completed++;
                 if (fetchAllStatus) {
-                  fetchAllStatus.textContent = `⚠️ ${completed}/${daysList.length} (erro em ${days}d)`;
+                  fetchAllStatus.textContent = `${completed}/${daysList.length} (erro em ${days}d)`;
                   fetchAllStatus.className = 'text-xs font-medium';
-                  fetchAllStatus.style.color = '#f4ad0f';
+                  fetchAllStatus.style.color = '#1d4ed8';
                 }
               }
             }
             
             if (fetchAllStatus) {
-              fetchAllStatus.innerHTML = `<span style="background: #f4ad0f; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos prontos!`;
+              fetchAllStatus.innerHTML = `<span style="background: #1d4ed8; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos prontos!`;
               fetchAllStatus.className = 'text-xs font-medium';
-              fetchAllStatus.style.color = '#009cb6';
+              fetchAllStatus.style.color = '#2563eb';
             }
             
             // Atualizar chips para mostrar checkmarks
@@ -1267,13 +1267,13 @@
             
           } catch (err) {
             if (fetchAllStatus) {
-              fetchAllStatus.textContent = '❌ Erro: ' + err.message;
+              fetchAllStatus.textContent = 'Erro: ' + err.message;
               fetchAllStatus.className = 'text-xs font-medium';
-              fetchAllStatus.style.color = '#f4ad0f';
+              fetchAllStatus.style.color = '#1d4ed8';
             }
           } finally {
             fetchAllDaysBtn.disabled = false;
-            fetchAllDaysBtn.textContent = '📊 Fetch All (Todos os Dias)';
+            fetchAllDaysBtn.textContent = 'Fetch All (Todos os Dias)';
           }
         });
         fetchAllDaysBtn._bound = true;

@@ -8,12 +8,32 @@
 
     const SYNC_INTERVAL = 30000; // Sync every 30 seconds
     const KEYS_TO_SYNC = [
+        // Branding & Appearance
         'brandingSettings',
+        'formulaSettings',
+        
+        // Price Automation
         'priceAutomationSettings',
         'automatedPriceRules',
         'pricingStrategies',
+        'priceAIData',
+        'customDias',
+        'vansPricing',
+        
+        // User Settings
         'userSettings',
-        'priceAutomationAISettings'
+        'priceAutomationAISettings',
+        
+        // Validation Rules
+        'priceValidationRules',
+        
+        // Language
+        'selectedLanguage',
+        
+        // Any other settings
+        'companyInfo',
+        'emailSettings',
+        'reportSettings'
     ];
 
     let syncInProgress = false;

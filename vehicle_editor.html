@@ -11,7 +11,7 @@
     <!-- Header -->
     <header class="bg-[#009cb6] border-b sticky top-0 z-50">
         <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
-            <h1 class="text-white text-xl font-bold">Vehicle Names Editor</h1>
+            <h1 class="text-white text-xl font-bold" data-i18n="vehicles.vehicleNamesEditor">Vehicle Names Editor</h1>
             <div class="flex items-center gap-3 text-white text-sm">
                 <span id="totalVehicles">0</span> vehicles
                 <button onclick="fetchCarPhotos()" class="p-2 hover:bg-white/10 transition-all" title="Fetch Car Photos from CarJet" id="btnFetchPhotos">
@@ -41,11 +41,11 @@
                 <nav class="flex space-x-4 px-4">
                     <button onclick="switchTab('all')" id="tabAll" 
                             class="border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold">
-                        All Vehicles
+                        <span data-i18n="vehicles.allVehicles">All Vehicles</span>
                     </button>
                     <button onclick="switchTab('uncategorized')" id="tabUncategorized" 
                             class="border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4">
-                        Uncategorized <span id="uncategorizedCount" class="ml-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs"></span>
+                        <span data-i18n="vehicles.uncategorized">Uncategorized</span> <span id="uncategorizedCount" class="ml-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs"></span>
                     </button>
                 </nav>
             </div>
@@ -55,17 +55,17 @@
         <div class="bg-gradient-to-r from-blue-50 to-yellow-50 border-2 border-[#009cb6] rounded-lg shadow-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold text-[#009cb6]">Category & Group Management</h3>
-                    <p class="text-sm text-gray-600">Create and manage vehicle categories and groups</p>
+                    <h3 class="text-lg font-bold text-[#009cb6]" data-i18n="vehicles.categoryManagement">Category & Group Management</h3>
+                    <p class="text-sm text-gray-600" data-i18n="vehicles.categoryManagementDesc">Create and manage vehicle categories and groups</p>
                 </div>
                 <div class="flex gap-3">
                     <button onclick="showNewCategoryModal()" 
                             class="px-6 py-3 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8e] font-semibold">
-                        + New Category
+                        <span data-i18n="vehicles.newCategory">+ New Category</span>
                     </button>
                     <button onclick="showNewGroupModal()" 
                             class="px-6 py-3 bg-[#f4ad0f] text-gray-900 rounded-lg hover:bg-[#e39e0e] font-semibold">
-                        + New Group
+                        <span data-i18n="vehicles.newGroup">+ New Group</span>
                     </button>
                 </div>
             </div>
@@ -78,11 +78,11 @@
                        class="px-4 py-2 border rounded-lg" onkeyup="filterVehicles()">
                 
                 <select id="filterBrand" class="px-4 py-2 border rounded-lg" onchange="filterVehicles()">
-                    <option value="">All brands</option>
+                    <option value="" data-i18n="vehicles.allBrands">All brands</option>
                 </select>
                 
                 <select id="filterCategory" class="px-4 py-2 border rounded-lg" onchange="filterVehicles()">
-                    <option value="">All categories</option>
+                    <option value="" data-i18n="vehicles.allCategories">All categories</option>
                 </select>
                 
                 <button onclick="loadVehicles()" class="p-2 text-[#009cb6] hover:bg-gray-100 rounded-lg">
@@ -455,48 +455,50 @@
                 const brandDiv = document.createElement('div');
                 brandDiv.className = 'mb-6';
                 brandDiv.innerHTML = `
-                    <div class="bg-[#009cb6] px-6 py-4 border-b-4 border-[#f4ad0f]">
-                        <h3 class="text-xl font-bold capitalize text-white">${brand} <span class="text-sm font-normal bg-[#f4ad0f] text-gray-900 px-3 py-1 rounded-full">${brandVehicles.length} vehicles</span></h3>
+                    <div class="bg-[#009cb6] px-6 py-3 rounded-t-lg">
+                        <h3 class="text-lg font-bold capitalize text-white">${brand} <span class="text-sm font-normal bg-[#f4ad0f] text-gray-900 px-3 py-1 rounded-full ml-2">${brandVehicles.length}</span></h3>
                     </div>
-                    <table class="min-w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Original Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clean Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Group</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            ${brandVehicles.map(v => {
-                                const group = categoryToGroup[v.category] || '—';
-                                const photoUrl = '/api/vehicles/' + encodeURIComponent(v.clean) + '/photo?t=' + photoTimestamp;
-                                return `
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4">
+                    <div class="bg-white rounded-b-lg border border-gray-200 divide-y divide-gray-200">
+                        ${brandVehicles.map(v => {
+                            const group = categoryToGroup[v.category] || '—';
+                            const photoUrl = '/api/vehicles/' + encodeURIComponent(v.clean) + '/photo?t=' + photoTimestamp;
+                            const cleanNameCapitalized = v.clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                            return `
+                                <div class="p-4 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <!-- Photo -->
+                                        <div class="flex-shrink-0">
                                             <img src="${photoUrl}" 
                                                  onerror="this.onerror=null; this.src='/api/vehicles/placeholder.svg'" 
                                                  alt="${v.clean}" 
-                                                 class="h-12 w-auto rounded border shadow-sm">
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">${v.original}</td>
-                                        <td class="px-6 py-4 text-sm font-semibold text-blue-600">${v.clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-mono rounded bg-[#f4ad0f] text-gray-900 font-bold">${group}</span></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">${v.category}</td>
-                                        <td class="px-6 py-4">
-                                            <button onclick='editVehicle(${JSON.stringify(v)})' class="text-[#009cb6] hover:text-[#007a8e]">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+                                                 class="h-20 w-28 object-cover rounded-lg border shadow-sm">
+                                        </div>
+                                        
+                                        <!-- Info -->
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-start justify-between">
+                                                <div class="flex-1">
+                                                    <h4 class="text-base font-semibold text-gray-900">${cleanNameCapitalized}</h4>
+                                                    <p class="text-xs text-gray-500 mt-1">${v.original}</p>
+                                                    <div class="flex items-center gap-3 mt-2">
+                                                        <span class="px-2 py-1 text-xs font-mono rounded bg-[#f4ad0f] text-gray-900 font-bold">${group}</span>
+                                                        <span class="text-sm text-gray-600">${v.category}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Action -->
+                                                <button onclick='editVehicle(${JSON.stringify(v).replace(/'/g, "&#39;")})' class="p-2 text-[#009cb6] hover:bg-[#009cb6]/10 rounded transition-colors" title="Edit">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 `;
                 container.appendChild(brandDiv);
             });

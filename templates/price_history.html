@@ -101,7 +101,7 @@
                     </select>
                 </div>
                 <div class="flex items-end">
-                    <button onclick="loadData()" class="w-full px-4 py-2 bg-[#009cb6] text-white hover:bg-[#f4ad0f] transition-colors">
+                    <button onclick="loadData()" class="w-full px-4 py-2 bg-[#009cb6] text-white hover:bg-[#008a9e] transition-colors">
                         Atualizar
                     </button>
                 </div>
@@ -166,7 +166,7 @@
                         {
                             label: 'Preço Médio (€)',
                             data: data.evolution?.avg || [],
-                            borderColor: '#009cb6',
+                            borderColor: '#2563eb',
                             backgroundColor: 'rgba(0, 156, 182, 0.1)',
                             tension: 0.4,
                             borderWidth: 2
@@ -204,7 +204,7 @@
                     datasets: [{
                         label: 'Preço Médio (€)',
                         data: data.comparison?.values || [],
-                        backgroundColor: ['#009cb6', '#f4ad0f']
+                        backgroundColor: ['#2563eb', '#1d4ed8']
                     }]
                 },
                 options: {
@@ -225,7 +225,7 @@
                     datasets: [{
                         label: 'Preço Médio (€)',
                         data: data.monthly?.values || [],
-                        backgroundColor: '#009cb6'
+                        backgroundColor: '#2563eb'
                     }]
                 },
                 options: {

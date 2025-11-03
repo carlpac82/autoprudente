@@ -10,11 +10,6 @@
     <title>Price Automation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="/static/notifications.js"></script>
-    <!-- Global Branding System -->
-    <script src="/static/branding.js"></script>
-    <!-- Auto-Sync System (prevents data loss on Render) -->
-    <script src="/static/auto-sync.js"></script>
     <style>
         * { font-family: 'Outfit', sans-serif; }
         
@@ -278,11 +273,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                     </svg>
                 </a>
-                <a href="/price-history" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Histórico de Preços">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                </a>
                 {% if request.session and request.session.get('is_admin') %}
                 <a href="/admin" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Settings">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,24 +316,24 @@
 
     <main class="mx-auto max-w-7xl px-4 py-6">
         <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Price Automation</h1>
-            <p class="text-gray-600">Fill in CarJet prices for comparison and competitiveness analysis</p>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="automation.priceAutomation">Price Automation</h1>
+            <p class="text-gray-600" data-i18n="automation.description">Fill in CarJet prices for comparison and competitiveness analysis</p>
         </div>
 
         <!-- Tabs -->
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex gap-4">
                 <button onclick="switchTab('automated')" id="tabAutomated" class="px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold">
-                    Automated Prices
+                    <span data-i18n="automation.automatedPrices">Automated Prices</span>
                 </button>
                 <button onclick="switchTab('current')" id="tabCurrent" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                    Current Prices
+                    <span data-i18n="automation.currentPrices">Current Prices</span>
                 </button>
                 <button onclick="switchTab('vans')" id="tabVans" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                    Commercial Vans
+                    <span data-i18n="automation.commercialVans">Commercial Vans</span>
                 </button>
                 <button onclick="switchTab('history')" id="tabHistory" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                    History
+                    <span data-i18n="automation.history">History</span>
                 </button>
             </nav>
         </div>
@@ -356,7 +346,7 @@
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.location">Location</label>
                         <select id="location" class="px-3 py-2 border border-gray-300 rounded">
                             <option value="Aeroporto de Faro">Aeroporto de Faro</option>
                             <option value="Albufeira" selected>Albufeira</option>
@@ -407,16 +397,21 @@
                     <span class="text-sm text-gray-500">to</span>
                     <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600">Download Excel:</span>
+                <div class="flex items-center gap-1">
+                    <span class="text-sm text-gray-600 mr-2">Download Excel:</span>
+                    <button onclick="downloadExcel('website')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Website">
+                        <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </button>
                     <button onclick="downloadExcel('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Way2Rentals">
-                        <svg class="w-6 h-6 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        <svg class="w-6 h-6 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                     </button>
                     <button onclick="downloadExcel('abbycar')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Abbycar">
-                        <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        <svg class="w-6 h-6 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                     </button>
                 </div>
@@ -501,21 +496,21 @@
         </div>
 
         <!-- Tab: Automated Prices -->
-        <div id="contentAutomated" class="">
+        <div id="contentAutomated">
 
         <!-- Controles -->
         <div class="bg-white shadow mb-6 p-4">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.location">Location</label>
                         <select id="locationAuto" class="px-3 py-2 border border-gray-300 rounded">
                             <option value="Aeroporto de Faro">Aeroporto de Faro</option>
                             <option value="Albufeira" selected>Albufeira</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date Selection</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.dateSelection">Date Selection</label>
                         <select id="dateTypeAuto" onchange="updateDateSelectionAuto()" class="px-3 py-2 border border-gray-300 rounded">
                             <option value="specific">Specific Date</option>
                             <option value="month">By Month</option>
@@ -608,16 +603,21 @@
                     <span class="text-sm text-gray-500">to</span>
                     <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600">Download Excel:</span>
+                <div class="flex items-center gap-1">
+                    <span class="text-sm text-gray-600 mr-2">Download Excel:</span>
+                    <button onclick="downloadExcelAuto('website')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Website">
+                        <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </button>
                     <button onclick="downloadExcelAuto('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Way2Rentals">
                         <svg class="w-6 h-6 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                     </button>
                     <button onclick="downloadExcelAuto('abbycar')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Abbycar">
                         <svg class="w-6 h-6 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                     </button>
                 </div>
@@ -747,10 +747,10 @@
             <div class="bg-white shadow mb-6 p-6">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h2 class="text-2xl font-bold text-[#009cb6]">
+                        <h2 class="text-2xl font-bold text-[#009cb6]" data-i18n="automation.commercialVansPricing">
                             Commercial Vans Pricing
                         </h2>
-                        <p class="text-sm text-gray-600 mt-1">Configure fixed prices for C3, C4, C5 groups</p>
+                        <p class="text-sm text-gray-600 mt-1" data-i18n="automation.configureFixedPrices">Configure fixed prices for C3, C4, C5 groups</p>
                     </div>
                     <button onclick="saveVansPricing()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#007a8c] transition-colors font-medium flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -887,17 +887,11 @@
                         <button onclick="switchHistoryTab('automated')" id="historyTabAutomated" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
                             Automated Prices
                         </button>
-                        <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900 flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
-                            </svg>
-                            Downloads
+                        <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                            📥 Downloads
                         </button>
-                        <button onclick="switchHistoryTab('calendar')" id="historyTabCalendar" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900 flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            Calendar Scans
+                        <button onclick="switchHistoryTab('calendar')" id="historyTabCalendar" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                            📅 Calendar Scans
                         </button>
                     </nav>
                 </div>
@@ -1325,38 +1319,6 @@
         let stopSearchFlag = false;
         let stopGenerateFlag = false;
 
-        function getMinDaysForLocation(location) {
-            const saved = localStorage.getItem('priceAutomationSettings');
-            if (saved) {
-                try {
-                    const settings = JSON.parse(saved);
-                    const isFaro = location.toLowerCase().includes('faro');
-                    if (isFaro) {
-                        return settings.minDaysFaro || 5;
-                    } else {
-                        return settings.minDaysAlbufeira || 1;
-                    }
-                } catch (e) {
-                    console.error('Error parsing settings:', e);
-                }
-            }
-            // Default: Faro = 5 days, Albufeira = 1 day
-            return location.toLowerCase().includes('faro') ? 5 : 1;
-        }
-        
-        function getExcludedSuppliers() {
-            const saved = localStorage.getItem('priceAutomationSettings');
-            if (saved) {
-                try {
-                    const settings = JSON.parse(saved);
-                    return (settings.excludeSuppliers || []).map(s => s.toLowerCase());
-                } catch (e) {
-                    console.error('Error parsing settings:', e);
-                }
-            }
-            return ['autoprudente']; // Default: exclude AutoPrudente
-        }
-        
         function getMaxAlternativeDays() {
             const saved = localStorage.getItem('priceAutomationSettings');
             if (saved) {
@@ -1368,6 +1330,20 @@
                 }
             }
             return 3; // Padrão
+        }
+        
+        function getExcludedSuppliers() {
+            const saved = localStorage.getItem('priceAutomationSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    // Return array of excluded suppliers, default: ['autoprudente']
+                    return settings.excludeSuppliers || ['autoprudente'];
+                } catch (e) {
+                    return ['autoprudente'];
+                }
+            }
+            return ['autoprudente']; // Padrão
         }
         
         function getMinimumPriceForDays(days, dayConfig) {
@@ -2028,6 +2004,12 @@
                 return;
             }
             
+            // Special handling for Website CSV export
+            if (broker === 'website') {
+                exportWebsiteCSV();
+                return;
+            }
+            
             const wb = XLSX.utils.book_new();
             const comissao = getComissao();
             
@@ -2231,6 +2213,130 @@
             
             console.log(`✅ Way2Rentals CSV exported: ${filename}`);
             showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
+        }
+        
+        async function exportWebsiteCSV() {
+            console.log('📤 Exporting Website CSV...');
+            
+            // Same format as Way2Rentals
+            const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
+                                       'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
+                                       'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
+            
+            const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
+                                   'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
+            
+            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+            
+            // Get website adjustment from settings (fetch from backend)
+            let websiteAdjustment = 14;
+            try {
+                const response = await fetch('/admin/env-summary');
+                const settings = await response.json();
+                websiteAdjustment = parseFloat(settings.website_pct || 14);
+                console.log(`📊 Website adjustment: ${websiteAdjustment}%`);
+            } catch (error) {
+                console.warn('⚠️ Could not fetch website adjustment, using 14%');
+            }
+            
+            // Commission: 13.66%
+            const commission = 0.1366;
+            
+            // Get vans pricing
+            const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
+            
+            // Filename
+            const location = document.getElementById('location').value;
+            const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
+            const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
+            
+            // Get prices from table
+            const pricesData = {};
+            grupos.forEach(grupo => {
+                pricesData[grupo] = {};
+                dias.forEach(day => {
+                    const cellId = `price_${grupo}_${day}`;
+                    const cell = document.getElementById(cellId);
+                    if (cell && cell.value) {
+                        pricesData[grupo][day] = parseFloat(cell.value);
+                    }
+                });
+            });
+            
+            // Build CSV content
+            let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
+            
+            // For each day period
+            way2rentalsDays.forEach(days => {
+                const rowData = [days];
+                
+                way2rentalsGroups.forEach(grupo => {
+                    // Skip ignored groups (leave empty) - EXCEPT C3, C4, C5 (fixed prices)
+                    if (ignoredGroups.includes(grupo) && !['C3', 'C4', 'C5'].includes(grupo)) {
+                        rowData.push('');
+                        return;
+                    }
+                    
+                    let price = null;
+                    
+                    // Special handling for C3, C4, C5 (fixed vans pricing)
+                    if (grupo === 'C3') {
+                        if (days === 1) price = vansPricing.c3_1day || 112;
+                        else if (days === 2) price = vansPricing.c3_2days || 144;
+                        else if (days === 3) price = vansPricing.c3_3days || 168;
+                    } else if (grupo === 'C4') {
+                        if (days === 1) price = vansPricing.c4_1day || 140;
+                        else if (days === 2) price = vansPricing.c4_2days || 180;
+                        else if (days === 3) price = vansPricing.c4_3days || 210;
+                    } else if (grupo === 'C5') {
+                        if (days === 1) price = vansPricing.c5_1day || 168;
+                        else if (days === 2) price = vansPricing.c5_2days || 216;
+                        else if (days === 3) price = vansPricing.c5_3days || 252;
+                    } else {
+                        // Regular groups: get from table
+                        if (pricesData[grupo] && pricesData[grupo][days]) {
+                            price = pricesData[grupo][days];
+                        }
+                    }
+                    
+                    if (price !== null) {
+                        // Apply commission
+                        const netPrice = price / (1 + commission);
+                        
+                        // Apply website adjustment ONLY if NOT C3, C4, C5
+                        let finalPrice;
+                        if (['C3', 'C4', 'C5'].includes(grupo)) {
+                            // C3, C4, C5: NO adjustment, just commission
+                            finalPrice = netPrice;
+                        } else {
+                            // Other groups: apply adjustment
+                            finalPrice = netPrice * (1 + websiteAdjustment / 100);
+                        }
+                        
+                        // Round to 2 decimals
+                        rowData.push(finalPrice.toFixed(2));
+                    } else {
+                        rowData.push('');
+                    }
+                });
+                
+                csvContent += rowData.join(';') + '\n';
+            });
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            // Save to downloads history
+            saveDownloadToHistory(filename, 'website', location);
+            
+            console.log(`✅ Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
+            showNotification(`✅ Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
         }
         
         async function saveExportToHistory(exportData) {
@@ -2640,30 +2746,17 @@
                 const isFirst = index === 0;
                 
                 if (item.type === 'automated') {
-                    // Get the CHEAPEST car from search results for this group (like homepage does)
-                    const competitorCars = allPricesData.filter(p => 
-                        (p.type === 'competitor' || p.type === 'autoprudente') && 
-                        p.car && 
-                        p.car.group === grupo
-                    );
+                    // Get AutoPrudente car from this group for the photo (ONLY AutoPrudente)
+                    const autoprudenteItem = allPricesData.find(p => p.type === 'autoprudente');
+                    const sampleCar = autoprudenteItem ? autoprudenteItem.car : { car: grupo, group: grupo, supplier: 'AutoPrudente' };
                     
-                    // Sort by price and get the cheapest one
-                    competitorCars.sort((a, b) => a.price - b.price);
-                    const sampleCar = competitorCars.length > 0 
-                        ? competitorCars[0].car 
-                        : { car: grupo, group: grupo, supplier: 'Search' };
-                    
-                    // DEBUG: Log car info to verify correct photo from search
-                    if (grupo === 'M1' || grupo === 'B1' || grupo === 'D') {
+                    // DEBUG: Log car info
+                    if (grupo === 'B1' || grupo === 'D') {
                         console.log(`🚗 AUTOMATED PRICE ${grupo}/${day}d:`, {
-                            competitorCount: competitorCars.length,
-                            firstCompetitor: competitorCars[0],
+                            hasAutoPrudente: !!autoprudenteItem,
                             sampleCar: sampleCar,
                             carName: sampleCar.car,
-                            carSupplier: sampleCar.supplier,
-                            carGroup: sampleCar.group,
-                            imageUrl: getCarImage(sampleCar, 'automated'),
-                            mappedUrl: imageUrlFor(sampleCar)
+                            imageUrl: getCarImage(sampleCar, 'automated')
                         });
                     }
                     
@@ -2730,10 +2823,10 @@
                                      class="w-12 h-8 object-cover rounded flex-shrink-0"
                                      onerror="this.style.display='none'">
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-xs font-semibold text-purple-600">AI</div>
+                                    <div class="text-xs font-semibold text-purple-600">AI SUGGESTION</div>
                                     <div class="text-xs text-gray-600 truncate">Group ${grupo}</div>
                                 </div>
-                                <div class="flex flex-col items-end gap-1">
+                                <div>
                                     <div class="font-bold text-sm text-purple-600">${item.price.toFixed(2)}€</div>
                                     <svg class="w-4 h-4 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
@@ -3134,16 +3227,16 @@
             'B2': 'https://www.carjet.com/cdn/img/cars/M/car_C30.jpg',  // Fiat Panda
             'D': 'https://www.carjet.com/cdn/img/cars/M/car_C60.jpg',   // Peugeot 208
             'E1': 'https://www.carjet.com/cdn/img/cars/M/car_C59.jpg',  // Kia Picanto
-            'E2': 'https://www.carjet.com/cdn/img/cars/M/car_A03.jpg',  // Opel Corsa (branco)
-            'F': 'https://www.carjet.com/cdn/img/cars/M/car_F29.jpg',  // Seat Arona (branco)
+            'E2': 'https://www.carjet.com/cdn/img/cars/M/car_C08.jpg',  // Opel Corsa
+            'F': 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg',  // Seat Arona
             'G': 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg',  // Fiat 500 Cabrio
             'J1': 'https://www.carjet.com/cdn/img/cars/M/car_F91.jpg',  // Peugeot 2008
-            'J2': 'https://www.carjet.com/cdn/img/cars/M/car_S100.jpg',  // Peugeot 308 SW (branco)
+            'J2': 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg',  // Peugeot 308 SW
             'L1': 'https://www.carjet.com/cdn/img/cars/M/car_A782.jpg', // Citroen C3 Aircross
-            'L2': 'https://www.carjet.com/cdn/img/cars/M/car_S100.jpg',  // Peugeot 308 SW Auto (branco)
-            'M1': 'https://www.carjet.com/cdn/img/cars/M/car_A1028.jpg', // Dacia Jogger (branco)
+            'L2': 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg',  // Peugeot 308 SW
+            'M1': 'https://www.carjet.com/cdn/img/cars/M/car_A1027.jpg', // Dacia Jogger
             'M2': 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg', // Citroen C4 Grand Picasso
-            'N': 'https://www.carjet.com/cdn/img/cars/M/car_A1029.jpg'  // Toyota Proace (branco)
+            'N': 'https://www.carjet.com/cdn/img/cars/M/car_A1026.jpg'  // Toyota Proace
         };
         
         function imageUrlFor(it) {
@@ -3207,72 +3300,6 @@
             if (/^nissan\s*qashqai/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F24.jpg';
             if (/^skoda\s*kamiq/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
             if (/^dacia\s*sandero/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C75.jpg';
-            if (/^hyundai\s*(kauai|kaua[ií])/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg';
-            if (/^mitsubishi\s*asx/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg';
-            if (/^hyundai\s*kona/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F191.jpg';
-            if (/^toyota\s*c-?hr(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A301.jpg';
-            if (/^ford\s*(eco\s*sport|ecosport)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A606.jpg';
-            if (/^opel\s*crossland\s*x(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A444.jpg';
-            if (/^(vw|volkswagen)\s*tiguan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg';
-            if (/^skoda\s*karoq(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A822.jpg';
-            if (/^cupra\s*leon\s*(sw|st|estate|sport[-\s]*tourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1426.jpg';
-            if (/^toyota\s*corolla\s*(sw|touring\s*sports|estate)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A590.jpg';
-            if (/^dacia\s*lodgy\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M117.jpg';
-            if (/^opel\s*zafira\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M05.jpg';
-            if (/^ford\s*tourneo\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M44.jpg';
-            if (/^(vw|volkswagen)\s*sharan\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M56.jpg';
-            if (/^(vw|volkswagen)\s*multivan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A406.jpg';
-            if (/^renault\s*grand\s*scenic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M15.jpg';
-            if (/(^citroen|^citroën)\s*(c4\s*)?grand\s*picasso(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg';
-            if (/^mercedes\s*glb(\b.*)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_GZ399.jpg';
-            if (/^(vw|volkswagen)\s*caddy(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A295.jpg';
-            if (/(^citroen|^citroën)\s*c5\s*aircross(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A640.jpg';
-            if (/^ds\s*4(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1637.jpg';
-            if (/^cupra\s*formentor(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1185.jpg';
-            if (/^jeep\s*renegade(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A222.jpg';
-            if (/^renault\s*arkana(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1159.jpg';
-            if (/^toyota\s*rav\s*?4(\s*4x4)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1000.jpg';
-            if (/^hyundai\s*tucson/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
-            if (/^renault\s*austral/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F430.jpg';
-            if (/^seat\s*ateca/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F154.jpg';
-            if (/^peugeot\s*5008/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M27.jpg';
-            if (/^toyota\s*hilux(\s*4x4)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg';
-            if (/^peugeot\s*308\s*sw(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S100.jpg';
-            if (/^opel\s*corsa(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A03.jpg';
-            if (/^dacia\s*jogger/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1028.jpg';
-            if (/^seat\s*(leon|león)\b(?!.*\b(sw|st|estate|sport[-\s]*tourer)\b).*$/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F39.jpg';
-            if (/^toyota\s*corolla\s*auto/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A623.jpg';
-            if (/(^mini|^miny)\s*(cooper\s*)?countryman(\s*(auto|automatic))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F209.jpg';
-            if (/^ford\s*puma(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A999.jpg';
-            if (/^fiat\s*talento/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M49.jpg';
-            if (/^peugeot\s*rifter(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M124.jpg';
-            if (/(^citroen\s*c4\s*grand\s*spacetourer|^citroën\s*c4\s*grand\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1430.jpg';
-            if (/^opel\s*vivaro/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg';
-            if (/^seat\s*arona(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F29.jpg';
-            if (/^toyota\s*proace/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1029.jpg';
-            if (/(^citroen\s*c4\s*picasso\s*auto|^citroën\s*c4\s*picasso\s*auto)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A522.jpg';
-            if (/^ford\s*transit/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg';
-            if (/^ford\s*galaxy/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M03.jpg';
-            if (/(^citroen\s*spacetourer|^citroën\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A261.jpg';
-            if (/^renault\s*trafic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A581.jpg';
-            if (/^peugeot\s*traveller\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M86.jpg';
-            if (/^(vw|volkswagen)\s*transporter\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M08.jpg';
-            if (/^mercedes(\s*benz)?\s*vito(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A230.jpg';
-            if (/^(vw|volkswagen)\s*caravelle\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M63.jpg';
-            if (/^mercedes(\s*benz)?\s*v\s*class(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1336.jpg';
-            if (/(^citroen\s*c4\s*cactus|^citroën\s*c4\s*cactus)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C51.jpg';
-            if (/^renault\s*clio\s*sw/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C54.jpg';
-            if (/(^mazda\s*cx[- ]?3)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F179.jpg';
-            if (/^skoda\s*octavia\b(\s*(sw|combi|estate))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I12.jpg';
-            if (/^skoda\s*fabia\b\s*(sw|combi|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S34.jpg';
-            if (/^(vw|volkswagen)\s*passat\b(\s*(variant|estate|sw))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg';
-            if (/^fiat\s*tipo\b\s*(sw|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F72.jpg';
-            if (/^peugeot\s*508\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F65.jpg';
-            if (/^seat\s*leon\s*(sw|st|estate|sport[-\s]*tourer)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F46.jpg';
-            if (/^(vw|volkswagen)\s*beetle\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L44.jpg';
-            if (/^(mini|miny)\s*(cooper|one)\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L118.jpg';
-            if (/^skoda\s*scala/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C166.jpg';
-            if (/^fiat\s*500l/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C43.jpg';
             
             // Fallback to photo field
             return it.photo || '';
@@ -3281,37 +3308,13 @@
         function getCarImage(carItem, supplierType = 'competitor') {
             const itemGroup = carItem.group || extractGroup(carItem.car || '');
             
-            // PRIORITY 1: For automated prices, use imageUrlFor (car name mapping) like homepage does
-            if (supplierType === 'automated') {
-                const mappedUrl = imageUrlFor(carItem);
-                
-                // DEBUG: Log image resolution for key groups
-                if (itemGroup === 'M1' || itemGroup === 'B1' || itemGroup === 'D') {
-                    console.log(`📸 getCarImage ${itemGroup}:`, {
-                        carName: carItem.car,
-                        supplier: carItem.supplier,
-                        itemGroup,
-                        mappedUrl,
-                        willUseMapped: !!(mappedUrl && mappedUrl !== ''),
-                        fallbackGroupImage: GROUP_IMAGES[itemGroup]
-                    });
-                }
-                
-                if (mappedUrl && mappedUrl !== '') {
-                    return mappedUrl;
-                }
-                // Fallback to GROUP_IMAGES if no specific mapping found
-                if (itemGroup && GROUP_IMAGES[itemGroup]) {
-                    return GROUP_IMAGES[itemGroup];
-                }
-            }
-            
-            // PRIORITY 2: Use GROUP_IMAGES for AutoPrudente and AI prices
-            if ((supplierType === 'autoprudente' || supplierType === 'ai') && itemGroup && GROUP_IMAGES[itemGroup]) {
+            // PRIORITY 1: Use GROUP_IMAGES for AutoPrudente, Automated, and AI prices
+            if ((supplierType === 'autoprudente' || supplierType === 'automated' || supplierType === 'ai') && itemGroup && GROUP_IMAGES[itemGroup]) {
+                console.log(`📸 Using GROUP_IMAGES for ${itemGroup}: ${GROUP_IMAGES[itemGroup]}`);
                 return GROUP_IMAGES[itemGroup];
             }
             
-            // PRIORITY 3: Use imageUrlFor mapping function (same as index.html)
+            // PRIORITY 2: Use imageUrlFor mapping function (same as index.html)
             const mappedUrl = imageUrlFor(carItem);
             
             if (mappedUrl && mappedUrl !== '') {
@@ -3513,20 +3516,13 @@
                             const minPrice = competitorPrices.length > 0 ? Math.min(...competitorPrices) : item.price;
                             const maxPrice = competitorPrices.length > 0 ? Math.max(...competitorPrices) : item.price;
                             
-                            // Get the CHEAPEST car from search results for this group (like homepage does)
-                            const competitorCars = allPrices.filter(p => 
-                                (p.type === 'competitor' || p.type === 'autoprudente') && 
-                                p.car && 
-                                p.car.group === grupo
-                            );
-                            competitorCars.sort((a, b) => a.price - b.price);
-                            const sampleCar = competitorCars.length > 0 
-                                ? competitorCars[0].car 
-                                : { car: grupo, group: grupo, supplier: 'Search' };
+                            // Get AutoPrudente car from this group for the photo (ONLY AutoPrudente)
+                            const autoprudenteItem = allPrices.find(p => p.type === 'autoprudente');
+                            const sampleCar = autoprudenteItem ? autoprudenteItem.car : { car: grupo, group: grupo, supplier: 'AutoPrudente' };
                             
                             // DEBUG: Log car info for price list
                             console.log(`🎨 PRICE LIST ${grupo}/${day}d:`, {
-                                competitorCount: competitorCars.length,
+                                hasAutoPrudente: !!autoprudenteItem,
                                 sampleCar: sampleCar,
                                 carName: sampleCar?.car,
                                 imageUrl: getCarImage(sampleCar, 'automated')
@@ -3592,7 +3588,7 @@
                                          class="w-12 h-8 object-cover rounded flex-shrink-0"
                                          onerror="this.style.display='none'">
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-xs font-semibold text-purple-600">AI</div>
+                                        <div class="text-xs font-semibold text-purple-600">AI SUGGESTION</div>
                                         <div class="text-xs text-gray-600 truncate">Group ${grupo}</div>
                                     </div>
                                     <div class="flex items-center gap-2">
@@ -3716,10 +3712,6 @@
                     if (stopGenerateFlag) {
                         break;
                     }
-                    
-                    // Check if we should skip AutoPrudente for this location/day based on settings
-                    const minDays = getMinDaysForLocation(currentLocation);
-                    const skipAutoPrudenteForThisDay = day < minDays;
 
                     progressText.textContent = `Searching ${day} days...`;
                     progressPercent.textContent = `${Math.round((completed / total) * 100)}%`;
@@ -3781,27 +3773,7 @@
                                 
                                 console.log(`${day} days - ${autoprudenteItems.length} AUTOPRUDENTE cars found`);
                                 
-                                // Skip AutoPrudente processing if below minimum days
-                                if (skipAutoPrudenteForThisDay) {
-                                    console.log(`⏭️ Skipping AutoPrudente for ${day} days in ${currentLocation} (minimum ${minDays} days)`);
-                                    // Mark all Real cells as N/A for this day
-                                    grupos.forEach(grupo => {
-                                        const inputReal = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
-                                        if (inputReal) {
-                                            inputReal.value = 'N/A';
-                                            inputReal.classList.add('bg-gray-100');
-                                            inputReal.disabled = true;
-                                            inputReal.title = `AutoPrudente não opera para menos de ${minDays} dias em ${currentLocation}`;
-                                        }
-                                    });
-                                    // Don't break - continue to next day (allCarsByDay is already populated for automated prices)
-                                } else if (autoprudenteItems.length === 0) {
-                                    console.warn(`⚠️ NO AUTOPRUDENTE CARS FOUND for ${day} days in ${currentLocation}`);
-                                    console.warn(`   This is normal if AutoPrudente doesn't operate in this location.`);
-                                    console.warn(`   Automated prices will still work using competitor data.`);
-                                }
-                                
-                                if (autoprudenteItems.length > 0 && !skipAutoPrudenteForThisDay) {
+                                if (autoprudenteItems.length > 0) {
                                     // RULE: Group by car group and choose LOWEST PRICE
                                     const precosPorGrupo = {};
                                     autoprudenteItems.forEach(item => {
@@ -3877,15 +3849,9 @@
                 const date = new Date(pickupDate);
                 const month = date.getMonth() + 1; // 1-12
                 
-                console.log(`\n${'='.repeat(80)}`);
-                console.log(`📋 LOADING STRATEGIES FOR AUTOMATED PRICES`);
-                console.log(`${'='.repeat(80)}`);
-                console.log(`📍 Current Location: "${currentLocation}"`);
-                console.log(`📅 Month: ${month}`);
-                console.log(`📂 Available locations in automatedRules:`, Object.keys(automatedRules));
+                console.log(`📋 Loading strategies from automatedPriceRules for ${currentLocation}, month ${month}`);
                 console.log(`📂 Full automatedRules:`, automatedRules);
-                console.log(`📍 Rules for "${currentLocation}":`, automatedRules[currentLocation]);
-                console.log(`${'='.repeat(80)}\n`);
+                console.log(`📍 Rules for ${currentLocation}:`, automatedRules[currentLocation]);
                 
                 let autoPricesGenerated = 0;
                 
@@ -4486,10 +4452,12 @@
         function downloadExcelAuto(format) {
             if (format === 'way2rentals') {
                 exportWay2RentalsCSVFromAuto();
+            } else if (format === 'website') {
+                exportWebsiteCSVFromAuto();
             } else if (format === 'abbycar') {
                 downloadAutomatedPricesExcel();
             } else {
-                showNotification('Excel download for automated prices will be implemented soon', 'info');
+                console.error('Unknown format:', format);
             }
         }
         
@@ -4650,6 +4618,130 @@
                 month_name: monthName,
                 file_content: csvContent
             });
+        }
+        
+        async function exportWebsiteCSVFromAuto() {
+            console.log('📤 Exporting Website CSV from Automated Prices...');
+            
+            // Same format as Way2Rentals
+            const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
+                                       'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
+                                       'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
+            
+            const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
+                                   'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
+            
+            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+            
+            // Get website adjustment from settings
+            let websiteAdjustment = 14;
+            try {
+                const response = await fetch('/admin/env-summary');
+                const settings = await response.json();
+                websiteAdjustment = parseFloat(settings.website_pct || 14);
+                console.log(`📊 Website adjustment: ${websiteAdjustment}%`);
+            } catch (error) {
+                console.warn('⚠️ Could not fetch website adjustment, using 14%');
+            }
+            
+            // Commission: 13.66%
+            const commission = 0.1366;
+            
+            // Get vans pricing
+            const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
+            
+            // Filename
+            const locationAuto = document.getElementById('locationAuto').value;
+            const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
+            const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const filename = `Website_${locationAuto.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
+            
+            // Get automated prices from table
+            const pricesData = {};
+            gruposAuto.forEach(grupo => {
+                pricesData[grupo] = {};
+                diasAuto.forEach(day => {
+                    const cellId = `priceAuto_${grupo}_${day}`;
+                    const cell = document.getElementById(cellId);
+                    if (cell && cell.value) {
+                        pricesData[grupo][day] = parseFloat(cell.value);
+                    }
+                });
+            });
+            
+            // Build CSV content
+            let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
+            
+            // For each day period
+            way2rentalsDays.forEach(days => {
+                const rowData = [days];
+                
+                way2rentalsGroups.forEach(grupo => {
+                    // Skip ignored groups (leave empty) - EXCEPT C3, C4, C5
+                    if (ignoredGroups.includes(grupo) && !['C3', 'C4', 'C5'].includes(grupo)) {
+                        rowData.push('');
+                        return;
+                    }
+                    
+                    let price = null;
+                    
+                    // Special handling for C3, C4, C5 (fixed vans pricing)
+                    if (grupo === 'C3') {
+                        if (days === 1) price = vansPricing.c3_1day || 112;
+                        else if (days === 2) price = vansPricing.c3_2days || 144;
+                        else if (days === 3) price = vansPricing.c3_3days || 168;
+                    } else if (grupo === 'C4') {
+                        if (days === 1) price = vansPricing.c4_1day || 140;
+                        else if (days === 2) price = vansPricing.c4_2days || 180;
+                        else if (days === 3) price = vansPricing.c4_3days || 210;
+                    } else if (grupo === 'C5') {
+                        if (days === 1) price = vansPricing.c5_1day || 168;
+                        else if (days === 2) price = vansPricing.c5_2days || 216;
+                        else if (days === 3) price = vansPricing.c5_3days || 252;
+                    } else {
+                        // Regular groups: get from automated table
+                        if (pricesData[grupo] && pricesData[grupo][days]) {
+                            price = pricesData[grupo][days];
+                        }
+                    }
+                    
+                    if (price !== null) {
+                        // Apply commission
+                        const netPrice = price / (1 + commission);
+                        
+                        // Apply website adjustment ONLY if NOT C3, C4, C5
+                        let finalPrice;
+                        if (['C3', 'C4', 'C5'].includes(grupo)) {
+                            // C3, C4, C5: NO adjustment, just commission
+                            finalPrice = netPrice;
+                        } else {
+                            // Other groups: apply adjustment
+                            finalPrice = netPrice * (1 + websiteAdjustment / 100);
+                        }
+                        
+                        // Round to 2 decimals
+                        rowData.push(finalPrice.toFixed(2));
+                    } else {
+                        rowData.push('');
+                    }
+                });
+                
+                csvContent += rowData.join(';') + '\n';
+            });
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            // Save to downloads history
+            saveDownloadToHistory(filename, 'website', locationAuto);
+            
+            console.log(`✅ Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
+            showNotification(`✅ Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
         }
         
         function renderSmartInsights(insights) {
@@ -6812,6 +6904,9 @@ Continue?`);
         document.getElementById('pickupDate').valueAsDate = new Date();
         document.getElementById('pickupDateAuto').valueAsDate = new Date();
         initTable();
+        
+        // Abrir tab Automated Prices por padrão
+        switchTab('automated');
         
         // Replace remaining "Auto" and "Real" text headers with icons
         setTimeout(() => {

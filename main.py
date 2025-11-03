@@ -1178,12 +1178,14 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     return category_map.get(cat, "Others")
 
 def _send_creds_email(to_email: str, username: str, password: str):
-    host = os.getenv("SMTP_HOST", "").strip()
-    port = int(os.getenv("SMTP_PORT", "587") or 587)
-    user = os.getenv("SMTP_USERNAME", "").strip()
-    pwd = os.getenv("SMTP_PASSWORD", "").strip()
-    from_addr = os.getenv("SMTP_FROM", "no-reply@example.com").strip()
-    use_tls = str(os.getenv("SMTP_TLS", "true")).lower() in ("1", "true", "yes", "y", "on")
+    # Ler configurações SMTP da base de dados (persistente) em vez de env vars
+    host = _get_setting("smtp_host", os.getenv("SMTP_HOST", "")).strip()
+    port = int(_get_setting("smtp_port", os.getenv("SMTP_PORT", "587")) or 587)
+    user = _get_setting("smtp_username", os.getenv("SMTP_USERNAME", "")).strip()
+    pwd = _get_setting("smtp_password", os.getenv("SMTP_PASSWORD", "")).strip()
+    from_addr = _get_setting("smtp_from", os.getenv("SMTP_FROM", "no-reply@example.com")).strip()
+    use_tls_val = _get_setting("smtp_tls", os.getenv("SMTP_TLS", "true"))
+    use_tls = str(use_tls_val).lower() in ("1", "true", "yes", "y", "on")
     if not host or not to_email:
         try:
             (DEBUG_DIR / "mail_error.txt").write_text("Missing SMTP_HOST or recipient\n", encoding="utf-8")
@@ -2112,9 +2114,11 @@ async def admin_env_summary(request: Request):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     try:
         cj_pct, cj_off = _get_carjet_adjustment()
+        website_pct = float(_get_setting("website_pct", "14"))
         data = {
             "CARJET_PRICE_ADJUSTMENT_PCT": cj_pct,
             "CARJET_PRICE_OFFSET_EUR": cj_off,
+            "website_pct": website_pct,
             "PRICES_CACHE_TTL_SECONDS": PRICES_CACHE_TTL_SECONDS,
             "BULK_CONCURRENCY": BULK_CONCURRENCY,
             "BULK_MAX_RETRIES": BULK_MAX_RETRIES,
@@ -2167,6 +2171,16 @@ async def admin_settings_page(request: Request):
     abbycar_pct = _get_abbycar_adjustment()
     abbycar_low_deposit_pct = _get_abbycar_low_deposit_adjustment()
     abbycar_low_deposit_enabled = _get_abbycar_low_deposit_enabled()
+    website_pct = float(_get_setting("website_pct", "14"))
+    
+    # Carregar configurações SMTP da base de dados
+    smtp_host = _get_setting("smtp_host", "")
+    smtp_port = _get_setting("smtp_port", "587")
+    smtp_username = _get_setting("smtp_username", "")
+    smtp_password = _get_setting("smtp_password", "")
+    smtp_from = _get_setting("smtp_from", "")
+    smtp_tls = _get_setting("smtp_tls", "1") == "1"
+    
     return templates.TemplateResponse("admin_settings.html", {
         "request": request, 
         "carjet_pct": cj_pct, 
@@ -2174,12 +2188,33 @@ async def admin_settings_page(request: Request):
         "abbycar_pct": abbycar_pct,
         "abbycar_low_deposit_pct": abbycar_low_deposit_pct,
         "abbycar_low_deposit_enabled": abbycar_low_deposit_enabled,
+        "website_pct": website_pct,
+        "smtp_host": smtp_host,
+        "smtp_port": smtp_port,
+        "smtp_username": smtp_username,
+        "smtp_password": smtp_password,
+        "smtp_from": smtp_from,
+        "smtp_tls": smtp_tls,
         "saved": False, 
         "error": None
     })
 
 @app.post("/admin/settings", response_class=HTMLResponse)
-async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carjet_off: str = Form(""), abbycar_pct: str = Form(""), abbycar_low_deposit_pct: str = Form(""), abbycar_low_deposit_enabled: str = Form("")):
+async def admin_settings_save(
+    request: Request, 
+    carjet_pct: str = Form(""), 
+    carjet_off: str = Form(""), 
+    abbycar_pct: str = Form(""), 
+    abbycar_low_deposit_pct: str = Form(""), 
+    abbycar_low_deposit_enabled: str = Form(""),
+    website_pct: str = Form(""),
+    smtp_host: str = Form(""),
+    smtp_port: str = Form("587"),
+    smtp_username: str = Form(""),
+    smtp_password: str = Form(""),
+    smtp_from: str = Form(""),
+    smtp_tls: str = Form("")
+):
     try:
         require_admin(request)
     except HTTPException:
@@ -2191,21 +2226,48 @@ async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carj
         abbycar_pct_val = float((abbycar_pct or "3").replace(",", "."))
         abbycar_low_deposit_pct_val = float((abbycar_low_deposit_pct or "0").replace(",", "."))
         abbycar_low_deposit_enabled_val = "1" if abbycar_low_deposit_enabled == "1" else "0"
+        website_pct_val = float((website_pct or "0").replace(",", "."))
+        
+        # Guardar configurações de preços
         _set_setting("carjet_pct", str(pct_val))
         _set_setting("carjet_off", str(off_val))
         _set_setting("abbycar_pct", str(abbycar_pct_val))
         _set_setting("abbycar_low_deposit_pct", str(abbycar_low_deposit_pct_val))
         _set_setting("abbycar_low_deposit_enabled", abbycar_low_deposit_enabled_val)
+        _set_setting("website_pct", str(website_pct_val))
+        
+        # Guardar configurações SMTP na base de dados (persistente)
+        _set_setting("smtp_host", smtp_host.strip())
+        _set_setting("smtp_port", smtp_port.strip())
+        _set_setting("smtp_username", smtp_username.strip())
+        _set_setting("smtp_password", smtp_password.strip())
+        _set_setting("smtp_from", smtp_from.strip())
+        _set_setting("smtp_tls", "1" if smtp_tls == "1" else "0")
+        
         cj_pct, cj_off = pct_val, off_val
         abbycar_pct_result = abbycar_pct_val
         abbycar_low_deposit_pct_result = abbycar_low_deposit_pct_val
         abbycar_low_deposit_enabled_result = abbycar_low_deposit_enabled_val == "1"
+        website_pct_result = website_pct_val
+        smtp_host_result = smtp_host.strip()
+        smtp_port_result = smtp_port.strip()
+        smtp_username_result = smtp_username.strip()
+        smtp_password_result = smtp_password.strip()
+        smtp_from_result = smtp_from.strip()
+        smtp_tls_result = smtp_tls == "1"
     except Exception as e:
         err = str(e)
         cj_pct, cj_off = _get_carjet_adjustment()
         abbycar_pct_result = _get_abbycar_adjustment()
         abbycar_low_deposit_pct_result = _get_abbycar_low_deposit_adjustment()
         abbycar_low_deposit_enabled_result = _get_abbycar_low_deposit_enabled()
+        website_pct_result = float(_get_setting("website_pct", "14"))
+        smtp_host_result = _get_setting("smtp_host", "")
+        smtp_port_result = _get_setting("smtp_port", "587")
+        smtp_username_result = _get_setting("smtp_username", "")
+        smtp_password_result = _get_setting("smtp_password", "")
+        smtp_from_result = _get_setting("smtp_from", "")
+        smtp_tls_result = _get_setting("smtp_tls", "1") == "1"
     return templates.TemplateResponse("admin_settings.html", {
         "request": request, 
         "carjet_pct": cj_pct, 
@@ -2213,6 +2275,13 @@ async def admin_settings_save(request: Request, carjet_pct: str = Form(""), carj
         "abbycar_pct": abbycar_pct_result,
         "abbycar_low_deposit_pct": abbycar_low_deposit_pct_result,
         "abbycar_low_deposit_enabled": abbycar_low_deposit_enabled_result,
+        "website_pct": website_pct_result,
+        "smtp_host": smtp_host_result,
+        "smtp_port": smtp_port_result,
+        "smtp_username": smtp_username_result,
+        "smtp_password": smtp_password_result,
+        "smtp_from": smtp_from_result,
+        "smtp_tls": smtp_tls_result,
         "saved": err is None, 
         "error": err
     })
@@ -10843,9 +10912,10 @@ async def export_automated_prices_excel(request: Request):
             model_example = sipp_to_model.get(sipp_code, '')
             group_prices = prices.get(internal_group, {})
             
-            # Check if this is a Low Deposit group for highlighting
-            is_low_deposit_group = internal_group in low_deposit_groups
-            low_deposit_fill = PatternFill(start_color="FFF9E6", end_color="FFF9E6", fill_type="solid") if is_low_deposit_group else None
+            # Check if this is a Low Deposit group for highlighting (by SIPP code)
+            is_low_deposit_group = sipp_code in low_deposit_sipp_codes
+            # Usar azul teal claro apenas para Low Deposit groups
+            low_deposit_fill = PatternFill(start_color="E0F7FA", end_color="E0F7FA", fill_type="solid") if is_low_deposit_group else None
             
             # Column 1: Stations
             ws.cell(row_num, 1).value = station_code
@@ -10868,7 +10938,7 @@ async def export_automated_prices_excel(request: Request):
             # Column 4: Group (SIPP Code)
             ws.cell(row_num, 4).value = sipp_code
             ws.cell(row_num, 4).alignment = cell_alignment
-            ws.cell(row_num, 4).font = Font(bold=True, color="f4ad0f" if is_low_deposit_group else "009cb6")
+            ws.cell(row_num, 4).font = Font(bold=True, color="009cb6")
             if is_low_deposit_group:
                 ws.cell(row_num, 4).fill = low_deposit_fill
             
@@ -11893,16 +11963,79 @@ async def download_backup(request: Request, filename: str):
 
 @app.post("/api/backup/restore")
 async def restore_backup(request: Request):
-    """Restore system from backup"""
+    """Restore system from backup ZIP file"""
     require_auth(request)
     
     try:
-        # Full implementation would extract zip and restore data
-        logging.info("Backup restore requested")
+        import zipfile
+        import shutil
+        from fastapi import UploadFile, File
+        
+        # Receber ficheiro ZIP
+        form = await request.form()
+        backup_file = form.get("file")
+        
+        if not backup_file or not isinstance(backup_file, UploadFile):
+            return JSONResponse({"ok": False, "error": "Nenhum ficheiro enviado"}, status_code=400)
+        
+        if not backup_file.filename.endswith('.zip'):
+            return JSONResponse({"ok": False, "error": "Ficheiro deve ser ZIP"}, status_code=400)
+        
+        logging.info(f"Restore backup from: {backup_file.filename}")
+        
+        # Guardar ZIP temporariamente
+        temp_zip = Path("backups") / f"restore_temp_{backup_file.filename}"
+        temp_zip.parent.mkdir(exist_ok=True)
+        
+        with open(temp_zip, "wb") as f:
+            content = await backup_file.read()
+            f.write(content)
+        
+        # Extrair e restaurar
+        with zipfile.ZipFile(temp_zip, 'r') as zipf:
+            # 1. Restaurar base de dados
+            for db_file in zipf.namelist():
+                if db_file.startswith("database/") and db_file.endswith(".db"):
+                    db_name = Path(db_file).name
+                    target_path = DATA_DIR / db_name
+                    
+                    # Backup da BD atual antes de sobrescrever
+                    if target_path.exists():
+                        backup_current = target_path.with_suffix('.db.backup')
+                        shutil.copy2(target_path, backup_current)
+                        logging.info(f"Current DB backed up to {backup_current}")
+                    
+                    # Extrair nova BD
+                    with zipf.open(db_file) as source, open(target_path, 'wb') as target:
+                        shutil.copyfileobj(source, target)
+                    logging.info(f"✅ Database {db_name} restored")
+            
+            # 2. Restaurar uploads
+            for upload_file in zipf.namelist():
+                if upload_file.startswith("uploads/"):
+                    target_path = Path(upload_file)
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    with zipf.open(upload_file) as source, open(target_path, 'wb') as target:
+                        shutil.copyfileobj(source, target)
+            logging.info("✅ Uploads restored")
+            
+            # 3. Restaurar static files (opcional - pode sobrescrever código)
+            # Comentado por segurança - descomentar se necessário
+            # for static_file in zipf.namelist():
+            #     if static_file.startswith("static/"):
+            #         target_path = Path(static_file)
+            #         target_path.parent.mkdir(parents=True, exist_ok=True)
+            #         with zipf.open(static_file) as source, open(target_path, 'wb') as target:
+            #             shutil.copyfileobj(source, target)
+        
+        # Limpar ficheiro temporário
+        temp_zip.unlink()
+        
+        logging.info("✅ Backup restored successfully")
         
         return JSONResponse({
             "ok": True,
-            "message": "Backup restaurado com sucesso"
+            "message": "Backup restaurado com sucesso! Recarrega a página."
         })
         
     except Exception as e:
