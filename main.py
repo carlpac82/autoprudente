@@ -7839,6 +7839,23 @@ async def track_carjet(request: Request):
         async def run():
             results: List[Dict[str, Any]] = []
             
+            # Referrer options for natural traffic simulation
+            referrers = [
+                "https://www.google.com/",
+                "https://www.google.pt/",
+                "https://www.bing.com/",
+                "https://www.google.com/search?q=rent+car+portugal",
+                None  # Direct access
+            ]
+            
+            # Timezone options for location diversity
+            timezones = [
+                "Europe/Lisbon",
+                "Europe/London", 
+                "Europe/Madrid",
+                "Europe/Paris"
+            ]
+            
             # Device rotation for better WAF evasion
             devices = [
                 {
@@ -7878,6 +7895,15 @@ async def track_carjet(request: Request):
                     device = random.choice(devices)
                     print(f"[DEVICE_ROTATION] Location: {name}, Device: {device['name']}")
                     
+                    # Select random timezone
+                    timezone = random.choice(timezones)
+                    print(f"[TIMEZONE_ROTATION] Location: {name}, Timezone: {timezone}")
+                    
+                    # Select random referrer
+                    referrer = random.choice(referrers)
+                    referrer_display = referrer if referrer else "Direct"
+                    print(f"[REFERRER_ROTATION] Location: {name}, Referrer: {referrer_display}")
+                    
                     # Create new context with random device (clears cache/history)
                     context = await browser.new_context(
                         user_agent=device["user_agent"],
@@ -7885,15 +7911,18 @@ async def track_carjet(request: Request):
                         device_scale_factor=device["scale"],
                         is_mobile=True,
                         has_touch=True,
-                        locale="pt-PT"
+                        locale="pt-PT",
+                        timezone_id=timezone
                     )
                     
-                    # Mobile headers
+                    # Mobile headers with random referrer
                     default_headers = {
                         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                         "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
                         "Accept-Encoding": "gzip, deflate, br",
                     }
+                    if referrer:
+                        default_headers["Referer"] = referrer
                     await context.set_extra_http_headers(default_headers)
                     await context.route("**/*", lambda route: route.continue_())
                     page = await context.new_page()
@@ -7932,6 +7961,12 @@ async def track_carjet(request: Request):
                     loc_block = {"location": name, "durations": []}
                     for d in durations:
                         try:
+                            # Random delay between duration searches (0.5-2 seconds)
+                            import asyncio
+                            delay = random.uniform(0.5, 2.0)
+                            print(f"[DELAY] Waiting {delay:.2f}s before next search...")
+                            await asyncio.sleep(delay)
+                            
                             start_dt = datetime.fromisoformat(rotated_pickup_date + "T" + rotated_pickup_time)
                             end_dt = start_dt + timedelta(days=int(d))
                             # Try direct POST to CarJet first (faster, no headless)
@@ -7940,6 +7975,16 @@ async def track_carjet(request: Request):
                             # Fallback to Playwright if direct returned empty or no prices
                             if not html or len(parse_prices(html, final_url)) == 0:
                                 html, final_url = await fetch_carjet_results(page, name, start_dt, end_dt, lang, currency, template)
+                                
+                                # Simulate human scroll behavior after page load
+                                try:
+                                    scroll_amount = random.randint(200, 500)
+                                    await page.evaluate(f"window.scrollBy(0, {scroll_amount})")
+                                    await asyncio.sleep(random.uniform(0.3, 0.8))
+                                    print(f"[SCROLL] Scrolled {scroll_amount}px")
+                                except:
+                                    pass  # Ignore scroll errors
+                                    
                             items = parse_prices(html, final_url)
                             items = normalize_and_sort(items, supplier_priority)
                             save_snapshots(name, start_dt, d, items, currency)
@@ -7960,6 +8005,13 @@ async def track_carjet(request: Request):
                     await page.close()
                     await context.close()
                     print(f"[CACHE_CLEAR] Location: {name}, Context closed - cache/history cleared")
+                    
+                    # Random delay between locations (2-5 seconds) - simulate human behavior
+                    if locations.index(loc) < len(locations) - 1:  # Not the last location
+                        import asyncio
+                        location_delay = random.uniform(2.0, 5.0)
+                        print(f"[LOCATION_DELAY] Waiting {location_delay:.2f}s before next location...")
+                        await asyncio.sleep(location_delay)
                     
                 await browser.close()
             return results
