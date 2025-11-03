@@ -3077,20 +3077,12 @@
         
         function renderStrategiesList(location, grupo, month, day) {
             const key = `${location}_${grupo}_${month}_${day}`;
-            console.log(`🎨 renderStrategiesList called: ${key}`);
-            console.log(`📊 strategiesData for key:`, strategiesData[key]);
-            console.log(`📦 All strategiesData keys:`, Object.keys(strategiesData).filter(k => k.includes(location) && k.includes(grupo)).slice(0, 5));
-            
             const container = document.getElementById(`strategiesList_${location}_${grupo}`);
-            if (!container) {
-                console.error(`❌ Container not found: strategiesList_${location}_${grupo}`);
-                return;
-            }
+            if (!container) return;
             
             container.innerHTML = '';
             
             const strategies = strategiesData[key] || [];
-            console.log(`📋 Strategies found: ${strategies.length}`);
             
             if (strategies.length === 0) {
                 container.innerHTML = '<p class="text-xs text-gray-500 italic">No strategies added yet. Click "+ Add Strategy" to start.</p>';
@@ -3382,128 +3374,10 @@
                 if (result.ok && result.strategies) {
                     strategiesData = result.strategies;
                     console.log('✅ Strategies loaded from database');
-                    
-                    // ALWAYS fill missing days/months with default strategy
-                    fillMissingStrategies();
-                    
-                    // Render strategies for all groups
-                    const locations = ['Albufeira', 'Aeroporto de Faro'];
-                    locations.forEach(location => {
-                        grupos.forEach(grupo => {
-                            const currentDay = getCurrentSelectedDay(location, grupo);
-                            const currentMonth = getCurrentSelectedMonth(location, grupo);
-                            if (currentDay && currentMonth) {
-                                renderStrategiesList(location, grupo, currentMonth.number, currentDay);
-                            }
-                        });
-                    });
                 }
             } catch (err) {
                 console.error('Error loading strategies from database:', err);
             }
-        }
-        
-        function fillMissingStrategies() {
-            console.log('🔄 fillMissingStrategies() called');
-            console.log('📦 Current strategiesData keys:', Object.keys(strategiesData).length);
-            
-            // Fill ALL missing days/months with default strategy (Lowest -1.5%)
-            const locations = ['Albufeira', 'Aeroporto de Faro'];
-            const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-            const days = Array.from({length: 31}, (_, i) => i + 1);
-            
-            let addedCount = 0;
-            console.log(`🔍 Checking ${locations.length} locations × ${grupos.length} grupos × ${months.length} months × ${days.length} days`);
-            
-            locations.forEach(location => {
-                grupos.forEach(grupo => {
-                    months.forEach(month => {
-                        days.forEach(day => {
-                            const key = `${location}_${grupo}_${month}_${day}`;
-                            
-                            // Only add if this key doesn't exist or is empty
-                            if (!strategiesData[key] || strategiesData[key].length === 0) {
-                                const strategyId = Date.now() + Math.random();
-                                
-                                strategiesData[key] = [{
-                                    id: strategyId,
-                                    type: 'follow_lowest',
-                                    name: 'Follow Lowest Price',
-                                    config: {
-                                        operation: 'subtract',
-                                        value: 1.5,
-                                        typeLabel: '%'
-                                    }
-                                }];
-                                addedCount++;
-                            }
-                        });
-                    });
-                });
-            });
-            
-            if (addedCount > 0) {
-                console.log(`📝 Added default strategy to ${addedCount} missing configurations`);
-                // Save to database
-                saveStrategies();
-                showNotification(`✅ Added Lowest -1.5% to ${addedCount} configurations`, 'success');
-            }
-        }
-        
-        function createDefaultStrategies() {
-            // Default strategy: Lowest -1.5% for all days, months, and years
-            const locations = ['Albufeira', 'Aeroporto de Faro'];
-            const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-            const days = Array.from({length: 31}, (_, i) => i + 1);
-            
-            locations.forEach(location => {
-                grupos.forEach(grupo => {
-                    months.forEach(month => {
-                        days.forEach(day => {
-                            const key = `${location}_${grupo}_${month}_${day}`;
-                            const strategyId = Date.now() + Math.random(); // Unique ID
-                            
-                            strategiesData[key] = [{
-                                id: strategyId,
-                                type: 'follow_lowest',
-                                name: 'Follow Lowest Price',
-                                config: {
-                                    operation: 'subtract',
-                                    value: 1.5,
-                                    typeLabel: '%'
-                                }
-                            }];
-                        });
-                    });
-                });
-            });
-            
-            // Save to database
-            saveStrategies();
-            
-            // Force re-render for all visible groups
-            setTimeout(() => {
-                locations.forEach(location => {
-                    grupos.forEach(grupo => {
-                        // Try to render for day 1 of January as default
-                        renderStrategiesList(location, grupo, 1, 1);
-                    });
-                });
-                
-                // Also re-render current selection if any
-                const currentLocation = document.querySelector('.location-tab.active')?.dataset?.location;
-                if (currentLocation) {
-                    grupos.forEach(grupo => {
-                        const currentDay = getCurrentSelectedDay(currentLocation, grupo);
-                        const currentMonth = getCurrentSelectedMonth(currentLocation, grupo);
-                        if (currentDay && currentMonth) {
-                            renderStrategiesList(currentLocation, grupo, currentMonth.number, currentDay);
-                        }
-                    });
-                }
-            }, 100);
-            
-            showNotification('✅ Default strategies created: Lowest -1.5% for all configurations', 'success');
         }
         
         // ===== EXPORT / IMPORT SETTINGS =====
