@@ -31,16 +31,16 @@
                 <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
-                Notificações por Email
+                <span data-i18n="emailNotifications.title">Notificações por Email</span>
             </h2>
             
-            <p class="text-sm text-gray-600 mb-6">
+            <p class="text-sm text-gray-600 mb-6" data-i18n="emailNotifications.description">
                 Configure uma conta de email para receber notificações automáticas sobre alterações de preços, alertas e relatórios.
             </p>
 
             <!-- Email Provider Selection -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-3">Fornecedor de Email</label>
+                <label class="block text-sm font-medium text-gray-700 mb-3" data-i18n="emailNotifications.provider">Fornecedor de Email</label>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div id="provider-gmail" class="provider-card border-2 border-gray-200 rounded-lg p-4 text-center" onclick="selectProvider('gmail')">
                         <svg class="w-8 h-8 mx-auto mb-2 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,30 +95,30 @@
 
             <!-- Notification Recipients (always visible) -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Destinatários das Notificações</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="emailNotifications.recipients">Destinatários das Notificações</label>
                 <textarea id="notificationRecipients" rows="3" placeholder="email1@example.com&#10;email2@example.com&#10;email3@example.com" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded"></textarea>
-                <p class="text-xs text-gray-500 mt-1">Um email por linha. Estes emails receberão as notificações.</p>
+                <p class="text-xs text-gray-500 mt-1" data-i18n="emailNotifications.recipientsHelp">Um email por linha. Estes emails receberão as notificações.</p>
             </div>
 
             <!-- Notification Types -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-3">Tipos de Notificações</label>
+                <label class="block text-sm font-medium text-gray-700 mb-3" data-i18n="emailNotifications.notificationTypes">Tipos de Notificações</label>
                 <div class="space-y-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="notifyPriceChanges" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
-                        <span class="text-sm text-gray-700">Alterações de preços significativas</span>
+                        <span class="text-sm text-gray-700" data-i18n="emailNotifications.priceChanges">Alterações de Preços</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="notifyDailyReport" class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
-                        <span class="text-sm text-gray-700">Relatório diário de preços</span>
+                        <span class="text-sm text-gray-700" data-i18n="emailNotifications.dailyReport">Relatório Diário de Preços</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="notifyWeeklyReport" class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
-                        <span class="text-sm text-gray-700">Relatório semanal</span>
+                        <span class="text-sm text-gray-700" data-i18n="emailNotifications.weeklyReport">Relatórios Semanais</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="notifyErrors" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
-                        <span class="text-sm text-gray-700">Erros e alertas do sistema</span>
+                        <span class="text-sm text-gray-700" data-i18n="emailNotifications.errors">Erros e Alertas do Sistema</span>
                     </label>
                 </div>
             </div>
@@ -130,32 +130,27 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
-                        Enviar Email de Teste
+                        <span data-i18n="emailNotifications.testEmail">Enviar Email de Teste</span>
                     </div>
                 </button>
-                <button onclick="saveEmailSettings()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors">
+                <button onclick="saveEmailSettings()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors" data-i18n="emailNotifications.saveSettings">
                     Guardar Configurações
                 </button>
             </div>
 
             <!-- OAuth Connection -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-3">Conectar Conta</label>
+                <label class="block text-sm font-medium text-gray-700 mb-3" data-i18n="emailNotifications.oauthConnection">Conectar Conta</label>
                 <div class="flex gap-3">
-                    <button onclick="connectGmail()" class="flex items-center gap-2 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                        Conectar Gmail
-                    </button>
-                    <button onclick="connectOutlook()" class="flex items-center gap-2 px-4 py-2 border border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors">
+                    <button onclick="connectGmail()" class="w-full px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors" data-i18n="emailNotifications.connectGmail">Conectar Gmail</button>
+                    <button onclick="connectOutlook()" class="flex items-center gap-2 px-4 py-2 border border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors" data-i18n="emailNotifications.connectOutlook">Conectar Outlook</button>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
                         Conectar Outlook
                     </button>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">Conecte a sua conta de forma segura usando OAuth2. Não é necessário inserir a password.</p>
+                <p class="text-xs text-gray-500 mt-2" data-i18n="emailNotifications.oauthNote">Conecte a sua conta de forma segura usando OAuth2. Não é necessário inserir a password.</p>
             </div>
 
             <!-- Connection Status -->
@@ -237,10 +232,13 @@
         function handleOAuthSuccess(data) {
             isConnected = true;
             
-            // Save OAuth token
+            // Save OAuth token with profile info
             localStorage.setItem('emailOAuthToken', JSON.stringify({
                 provider: data.provider,
                 email: data.email,
+                name: data.name || '',
+                picture: data.picture || '',
+                googleId: data.googleId || '',
                 token: data.token,
                 refreshToken: data.refreshToken,
                 expiresAt: data.expiresAt
@@ -250,9 +248,36 @@
             document.getElementById('connectedEmail').textContent = data.email;
             document.getElementById('connectionStatus').style.display = 'block';
             
+            // Update user profile picture if available
+            if (data.picture && data.googleId) {
+                updateUserProfilePicture(data.googleId, data.picture);
+            }
+            
             // Use global notification system (no emoji)
             if (typeof showNotification === 'function') {
-                showNotification('Conta conectada com sucesso!', 'success');
+                showNotification('Conta conectada com sucesso! Foto de perfil atualizada.', 'success');
+            }
+        }
+
+        async function updateUserProfilePicture(googleId, pictureUrl) {
+            try {
+                const response = await fetch('/api/user/update-google-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        googleId: googleId,
+                        pictureUrl: pictureUrl
+                    })
+                });
+
+                const result = await response.json();
+                if (result.ok) {
+                    console.log('Profile picture updated successfully');
+                }
+            } catch (error) {
+                console.error('Error updating profile picture:', error);
             }
         }
 
@@ -433,6 +458,11 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadEmailSettings();
             selectProvider('gmail'); // Default
+            
+            // Apply translations
+            if (typeof applyTranslations === 'function') {
+                applyTranslations();
+            }
         });
     </script>
 </body>

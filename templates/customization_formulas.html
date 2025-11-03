@@ -6,6 +6,8 @@
     <title>Formulas & Calculations</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/i18n.js"></script>
+    <script src="/static/auto-sync.js"></script>
     <script src="/static/notifications.js"></script>
     <style>
         * { font-family: 'Outfit', sans-serif; }
@@ -26,12 +28,12 @@
                 <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
-                Formulas & Calculations
+                <span data-i18n="priceAdjustment.title">Formulas & Calculations</span>
             </h2>
             
             <!-- Broker Commission -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Broker Commission (%)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="priceAdjustment.brokerCommission">Broker Commission (%)</label>
                 <input type="number" id="brokerCommission" value="13.66" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
                 <p class="text-xs text-gray-500 mt-1">Commission percentage applied by the broker (e.g., CarJet)</p>
                 <div class="formula-box mt-2">
@@ -41,7 +43,7 @@
 
             <!-- Default Margin -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Default Margin (%)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="priceAdjustment.defaultMargin">Default Margin (%)</label>
                 <input type="number" id="defaultMargin" value="0" step="0.1" min="-100" max="100" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
                 <p class="text-xs text-gray-500 mt-1">Default margin when no specific rule exists (0% = no margin)</p>
                 <div class="formula-box mt-2">
@@ -51,7 +53,7 @@
 
             <!-- Rounding -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Price Rounding</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="priceAdjustment.priceRounding">Price Rounding</label>
                 <select id="priceRounding" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
                     <option value="0.01">Cents (0.01€) - Exact</option>
                     <option value="0.50">Half Euro (0.50€)</option>
@@ -59,25 +61,26 @@
                     <option value="5.00">5 Euros (5.00€)</option>
                     <option value="10.00">10 Euros (10.00€)</option>
                 </select>
-                <p class="text-xs text-gray-500 mt-1">Round final prices to nearest value</p>
+                <p class="text-xs text-gray-500 mt-1" data-i18n="priceAdjustment.priceRoundingDescription">Round final prices to nearest value</p>
             </div>
 
             <!-- Min Price Per Day -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Price Per Day (€)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="priceAdjustment.minPricePerDay">Minimum Price per Day (€)</label>
                 <input type="number" id="minPricePerDay" value="" step="0.01" min="0" placeholder="No minimum" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
-                <p class="text-xs text-gray-500 mt-1">Global minimum price per day (leave empty for no minimum)</p>
+                <p class="text-xs text-gray-500 mt-1" data-i18n="priceAdjustment.minPricePerDayDescription">Global minimum price per day (leave empty for no minimum)</p>
             </div>
 
             <!-- Min Price Per Month -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Price Per Month (€)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="priceAdjustment.minPricePerMonth">Minimum Price per Month (€)</label>
                 <input type="number" id="minPricePerMonth" value="" step="0.01" min="0" placeholder="No minimum" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
-                <p class="text-xs text-gray-500 mt-1">Global minimum price for 30+ day rentals</p>
+                <p class="text-xs text-gray-500 mt-1" data-i18n="priceAdjustment.minPricePerMonthDescription">Global minimum price for 30+ day rentals</p>
             </div>
 
             <!-- Tax Rate -->
             <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="priceAdjustment.taxRate">Tax Rate / VAT (%)</label>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tax Rate / VAT (%)</label>
                 <input type="number" id="taxRate" value="23" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
                 <p class="text-xs text-gray-500 mt-1">VAT or tax rate (Portugal = 23%)</p>
@@ -154,7 +157,13 @@
             }
         });
 
-        loadSettings();
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            // Apply translations
+            if (typeof applyTranslations === 'function') {
+                applyTranslations();
+            }
+        });
     </script>
 </body>
 </html>

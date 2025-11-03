@@ -6,6 +6,8 @@
     <title>Admin • Price Adjustment</title>
     <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/i18n.js"></script>
+    <script src="/static/auto-sync.js"></script>
     <style>
       img[alt="Profile"], img[src*="profile"], .profile-picture {
         border-radius: 50% !important;
@@ -68,7 +70,7 @@
     </header>
     <main class="mx-auto max-w-6xl px-4 py-6">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Price Adjustment</h2>
+        <h2 class="text-lg font-semibold" data-i18n="priceAdjustment.title">Price Adjustment</h2>
         <div class="flex items-center gap-2">
           <a href="/admin/settings" class="px-3 py-2 rounded bg-[#009cb6] text-white text-sm border border-[#009cb6] hover:bg-[#0086a1] transition-colors">Price Adjustment</a>
           <a href="/admin/users" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Users</a>
@@ -100,14 +102,14 @@
       {% endif %}
       <form method="post" class="bg-white rounded shadow p-4 space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700">CarJet Adjustment Percentage (%)</label>
+          <label class="block text-sm font-medium text-gray-700" data-i18n="priceAdjustment.carjetPercentage">CarJet Adjustment Percentage (%)</label>
           <input type="text" name="carjet_pct" value="{{ '%.2f' % carjet_pct if carjet_pct is not none else '0.00' }}" placeholder="0.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
-          <p class="text-xs text-gray-500 mt-1">Default: 0.00% (no adjustment)</p>
+          <p class="text-xs text-gray-500 mt-1" data-i18n="priceAdjustment.carjetPercentageDefault">Default: 0.00% (no adjustment)</p>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">CarJet Offset (€)</label>
+          <label class="block text-sm font-medium text-gray-700" data-i18n="priceAdjustment.carjetOffset">CarJet Offset (€)</label>
           <input type="text" name="carjet_off" value="{{ '%.2f' % carjet_off if carjet_off is not none else '0.00' }}" placeholder="0.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
-          <p class="text-xs text-gray-500 mt-1">Default: 0.00€ (no offset)</p>
+          <p class="text-xs text-gray-500 mt-1" data-i18n="priceAdjustment.carjetOffsetDefault">Default: 0.00€ (no offset)</p>
         </div>
         
         <!-- Abbycar Excel Export Adjustment -->
@@ -116,11 +118,11 @@
             <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            Abbycar Excel Export Adjustment
+            <span data-i18n="priceAdjustment.abbycarExport">Abbycar Excel Export Adjustment</span>
           </h3>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700">Price Adjustment Abbycar (%)</label>
+              <label class="block text-sm font-medium text-gray-700" data-i18n="priceAdjustment.abbycarPercentage">Price Adjustment Abbycar (%)</label>
               <input type="text" name="abbycar_pct" value="{{ '%.2f' % abbycar_pct if abbycar_pct is not none else '3.00' }}" placeholder="3.00" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
               <p class="text-xs text-gray-500 mt-1">
                 Aplica ajuste percentual a TODOS os preços no Excel Abbycar.<br>
@@ -178,7 +180,7 @@
             <div>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name="ui_icons_monochrome" value="1" {% if ui_icons_monochrome %}checked{% endif %} class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]" />
-                <span class="text-sm font-medium text-gray-700">Ícones Monocromáticos (Grayscale)</span>
+                <span class="text-sm font-medium text-gray-700" data-i18n="priceAdjustment.grayscaleIcons">Ícones Monocromáticos (Grayscale)</span>
               </label>
               <p class="text-xs text-gray-500 mt-1 ml-6">
                 Quando ativado, todos os ícones de carros ficam em tons de cinza.<br>
@@ -189,10 +191,18 @@
         </div>
         
         <div class="flex items-center gap-3">
-          <button type="submit" class="px-4 py-2 rounded bg-[#009cb6] text-white">Save</button>
-          <a href="/admin/env-summary" class="text-sm text-[#009cb6] underline">View current values (JSON)</a>
+          <button type="submit" class="px-4 py-2 rounded bg-[#009cb6] text-white" data-i18n="priceAdjustment.save">Save</button>
+          <a href="/admin/env-summary" class="text-sm text-[#009cb6] underline" data-i18n="priceAdjustment.viewJson">View current values (JSON)</a>
         </div>
       </form>
     </main>
+    <script>
+      // Apply translations on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof applyTranslations === 'function') {
+          applyTranslations();
+        }
+      });
+    </script>
   </body>
 </html>

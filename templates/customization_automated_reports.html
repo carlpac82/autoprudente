@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Reports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/i18n.js"></script>
+    <script src="/static/notifications.js"></script>
+    <script src="/static/auto-sync.js"></script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+                <span data-i18n="automatedReports.title">Relatórios Automáticos</span>
+            </h2>
+            
+            <p class="text-sm text-gray-600 mb-6">
+                Configure relatórios diários automáticos e alertas por email quando os preços mudam ou alertas são disparados.
+            </p>
+
+            <!-- Daily Report Settings -->
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-medium text-gray-900" data-i18n="automatedReports.dailyReport">Relatório Diário de Preços</h3>
+                            <p class="text-xs text-gray-500">Pesquisa automática e comparação de preços</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="enableDailyReport" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#009cb6]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#009cb6]"></div>
+                    </label>
+                </div>
+
+                <div id="dailyReportSettings" class="space-y-4" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hora do Relatório</label>
+                            <input type="time" id="reportTime" value="09:00" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                            <p class="text-xs text-gray-500 mt-1">Hora em que o relatório será gerado</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dias de Pesquisa</label>
+                            <input type="text" id="searchDays" value="1,2,3,4,5,6,7" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                            <p class="text-xs text-gray-500 mt-1">Dias a pesquisar (separados por vírgula)</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Localizações</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="locationFaro" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Aeroporto de Faro</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="locationAlbufeira" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Albufeira</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Comparar com</label>
+                        <select id="compareWith" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                            <option value="last_search">Última pesquisa manual</option>
+                            <option value="yesterday">Relatório de ontem</option>
+                            <option value="last_week">Há 1 semana</option>
+                            <option value="month_start">Início do mês</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Período de comparação para calcular diferenças</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Organização do Relatório</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="reportOrganization" id="orgByDay" value="by_day" checked class="w-4 h-4 text-[#009cb6] border-gray-300 focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Por Dia (1 dia, 2 dias, 3 dias...)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="reportOrganization" id="orgByGroup" value="by_group" class="w-4 h-4 text-[#009cb6] border-gray-300 focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Por Grupo (Económico, Compacto, SUV...)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="reportOrganization" id="orgBoth" value="both" class="w-4 h-4 text-[#009cb6] border-gray-300 focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Ambos (Dia + Grupo)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="includeLogo" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                            <span class="text-sm text-gray-700">Incluir logotipo Auto Prudente no email</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Report Settings -->
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-medium text-gray-900" data-i18n="automatedReports.weeklyReport">Relatório Semanal (Próximos 3 Meses)</h3>
+                            <p class="text-xs text-gray-500">Visão geral de tendências de preços</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="enableWeeklyReport" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#009cb6]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#009cb6]"></div>
+                    </label>
+                </div>
+
+                <div id="weeklyReportSettings" class="space-y-4" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dia da Semana</label>
+                            <select id="weeklyDay" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                                <option value="saturday" selected>Sábado</option>
+                                <option value="sunday">Domingo</option>
+                                <option value="monday">Segunda-feira</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hora</label>
+                            <input type="time" id="weeklyTime" value="10:00" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Período de Análise</label>
+                        <select id="weeklyPeriod" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                            <option value="3_months" selected>Próximos 3 meses</option>
+                            <option value="2_months">Próximos 2 meses</option>
+                            <option value="4_months">Próximos 4 meses</option>
+                            <option value="6_months">Próximos 6 meses</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Período para análise de tendências</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Incluir no Relatório Semanal</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="weeklyTrends" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Gráfico de tendências de preços</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="weeklyBestDays" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Melhores dias para alugar</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="weeklySeasonality" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm text-gray-700">Análise de sazonalidade</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Notifications -->
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-medium text-gray-900">Alertas Automáticos</h3>
+                            <p class="text-xs text-gray-500">Enviar email quando alertas são disparados</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="enableAlertEmails" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#009cb6]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#009cb6]"></div>
+                    </label>
+                </div>
+
+                <div id="alertEmailSettings" class="space-y-3" style="display: none;">
+                    <p class="text-sm text-gray-600">
+                        Quando o sistema faz a pesquisa automática às <strong id="displayReportTime">09:00</strong> e encontra preços que disparam alertas visuais configurados, será enviado um email imediatamente.
+                    </p>
+                    
+                    <div class="bg-[#f0f9fb] border border-[#009cb6] rounded p-3">
+                        <div class="flex items-start gap-2">
+                            <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="text-sm text-gray-800">
+                                <strong class="text-[#009cb6]">Nota:</strong> Os alertas visuais são configurados na página de <strong>Price Validation</strong>. Este sistema envia emails quando esses alertas são disparados.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Template Preview -->
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <h3 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Pré-visualização do Email
+                </h3>
+                <div class="bg-gray-50 p-4 rounded text-xs overflow-auto" style="max-height: 400px;">
+                    <!-- Mini preview of email design -->
+                    <div style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 20px; text-align: center; border-radius: 4px 4px 0 0;">
+                        <div style="color: white; font-weight: 600; font-size: 16px;">📊 Relatório Diário de Preços</div>
+                        <div style="color: #e0f2f7; font-size: 11px; margin-top: 4px;">02/11/2024 - Comparação com ontem</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border: 1px solid #e2e8f0; border-top: none;">
+                        <!-- Summary cards -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex: 1; background: #f0f9fb; border-left: 3px solid #009cb6; padding: 10px; border-radius: 3px;">
+                                <div style="font-size: 10px; color: #64748b;">TOTAL DE OFERTAS</div>
+                                <div style="font-size: 20px; font-weight: 700; color: #009cb6;">156</div>
+                            </div>
+                            <div style="flex: 1; background: #fff7ed; border-left: 3px solid #f4ad0f; padding: 10px; border-radius: 3px;">
+                                <div style="font-size: 10px; color: #64748b;">ALERTAS</div>
+                                <div style="font-size: 20px; font-weight: 700; color: #f4ad0f;">3</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Location section -->
+                        <div style="border-bottom: 2px solid #009cb6; padding-bottom: 5px; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
+                            ✈️ Aeroporto de Faro
+                        </div>
+                        
+                        <!-- Mini table -->
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px;">
+                            <thead>
+                                <tr style="background: #f8fafc;">
+                                    <th style="padding: 5px; text-align: left; border-bottom: 1px solid #e2e8f0;">Fornecedor</th>
+                                    <th style="padding: 5px; text-align: right; border-bottom: 1px solid #e2e8f0;">Preço</th>
+                                    <th style="padding: 5px; text-align: right; border-bottom: 1px solid #e2e8f0;">Mudança</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">AutoPrudente</td>
+                                    <td style="padding: 5px; text-align: right; font-weight: 600; border-bottom: 1px solid #f1f5f9;">€38.00</td>
+                                    <td style="padding: 5px; text-align: right; color: #10b981; border-bottom: 1px solid #f1f5f9;">↓ €3.50</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Goldcar</td>
+                                    <td style="padding: 5px; text-align: right; font-weight: 600; border-bottom: 1px solid #f1f5f9;">€42.80</td>
+                                    <td style="padding: 5px; text-align: right; color: #ef4444; border-bottom: 1px solid #f1f5f9;">↑ €2.10</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div style="background: #fef3c7; border-left: 3px solid #f4ad0f; padding: 8px; border-radius: 3px; font-size: 10px;">
+                            <div style="font-weight: 600; color: #92400e;">⚠️ 2 alertas disparados</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    O email real incluirá tabelas completas com todos os preços e comparações detalhadas para ambas as localizações.
+                </p>
+            </div>
+
+            <!-- Save Button -->
+            <div class="flex gap-3 flex-wrap">
+                <button onclick="saveAutomatedReportsSettings()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors" data-i18n="settings.save">
+                    Guardar Configurações
+                </button>
+                <button onclick="testDailyReport()" class="px-4 py-2 border border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors">
+                    Testar Relatório Diário
+                </button>
+                <button onclick="testWeeklyReport()" class="px-4 py-2 border border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors">
+                    Testar Relatório Semanal
+                </button>
+                <button onclick="testAlertEmail()" class="px-4 py-2 border border-[#f4ad0f] text-[#f4ad0f] rounded-lg hover:bg-[#f4ad0f] hover:text-white transition-colors">
+                    Ver Template de Alertas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle daily report settings
+        document.getElementById('enableDailyReport').addEventListener('change', function() {
+            document.getElementById('dailyReportSettings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Toggle weekly report settings
+        document.getElementById('enableWeeklyReport').addEventListener('change', function() {
+            document.getElementById('weeklyReportSettings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Toggle alert email settings
+        document.getElementById('enableAlertEmails').addEventListener('change', function() {
+            document.getElementById('alertEmailSettings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Update display time when report time changes
+        document.getElementById('reportTime').addEventListener('change', function() {
+            document.getElementById('displayReportTime').textContent = this.value;
+        });
+
+        function saveAutomatedReportsSettings() {
+            // Get report organization
+            let reportOrganization = 'by_day';
+            if (document.getElementById('orgByGroup').checked) reportOrganization = 'by_group';
+            if (document.getElementById('orgBoth').checked) reportOrganization = 'both';
+            
+            const settings = {
+                // Daily Report
+                enableDailyReport: document.getElementById('enableDailyReport').checked,
+                reportTime: document.getElementById('reportTime').value,
+                searchDays: document.getElementById('searchDays').value,
+                locationFaro: document.getElementById('locationFaro').checked,
+                locationAlbufeira: document.getElementById('locationAlbufeira').checked,
+                compareWith: document.getElementById('compareWith').value,
+                reportOrganization: reportOrganization,
+                includeLogo: document.getElementById('includeLogo').checked,
+                
+                // Weekly Report
+                enableWeeklyReport: document.getElementById('enableWeeklyReport').checked,
+                weeklyDay: document.getElementById('weeklyDay').value,
+                weeklyTime: document.getElementById('weeklyTime').value,
+                weeklyPeriod: document.getElementById('weeklyPeriod').value,
+                weeklyTrends: document.getElementById('weeklyTrends').checked,
+                weeklyBestDays: document.getElementById('weeklyBestDays').checked,
+                weeklySeasonality: document.getElementById('weeklySeasonality').checked,
+                
+                // Alerts
+                enableAlertEmails: document.getElementById('enableAlertEmails').checked
+            };
+
+            // Save to localStorage
+            localStorage.setItem('automatedReportsSettings', JSON.stringify(settings));
+
+            // Trigger sync to database
+            if (typeof syncSettingsToDatabase === 'function') {
+                syncSettingsToDatabase();
+            }
+
+            showNotification('Configurações de relatórios guardadas!', 'success');
+        }
+
+        async function testDailyReport() {
+            showNotification('A gerar relatório diário de teste...', 'info');
+
+            try {
+                // Get OAuth token from localStorage
+                const oauthToken = localStorage.getItem('emailOAuthToken');
+                if (!oauthToken) {
+                    showNotification('Por favor, conecte sua conta Gmail primeiro em Email Notifications', 'warning');
+                    return;
+                }
+
+                const tokenData = JSON.parse(oauthToken);
+
+                const response = await fetch('/api/reports/test-daily', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        accessToken: tokenData.token
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    showNotification('Relatório diário enviado com sucesso!', 'success');
+                } else {
+                    showNotification(`Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao gerar relatório de teste', 'error');
+                console.error('Test report error:', error);
+            }
+        }
+
+        async function testWeeklyReport() {
+            showNotification('A gerar relatório semanal de teste...', 'info');
+
+            try {
+                const response = await fetch('/api/reports/test-weekly', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    showNotification('Relatório semanal enviado com sucesso!', 'success');
+                } else {
+                    showNotification(`Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao gerar relatório semanal', 'error');
+                console.error('Test weekly report error:', error);
+            }
+        }
+
+        async function testAlertEmail() {
+            showNotification('A enviar template de alertas...', 'info');
+
+            try {
+                const response = await fetch('/api/reports/test-alert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    showNotification('Template de alertas enviado com sucesso! Verifica o teu email.', 'success');
+                } else {
+                    showNotification(`Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao enviar template de alertas', 'error');
+                console.error('Test alert email error:', error);
+            }
+        }
+
+        function loadAutomatedReportsSettings() {
+            const saved = localStorage.getItem('automatedReportsSettings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+
+                    document.getElementById('enableDailyReport').checked = settings.enableDailyReport || false;
+                    document.getElementById('reportTime').value = settings.reportTime || '09:00';
+                    document.getElementById('searchDays').value = settings.searchDays || '1,2,3,4,5,6,7';
+                    document.getElementById('locationFaro').checked = settings.locationFaro !== false;
+                    document.getElementById('locationAlbufeira').checked = settings.locationAlbufeira !== false;
+                    document.getElementById('compareWith').value = settings.compareWith || 'last_search';
+                    document.getElementById('enableAlertEmails').checked = settings.enableAlertEmails || false;
+
+                    // Trigger display updates
+                    document.getElementById('dailyReportSettings').style.display = settings.enableDailyReport ? 'block' : 'none';
+                    document.getElementById('alertEmailSettings').style.display = settings.enableAlertEmails ? 'block' : 'none';
+                    document.getElementById('displayReportTime').textContent = settings.reportTime || '09:00';
+                } catch (e) {
+                    console.error('Error loading automated reports settings:', e);
+                }
+            }
+        }
+
+        // Load settings on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAutomatedReportsSettings();
+            
+            // Apply translations
+            if (typeof applyTranslations === 'function') {
+                applyTranslations();
+            }
+        });
+    </script>
+</body>
+</html>

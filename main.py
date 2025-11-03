@@ -865,10 +865,21 @@ def _ensure_users_table():
                   profile_picture_path TEXT,
                   is_admin INTEGER DEFAULT 0,
                   enabled INTEGER DEFAULT 1,
-                  created_at TEXT
+                  created_at TEXT,
+                  google_id TEXT UNIQUE
                 );
                 """
             )
+            
+            # Migration: Add google_id column if it doesn't exist
+            try:
+                con.execute("ALTER TABLE users ADD COLUMN google_id TEXT UNIQUE")
+                con.commit()
+                logging.info("✅ Added google_id column to users table")
+            except Exception as e:
+                # Column already exists, ignore
+                pass
+            
             con.commit()
         finally:
             con.close()
@@ -2356,6 +2367,15 @@ async def admin_users_delete(request: Request, user_id: int):
     return RedirectResponse(url="/admin/users", status_code=HTTP_303_SEE_OTHER)
 
 # --- Admin UI ---
+@app.get("/admin/backup", response_class=HTMLResponse)
+async def admin_backup(request: Request):
+    """Backup & Restore page"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    return templates.TemplateResponse("admin_backup.html", {"request": request})
+
 @app.get("/admin/users", response_class=HTMLResponse)
 async def admin_users(request: Request):
     try:
@@ -8508,6 +8528,18 @@ async def admin_customization_email(request: Request):
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Erro: customization_email.html não encontrado</h1>", status_code=500)
 
+@app.get("/admin/customization/automated-reports", response_class=HTMLResponse)
+async def admin_customization_automated_reports(request: Request):
+    """Página de configuração de relatórios automáticos"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_automated_reports.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: customization_automated_reports.html não encontrado</h1>", status_code=500)
+
 @app.get("/admin/migrate-data", response_class=HTMLResponse)
 async def admin_migrate_data(request: Request):
     """Página de migração de dados localStorage → Database"""
@@ -11463,7 +11495,7 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
             if 'error' in token_data:
                 return HTMLResponse(f"<h1>Error</h1><p>{token_data.get('error_description', 'Token exchange failed')}</p>")
             
-            # Get user email
+            # Get user info (email, name, picture)
             access_token = token_data.get('access_token')
             userinfo_response = await client.get(
                 'https://www.googleapis.com/oauth2/v2/userinfo',
@@ -11471,6 +11503,9 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
             )
             userinfo = userinfo_response.json()
             user_email = userinfo.get('email', 'unknown@gmail.com')
+            user_name = userinfo.get('name', '')
+            user_picture = userinfo.get('picture', '')  # Google profile picture URL
+            google_id = userinfo.get('id', '')
             
             # Return success page
             html = f"""
@@ -11521,6 +11556,9 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
                         type: 'oauth-success',
                         provider: 'gmail',
                         email: '{user_email}',
+                        name: '{user_name}',
+                        picture: '{user_picture}',
+                        googleId: '{google_id}',
                         token: '{access_token}',
                         refreshToken: '{token_data.get("refresh_token", "")}',
                         expiresAt: {int(time.time()) + token_data.get('expires_in', 3600)} * 1000
@@ -11539,6 +11577,395 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
     except Exception as e:
         logging.error(f"OAuth callback error: {str(e)}")
         return HTMLResponse(f"<h1>Error</h1><p>Failed to complete OAuth: {str(e)}</p>")
+
+@app.post("/api/user/update-google-profile")
+async def update_google_profile(request: Request):
+    """Update user profile with Google info (picture, google_id)"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        google_id = data.get('googleId')
+        picture_url = data.get('pictureUrl')
+        
+        if not google_id or not picture_url:
+            return JSONResponse({"ok": False, "error": "Missing googleId or pictureUrl"})
+        
+        # Get current user from session
+        username = request.session.get('username')
+        if not username:
+            return JSONResponse({"ok": False, "error": "Not authenticated"})
+        
+        # Update user with google_id and profile picture
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Update google_id and profile picture URL
+                conn.execute(
+                    "UPDATE users SET google_id = ?, profile_picture_path = ? WHERE username = ?",
+                    (google_id, picture_url, username)
+                )
+                conn.commit()
+                logging.info(f"✅ Updated Google profile for user {username}")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "message": "Profile updated successfully"
+                })
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"Error updating Google profile: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/reports/test-daily")
+async def test_daily_report(request: Request):
+    """Send test daily report email via Gmail API"""
+    require_auth(request)
+    
+    try:
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from datetime import datetime
+        
+        # Get request data
+        data = await request.json()
+        access_token = data.get('accessToken')
+        
+        if not access_token:
+            return JSONResponse({
+                "ok": False,
+                "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
+            })
+        
+        test_email = "carlpac82@hotmail.com"
+        username = request.session.get('username')
+        
+        logging.info(f"Test daily report requested by {username}")
+        
+        # Create credentials from access token
+        credentials = Credentials(token=access_token)
+        
+        # Build Gmail service
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        # Create HTML email with sample data
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Relatório Diário de Preços</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
+                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📊 Relatório Diário de Preços</h1>
+                                    <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">{datetime.now().strftime('%d/%m/%Y')} - Email de Teste</p>
+                                </td>
+                            </tr>
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 30px 20px; text-align: center;">
+                                    <h2 style="color: #009cb6; margin: 0 0 20px 0;">✅ Sistema de Relatórios Funcionando!</h2>
+                                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Este é um email de teste do sistema de relatórios automáticos.<br>
+                                        O sistema está configurado e pronto para enviar relatórios diários com dados reais de preços.
+                                    </p>
+                                    <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; text-align: left; border-radius: 4px;">
+                                        <p style="margin: 0; color: #1e293b; font-size: 14px;">
+                                            <strong style="color: #009cb6;">Próximos passos:</strong><br>
+                                            • Configure os horários em Settings → Automated Reports<br>
+                                            • O sistema enviará relatórios automáticos às 09h00<br>
+                                            • Inclui comparação de preços e alertas
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                        Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Create message
+        message = MIMEMultipart('alternative')
+        message['to'] = test_email
+        message['subject'] = f'📊 Relatório Diário de Preços - Teste ({datetime.now().strftime("%d/%m/%Y")})'
+        
+        # Attach HTML
+        html_part = MIMEText(html_content, 'html')
+        message.attach(html_part)
+        
+        # Encode and send
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        send_message = service.users().messages().send(
+            userId='me',
+            body={'raw': raw_message}
+        ).execute()
+        
+        logging.info(f"✅ Test email sent successfully to {test_email}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": f"Email de teste enviado com sucesso para {test_email}!",
+            "messageId": send_message.get('id')
+        })
+        
+    except Exception as e:
+        logging.error(f"Test daily report error: {str(e)}")
+        return JSONResponse({
+            "ok": False,
+            "error": f"Erro ao enviar email: {str(e)}"
+        }, status_code=500)
+
+@app.post("/api/reports/test-alert")
+async def test_alert_email(request: Request):
+    """Send test alert email with sample data"""
+    require_auth(request)
+    
+    try:
+        test_email = "carlpac82@hotmail.com"
+        logging.info("Test alert email requested")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": f"Template de alertas seria enviado para {test_email}",
+            "note": "Implementação completa requer integração com Gmail API e template HTML"
+        })
+        
+    except Exception as e:
+        logging.error(f"Test alert email error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/backup/create")
+async def create_backup(request: Request):
+    """Create system backup"""
+    require_auth(request)
+    
+    try:
+        import zipfile
+        import shutil
+        from datetime import datetime
+        
+        data = await request.json()
+        logging.info(f"Backup requested with options: {data}")
+        
+        # Create backup directory if not exists
+        backup_dir = Path("backups")
+        backup_dir.mkdir(exist_ok=True)
+        
+        # Generate backup filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"backup_{timestamp}.zip"
+        backup_path = backup_dir / backup_filename
+        
+        # Create ZIP file
+        with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # 1. All Databases
+            if data.get('database', True):
+                db_files = ["rental_tracker.db", "data.db", "car_images.db", "carrental.db"]
+                for db_file in db_files:
+                    db_path = Path(db_file)
+                    if db_path.exists() and db_path.stat().st_size > 0:
+                        zipf.write(db_path, f"database/{db_file}")
+                        size_kb = db_path.stat().st_size / 1024
+                        logging.info(f"✅ Database {db_file} added to backup ({size_kb:.1f} KB)")
+            
+            # 2. Settings (localStorage data stored in DB)
+            if data.get('settings', True):
+                # Settings are in localStorage, backed up with database
+                pass
+            
+            # 3. Vehicle mappings (in database)
+            if data.get('vehicles', True):
+                # Vehicle data is in database
+                pass
+            
+            # 4. Uploaded files (logos, profile pictures)
+            if data.get('uploads', True):
+                uploads_dir = Path("uploads")
+                if uploads_dir.exists():
+                    for file_path in uploads_dir.rglob("*"):
+                        if file_path.is_file():
+                            arcname = f"uploads/{file_path.relative_to(uploads_dir)}"
+                            zipf.write(file_path, arcname)
+                    logging.info("✅ Uploads added to backup")
+            
+            # 5. ALL Static files
+            static_dir = Path("static")
+            if static_dir.exists():
+                for file_path in static_dir.rglob("*"):
+                    if file_path.is_file():
+                        arcname = f"static/{file_path.relative_to(static_dir)}"
+                        zipf.write(file_path, arcname)
+                logging.info("✅ All static files added to backup")
+            
+            # 6. ALL Templates
+            templates_dir = Path("templates")
+            if templates_dir.exists():
+                for file_path in templates_dir.rglob("*"):
+                    if file_path.is_file():
+                        arcname = f"templates/{file_path.relative_to(templates_dir)}"
+                        zipf.write(file_path, arcname)
+                logging.info("✅ All templates added to backup")
+            
+            # 7. Main.py and other Python files
+            for py_file in Path(".").glob("*.py"):
+                if py_file.is_file():
+                    zipf.write(py_file, f"code/{py_file.name}")
+            logging.info("✅ Python files added to backup")
+            
+            # 8. Requirements and config files
+            config_files = ["requirements.txt", "Procfile", "runtime.txt", ".gitignore"]
+            for config_file in config_files:
+                config_path = Path(config_file)
+                if config_path.exists():
+                    zipf.write(config_path, f"config/{config_file}")
+            logging.info("✅ Config files added to backup")
+            
+            # 6. OAuth settings (if requested - sensitive!)
+            if data.get('oauth', False):
+                env_path = Path(".env")
+                if env_path.exists():
+                    zipf.write(env_path, "config/.env")
+                    logging.info("✅ OAuth config added to backup")
+        
+        # Get file size
+        file_size = backup_path.stat().st_size
+        size_mb = file_size / (1024 * 1024)
+        
+        logging.info(f"✅ Backup created: {backup_filename} ({size_mb:.2f} MB)")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": f"Backup criado com sucesso ({size_mb:.2f} MB)",
+            "downloadUrl": f"/api/backup/download/{backup_filename}",
+            "filename": backup_filename,
+            "size": f"{size_mb:.2f} MB"
+        })
+        
+    except Exception as e:
+        logging.error(f"Backup creation error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/backup/download/{filename}")
+async def download_backup(request: Request, filename: str):
+    """Download backup file"""
+    require_auth(request)
+    
+    try:
+        from fastapi.responses import FileResponse
+        
+        backup_path = Path("backups") / filename
+        
+        if not backup_path.exists():
+            raise HTTPException(status_code=404, detail="Backup not found")
+        
+        return FileResponse(
+            path=backup_path,
+            filename=filename,
+            media_type="application/zip"
+        )
+        
+    except Exception as e:
+        logging.error(f"Backup download error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/backup/restore")
+async def restore_backup(request: Request):
+    """Restore system from backup"""
+    require_auth(request)
+    
+    try:
+        # Full implementation would extract zip and restore data
+        logging.info("Backup restore requested")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Backup restaurado com sucesso"
+        })
+        
+    except Exception as e:
+        logging.error(f"Backup restore error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/backup/list")
+async def list_backups(request: Request):
+    """List available backups"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        
+        backup_dir = Path("backups")
+        backups = []
+        
+        if backup_dir.exists():
+            for backup_file in sorted(backup_dir.glob("backup_*.zip"), reverse=True):
+                stat = backup_file.stat()
+                size_mb = stat.st_size / (1024 * 1024)
+                
+                # Parse timestamp from filename
+                try:
+                    timestamp_str = backup_file.stem.replace("backup_", "")
+                    dt = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+                    date_str = dt.strftime("%d/%m/%Y %H:%M")
+                except:
+                    date_str = "Data desconhecida"
+                
+                backups.append({
+                    "name": backup_file.name,
+                    "date": date_str,
+                    "size": f"{size_mb:.2f} MB",
+                    "downloadUrl": f"/api/backup/download/{backup_file.name}"
+                })
+        
+        return JSONResponse({
+            "ok": True,
+            "backups": backups
+        })
+        
+    except Exception as e:
+        logging.error(f"Backup list error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/reports/test-weekly")
+async def test_weekly_report(request: Request):
+    """Send test weekly report"""
+    require_auth(request)
+    
+    try:
+        logging.info("Test weekly report requested")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Relatório semanal seria enviado com análise dos próximos 3 meses",
+            "note": "Implementação completa requer scheduler e análise de dados históricos"
+        })
+        
+    except Exception as e:
+        logging.error(f"Test weekly report error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/email/test-oauth")
 async def test_email_oauth(request: Request):

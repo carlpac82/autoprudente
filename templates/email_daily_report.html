@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Diário de Preços</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <!-- Main Container -->
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                                📊 Relatório Diário de Preços
+                            </h1>
+                            <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">
+                                {{ date }} - Comparação com {{ comparison_period }}
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Summary Cards -->
+                    <tr>
+                        <td style="padding: 20px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="50%" style="padding-right: 10px;">
+                                        <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; border-radius: 4px;">
+                                            <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Total de Ofertas</div>
+                                            <div style="font-size: 28px; font-weight: 700; color: #009cb6;">{{ total_offers }}</div>
+                                        </div>
+                                    </td>
+                                    <td width="50%" style="padding-left: 10px;">
+                                        <div style="background: #fff7ed; border-left: 4px solid #f4ad0f; padding: 15px; border-radius: 4px;">
+                                            <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Alertas Disparados</div>
+                                            <div style="font-size: 28px; font-weight: 700; color: #f4ad0f;">{{ total_alerts }}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Faro Section -->
+                    <tr>
+                        <td style="padding: 0 20px 20px 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">
+                                ✈️ Aeroporto de Faro
+                            </h2>
+                            
+                            <!-- Price Summary -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                                <tr>
+                                    <td style="background: #f8fafc; padding: 12px; border-radius: 4px;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td width="33%" style="text-align: center; border-right: 1px solid #e2e8f0;">
+                                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Preço Médio</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #1e293b;">€{{ faro_avg_price }}</div>
+                                                    <div style="font-size: 12px; color: {{ faro_avg_change_color }}; margin-top: 2px;">
+                                                        {{ faro_avg_change_icon }} €{{ faro_avg_change }}
+                                                    </div>
+                                                </td>
+                                                <td width="33%" style="text-align: center; border-right: 1px solid #e2e8f0;">
+                                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Melhor Preço</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #10b981;">€{{ faro_best_price }}</div>
+                                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">{{ faro_best_supplier }}</div>
+                                                </td>
+                                                <td width="34%" style="text-align: center;">
+                                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Ofertas</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #1e293b;">{{ faro_total_offers }}</div>
+                                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">disponíveis</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Faro Price Table -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                <thead>
+                                    <tr style="background: #f8fafc;">
+                                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Fornecedor</th>
+                                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Carro</th>
+                                        <th style="padding: 10px; text-align: right; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Preço</th>
+                                        <th style="padding: 10px; text-align: right; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Mudança</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for offer in faro_offers %}
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 12px 10px; font-size: 13px; color: #1e293b;">{{ offer.supplier }}</td>
+                                        <td style="padding: 12px 10px; font-size: 13px; color: #64748b;">{{ offer.car }}</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 600; color: #1e293b;">€{{ offer.price }}</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-size: 13px; color: {{ offer.change_color }};">
+                                            {{ offer.change_icon }} €{{ offer.change }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <!-- Faro Alerts -->
+                            {% if faro_alerts %}
+                            <div style="margin-top: 15px; background: #fef3c7; border-left: 4px solid #f4ad0f; padding: 12px; border-radius: 4px;">
+                                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 5px;">⚠️ Alertas Disparados</div>
+                                <div style="font-size: 12px; color: #78350f;">
+                                    {{ faro_alerts }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Albufeira Section -->
+                    <tr>
+                        <td style="padding: 0 20px 20px 20px;">
+                            <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">
+                                🏖️ Albufeira
+                            </h2>
+                            
+                            <!-- Price Summary -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                                <tr>
+                                    <td style="background: #f8fafc; padding: 12px; border-radius: 4px;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td width="33%" style="text-align: center; border-right: 1px solid #e2e8f0;">
+                                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Preço Médio</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #1e293b;">€{{ albufeira_avg_price }}</div>
+                                                    <div style="font-size: 12px; color: {{ albufeira_avg_change_color }}; margin-top: 2px;">
+                                                        {{ albufeira_avg_change_icon }} €{{ albufeira_avg_change }}
+                                                    </div>
+                                                </td>
+                                                <td width="33%" style="text-align: center; border-right: 1px solid #e2e8f0;">
+                                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Melhor Preço</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #10b981;">€{{ albufeira_best_price }}</div>
+                                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">{{ albufeira_best_supplier }}</div>
+                                                </td>
+                                                <td width="34%" style="text-align: center;">
+                                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Ofertas</div>
+                                                    <div style="font-size: 20px; font-weight: 700; color: #1e293b;">{{ albufeira_total_offers }}</div>
+                                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">disponíveis</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Albufeira Price Table -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                <thead>
+                                    <tr style="background: #f8fafc;">
+                                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Fornecedor</th>
+                                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Carro</th>
+                                        <th style="padding: 10px; text-align: right; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Preço</th>
+                                        <th style="padding: 10px; text-align: right; font-size: 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Mudança</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for offer in albufeira_offers %}
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 12px 10px; font-size: 13px; color: #1e293b;">{{ offer.supplier }}</td>
+                                        <td style="padding: 12px 10px; font-size: 13px; color: #64748b;">{{ offer.car }}</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 600; color: #1e293b;">€{{ offer.price }}</td>
+                                        <td style="padding: 12px 10px; text-align: right; font-size: 13px; color: {{ offer.change_color }};">
+                                            {{ offer.change_icon }} €{{ offer.change }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <!-- Albufeira Alerts -->
+                            {% if albufeira_alerts %}
+                            <div style="margin-top: 15px; background: #fef3c7; border-left: 4px solid #f4ad0f; padding: 12px; border-radius: 4px;">
+                                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 5px;">⚠️ Alertas Disparados</div>
+                                <div style="font-size: 12px; color: #78350f;">
+                                    {{ albufeira_alerts }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0 0 10px 0; font-size: 13px; color: #64748b;">
+                                Este relatório foi gerado automaticamente pelo sistema de monitorização de preços
+                            </p>
+                            <a href="{{ dashboard_url }}" style="display: inline-block; background: #009cb6; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                                Ver Dashboard Completo
+                            </a>
+                            <p style="margin: 15px 0 0 0; font-size: 11px; color: #94a3b8;">
+                                Auto Prudente © {{ year }} - Todos os direitos reservados
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
