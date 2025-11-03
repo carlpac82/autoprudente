@@ -1999,8 +1999,9 @@ async def home(request: Request):
             supplier_logos = [row[0] for row in rows if row[0]]
         finally:
             conn.close()
-    except Exception as e:
-        print(f"Error loading supplier logos: {e}", file=sys.stderr, flush=True)
+    except Exception:
+        # Suppliers table doesn't exist yet, skip logo preloading
+        pass
     
     # FORCE NO CACHE - prevent browser from caching HTML/JS
     response = templates.TemplateResponse("index.html", {
