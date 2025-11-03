@@ -1238,7 +1238,7 @@
             progressBar.classList.add('hidden');
             
             // Show notification
-            showNotification('⏹️ Search stopped by user', 'warning');
+            showNotification('Search stopped by user', 'warning');
         }
         
         function stopGenerating() {
@@ -1258,7 +1258,7 @@
             progressBar.classList.add('hidden');
             
             // Show notification
-            showNotification('⏹️ Generation stopped by user', 'warning');
+            showNotification('Generation stopped by user', 'warning');
         }
 
         function getMaxAlternativeDays() {
@@ -2414,7 +2414,7 @@
             };
             
             localStorage.setItem('vansPricing', JSON.stringify(prices));
-            showNotification('✅ Commercial Vans pricing saved successfully!', 'success');
+            showNotification('Commercial Vans pricing saved successfully!', 'success');
             console.log('💾 Vans pricing saved:', prices);
         }
         
@@ -2538,11 +2538,11 @@
                 // Save to downloads history
                 saveDownloadToHistory(filename, 'abbycar', location);
                 
-                showNotification('✅ Excel file downloaded successfully!', 'success');
+                showNotification('Excel file downloaded successfully!', 'success');
                 
             } catch (error) {
                 console.error('Error downloading Excel:', error);
-                showNotification('❌ Error generating Excel file: ' + error.message, 'error');
+                showNotification('Error generating Excel file: ' + error.message, 'error');
             }
         }
         

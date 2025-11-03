@@ -751,7 +751,7 @@
                     // Trigger event for real-time update
                     window.dispatchEvent(new CustomEvent('settingsChanged', { detail: { settings } }));
 
-                    showNotification('✅ Settings saved to database!', 'success');
+                    showNotification('Settings saved to database!', 'success');
                 } else {
                     throw new Error(result.error || 'Failed to save settings');
                 }
@@ -759,7 +759,7 @@
                 console.error('❌ Error saving settings:', err);
                 // Fallback to localStorage
                 localStorage.setItem('priceAutomationSettings', JSON.stringify(settings));
-                showNotification(`⚠️ Saved locally only. Database error: ${err.message}`, 'warning');
+                showNotification(`Saved locally only. Database error: ${err.message}`, 'warning');
             }
         }
 
@@ -789,7 +789,7 @@
                 renderHierarchyRules();
                 toggleGroupHierarchy();
                 saveSettings();
-                showNotification('✅ Settings reset to defaults!');
+                showNotification('Settings reset to defaults!', 'success');
             }
         }
 
@@ -2325,10 +2325,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(rules)
                 });
-                showNotification('✅ Strategy deleted successfully!', 'success');
+                showNotification('Strategy deleted successfully!', 'success');
             } catch (err) {
                 console.error('Error saving:', err);
-                showNotification('❌ Error deleting strategy', 'error');
+                showNotification('Error deleting strategy', 'error');
             }
             
             rebuildFieldsForDay(location, grupo, month, day);
@@ -3314,7 +3314,7 @@
                     // Also save to localStorage as backup
                     localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
                     console.log(`✅ Config saved for ${location}/${grupo}/${month}/${day}`);
-                    showNotification('✅ Configuration saved!', 'success');
+                    showNotification('Configuration saved!', 'success');
                 } else {
                     throw new Error(result.error || 'Failed to save');
                 }
@@ -3347,13 +3347,13 @@
                 
                 if (result.ok) {
                     console.log('✅ Strategies saved to database');
-                    showNotification('✅ Strategies saved successfully!', 'success');
+                    showNotification('Strategies saved successfully!', 'success');
                 } else {
                     throw new Error(result.error || 'Failed to save strategies');
                 }
             } catch (err) {
                 console.error('Error saving strategies to database:', err);
-                showNotification('❌ Error saving strategies', 'error');
+                showNotification('Error saving strategies', 'error');
             }
         }
         
@@ -3413,7 +3413,7 @@
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
             
-            showNotification('✅ Settings exported successfully!');
+            showNotification('Settings exported successfully!', 'success');
         }
         
         function importSettings() {
@@ -3487,7 +3487,7 @@
                         localStorage.setItem('pricingStrategies', JSON.stringify(importedSettings.pricingStrategies));
                     }
                     
-                    showNotification('✅ Settings imported successfully! Reloading page...');
+                    showNotification('Settings imported successfully! Reloading page...', 'success');
                     
                     // Reload page to apply all changes
                     setTimeout(() => {
