@@ -5,7 +5,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/i18n.js"></script>
     <script src="/static/notifications.js"></script>
+    <script>
+      // Listen for language changes from parent window
+      window.addEventListener('message', function(e) {
+        console.log('Message received in vehicle editor:', e.data);
+        if (e.data && e.data.type === 'languageChange') {
+          console.log('Language change message received, new language:', e.data.language);
+          localStorage.setItem('siteLanguage', e.data.language);
+          window.location.reload();
+        }
+      });
+      
+      // Log current language on load
+      console.log('Vehicle editor loaded with language:', localStorage.getItem('siteLanguage') || 'pt');
+    </script>
 </head>
 <body class="bg-gray-50">
     <!-- Header -->
