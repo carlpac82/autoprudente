@@ -127,11 +127,10 @@
             min-width: 320px;
             max-width: 500px;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 16px;
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 12px;
             z-index: 10000;
             animation: slideIn 0.3s ease-out;
@@ -150,11 +149,6 @@
         .custom-notification.hiding {
             animation: slideOut 0.3s ease-out forwards;
         }
-        
-        .custom-notification.success { border-left: 4px solid #009cb6; }
-        .custom-notification.warning { border-left: 4px solid #f4ad0f; }
-        .custom-notification.error { border-left: 4px solid #ef4444; }
-        .custom-notification.info { border-left: 4px solid #009cb6; }
         
         .notification-icon {
             flex-shrink: 0;
@@ -2418,23 +2412,6 @@
             }
         }
 
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            const bgColor = type === 'success' ? 'bg-[#009cb6]' : type === 'warning' ? 'bg-[#f4ad0f]' : 'bg-red-500';
-            notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in`;
-            
-            const icon = type === 'success' ? '✓' : type === 'warning' ? '⚠' : '✕';
-            notification.innerHTML = `<span class="text-xl">${icon}</span><span>${message}</span>`;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(100%)';
-                notification.style.transition = 'all 0.3s ease-out';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
 
         function showAddColumnDialog() {
             const newDays = prompt('Quantos dias deseja adicionar? (ex: 15, 45, 90)');
