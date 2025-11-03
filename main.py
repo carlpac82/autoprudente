@@ -7811,6 +7811,41 @@ async def track_carjet(request: Request):
     try:
         from datetime import datetime, timedelta
         from playwright.async_api import async_playwright
+        import random
+        
+        # Load date rotation settings from database
+        date_rotation_enabled = False
+        date_rotation_max_days = 3
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                row = con.execute(
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = ?",
+                    ("date_rotation_enabled",)
+                ).fetchone()
+                if row:
+                    date_rotation_enabled = row[0].lower() in ('true', '1', 'yes')
+                
+                row = con.execute(
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = ?",
+                    ("date_rotation_max_days",)
+                ).fetchone()
+                if row:
+                    date_rotation_max_days = int(row[0])
+            finally:
+                con.close()
+        
+        # Apply date rotation if enabled
+        original_pickup_date = pickup_date
+        if date_rotation_enabled and date_rotation_max_days > 0:
+            base_date = datetime.strptime(pickup_date, "%Y-%m-%d")
+            days_offset = random.randint(0, date_rotation_max_days)
+            rotated_date = base_date + timedelta(days=days_offset)
+            pickup_date = rotated_date.strftime("%Y-%m-%d")
+            print(f"[DATE_ROTATION] Original: {original_pickup_date}, Rotated: {pickup_date} (+{days_offset} days)")
+        else:
+            print(f"[DATE_ROTATION] Disabled, using original date: {pickup_date}")
 
         async def run():
             results: List[Dict[str, Any]] = []

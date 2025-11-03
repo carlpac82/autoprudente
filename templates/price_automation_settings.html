@@ -137,6 +137,57 @@
                 </div>
             </div>
 
+            <!-- Anti-WAF Settings -->
+            <div class="border-t pt-4 mb-4">
+                <h3 class="text-md font-semibold mb-3 text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <span>🛡️ Anti-WAF Protection</span>
+                </h3>
+                <p class="text-sm text-gray-600 mb-3">Configure date rotation to avoid WAF detection by varying search dates.</p>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="text-sm text-yellow-800">
+                            <strong>How it works:</strong> When enabled, the system will randomly add 0 to N days to the pickup date for each search, making it harder for WAF to detect automated patterns.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <span class="flex items-center gap-2">
+                                <input type="checkbox" id="dateRotationEnabled" class="rounded">
+                                <span>Enable Date Rotation</span>
+                            </span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">Randomly vary pickup dates to avoid detection</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Days Ahead</label>
+                        <input type="number" id="dateRotationMaxDays" value="3" min="0" max="7" class="w-full px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-[#009cb6] focus:border-transparent rounded">
+                        <p class="text-xs text-gray-500 mt-1">Random offset: 0 to N days (0-7)</p>
+                    </div>
+                </div>
+                
+                <div class="mt-3 bg-blue-50 border border-blue-200 rounded p-3">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <strong>Example:</strong> If you search for Nov 1st with max 3 days, the system will randomly search Nov 1st, 2nd, 3rd, or 4th. This makes each search appear unique to WAF.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="border-t pt-4 mb-4">
                 <h3 class="text-md font-semibold mb-3 text-gray-800 flex items-center gap-2">
                     <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -600,6 +651,14 @@
                         renderHierarchyRules();
                     }
                     
+                    // Anti-WAF settings
+                    if (settings.date_rotation_enabled !== undefined) {
+                        document.getElementById('dateRotationEnabled').checked = settings.date_rotation_enabled;
+                    }
+                    if (settings.date_rotation_max_days !== undefined) {
+                        document.getElementById('dateRotationMaxDays').value = settings.date_rotation_max_days;
+                    }
+                    
                     // Also save to localStorage as backup
                     localStorage.setItem('priceAutomationSettings', JSON.stringify(settings));
                     console.log('✅ Settings loaded from database');
@@ -648,7 +707,10 @@
                 autoSaveHistory: document.getElementById('autoSaveHistory').value === 'true',
                 referenceSupplier: document.getElementById('referenceSupplier').value,
                 enableGroupHierarchy: document.getElementById('enableGroupHierarchy').checked,
-                groupHierarchyRules: groupHierarchyRules
+                groupHierarchyRules: groupHierarchyRules,
+                // Anti-WAF settings
+                date_rotation_enabled: document.getElementById('dateRotationEnabled').checked,
+                date_rotation_max_days: parseInt(document.getElementById('dateRotationMaxDays').value)
             };
 
             // Validate
