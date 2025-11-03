@@ -433,6 +433,7 @@ import asyncio
 from bs4 import BeautifulSoup
 import sqlite3
 from threading import Lock
+import random
 
 # Import database module for PostgreSQL/SQLite hybrid support
 try:
