@@ -1673,6 +1673,18 @@ def init_db():
                 """
             )
             
+            # Tabela para Price Validation Rules
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS price_validation_rules (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  rules_json TEXT NOT NULL,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_by TEXT DEFAULT 'admin'
+                )
+                """
+            )
+            
             # Tabela para Price History (versões salvas)
             conn.execute(
                 """
@@ -11187,6 +11199,74 @@ async def save_vans_pricing(request: Request):
                 ))
                 con.commit()
                 return _no_store_json({"ok": True, "message": "Vans pricing saved successfully"})
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/price-validation/rules")
+async def get_price_validation_rules(request: Request):
+    """Get Price Validation Rules from database"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Get the most recent rules
+                row = con.execute("""
+                    SELECT rules_json, updated_at 
+                    FROM price_validation_rules 
+                    ORDER BY id DESC LIMIT 1
+                """).fetchone()
+                
+                if row:
+                    import json
+                    return _no_store_json({
+                        "ok": True,
+                        "rules": json.loads(row[0]),
+                        "updated_at": row[1]
+                    })
+                else:
+                    # Return empty array if no rules exist
+                    return _no_store_json({
+                        "ok": True,
+                        "rules": [],
+                        "updated_at": None
+                    })
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.post("/api/price-validation/rules")
+async def save_price_validation_rules(request: Request):
+    """Save Price Validation Rules to database"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        rules = data.get('rules', [])
+        user = request.session.get('user', 'admin')
+        
+        import json
+        rules_json = json.dumps(rules)
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Insert new rules (keeping history)
+                con.execute("""
+                    INSERT INTO price_validation_rules (rules_json, updated_by)
+                    VALUES (?, ?)
+                """, (rules_json, user))
+                con.commit()
+                
+                return _no_store_json({
+                    "ok": True,
+                    "message": "Price validation rules saved successfully",
+                    "count": len(rules)
+                })
             finally:
                 con.close()
     except Exception as e:
