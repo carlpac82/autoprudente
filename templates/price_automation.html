@@ -554,14 +554,15 @@
                                 <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
                         </button>
+                        <button id="btnStopGenerate" onclick="stopGenerating()" class="hidden p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded transition-colors border border-red-200" title="Stop generating prices">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
+                            </svg>
+                        </button>
                         <button id="btnAIInsights" onclick="showAIInsights()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="AI Insights - View pricing intelligence">
                             <svg class="w-6 h-6 text-[#8b5cf6]" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                            </svg>
-                        </button>
-                        <button id="btnStopGenerate" onclick="stopGenerate()" class="p-2 hover:bg-gray-100 rounded transition-colors hidden" title="Stop generation">
-                            <svg class="w-6 h-6 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
                     </div>
@@ -1319,6 +1320,18 @@
         // Variáveis de controle para parar operações
         let stopSearchFlag = false;
         let stopGenerateFlag = false;
+        
+        function stopGenerating() {
+            stopGenerateFlag = true;
+            const btnStop = document.getElementById('btnStopGenerate');
+            btnStop.innerHTML = `
+                <svg class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            `;
+            btnStop.disabled = true;
+            btnStop.title = 'Stopping...';
+        }
 
         function getMaxAlternativeDays() {
             const saved = localStorage.getItem('priceAutomationSettings');
