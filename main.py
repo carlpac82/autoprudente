@@ -7811,8 +7811,21 @@ async def track_carjet(request: Request):
             results: List[Dict[str, Any]] = []
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
-                context = await browser.new_context()
-                default_headers = {"User-Agent": "Mozilla/5.0 (compatible; PriceTracker/1.0)"}
+                # Use mobile user agent and viewport to avoid WAF detection
+                context = await browser.new_context(
+                    user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+                    viewport={"width": 390, "height": 844},  # iPhone 13 Pro
+                    device_scale_factor=3,
+                    is_mobile=True,
+                    has_touch=True,
+                    locale="pt-PT"
+                )
+                # Mobile headers
+                default_headers = {
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
+                    "Accept-Encoding": "gzip, deflate, br",
+                }
                 await context.set_extra_http_headers(default_headers)
                 # Allow all resources to ensure CarJet JS initializes correctly
                 await context.route("**/*", lambda route: route.continue_())
