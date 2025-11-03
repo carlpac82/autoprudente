@@ -7815,7 +7815,7 @@ async def track_carjet(request: Request):
         
         # Load date rotation settings from database
         date_rotation_enabled = False
-        date_rotation_max_days = 3
+        date_rotation_max_days = 4
         
         with _db_lock:
             con = _db_connect()
