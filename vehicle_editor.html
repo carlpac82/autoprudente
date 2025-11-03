@@ -28,7 +28,7 @@
         <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
             <h1 class="text-white text-xl font-bold" data-i18n="vehicles.vehicleNamesEditor">Vehicle Names Editor</h1>
             <div class="flex items-center gap-3 text-white text-sm">
-                <span id="totalVehicles">0</span> vehicles
+                <span id="totalVehicles">0</span> <span data-i18n="vehicles.vehicles">vehicles</span>
                 <button onclick="fetchCarPhotos()" class="p-2 hover:bg-white/10 transition-all" title="Fetch Car Photos from CarJet" id="btnFetchPhotos">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -423,14 +423,14 @@
         function populateFilters() {
             const brands = [...new Set(allVehicles.map(v => v.brand))].sort();
             const brandSelect = document.getElementById('filterBrand');
-            brandSelect.innerHTML = '<option value="">All brands</option>';
+            brandSelect.innerHTML = `<option value="">${t('vehicles.allBrands', 'All brands')}</option>`;
             brands.forEach(brand => {
                 brandSelect.innerHTML += `<option value="${brand}">${brand.charAt(0).toUpperCase() + brand.slice(1)}</option>`;
             });
             
             const categories = [...new Set(allVehicles.map(v => v.category))].sort();
             const catSelect = document.getElementById('filterCategory');
-            catSelect.innerHTML = '<option value="">All categories</option>';
+            catSelect.innerHTML = `<option value="">${t('vehicles.allCategories', 'All categories')}</option>`;
             categories.forEach(cat => {
                 catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
             });

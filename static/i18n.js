@@ -416,6 +416,7 @@ const translations = {
         
         // Vehicles Page
         'vehicles.vehicleNamesEditor': 'Editor de Nomes de Veículos',
+        'vehicles.vehicles': 'veículos',
         'vehicles.allVehicles': 'Todos os Veículos',
         'vehicles.uncategorized': 'Sem Categoria',
         'vehicles.categoryManagement': 'Gestão de Categorias & Grupos',
@@ -911,6 +912,7 @@ const translations = {
         
         // Vehicles Page
         'vehicles.vehicleNamesEditor': 'Vehicle Names Editor',
+        'vehicles.vehicles': 'vehicles',
         'vehicles.allVehicles': 'All Vehicles',
         'vehicles.uncategorized': 'Uncategorized',
         'vehicles.categoryManagement': 'Category & Group Management',
