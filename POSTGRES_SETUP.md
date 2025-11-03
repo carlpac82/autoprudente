@@ -22,13 +22,18 @@ Este guia explica como configurar PostgreSQL no Render para ter dados persistent
    
 3. **Configurar Database**
    ```
-   Name: carrental-db
-   Database: carrental
+   Name: carrental_db
+   Database: carrental_db
    User: carrental_user
    Region: Frankfurt (EU Central)
    PostgreSQL Version: 16
    Plan: Free
    ```
+   
+   **⚠️ IMPORTANTE:** 
+   - Database name deve usar apenas: `a-z`, `0-9`, `_`
+   - Não usar hífens (`-`)
+   - Deve começar com letra ou underscore
 
 4. **Criar Database**
    - Clicar em **"Create Database"**
