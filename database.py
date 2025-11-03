@@ -31,6 +31,7 @@ USE_POSTGRES = DATABASE_URL is not None
 
 if USE_POSTGRES:
     import psycopg2
+    from psycopg2 import pool
     from psycopg2.extras import RealDictCursor
     from urllib.parse import urlparse
     
@@ -44,8 +45,22 @@ if USE_POSTGRES:
         'password': result.password,
         'sslmode': 'require'
     }
+    
+    # Connection Pool (5-20 connections)
+    try:
+        connection_pool = pool.ThreadedConnectionPool(
+            minconn=5,
+            maxconn=20,
+            **DB_CONFIG
+        )
+        logging.info(f"🐘 PostgreSQL connection pool created: {result.hostname}/{result.path[1:]}")
+    except Exception as e:
+        logging.error(f"❌ Failed to create connection pool: {e}")
+        connection_pool = None
+    
     logging.info(f"🐘 Using PostgreSQL: {result.hostname}/{result.path[1:]}")
 else:
+    connection_pool = None
     logging.info("📁 Using SQLite (local development)")
 
 class DatabaseConnection:
@@ -58,6 +73,15 @@ class DatabaseConnection:
     def connect(self):
         """Establish database connection"""
         if self.is_postgres:
+            # Use connection pool if available
+            if connection_pool:
+                try:
+                    self.conn = connection_pool.getconn()
+                    self.conn.autocommit = False
+                    return self.conn
+                except Exception as e:
+                    logging.error(f"Failed to get connection from pool: {e}")
+            # Fallback to direct connection
             self.conn = psycopg2.connect(**DB_CONFIG)
             self.conn.autocommit = False
         else:
@@ -68,7 +92,15 @@ class DatabaseConnection:
     def close(self):
         """Close database connection"""
         if self.conn:
-            self.conn.close()
+            if self.is_postgres and connection_pool:
+                # Return connection to pool
+                try:
+                    connection_pool.putconn(self.conn)
+                except Exception as e:
+                    logging.error(f"Failed to return connection to pool: {e}")
+                    self.conn.close()
+            else:
+                self.conn.close()
             self.conn = None
     
     def execute(self, query: str, params: tuple = None):

@@ -1,0 +1,75 @@
+[22:38:35.810] ================================================================================
+[22:38:35.810] TESTE COM LOGGING COMPLETO
+[22:38:35.810] ================================================================================
+[22:38:35.811] Log file: /Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/test_log_20251103_223835.txt
+[22:38:35.811] 
+🚀 Iniciando Chrome...
+[22:38:37.887] 
+================================================================================
+[22:38:37.887] ESTADO 1: Abrir página
+[22:38:37.887] ================================================================================
+[22:38:41.210] 🍪 [INICIAL] Verificando cookies...
+[22:38:41.224]    ℹ️  [INICIAL] Sem cookies
+[22:38:42.229] 
+================================================================================
+[22:38:42.230] ESTADO 2: Preencher local
+[22:38:42.230] ================================================================================
+[22:38:42.437]    Digitado: Albufeira Cidade
+[22:38:44.438] 
+================================================================================
+[22:38:44.438] ESTADO 3: Clicar dropdown
+[22:38:44.438] ================================================================================
+[22:38:44.443]    ✅ Dropdown clicado
+[22:38:45.447] 🍪 [APÓS DROPDOWN] Verificando cookies...
+[22:38:45.451]    ℹ️  [APÓS DROPDOWN] Sem cookies
+[22:38:46.456] 
+================================================================================
+[22:38:46.456] ESTADO 4: Preencher formulário COM RETRY
+[22:38:46.456] ================================================================================
+[22:38:46.456] 
+--- Tentativa 1/3 ---
+[22:38:46.457] 🔍 Verificando valores do formulário...
+[22:38:46.459]    ✅ fechaDevolucion: 07/11/2025
+[22:38:46.460]    ✅ fechaRecogida: 04/11/2025
+[22:38:46.460]    ✅ horaDevolucion: 10:30
+[22:38:46.460]    ✅ horaRecogida: 10:30
+[22:38:46.460]    ✅ pickup: Albufeira Cidade
+[22:38:46.460] 📝 Preenchendo formulário...
+[22:38:46.460]    Local: Albufeira Cidade
+[22:38:46.460]    Data recolha: 10/11/2025
+[22:38:46.460]    Data devolução: 15/11/2025
+[22:38:46.477]    Resultado: {'allFilled': <selenium.webdriver.remote.webelement.WebElement (session="36346c6398ebd72d4ff36d411209f3dd", element="f.175AF837D5551CDC073E1223321175B6.d.76607EC357DD15F05395F590AFE13C13.e.2")>, 'fechaDevolucion': True, 'fechaRecogida': True, 'horaDevolucion': True, 'horaRecogida': True, 'pickup': True}
+[22:38:46.477]    ✅ Formulário preenchido!
+[22:38:46.477] 
+================================================================================
+[22:38:46.477] ESTADO 5: Verificação final antes de submeter
+[22:38:46.478] ================================================================================
+[22:38:46.478] 🔍 Verificando valores do formulário...
+[22:38:46.479]    ✅ fechaDevolucion: 15/11/2025
+[22:38:46.479]    ✅ fechaRecogida: 10/11/2025
+[22:38:46.480]    ✅ horaDevolucion: 10:00
+[22:38:46.480]    ✅ horaRecogida: 10:00
+[22:38:46.480]    ✅ pickup: Albufeira Cidade
+[22:38:46.480] 🍪 [ANTES DE SUBMETER] Verificando cookies...
+[22:38:46.482]    ℹ️  [ANTES DE SUBMETER] Sem cookies
+[22:38:46.482] 
+================================================================================
+[22:38:46.482] ESTADO 6: Submeter formulário
+[22:38:46.482] ================================================================================
+[22:38:46.900]    ✅ Formulário submetido
+[22:38:51.905] 🍪 [APÓS SUBMETER] Verificando cookies...
+[22:38:51.934]    ℹ️  [APÓS SUBMETER] Sem cookies
+[22:38:53.943] 
+📄 URL final: https://www.carjet.com/aluguel-carros/index.htm?war=0
+[22:38:53.944] ❌ ERRO: war=0
+[22:38:53.944] 
+================================================================================
+[22:38:53.944] TESTE CONCLUÍDO
+[22:38:53.944] Log salvo em: /Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/test_log_20251103_223835.txt
+[22:38:53.944] ================================================================================
+[22:38:53.945] 
+⏱️  Chrome aberto 90 segundos
+[22:40:24.381] 
+👋 Chrome fechado
+[22:40:24.382] 
+📄 Ver log completo em: /Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/test_log_20251103_223835.txt

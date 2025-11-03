@@ -469,6 +469,35 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, 
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+
+# ============================================================
+# MONITORING & ERROR TRACKING (Sentry)
+# ============================================================
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+    
+    SENTRY_DSN = os.getenv("SENTRY_DSN")
+    if SENTRY_DSN:
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[
+                StarletteIntegration(transaction_style="url"),
+                FastApiIntegration(transaction_style="url"),
+            ],
+            traces_sample_rate=0.1,  # 10% das transações
+            profiles_sample_rate=0.1,  # 10% dos profiles
+            environment=os.getenv("ENVIRONMENT", "production"),
+            release=os.getenv("RENDER_GIT_COMMIT", "unknown"),
+        )
+        logging.info("✅ Sentry monitoring enabled")
+    else:
+        logging.info("ℹ️  Sentry DSN not configured - monitoring disabled")
+except ImportError:
+    logging.warning("⚠️  Sentry SDK not installed - monitoring disabled")
+except Exception as e:
+    logging.error(f"❌ Failed to initialize Sentry: {e}")
 from urllib.parse import urlencode, quote_plus
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -13085,6 +13114,136 @@ async def oauth_outlook_authorize(request: Request):
     </html>
     """
     return HTMLResponse(content=html)
+
+# ============================================================
+# AUTOMATIC BACKUPS SCHEDULER
+# ============================================================
+
+def create_automatic_backup():
+    """Criar backup automático do sistema"""
+    try:
+        import zipfile
+        from pathlib import Path
+        from datetime import datetime
+        
+        # Criar diretório de backups
+        backup_dir = Path("backups")
+        backup_dir.mkdir(exist_ok=True)
+        
+        # Nome do backup com timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"auto_backup_{timestamp}.zip"
+        backup_path = backup_dir / backup_filename
+        
+        # Criar ZIP
+        with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Databases
+            db_files = ["rental_tracker.db", "data.db", "car_images.db", "carrental.db"]
+            for db_file in db_files:
+                db_path = Path(db_file)
+                if db_path.exists() and db_path.stat().st_size > 0:
+                    zipf.write(db_path, f"database/{db_file}")
+            
+            # Settings
+            if Path("app_settings.json").exists():
+                zipf.write("app_settings.json", "settings/app_settings.json")
+        
+        file_size = backup_path.stat().st_size / (1024 * 1024)
+        log_to_db("INFO", f"Automatic backup created: {backup_filename} ({file_size:.2f} MB)", "main", "create_automatic_backup")
+        
+        # Limpar backups antigos (manter últimos 7)
+        cleanup_old_backups(backup_dir, keep_last=7)
+        
+        return True
+    except Exception as e:
+        log_to_db("ERROR", f"Automatic backup failed: {str(e)}", "main", "create_automatic_backup")
+        return False
+
+def cleanup_old_backups(backup_dir: Path, keep_last: int = 7):
+    """Limpar backups antigos, mantendo apenas os últimos N"""
+    try:
+        backups = sorted(backup_dir.glob("auto_backup_*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+        for old_backup in backups[keep_last:]:
+            old_backup.unlink()
+            log_to_db("INFO", f"Old backup deleted: {old_backup.name}", "main", "cleanup_old_backups")
+    except Exception as e:
+        log_to_db("ERROR", f"Cleanup old backups failed: {str(e)}", "main", "cleanup_old_backups")
+
+# Iniciar scheduler de backups automáticos
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    
+    backup_scheduler = BackgroundScheduler()
+    # Backup diário às 3 AM
+    backup_scheduler.add_job(
+        create_automatic_backup,
+        CronTrigger(hour=3, minute=0),
+        id='daily_backup',
+        name='Daily Automatic Backup',
+        replace_existing=True
+    )
+    backup_scheduler.start()
+    log_to_db("INFO", "Automatic backup scheduler started (daily at 3 AM)", "main", "scheduler")
+except ImportError:
+    log_to_db("WARNING", "APScheduler not installed - automatic backups disabled", "main", "scheduler")
+except Exception as e:
+    log_to_db("ERROR", f"Failed to start backup scheduler: {str(e)}", "main", "scheduler")
+
+# ============================================================
+# EMAIL QUEUE SYSTEM
+# ============================================================
+
+import queue
+import threading
+
+email_queue = queue.Queue()
+email_queue_running = False
+
+def email_worker():
+    """Worker thread para processar fila de emails"""
+    global email_queue_running
+    email_queue_running = True
+    
+    while email_queue_running:
+        try:
+            # Aguardar email na fila (timeout 1s)
+            email_data = email_queue.get(timeout=1)
+            
+            # Enviar email
+            try:
+                _send_notification_email(
+                    email_data['to'],
+                    email_data['subject'],
+                    email_data['message']
+                )
+                log_to_db("INFO", f"Email sent from queue: {email_data['to']}", "main", "email_worker")
+            except Exception as e:
+                log_to_db("ERROR", f"Failed to send queued email: {str(e)}", "main", "email_worker")
+                # Retry até 3 vezes
+                if email_data.get('retry_count', 0) < 3:
+                    email_data['retry_count'] = email_data.get('retry_count', 0) + 1
+                    email_queue.put(email_data)
+            
+            email_queue.task_done()
+        except queue.Empty:
+            continue
+        except Exception as e:
+            log_to_db("ERROR", f"Email worker error: {str(e)}", "main", "email_worker")
+
+def queue_email(to: str, subject: str, message: str):
+    """Adicionar email à fila para envio assíncrono"""
+    email_queue.put({
+        'to': to,
+        'subject': subject,
+        'message': message,
+        'retry_count': 0
+    })
+
+# Iniciar worker thread para emails
+email_thread = threading.Thread(target=email_worker, daemon=True)
+email_thread.start()
+log_to_db("INFO", "Email queue worker started", "main", "email_queue")
 
 if __name__ == "__main__":
     import uvicorn

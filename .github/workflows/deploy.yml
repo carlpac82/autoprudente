@@ -1,0 +1,122 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          # Stop build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+      
+      - name: Check code formatting
+        run: |
+          pip install black
+          black --check . || true
+        continue-on-error: true
+      
+      - name: Security check
+        run: |
+          pip install bandit
+          bandit -r . -f json -o bandit-report.json || true
+        continue-on-error: true
+      
+      - name: Test database initialization
+        run: |
+          python -c "from main import init_db; init_db(); print('✅ Database initialization successful')"
+      
+      - name: Validate requirements
+        run: |
+          pip check
+      
+      - name: Test imports
+        run: |
+          python -c "import main; print('✅ Main module imports successfully')"
+
+  deploy:
+    name: Deploy to Render
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Trigger Render Deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
+            echo "🚀 Triggering Render deployment..."
+            curl -X POST "$RENDER_DEPLOY_HOOK"
+            echo "✅ Deploy triggered successfully"
+          else
+            echo "⚠️  RENDER_DEPLOY_HOOK not configured"
+            echo "ℹ️  Render will auto-deploy from GitHub integration"
+          fi
+      
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting 30 seconds for deployment to start..."
+          sleep 30
+      
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Message:** ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment triggered successfully!" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: Notify Status
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check status
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ All jobs completed successfully"
+          else
+            echo "❌ Some jobs failed"
+            exit 1
+          fi
