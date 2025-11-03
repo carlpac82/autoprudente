@@ -3639,22 +3639,49 @@ async def track_by_params(request: Request):
                 "days": days,
             })
         
-        # PRIORIDADE 1: Tentar método direto (sem browser) - NOVO!
+        # PRIORIDADE 1: Tentar Playwright Mobile (NOVO - Anti-WAF)
         try:
-            from carjet_direct import scrape_carjet_direct
             import sys
-            print(f"[DIRECT] Tentando método direto (sem browser)...", file=sys.stderr, flush=True)
+            print(f"[PLAYWRIGHT_MOBILE] Tentando scraping mobile anti-WAF...", file=sys.stderr, flush=True)
             
-            direct_items = scrape_carjet_direct(location, start_dt, end_dt, quick)
+            # Usar try_direct_carjet primeiro (POST direto)
+            html = try_direct_carjet(location, start_dt, end_dt, lang=lang, currency=currency)
+            final_url = "https://www.carjet.com/do/list"
             
-            if direct_items and len(direct_items) > 0:
-                print(f"[DIRECT] ✅ Sucesso! {len(direct_items)} carros encontrados", file=sys.stderr, flush=True)
-                items = direct_items
-                # Aplicar ajustes de preço se necessário
-                items = apply_price_adjustments(items, "https://www.carjet.com")
-                # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
-                items = normalize_and_sort(items, supplier_priority=None)
-                # Retornar resultado
+            # Se POST direto falhar, usar Playwright mobile
+            if not html or len(parse_prices(html, final_url)) == 0:
+                print(f"[PLAYWRIGHT_MOBILE] POST direto falhou, usando Playwright mobile...", file=sys.stderr, flush=True)
+                from playwright.async_api import async_playwright
+                
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(headless=True)
+                    
+                    # Dispositivos mobile
+                    devices = [
+                        {"name": "iPhone 13 Pro", "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1", "viewport": {"width": 390, "height": 844}, "scale": 3},
+                        {"name": "Samsung Galaxy S21", "user_agent": "Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36", "viewport": {"width": 360, "height": 800}, "scale": 3},
+                    ]
+                    device = random.choice(devices)
+                    
+                    context = await browser.new_context(
+                        user_agent=device["user_agent"],
+                        viewport=device["viewport"],
+                        device_scale_factor=device["scale"],
+                        is_mobile=True,
+                        has_touch=True,
+                        locale="pt-PT"
+                    )
+                    
+                    page = await context.new_page()
+                    html, final_url = await fetch_carjet_results(page, location, start_dt, end_dt, lang, currency, "")
+                    await browser.close()
+            
+            # Parse results
+            playwright_items = parse_prices(html, final_url)
+            
+            if playwright_items and len(playwright_items) > 0:
+                print(f"[PLAYWRIGHT_MOBILE] ✅ Sucesso! {len(playwright_items)} carros encontrados", file=sys.stderr, flush=True)
+                items = normalize_and_sort(playwright_items, supplier_priority=None)
                 return _no_store_json({
                     "ok": True,
                     "items": items,
@@ -3664,13 +3691,15 @@ async def track_by_params(request: Request):
                     "end_date": end_dt.date().isoformat(),
                     "end_time": end_dt.strftime("%H:%M"),
                     "days": days,
-                    "method": "direct_api",
+                    "method": "playwright_mobile",
                 })
             else:
-                print(f"[DIRECT] ⚠️ Método direto retornou 0 items, tentando fallback...", file=sys.stderr, flush=True)
+                print(f"[PLAYWRIGHT_MOBILE] ⚠️ Retornou 0 items, tentando fallback...", file=sys.stderr, flush=True)
         except Exception as e:
-            print(f"[DIRECT] ❌ Erro no método direto: {e}", file=sys.stderr, flush=True)
-            print(f"[DIRECT] Continuando para métodos alternativos...", file=sys.stderr, flush=True)
+            print(f"[PLAYWRIGHT_MOBILE] ❌ Erro: {e}", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc()
+            print(f"[PLAYWRIGHT_MOBILE] Continuando para métodos alternativos...", file=sys.stderr, flush=True)
         
         # MODO REAL: Usar ScraperAPI para scraping dinâmico
         if TEST_MODE_LOCAL == 0 and SCRAPER_API_KEY:
