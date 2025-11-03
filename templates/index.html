@@ -600,6 +600,18 @@
         // Update button text
         document.getElementById('currentLang').textContent = newLang.toUpperCase();
         
+        // Notify all iframes about language change
+        document.querySelectorAll('iframe').forEach(iframe => {
+          try {
+            iframe.contentWindow.postMessage({
+              type: 'languageChange',
+              language: newLang
+            }, '*');
+          } catch (e) {
+            console.log('Could not send message to iframe:', e);
+          }
+        });
+        
         // Show notification
         showCustomAlert(
           newLang === 'pt' ? 'Idioma alterado para Português' : 'Language changed to English',
