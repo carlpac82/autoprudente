@@ -10,6 +10,7 @@
     <title>Price Automation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/static/i18n.js"></script>
     <style>
         * { font-family: 'Outfit', sans-serif; }
         
@@ -353,7 +354,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.startDate">Start Date</label>
                         <input type="date" id="pickupDate" class="px-3 py-2 border border-gray-300 rounded">
                     </div>
                     <div class="flex items-end gap-2">
@@ -377,28 +378,28 @@
             <!-- Gestão de Colunas -->
             <div class="border-t pt-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600">Manage columns:</span>
+                    <span class="text-sm text-gray-600" data-i18n="automation.manageColumns">Manage columns:</span>
                     <button onclick="showAddColumnDialog()" class="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-sm flex items-center gap-1" title="Add column">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Add
+                        <span data-i18n="automation.add">Add</span>
                     </button>
                     <button onclick="showRemoveColumnDialog()" class="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-sm flex items-center gap-1" title="Remove column">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
                         </svg>
-                        Remove
+                        <span data-i18n="automation.remove">Remove</span>
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600 font-medium">Tariff Period:</span>
+                    <span class="text-sm text-gray-600 font-medium" data-i18n="automation.tariffPeriod">Tariff Period:</span>
                     <input type="number" id="wr_start_day" min="1" max="31" value="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="01">
-                    <span class="text-sm text-gray-500">to</span>
+                    <span class="text-sm text-gray-500" data-i18n="automation.to">to</span>
                     <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
                 </div>
                 <div class="flex items-center gap-1">
-                    <span class="text-sm text-gray-600 mr-2">Download Excel:</span>
+                    <span class="text-sm text-gray-600 mr-2" data-i18n="automation.downloadExcel">Download Excel:</span>
                     <button onclick="downloadExcel('website')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Website">
                         <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -512,10 +513,10 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.dateSelection">Date Selection</label>
                         <select id="dateTypeAuto" onchange="updateDateSelectionAuto()" class="px-3 py-2 border border-gray-300 rounded">
-                            <option value="specific">Specific Date</option>
-                            <option value="month">By Month</option>
-                            <option value="year">By Year</option>
-                            <option value="period">By Price Period</option>
+                            <option value="specific" data-i18n="automation.specificDate">Specific Date</option>
+                            <option value="month" data-i18n="automation.byMonth">By Month</option>
+                            <option value="year" data-i18n="automation.byYear">By Year</option>
+                            <option value="period" data-i18n="automation.byPricePeriod">By Price Period</option>
                         </select>
                     </div>
                     <div id="dateSelectorsAuto">
@@ -570,7 +571,7 @@
             <!-- Gestão de Colunas e Visualização -->
             <div class="border-t pt-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600">View:</span>
+                    <span class="text-sm text-gray-600" data-i18n="automation.view">View:</span>
                     <button onclick="toggleView('cards')" id="btnViewCards" class="p-2 border border-gray-300 hover:bg-gray-50 rounded transition-colors" title="Visual Cards">
                         <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
@@ -583,28 +584,28 @@
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600">Manage columns:</span>
+                    <span class="text-sm text-gray-600" data-i18n="automation.manageColumns">Manage columns:</span>
                     <button onclick="showAddColumnDialogAuto()" class="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-sm flex items-center gap-1" title="Add column">
                         <svg class="w-4 h-4 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 4v16m8-8H4"/>
                         </svg>
-                        Add
+                        <span data-i18n="automation.add">Add</span>
                     </button>
                     <button onclick="showRemoveColumnDialogAuto()" class="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-sm flex items-center gap-1" title="Remove column">
                         <svg class="w-4 h-4 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M20 12H4"/>
                         </svg>
-                        Remove
+                        <span data-i18n="automation.remove">Remove</span>
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600 font-medium">Tariff Period:</span>
+                    <span class="text-sm text-gray-600 font-medium" data-i18n="automation.tariffPeriod">Tariff Period:</span>
                     <input type="number" id="wr_start_day" min="1" max="31" value="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="01">
-                    <span class="text-sm text-gray-500">to</span>
+                    <span class="text-sm text-gray-500" data-i18n="automation.to">to</span>
                     <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
                 </div>
                 <div class="flex items-center gap-1">
-                    <span class="text-sm text-gray-600 mr-2">Download Excel:</span>
+                    <span class="text-sm text-gray-600 mr-2" data-i18n="automation.downloadExcel">Download Excel:</span>
                     <button onclick="downloadExcelAuto('website')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Website">
                         <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -652,7 +653,7 @@
             <!-- Toggle Auto/AI -->
             <div class="flex items-center justify-between p-3 bg-gray-50 border-b">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold text-gray-700">Fill Method:</span>
+                    <span class="text-sm font-semibold text-gray-700" data-i18n="automation.fillMethod">Fill Method:</span>
                     <div class="inline-flex rounded-lg border border-gray-300 bg-white p-1">
                         <button id="btnFillAuto" onclick="setFillMode('auto')" 
                                 class="fill-mode-btn active px-4 py-1.5 rounded-md flex items-center gap-2 transition-colors">
@@ -660,19 +661,19 @@
                                 <path d="M13 7H7v6h6V7z"/>
                                 <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 110-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/>
                             </svg>
-                            <span class="text-sm font-medium">Auto</span>
+                            <span class="text-sm font-medium" data-i18n="automation.auto">Auto</span>
                         </button>
                         <button id="btnFillAI" onclick="setFillMode('ai')" 
                                 class="fill-mode-btn px-4 py-1.5 rounded-md flex items-center gap-2 transition-colors">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                             </svg>
-                            <span class="text-sm font-medium">AI</span>
+                            <span class="text-sm font-medium" data-i18n="automation.ai">AI</span>
                         </button>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500">
-                    <span id="fillModeDesc">Using rules-based automation</span>
+                    <span id="fillModeDesc" data-i18n="automation.usingRules">Using rules-based automation</span>
                 </div>
             </div>
             
