@@ -3383,12 +3383,8 @@
                     strategiesData = result.strategies;
                     console.log('✅ Strategies loaded from database');
                     
-                    // Create default strategies if none exist
-                    const hasStrategies = Object.keys(strategiesData).length > 0;
-                    if (!hasStrategies) {
-                        console.log('📝 Creating default strategies (Lowest -1.5% for all days/months/years)');
-                        createDefaultStrategies();
-                    }
+                    // ALWAYS fill missing days/months with default strategy
+                    fillMissingStrategies();
                     
                     // Render strategies for all groups
                     const locations = ['Albufeira', 'Aeroporto de Faro'];
@@ -3404,6 +3400,49 @@
                 }
             } catch (err) {
                 console.error('Error loading strategies from database:', err);
+            }
+        }
+        
+        function fillMissingStrategies() {
+            // Fill ALL missing days/months with default strategy (Lowest -1.5%)
+            const locations = ['Albufeira', 'Aeroporto de Faro'];
+            const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const days = Array.from({length: 31}, (_, i) => i + 1);
+            
+            let addedCount = 0;
+            
+            locations.forEach(location => {
+                grupos.forEach(grupo => {
+                    months.forEach(month => {
+                        days.forEach(day => {
+                            const key = `${location}_${grupo}_${month}_${day}`;
+                            
+                            // Only add if this key doesn't exist or is empty
+                            if (!strategiesData[key] || strategiesData[key].length === 0) {
+                                const strategyId = Date.now() + Math.random();
+                                
+                                strategiesData[key] = [{
+                                    id: strategyId,
+                                    type: 'follow_lowest',
+                                    name: 'Follow Lowest Price',
+                                    config: {
+                                        operation: 'subtract',
+                                        value: 1.5,
+                                        typeLabel: '%'
+                                    }
+                                }];
+                                addedCount++;
+                            }
+                        });
+                    });
+                });
+            });
+            
+            if (addedCount > 0) {
+                console.log(`📝 Added default strategy to ${addedCount} missing configurations`);
+                // Save to database
+                saveStrategies();
+                showNotification(`✅ Added Lowest -1.5% to ${addedCount} configurations`, 'success');
             }
         }
         
