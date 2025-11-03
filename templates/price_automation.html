@@ -6607,7 +6607,7 @@ Continue?`);
         }
         
         function deleteCalendarScan(scanId) {
-            if (!confirm('Delete this calendar scan from history?')) {
+            if (!confirm(t('alerts.deleteFromHistory', 'Delete from history?'))) {
                 return;
             }
             
@@ -6734,7 +6734,7 @@ Continue?`);
         }
         
         function deleteDownload(downloadId) {
-            if (!confirm('Delete this download from history?')) {
+            if (!confirm(t('alerts.deleteFromHistory', 'Delete from history?'))) {
                 return;
             }
             

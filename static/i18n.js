@@ -206,6 +206,26 @@ const translations = {
         'vehicles.addFirstVehicle': 'Adicionar Primeiro Veículo',
         'vehicles.deleteConfirm': 'Eliminar este veículo?',
         
+        // Common Alerts & Confirmations
+        'alerts.selectDateFirst': '⚠️ Selecione uma data primeiro',
+        'alerts.fillAllFields': 'Preencha todos os campos',
+        'alerts.error': 'Erro',
+        'alerts.success': '✅ Sucesso!',
+        'alerts.saved': '✅ Guardado com sucesso!',
+        'alerts.deleted': '✅ Eliminado com sucesso!',
+        'alerts.copied': '✅ Copiado com sucesso!',
+        'alerts.selectAtLeastOne': '⚠️ Selecione pelo menos um!',
+        'alerts.noDataFound': '⚠️ Nenhum dado encontrado',
+        'alerts.invalidData': '⚠️ Dados inválidos',
+        'alerts.confirmDelete': 'Tem a certeza que deseja eliminar?',
+        'alerts.confirmAction': 'Tem a certeza que deseja continuar?',
+        'alerts.cannotUndo': 'Esta ação não pode ser revertida!',
+        'alerts.deleteFromHistory': 'Eliminar do histórico?',
+        'alerts.resetToDefaults': 'Restaurar valores padrão?',
+        'alerts.clearAllData': '⚠️ Tem a certeza que deseja limpar todos os dados? Isto não pode ser revertido.',
+        'alerts.overwriteWarning': '⚠️ Isto irá sobrescrever todas as configurações atuais. Continuar?',
+        'alerts.finalWarning': '⚠️ AVISO FINAL!\n\nTem a certeza absoluta?\n\nTodos os dados serão permanentemente eliminados.',
+        
         // Email Notifications
         'emailNotifications.title': 'Notificações por Email',
         'emailNotifications.description': 'Configure uma conta de email para receber notificações automáticas sobre alterações de preços, alertas e relatórios.',
@@ -663,6 +683,26 @@ const translations = {
         'vehicles.getStarted': 'Get started by adding your first vehicle to the system.',
         'vehicles.addFirstVehicle': 'Add First Vehicle',
         'vehicles.deleteConfirm': 'Delete this vehicle?',
+        
+        // Common Alerts & Confirmations
+        'alerts.selectDateFirst': '⚠️ Please select a date first',
+        'alerts.fillAllFields': 'Please fill all fields',
+        'alerts.error': 'Error',
+        'alerts.success': '✅ Success!',
+        'alerts.saved': '✅ Saved successfully!',
+        'alerts.deleted': '✅ Deleted successfully!',
+        'alerts.copied': '✅ Copied successfully!',
+        'alerts.selectAtLeastOne': '⚠️ Please select at least one!',
+        'alerts.noDataFound': '⚠️ No data found',
+        'alerts.invalidData': '⚠️ Invalid data',
+        'alerts.confirmDelete': 'Are you sure you want to delete?',
+        'alerts.confirmAction': 'Are you sure you want to continue?',
+        'alerts.cannotUndo': 'This action cannot be undone!',
+        'alerts.deleteFromHistory': 'Delete from history?',
+        'alerts.resetToDefaults': 'Reset to default values?',
+        'alerts.clearAllData': '⚠️ Are you sure you want to clear all data? This cannot be undone.',
+        'alerts.overwriteWarning': '⚠️ This will overwrite all current settings. Continue?',
+        'alerts.finalWarning': '⚠️ FINAL WARNING!\n\nAre you absolutely sure?\n\nAll data will be permanently deleted.',
         
         // Email Notifications
         'emailNotifications.title': 'Email Notifications',
