@@ -2329,8 +2329,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(rules)
                 });
+                showNotification('✅ Strategy deleted successfully!', 'success');
             } catch (err) {
                 console.error('Error saving:', err);
+                showNotification('❌ Error deleting strategy', 'error');
             }
             
             rebuildFieldsForDay(location, grupo, month, day);
@@ -3062,8 +3064,11 @@
             // Render updated list
             renderStrategiesList(location, grupo, month, day);
             
+            // Save to database
+            saveStrategies();
+            
             // Show success message
-            showNotification(`✅ ${strategyName} added as strategy #${strategiesData[key].length}`);
+            showNotification(`✅ ${strategyName} added as strategy #${strategiesData[key].length}`, 'success');
         }
         
         function renderStrategiesList(location, grupo, month, day) {
@@ -3346,11 +3351,13 @@
                 
                 if (result.ok) {
                     console.log('✅ Strategies saved to database');
+                    showNotification('✅ Strategies saved successfully!', 'success');
                 } else {
                     throw new Error(result.error || 'Failed to save strategies');
                 }
             } catch (err) {
                 console.error('Error saving strategies to database:', err);
+                showNotification('❌ Error saving strategies', 'error');
             }
         }
         
@@ -3363,6 +3370,13 @@
                 if (result.ok && result.strategies) {
                     strategiesData = result.strategies;
                     console.log('✅ Strategies loaded from database');
+                    
+                    // Create default strategies if none exist
+                    const hasStrategies = Object.keys(strategiesData).length > 0;
+                    if (!hasStrategies) {
+                        console.log('📝 Creating default strategies (Lowest -1.5% for all days/months/years)');
+                        createDefaultStrategies();
+                    }
                     
                     // Render strategies for all groups
                     const locations = ['Albufeira', 'Aeroporto de Faro'];
@@ -3379,6 +3393,35 @@
             } catch (err) {
                 console.error('Error loading strategies from database:', err);
             }
+        }
+        
+        function createDefaultStrategies() {
+            // Default strategy: Lowest -1.5% for all days, months, and years
+            const defaultStrategy = {
+                type: 'lowest',
+                operation: 'subtract',
+                value: 1.5,
+                typeLabel: '%'
+            };
+            
+            const locations = ['Albufeira', 'Aeroporto de Faro'];
+            const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const days = Array.from({length: 31}, (_, i) => i + 1);
+            
+            locations.forEach(location => {
+                grupos.forEach(grupo => {
+                    months.forEach(month => {
+                        days.forEach(day => {
+                            const key = `${location}_${grupo}_${month}_${day}`;
+                            strategiesData[key] = [{ ...defaultStrategy }];
+                        });
+                    });
+                });
+            });
+            
+            // Save to database
+            saveStrategies();
+            showNotification('✅ Default strategies created: Lowest -1.5% for all configurations', 'success');
         }
         
         // ===== EXPORT / IMPORT SETTINGS =====
