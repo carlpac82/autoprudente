@@ -171,12 +171,27 @@ def scrape_with_playwright(url: str) -> List[Dict[str, Any]]:
                 
                 # IMPORTANTE: Aceitar cookies primeiro se aparecer
                 try:
-                    cookies_btn = page.query_selector('#didomi-notice-agree-button, button:has-text("Aceitar")')
-                    if cookies_btn and cookies_btn.is_visible():
-                        cookies_btn.click()
-                        print("[PLAYWRIGHT] Cookies aceites", file=sys.stderr, flush=True)
-                        page.wait_for_timeout(1000)
-                except Exception:
+                    page.evaluate("""
+                        // Procurar e clicar no botão de cookies
+                        const buttons = document.querySelectorAll('button');
+                        for (let btn of buttons) {
+                            const text = btn.textContent.toLowerCase().trim();
+                            if (text.includes('aceitar todos') || text.includes('aceitar tudo')) {
+                                btn.click();
+                                console.log('✓ Cookies aceitos:', btn.textContent);
+                                break;
+                            }
+                        }
+                        // Remover banners de cookies
+                        document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=didomi], [class*=didomi]').forEach(el => {
+                            el.remove();
+                        });
+                        document.body.style.overflow = 'auto';
+                    """)
+                    print("[PLAYWRIGHT] Cookies aceites via JavaScript", file=sys.stderr, flush=True)
+                    page.wait_for_timeout(1000)
+                except Exception as e:
+                    print(f"[PLAYWRIGHT] Erro ao aceitar cookies: {e}", file=sys.stderr, flush=True)
                     pass
                 
                 # Desmarcar todos os checkboxes de suppliers primeiro
@@ -188,6 +203,22 @@ def scrape_with_playwright(url: str) -> List[Dict[str, Any]]:
                 
                 # Aguardar um pouco
                 page.wait_for_timeout(1000)
+                
+                # AUTODETECTAR COOKIES após desmarcar
+                try:
+                    page.evaluate("""
+                        const buttons = document.querySelectorAll('button');
+                        for (let btn of buttons) {
+                            const text = btn.textContent.toLowerCase().trim();
+                            if (text.includes('aceitar todos') || text.includes('aceitar tudo')) {
+                                btn.click();
+                                console.log('✓ Cookies aceitos após desmarcar');
+                                break;
+                            }
+                        }
+                    """)
+                except:
+                    pass
                 
                 # Marcar apenas AUTOPRUDENTE
                 print("[PLAYWRIGHT] Marcando apenas AUTOPRUDENTE...", file=sys.stderr, flush=True)
@@ -203,6 +234,22 @@ def scrape_with_playwright(url: str) -> List[Dict[str, Any]]:
                 # Aguardar página recarregar com filtro
                 page.wait_for_load_state("networkidle", timeout=15000)
                 page.wait_for_timeout(2000)
+                
+                # AUTODETECTAR COOKIES após marcar AUTOPRUDENTE
+                try:
+                    page.evaluate("""
+                        const buttons = document.querySelectorAll('button');
+                        for (let btn of buttons) {
+                            const text = btn.textContent.toLowerCase().trim();
+                            if (text.includes('aceitar todos') || text.includes('aceitar tudo')) {
+                                btn.click();
+                                console.log('✓ Cookies aceitos após AUTOPRUDENTE');
+                                break;
+                            }
+                        }
+                    """)
+                except:
+                    pass
                     
             except Exception as e:
                 print(f"[PLAYWRIGHT] Erro ao filtrar AUTOPRUDENTE: {e}", file=sys.stderr, flush=True)
@@ -1719,6 +1766,64 @@ def init_db():
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_price_history ON price_history(history_type, year, month, location, saved_at DESC)")
             
+            # Tabela para Search History (histórico de pesquisas)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS search_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  location TEXT NOT NULL,
+                  start_date TEXT NOT NULL,
+                  end_date TEXT NOT NULL,
+                  days INTEGER NOT NULL,
+                  results_count INTEGER,
+                  min_price REAL,
+                  max_price REAL,
+                  avg_price REAL,
+                  search_timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  user TEXT DEFAULT 'admin',
+                  search_params TEXT
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_search_history ON search_history(location, start_date, search_timestamp DESC)")
+            
+            # Tabela para Notification Rules (regras de notificação)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS notification_rules (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  rule_name TEXT NOT NULL,
+                  rule_type TEXT NOT NULL,
+                  condition_json TEXT NOT NULL,
+                  action_json TEXT NOT NULL,
+                  enabled INTEGER DEFAULT 1,
+                  priority INTEGER DEFAULT 1,
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  created_by TEXT DEFAULT 'admin'
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_notification_rules ON notification_rules(enabled, priority, rule_type)")
+            
+            # Tabela para Notification History (histórico de notificações enviadas)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS notification_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  rule_id INTEGER,
+                  notification_type TEXT NOT NULL,
+                  recipient TEXT NOT NULL,
+                  subject TEXT,
+                  message TEXT NOT NULL,
+                  sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  status TEXT DEFAULT 'sent',
+                  error_message TEXT
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_notification_history ON notification_history(sent_at DESC, status)")
+            
         finally:
             conn.commit()
             conn.close()
@@ -1833,6 +1938,101 @@ def save_file_to_db(filename: str, filepath: str, file_data: bytes, content_type
     except Exception as e:
         log_to_db("ERROR", f"Failed to save file to DB: {str(e)}", "main", "save_file_to_db", exception=str(e))
         raise
+
+def save_search_to_history(location: str, start_date: str, end_date: str, days: int, results_count: int = 0, 
+                           min_price: float = None, max_price: float = None, avg_price: float = None, 
+                           user: str = "admin", search_params: str = None):
+    """Salvar pesquisa no histórico"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO search_history 
+                    (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
+                )
+                conn.commit()
+                log_to_db("INFO", f"Search saved to history: {location}, {start_date}-{end_date}, {results_count} results", "main", "save_search_to_history")
+            finally:
+                conn.close()
+    except Exception as e:
+        log_to_db("ERROR", f"Failed to save search history: {str(e)}", "main", "save_search_to_history")
+
+def send_notification(rule_id: int, notification_type: str, recipient: str, subject: str, message: str):
+    """Enviar notificação e salvar no histórico"""
+    try:
+        # Enviar email
+        if notification_type == "email":
+            _send_notification_email(recipient, subject, message)
+        
+        # Salvar no histórico
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO notification_history 
+                    (rule_id, notification_type, recipient, subject, message, status)
+                    VALUES (?, ?, ?, ?, ?, 'sent')
+                    """,
+                    (rule_id, notification_type, recipient, subject, message)
+                )
+                conn.commit()
+                log_to_db("INFO", f"Notification sent: {notification_type} to {recipient}", "main", "send_notification")
+            finally:
+                conn.close()
+    except Exception as e:
+        # Salvar erro no histórico
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO notification_history 
+                    (rule_id, notification_type, recipient, subject, message, status, error_message)
+                    VALUES (?, ?, ?, ?, ?, 'failed', ?)
+                    """,
+                    (rule_id, notification_type, recipient, subject, message, str(e))
+                )
+                conn.commit()
+            finally:
+                conn.close()
+        log_to_db("ERROR", f"Failed to send notification: {str(e)}", "main", "send_notification")
+
+def _send_notification_email(to_email: str, subject: str, message: str):
+    """Enviar email de notificação"""
+    host = _get_setting("smtp_host", "").strip()
+    port = int(_get_setting("smtp_port", "587") or 587)
+    user = _get_setting("smtp_username", "").strip()
+    pwd = _get_setting("smtp_password", "").strip()
+    from_addr = _get_setting("smtp_from", "no-reply@example.com").strip()
+    use_tls_val = _get_setting("smtp_tls", "true")
+    use_tls = str(use_tls_val).lower() in ("1", "true", "yes", "y", "on")
+    
+    if not host or not to_email:
+        raise Exception("Missing SMTP_HOST or recipient")
+    
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_email
+    msg.set_content(message)
+    
+    if use_tls:
+        with smtplib.SMTP(host, port, timeout=15) as s:
+            s.starttls()
+            if user and pwd:
+                s.login(user, pwd)
+            s.send_message(msg)
+    else:
+        with smtplib.SMTP_SSL(host, port, timeout=15) as s:
+            if user and pwd:
+                s.login(user, pwd)
+            s.send_message(msg)
 
 def get_file_from_db(filepath: str):
     """Obter ficheiro da base de dados"""
@@ -4055,6 +4255,28 @@ async def track_by_params(request: Request):
                     print(f"[TEST MODE] {len(items)} carros encontrados!", file=sys.stderr, flush=True)
                     # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                     items = normalize_and_sort(items, supplier_priority=None)
+                    try:
+                        prices = [float(item.get('price_num', 0)) for item in items if item.get('price_num')]
+                        min_price = min(prices) if prices else None
+                        max_price = max(prices) if prices else None
+                        avg_price = sum(prices) / len(prices) if prices else None
+                        
+                        save_search_to_history(
+                            location=location,
+                            start_date=start_dt.date().isoformat(),
+                            end_date=end_dt.date().isoformat(),
+                            days=days,
+                            results_count=len(items),
+                            min_price=min_price,
+                            max_price=max_price,
+                            avg_price=avg_price,
+                            user="admin",
+                            search_params=f"lang={selected_lang['name']}, hour={selected_hour}, device={selected_device['name']}"
+                        )
+                    except Exception as e:
+                        print(f"[SELENIUM] Erro ao salvar histórico: {e}", file=sys.stderr, flush=True)
+                    
+                    # RETORNAR resultado final
                     return _no_store_json({
                         "ok": True,
                         "items": items,
@@ -4081,65 +4303,250 @@ async def track_by_params(request: Request):
             from selenium.webdriver.support import expected_conditions as EC
             import time
             
-            # Mapear location para formato CarJet
-            # IMPORTANTE: CarJet é MUITO específico com os nomes!
-            carjet_location = location
-            if 'faro' in location.lower():
-                carjet_location = 'Faro Aeroporto (FAO)'
-            elif 'albufeira' in location.lower():
-                carjet_location = 'Albufeira Cidade'  # Nome EXATO do CarJet (sem código)
-            
-            # Configurar Chrome headless com anti-deteção e rotação de localização
-            import random
-            
-            # Rotação de User-Agents (diferentes países/sistemas)
-            user_agents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',  # Windows
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',  # Mac
-                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',  # Linux
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',  # Firefox Windows
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/119.0',  # Firefox Mac
+            # ============================================
+            # ROTAÇÃO MULTI-IDIOMA (7 idiomas)
+            # ============================================
+            languages = [
+                {
+                    'name': 'Português',
+                    'url': 'https://www.carjet.com/aluguel-carros/index.htm',
+                    'faro': 'Faro Aeroporto (FAO)',
+                    'albufeira': 'Albufeira Cidade'
+                },
+                {
+                    'name': 'English',
+                    'url': 'https://www.carjet.com/index.htm',
+                    'faro': 'Faro Airport (FAO)',
+                    'albufeira': 'Albufeira City'
+                },
+                {
+                    'name': 'Français',
+                    'url': 'https://www.carjet.com/location-voitures/index.htm',
+                    'faro': 'Faro Aéroport (FAO)',
+                    'albufeira': 'Albufeira Centre ville'
+                },
+                {
+                    'name': 'Español',
+                    'url': 'https://www.carjet.com/alquiler-coches/index.htm',
+                    'faro': 'Faro Aeropuerto (FAO)',
+                    'albufeira': 'Albufeira Ciudad'
+                },
+                {
+                    'name': 'Deutsch',
+                    'url': 'https://www.carjet.com/mietwagen/index.htm',
+                    'faro': 'Faro Flughafen (FAO)',
+                    'albufeira': 'Albufeira Stadt'
+                },
+                {
+                    'name': 'Italiano',
+                    'url': 'https://www.carjet.com/autonoleggio/index.htm',
+                    'faro': 'Faro Aeroporto (FAO)',
+                    'albufeira': 'Albufeira Città'
+                },
+                {
+                    'name': 'Nederlands',
+                    'url': 'https://www.carjet.com/autohuur/index.htm',
+                    'faro': 'Faro Vliegveld (FAO)',
+                    'albufeira': 'Albufeira Stad'
+                }
             ]
             
-            # Rotação de Accept-Language (diferentes países)
+            # Selecionar idioma aleatoriamente
+            selected_lang = random.choice(languages)
+            
+            # Mapear location para formato CarJet no idioma selecionado
+            carjet_location = location
+            if 'faro' in location.lower():
+                carjet_location = selected_lang['faro']
+            elif 'albufeira' in location.lower():
+                carjet_location = selected_lang['albufeira']
+            
+            carjet_url = selected_lang['url']
+            
+            print(f"[SELENIUM] Idioma selecionado: {selected_lang['name']}", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] URL: {carjet_url}", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Local traduzido: {carjet_location}", file=sys.stderr, flush=True)
+            
+            # ============================================
+            # ROTAÇÃO DE DATAS (0-4 dias aleatório)
+            # ============================================
+            import random
+            from datetime import timedelta
+            
+            # Adicionar offset aleatório de 0-4 dias às datas
+            date_offset = random.randint(0, 4)
+            start_dt = start_dt + timedelta(days=date_offset)
+            end_dt = end_dt + timedelta(days=date_offset)
+            
+            print(f"[SELENIUM] Offset de datas: +{date_offset} dias", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Datas ajustadas: {start_dt.date()} - {end_dt.date()}", file=sys.stderr, flush=True)
+            
+            # ============================================
+            # ROTAÇÃO DE HORAS (14:30-17:00 aleatório)
+            # ============================================
+            # Horas disponíveis no Carjet (de 30 em 30 minutos)
+            available_hours = ['14:30', '15:00', '15:30', '16:00', '16:30', '17:00']
+            selected_hour = random.choice(available_hours)
+            
+            # Ajustar start_dt e end_dt para usar a hora selecionada
+            start_dt = start_dt.replace(hour=int(selected_hour.split(':')[0]), minute=int(selected_hour.split(':')[1]))
+            end_dt = end_dt.replace(hour=int(selected_hour.split(':')[0]), minute=int(selected_hour.split(':')[1]))
+            
+            print(f"[SELENIUM] Hora selecionada: {selected_hour}", file=sys.stderr, flush=True)
+            
+            # ============================================
+            # ANTI-DETECÇÃO COMPLETA COM ROTAÇÕES
+            # ============================================
+            # ✅ Rotação de datas - 0-4 dias aleatório
+            # ✅ Rotação de horas - 14:30-17:00 aleatório
+            # ✅ Rotação de dispositivos - 4 devices diferentes
+            # ✅ Rotação de timezones - 4 timezones europeus
+            # ✅ Rotação de referrers - 5 opções (Google, Bing, Direct)
+            # ✅ Delays entre searches - 0.5-2s
+            # ✅ Scroll simulation - 200-500px aleatório
+            # ✅ Cache clearing - Context novo por localização
+            # ✅ Mobile emulation - Versão mobile mais estável
+            import random
+            
+            # 1. ROTAÇÃO DE DISPOSITIVOS MOBILE (4 devices)
+            mobile_devices = [
+                {
+                    'name': 'iPhone 13',
+                    'ua': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+                    'width': 390, 'height': 844, 'pixelRatio': 3.0
+                },
+                {
+                    'name': 'iPhone 12',
+                    'ua': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1',
+                    'width': 390, 'height': 844, 'pixelRatio': 3.0
+                },
+                {
+                    'name': 'Samsung Galaxy S21',
+                    'ua': 'Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Mobile Safari/537.36',
+                    'width': 360, 'height': 800, 'pixelRatio': 3.0
+                },
+                {
+                    'name': 'Google Pixel 5',
+                    'ua': 'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Mobile Safari/537.36',
+                    'width': 393, 'height': 851, 'pixelRatio': 2.75
+                }
+            ]
+            
+            # 2. ROTAÇÃO DE TIMEZONES (4 europeus)
+            timezones = [
+                'Europe/Lisbon',    # Portugal
+                'Europe/Madrid',    # Espanha
+                'Europe/London',    # UK
+                'Europe/Paris'      # França
+            ]
+            
+            # 3. ROTAÇÃO DE LANGUAGES
             languages = [
                 'pt-PT,pt;q=0.9,en;q=0.8',  # Portugal
                 'pt-BR,pt;q=0.9,en;q=0.8',  # Brasil
-                'en-GB,en;q=0.9',  # UK
-                'en-US,en;q=0.9',  # USA
-                'es-ES,es;q=0.9,en;q=0.8',  # Espanha
+                'en-GB,en;q=0.9',           # UK
+                'es-ES,es;q=0.9,en;q=0.8'   # Espanha
             ]
             
-            selected_ua = random.choice(user_agents)
-            selected_lang = random.choice(languages)
+            # 4. ROTAÇÃO DE REFERRERS (5 opções)
+            referrers = [
+                'https://www.google.com/search?q=aluguer+carros+faro',
+                'https://www.google.pt/search?q=rent+car+portugal',
+                'https://www.bing.com/search?q=car+rental+algarve',
+                'https://www.booking.com/',
+                ''  # Direct (sem referrer)
+            ]
             
-            print(f"[SELENIUM] User-Agent: {selected_ua[:50]}...", file=sys.stderr, flush=True)
+            # SELECIONAR ALEATORIAMENTE
+            selected_device = random.choice(mobile_devices)
+            selected_timezone = random.choice(timezones)
+            selected_lang = random.choice(languages)
+            selected_referrer = random.choice(referrers)
+            
+            print(f"[SELENIUM] Device: {selected_device['name']}", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Timezone: {selected_timezone}", file=sys.stderr, flush=True)
             print(f"[SELENIUM] Language: {selected_lang}", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Referrer: {selected_referrer if selected_referrer else 'Direct'}", file=sys.stderr, flush=True)
             
             chrome_options = Options()
             chrome_options.add_argument('--headless')  # Headless para produção
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument(f'user-agent={selected_ua}')
+            chrome_options.add_argument(f'user-agent={selected_device["ua"]}')
             chrome_options.add_argument(f'--lang={selected_lang.split(",")[0]}')
+            
+            # EMULAÇÃO MOBILE COMPLETA com device específico
+            mobile_emulation = {
+                "deviceMetrics": { 
+                    "width": selected_device['width'], 
+                    "height": selected_device['height'], 
+                    "pixelRatio": selected_device['pixelRatio']
+                },
+                "userAgent": selected_device['ua']
+            }
+            chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
             
             # Anti-deteção
             chrome_options.add_argument('--disable-blink-features=AutomationControlled')
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option('useAutomationExtension', False)
             
-            # Preferências adicionais
+            # Preferências adicionais com timezone
             chrome_options.add_experimental_option("prefs", {
                 "intl.accept_languages": selected_lang,
-                "profile.default_content_setting_values.geolocation": 1,  # Permitir geolocalização
+                "profile.default_content_setting_values.geolocation": 1,
+                # Cache clearing - limpar cache
+                "profile.default_content_settings.cookies": 2,  # Block cookies por padrão
+                "profile.block_third_party_cookies": True
             })
+            
+            # Timezone via CDP
+            chrome_options.add_argument(f'--timezone={selected_timezone}')
             
             # Iniciar driver
             driver = webdriver.Chrome(
                 service=Service(ChromeDriverManager().install()),
                 options=chrome_options
             )
+            
+            # FUNÇÃO HELPER: Autodetectar e REJEITAR cookies (mais simples!)
+            def reject_cookies_if_present(step_name=""):
+                """Detecta e REJEITA cookies automaticamente. Retorna True se encontrou cookies."""
+                try:
+                    result = driver.execute_script("""
+                        // Procurar e clicar no botão de REJEITAR cookies
+                        const buttons = document.querySelectorAll('button, a, [role="button"]');
+                        let found = false;
+                        for (let btn of buttons) {
+                            const text = btn.textContent.toLowerCase().trim();
+                            // Procurar por "rejeitar", "recusar", "reject", etc.
+                            if (text.includes('rejeitar') || text.includes('recusar') || 
+                                text.includes('reject') || text.includes('rechazar') ||
+                                text.includes('não aceitar') || text.includes('decline')) {
+                                btn.click();
+                                console.log('✓ Cookies rejeitados:', btn.textContent);
+                                found = true;
+                                break;
+                            }
+                        }
+                        // Se não encontrou botão de rejeitar, tentar fechar/remover o banner
+                        if (!found) {
+                            document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=didomi], [class*=didomi], [id*=consent], [class*=consent]').forEach(el => {
+                                el.remove();
+                            });
+                        }
+                        document.body.style.overflow = 'auto';
+                        return found;
+                    """)
+                    if result:
+                        print(f"[SELENIUM] ✓ Cookies rejeitados {step_name}", file=sys.stderr, flush=True)
+                    else:
+                        print(f"[SELENIUM] ℹ️  Banner removido {step_name}", file=sys.stderr, flush=True)
+                    return result
+                except Exception as e:
+                    print(f"[SELENIUM] ⚠ Erro ao verificar cookies {step_name}: {e}", file=sys.stderr, flush=True)
+                    return False
             
             try:
                 # Esconder webdriver
@@ -4151,58 +4558,27 @@ async def track_by_params(request: Request):
                     '''
                 })
                 
-                print(f"[SELENIUM] Configurando Chrome headless...", file=sys.stderr, flush=True)
+                print(f"[SELENIUM] Configurando Chrome headless com mobile UA...", file=sys.stderr, flush=True)
                 driver.set_page_load_timeout(20)
-                print(f"[SELENIUM] Acessando CarJet homepage...", file=sys.stderr, flush=True)
-                driver.get("https://www.carjet.com/aluguel-carros/index.htm")  # Português BR
-                time.sleep(2)  # Aguardar página carregar
                 
-                # ACEITAR COOKIES - TENTAR TODAS AS FORMAS POSSÍVEIS
-                print(f"[SELENIUM] Aceitando cookies...", file=sys.stderr, flush=True)
-                time.sleep(2)  # Aguardar popup de cookies carregar
+                # Definir referrer se não for direct
+                if selected_referrer:
+                    print(f"[SELENIUM] Definindo referrer...", file=sys.stderr, flush=True)
+                    driver.execute_cdp_cmd('Network.setExtraHTTPHeaders', {
+                        'headers': {'Referer': selected_referrer}
+                    })
                 
-                # Tentar múltiplos seletores comuns de botões de cookies
-                cookie_selectors = [
-                    "button[id*='accept']",
-                    "button[class*='accept']", 
-                    "button[id*='cookie']",
-                    "a[id*='accept']",
-                    "a[class*='accept']",
-                    "#onetrust-accept-btn-handler",
-                    ".cookie-accept",
-                    ".accept-cookies",
-                    "[data-testid='cookie-accept']",
-                    "button:contains('Aceitar')",
-                    "button:contains('Accept')",
-                    "button:contains('Aceptar')"
-                ]
+                print(f"[SELENIUM] Acessando CarJet ({selected_lang['name']})...", file=sys.stderr, flush=True)
+                driver.get(carjet_url)
                 
-                cookies_accepted = False
-                for selector in cookie_selectors:
-                    try:
-                        accept_btn = driver.find_element(By.CSS_SELECTOR, selector)
-                        if accept_btn.is_displayed():
-                            accept_btn.click()
-                            cookies_accepted = True
-                            print(f"[SELENIUM] ✓ Cookies aceitos via: {selector}", file=sys.stderr, flush=True)
-                            time.sleep(1)
-                            break
-                    except:
-                        pass
-                
-                # Se não conseguiu clicar, remover via JS
-                if not cookies_accepted:
-                    print(f"[SELENIUM] Tentando remover cookies via JS...", file=sys.stderr, flush=True)
-                    driver.execute_script("""
-                        try { 
-                            document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=consent], [class*=consent], [class*=modal], [id*=gdpr]').forEach(el => {
-                                el.style.display = 'none';
-                                el.remove();
-                            });
-                            document.body.style.overflow = 'auto';
-                        } catch(e) { console.log(e); }
-                    """)
-                    print(f"[SELENIUM] ⚠ Cookies removidos via JS", file=sys.stderr, flush=True)
+                # REJEITAR COOKIES RAPIDAMENTE (0.3 segundos após carregar)
+                print(f"[SELENIUM] Rejeitando cookies RAPIDAMENTE...", file=sys.stderr, flush=True)
+                time.sleep(0.3)  # Aguardar só 0.3 segundos
+                reject_cookies_if_present("(inicial-rápido)")
+                time.sleep(0.5)
+                # Tentar novamente após 1 segundo (caso apareça atrasado)
+                reject_cookies_if_present("(inicial-retry)")
+                time.sleep(0.5)
                 
                 # DETECTAR IDIOMA e ajustar nome da localização
                 page_url = driver.current_url
@@ -4256,120 +4632,196 @@ async def track_by_params(request: Request):
                     print(f"[SELENIUM] Aguardando dropdown aparecer...", file=sys.stderr, flush=True)
                     time.sleep(2)  # Aguardar dropdown carregar
                     
-                    # CLICAR NO DROPDOWN - SELETORES CORRETOS DO CARJET
+                    # CLICAR NO DROPDOWN - COM RETRY APÓS COOKIES
                     clicked = False
+                    max_attempts = 2  # Tentar 2 vezes (antes e depois de cookies)
                     
-                    # Tentar seletores específicos do CarJet baseado no HTML real
-                    carjet_selectors = [
-                        f"#recogida_lista li[data-id='{carjet_location}'] a",
-                        f"#recogida_lista li[data-id='{carjet_location}']",
-                        "#recogida_lista li.history-list:first-child a",
-                        "#recogida_lista li.history-list:first-child",
-                        ".autocomplete-list li[data-id] a:first",
-                        ".autocomplete-list li[data-id]:first",
-                    ]
-                    
-                    for selector in carjet_selectors:
-                        try:
-                            print(f"[SELENIUM] Tentando: {selector}", file=sys.stderr, flush=True)
-                            dropdown_item = WebDriverWait(driver, 3).until(
-                                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
-                            )
-                            dropdown_item.click()
-                            clicked = True
-                            print(f"[SELENIUM] ✓ Dropdown clicado via: {selector}", file=sys.stderr, flush=True)
-                            time.sleep(1)
+                    for attempt in range(max_attempts):
+                        if clicked:
                             break
-                        except Exception as e:
-                            pass
+                            
+                        if attempt > 0:
+                            print(f"[SELENIUM] Tentativa {attempt + 1} após aceitar cookies...", file=sys.stderr, flush=True)
+                        
+                        # Tentar seletores específicos do CarJet
+                        carjet_selectors = [
+                            f"#recogida_lista li[data-id='{carjet_location}'] a",
+                            f"#recogida_lista li[data-id='{carjet_location}']",
+                            "#recogida_lista li.history-list:first-child a",
+                            "#recogida_lista li.history-list:first-child",
+                        ]
+                        
+                        for selector in carjet_selectors:
+                            try:
+                                print(f"[SELENIUM] Tentando: {selector}", file=sys.stderr, flush=True)
+                                dropdown_item = WebDriverWait(driver, 3).until(
+                                    EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                                )
+                                dropdown_item.click()
+                                clicked = True
+                                print(f"[SELENIUM] ✓ Dropdown clicado via: {selector}", file=sys.stderr, flush=True)
+                                time.sleep(1)
+                                break
+                            except Exception as e:
+                                pass
+                        
+                        # Se não conseguiu, tentar via JavaScript
+                        if not clicked:
+                            print(f"[SELENIUM] Tentando click via JavaScript...", file=sys.stderr, flush=True)
+                            try:
+                                result = driver.execute_script(f"""
+                                    const item = document.querySelector('#recogida_lista li[data-id="{carjet_location}"]');
+                                    if (item) {{
+                                        item.click();
+                                        return true;
+                                    }}
+                                    const link = document.querySelector('#recogida_lista li[data-id="{carjet_location}"] a');
+                                    if (link) {{
+                                        link.click();
+                                        return true;
+                                    }}
+                                    return false;
+                                """)
+                                if result:
+                                    clicked = True
+                                    print(f"[SELENIUM] ✓ Dropdown clicado via JavaScript", file=sys.stderr, flush=True)
+                                    time.sleep(1)
+                            except:
+                                pass
+                        
+                        # Se ainda não clicou, verificar se há cookies bloqueando
+                        if not clicked and attempt < max_attempts - 1:
+                            print(f"[SELENIUM] Verificando se cookies estão bloqueando...", file=sys.stderr, flush=True)
+                            cookies_found = reject_cookies_if_present("(bloqueando dropdown)")
+                            if cookies_found:
+                                time.sleep(1)
+                                # Tentar reabrir dropdown
+                                try:
+                                    pickup_input = driver.find_element(By.ID, "pickup")
+                                    pickup_input.click()
+                                    time.sleep(0.5)
+                                except:
+                                    pass
                     
-                    # Se não conseguiu, tentar via JavaScript com data-id
                     if not clicked:
-                        print(f"[SELENIUM] Tentando click via JavaScript...", file=sys.stderr, flush=True)
-                        try:
-                            driver.execute_script(f"""
-                                const item = document.querySelector('#recogida_lista li[data-id="{carjet_location}"]');
-                                if (item) {{
-                                    item.click();
-                                    return true;
-                                }}
-                                const link = document.querySelector('#recogida_lista li[data-id="{carjet_location}"] a');
-                                if (link) {{
-                                    link.click();
-                                    return true;
-                                }}
-                                return false;
-                            """)
-                            clicked = True
-                            print(f"[SELENIUM] ✓ Dropdown clicado via JavaScript", file=sys.stderr, flush=True)
-                            time.sleep(1)
-                        except:
-                            print(f"[SELENIUM] ⚠ Não conseguiu clicar no dropdown!", file=sys.stderr, flush=True)
+                        print(f"[SELENIUM] ⚠ Não conseguiu clicar no dropdown após {max_attempts} tentativas!", file=sys.stderr, flush=True)
                     
                     time.sleep(0.5)
                     
-                    # VERIFICAR SE APARECEU SEGUNDO POPUP DE COOKIES
-                    print(f"[SELENIUM] Verificando segundo popup de cookies...", file=sys.stderr, flush=True)
-                    try:
-                        # Procurar pelo texto dos botões de cookies em português
-                        second_cookie_selectors = [
-                            "//button[contains(text(), 'Aceitar todos os cookies')]",
-                            "//button[contains(text(), 'Aceitar todos')]",
-                            "//button[contains(., 'Aceitar todos os cookies')]",
-                            "button:contains('Aceitar todos os cookies')",
-                            "button[class*='cookie']:contains('Aceitar')",
-                        ]
-                        
-                        for sel in second_cookie_selectors:
-                            try:
-                                if sel.startswith('//'):
-                                    cookie_btn = driver.find_element(By.XPATH, sel)
-                                else:
-                                    cookie_btn = driver.find_element(By.CSS_SELECTOR, sel)
-                                
-                                if cookie_btn and cookie_btn.is_displayed():
-                                    cookie_btn.click()
-                                    print(f"[SELENIUM] ✓ Segundo popup de cookies aceito!", file=sys.stderr, flush=True)
-                                    time.sleep(1)
-                                    break
-                            except:
-                                pass
-                    except:
-                        print(f"[SELENIUM] Nenhum segundo popup encontrado", file=sys.stderr, flush=True)
+                    # AUTODETECTAR COOKIES final
+                    reject_cookies_if_present("(após dropdown)")
+                    time.sleep(0.5)
                     
-                    # 2. Preencher datas e horas via JavaScript
-                    driver.execute_script("""
-                        function fill(sel, val) {
-                            const el = document.querySelector(sel);
-                            if (el) { 
-                                el.value = val; 
-                                el.dispatchEvent(new Event('change', {bubbles: true}));
-                                return true;
-                            }
-                            return false;
-                        }
-                        fill('input[name="dropoff"]', arguments[0]);
-                        fill('input[name="fechaRecogida"]', arguments[1]);
-                        fill('input[name="fechaEntrega"]', arguments[2]);
+                    # 2. Preencher TUDO (local + datas + horas) COM RETRY
+                    # IMPORTANTE: Cookies podem limpar o formulário, então verificamos TUDO
+                    print(f"[SELENIUM] Preenchendo formulário completo...", file=sys.stderr, flush=True)
+                    form_filled = False
+                    max_form_attempts = 3  # Tentar até 3 vezes
+                    
+                    for form_attempt in range(max_form_attempts):
+                        if form_filled:
+                            break
                         
-                        const h1 = document.querySelector('select[name="fechaRecogidaSelHour"]');
-                        const h2 = document.querySelector('select[name="fechaEntregaSelHour"]');
-                        if (h1) h1.value = arguments[3] || '16:00';
-                        if (h2) h2.value = arguments[4] || '10:00';
-                    """, carjet_location, start_dt.strftime("%d/%m/%Y"), end_dt.strftime("%d/%m/%Y"), start_dt.strftime("%H:%M"), end_dt.strftime("%H:%M"))
+                        if form_attempt > 0:
+                            print(f"[SELENIUM] Tentativa {form_attempt + 1} de preencher formulário...", file=sys.stderr, flush=True)
+                        
+                        try:
+                            # Preencher TUDO de uma vez
+                            result = driver.execute_script("""
+                                function fill(sel, val) {
+                                    const el = document.querySelector(sel);
+                                    if (el) { 
+                                        el.value = val; 
+                                        el.dispatchEvent(new Event('input', {bubbles: true}));
+                                        el.dispatchEvent(new Event('change', {bubbles: true}));
+                                        el.dispatchEvent(new Event('blur', {bubbles: true}));
+                                        return true;
+                                    }
+                                    return false;
+                                }
+                                
+                                // Preencher LOCAL (pode ter sido limpo por cookie)
+                                const pickup = fill('input[id="pickup"]', arguments[0]);
+                                
+                                // Preencher datas - NOMES CORRETOS DO CARJET
+                                const r2 = fill('input[id="fechaRecogida"]', arguments[1]);
+                                const r3 = fill('input[id="fechaDevolucion"]', arguments[2]);
+                                
+                                // Preencher horas - NOMES CORRETOS DO CARJET
+                                const h1 = document.querySelector('select[id="fechaRecogidaSelHour"]');
+                                const h2 = document.querySelector('select[id="fechaDevolucionSelHour"]');
+                                let h1_ok = false, h2_ok = false;
+                                if (h1) { h1.value = arguments[3] || '10:00'; h1_ok = true; }
+                                if (h2) { h2.value = arguments[4] || '10:00'; h2_ok = true; }
+                                
+                                return {
+                                    pickup: pickup,
+                                    fechaRecogida: r2,
+                                    fechaDevolucion: r3,
+                                    horaRecogida: h1_ok,
+                                    horaDevolucion: h2_ok,
+                                    allFilled: pickup && r2 && r3 && h1_ok && h2_ok
+                                };
+                            """, carjet_location, start_dt.strftime("%d/%m/%Y"), end_dt.strftime("%d/%m/%Y"), start_dt.strftime("%H:%M"), end_dt.strftime("%H:%M"))
+                            
+                            print(f"[SELENIUM] Resultado preenchimento: {result}", file=sys.stderr, flush=True)
+                            
+                            if result and result.get('allFilled'):
+                                form_filled = True
+                                print(f"[SELENIUM] ✓ Formulário completo preenchido com sucesso!", file=sys.stderr, flush=True)
+                            else:
+                                print(f"[SELENIUM] ⚠ Preenchimento incompleto", file=sys.stderr, flush=True)
+                                
+                        except Exception as e:
+                            print(f"[SELENIUM] Erro ao preencher formulário: {e}", file=sys.stderr, flush=True)
+                        
+                        # Se não preencheu tudo, verificar se há cookies que limparam o formulário
+                        if not form_filled and form_attempt < max_form_attempts - 1:
+                            print(f"[SELENIUM] Verificando se cookies limparam formulário...", file=sys.stderr, flush=True)
+                            cookies_found = reject_cookies_if_present("(limpou formulário)")
+                            if cookies_found:
+                                time.sleep(1)
+                                print(f"[SELENIUM] Cookie rejeitado, preenchendo TUDO novamente...", file=sys.stderr, flush=True)
+                            else:
+                                time.sleep(0.5)
+                    
+                    if not form_filled:
+                        print(f"[SELENIUM] ⚠ Não conseguiu preencher formulário após {max_form_attempts} tentativas", file=sys.stderr, flush=True)
                     
                 except Exception as e:
-                    print(f"[SELENIUM] Erro ao preencher: {e}", file=sys.stderr, flush=True)
+                    print(f"[SELENIUM] Erro geral ao preencher: {e}", file=sys.stderr, flush=True)
                 
                 time.sleep(0.5)
+                
+                # AUTODETECTAR COOKIES antes de submeter
+                reject_cookies_if_present("(antes de submeter)")
+                
+                # ============================================
+                # DELAYS E SCROLL SIMULATION (anti-bot)
+                # ============================================
+                # Delay antes de submeter (0.5-2s)
+                delay_before_submit = random.uniform(0.5, 2.0)
+                print(f"[SELENIUM] Aguardando {delay_before_submit:.1f}s antes de submeter...", file=sys.stderr, flush=True)
+                time.sleep(delay_before_submit)
+                
+                # Scroll simulation (200-500px aleatório)
+                scroll_amount = random.randint(200, 500)
+                driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+                time.sleep(random.uniform(0.3, 0.7))
+                driver.execute_script("window.scrollTo(0, 0);")  # Voltar ao topo
+                time.sleep(0.3)
                 
                 # Submeter formulário
                 print(f"[SELENIUM] Submetendo formulário...", file=sys.stderr, flush=True)
                 driver.execute_script("document.querySelector('form').submit();")
                 
                 # Aguardar navegação para /do/list/
-                print(f"[SELENIUM] Aguardando navegação (10 seg)...", file=sys.stderr, flush=True)
-                time.sleep(10)
+                print(f"[SELENIUM] Aguardando navegação (5 seg)...", file=sys.stderr, flush=True)
+                time.sleep(5)
+                
+                # AUTODETECTAR COOKIES após submeter (IMPORTANTE!)
+                reject_cookies_if_present("(após submeter)")
+                time.sleep(2)
                 
                 final_url = driver.current_url
                 
@@ -11327,6 +11779,24 @@ async def export_automated_prices_excel(request: Request):
         # Generate filename
         filename = f"AutomatedPrices_{location.replace(' ', '_')}_{date}.xlsx"
         
+        # SALVAR NA BASE DE DADOS (persistente)
+        try:
+            excel_bytes = excel_file.getvalue()
+            username = request.session.get("username", "admin")
+            save_file_to_db(
+                filename=filename,
+                filepath=f"/exports/{filename}",
+                file_data=excel_bytes,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                uploaded_by=username
+            )
+            log_to_db("INFO", f"Excel export saved to DB: {filename}", "main", "export_automated_prices_excel")
+        except Exception as e:
+            log_to_db("ERROR", f"Failed to save Excel to DB: {str(e)}", "main", "export_automated_prices_excel")
+        
+        # Reset para retornar
+        excel_file.seek(0)
+        
         from starlette.responses import Response
         return Response(
             content=excel_file.getvalue(),
@@ -11621,7 +12091,16 @@ async def fetch_car_photos(request: Request):
         print(f"📆 Days: {days_to_search}")
         
         # Search each combination - Use mock data for quick testing
-        for location in locations:
+        for loc_idx, location in enumerate(locations):
+            # ============================================
+            # DELAY ENTRE LOCATIONS (2-5s aleatório)
+            # ============================================
+            if loc_idx > 0:  # Não fazer delay na primeira location
+                import random
+                delay_between_locations = random.uniform(2.0, 5.0)
+                print(f"\n⏳ Aguardando {delay_between_locations:.1f}s antes da próxima location...", file=sys.stderr, flush=True)
+                time.sleep(delay_between_locations)
+            
             for date in dates:
                 for days in days_to_search:
                     try:
