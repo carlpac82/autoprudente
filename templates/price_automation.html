@@ -877,22 +877,22 @@
         <!-- Tab: Histórico -->
         <div id="contentHistory" class="hidden">
             <div class="bg-white shadow mb-6 p-4">
-                <h2 class="text-lg font-semibold mb-4">Price History (2 years)</h2>
+                <h2 class="text-lg font-semibold mb-4" data-i18n="automation.priceHistory">Price History (2 years)</h2>
                 
                 <!-- History Tabs -->
                 <div class="mb-4 border-b border-gray-200">
                     <nav class="flex gap-4">
                         <button onclick="switchHistoryTab('current')" id="historyTabCurrent" class="px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold">
-                            Current Prices
+                            <span data-i18n="automation.currentPrices">Current Prices</span>
                         </button>
                         <button onclick="switchHistoryTab('automated')" id="historyTabAutomated" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                            Automated Prices
+                            <span data-i18n="automation.automatedPrices">Automated Prices</span>
                         </button>
                         <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                            📥 Downloads
+                            <span data-i18n="automation.downloads">Downloads</span>
                         </button>
                         <button onclick="switchHistoryTab('calendar')" id="historyTabCalendar" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
-                            📅 Calendar Scans
+                            <span data-i18n="automation.calendarScans">Calendar Scans</span>
                         </button>
                     </nav>
                 </div>
