@@ -1,4 +1,4 @@
-home/**
+/**
  * Internationalization (i18n) System
  * Supports Portuguese (pt) and English (en)
  */
@@ -380,6 +380,9 @@ const translations = {
         'home.days': 'Dias',
         'home.search': 'Pesquisar',
         'home.searchAllDays': 'Pesquisar Todos os Dias',
+        'home.send': 'Enviar',
+        'home.aeroportoFaro': 'Aeroporto de Faro',
+        'home.albufeira': 'Albufeira',
         
         // Branding
         'branding.title': 'Identidade da Marca',
@@ -793,6 +796,9 @@ const translations = {
         'home.days': 'Days',
         'home.search': 'Search',
         'home.searchAllDays': 'Search All Days',
+        'home.send': 'Send',
+        'home.aeroportoFaro': 'Faro Airport',
+        'home.albufeira': 'Albufeira',
         
         // Branding
         'branding.title': 'Brand Identity',
