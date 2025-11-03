@@ -1323,11 +1323,23 @@
         
         function stopGenerating() {
             stopGenerateFlag = true;
+            
+            // Immediately reset UI
+            const btn = document.getElementById('btnGenerateAuto');
             const btnStop = document.getElementById('btnStopGenerate');
-            btnStop.classList.remove('bg-red-50', 'hover:bg-red-100', 'border-red-200');
-            btnStop.classList.add('bg-gray-100', 'cursor-not-allowed');
-            btnStop.disabled = true;
-            btnStop.title = 'Stopping...';
+            const generateIcon = btn.querySelector('.generate-icon');
+            const loadingIcon = btn.querySelector('.loading-icon-auto');
+            const progressBar = document.getElementById('progressBarAuto');
+            
+            // Reset button states immediately
+            generateIcon.classList.remove('hidden');
+            loadingIcon.classList.add('hidden');
+            btn.disabled = false;
+            btnStop.classList.add('hidden');
+            progressBar.classList.add('hidden');
+            
+            // Show notification
+            showNotification('⏹️ Generation stopped by user', 'warning');
         }
 
         function getMaxAlternativeDays() {
@@ -3737,6 +3749,11 @@
                     
                     // Try original date and up to X days forward (configurable in settings)
                     for (let dateOffset = 0; dateOffset <= maxAlternativeDays && !foundPrices; dateOffset++) {
+                        // Check stop flag
+                        if (stopGenerateFlag) {
+                            return;
+                        }
+                        
                         const searchDate = new Date(pickupDate);
                         searchDate.setDate(searchDate.getDate() + dateOffset);
                         
