@@ -226,6 +226,25 @@ const translations = {
         'alerts.overwriteWarning': '⚠️ Isto irá sobrescrever todas as configurações atuais. Continuar?',
         'alerts.finalWarning': '⚠️ AVISO FINAL!\n\nTem a certeza absoluta?\n\nTodos os dados serão permanentemente eliminados.',
         
+        // Settings Menu
+        'settings.title': 'Definições',
+        'settings.vehicles': 'Veículos',
+        'settings.priceAdjustment': 'Ajuste de Preços',
+        'settings.priceValidation': 'Validação de Preços',
+        'settings.automatedPriceSettings': 'Configurações de Preços Automatizados',
+        'settings.customization': 'PERSONALIZAÇÃO',
+        'settings.branding': 'Marca',
+        'settings.companyInfo': 'Informação da Empresa',
+        'settings.language': 'Idioma / Language',
+        'settings.emailNotifications': 'Notificações por Email',
+        'settings.automatedReports': 'Relatórios Automatizados',
+        'settings.backup': 'Backup & Restauro',
+        
+        // Common
+        'common.users': 'Utilizadores',
+        'common.home': 'Início',
+        'common.logout': 'Sair',
+        
         // Email Notifications
         'emailNotifications.title': 'Notificações por Email',
         'emailNotifications.description': 'Configure uma conta de email para receber notificações automáticas sobre alterações de preços, alertas e relatórios.',
@@ -703,6 +722,25 @@ const translations = {
         'alerts.clearAllData': '⚠️ Are you sure you want to clear all data? This cannot be undone.',
         'alerts.overwriteWarning': '⚠️ This will overwrite all current settings. Continue?',
         'alerts.finalWarning': '⚠️ FINAL WARNING!\n\nAre you absolutely sure?\n\nAll data will be permanently deleted.',
+        
+        // Settings Menu
+        'settings.title': 'Settings',
+        'settings.vehicles': 'Vehicles',
+        'settings.priceAdjustment': 'Price Adjustment',
+        'settings.priceValidation': 'Price Validation',
+        'settings.automatedPriceSettings': 'Automated Price Settings',
+        'settings.customization': 'CUSTOMIZATION',
+        'settings.branding': 'Branding',
+        'settings.companyInfo': 'Company Info',
+        'settings.language': 'Language / Idioma',
+        'settings.emailNotifications': 'Email Notifications',
+        'settings.automatedReports': 'Automated Reports',
+        'settings.backup': 'Backup & Restore',
+        
+        // Common
+        'common.users': 'Users',
+        'common.home': 'Home',
+        'common.logout': 'Logout',
         
         // Email Notifications
         'emailNotifications.title': 'Email Notifications',
