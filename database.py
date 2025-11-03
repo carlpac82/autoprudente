@@ -11,6 +11,22 @@ import logging
 
 # Check if we're in production (Render) or local development
 DATABASE_URL = os.getenv("DATABASE_URL")  # Render PostgreSQL URL
+
+# Fix for Render environment variable issue
+if not DATABASE_URL:
+    # Try to extract from printenv output (Render stores it as Key/Value)
+    try:
+        import subprocess
+        result = subprocess.run(['printenv'], capture_output=True, text=True)
+        for line in result.stdout.split('\n'):
+            if line.startswith('Value=postgresql://'):
+                DATABASE_URL = line.split('=', 1)[1]
+                os.environ['DATABASE_URL'] = DATABASE_URL
+                logging.info(f"✅ Extracted DATABASE_URL from environment")
+                break
+    except Exception as e:
+        logging.warning(f"Could not extract DATABASE_URL: {e}")
+
 USE_POSTGRES = DATABASE_URL is not None
 
 if USE_POSTGRES:
