@@ -3426,17 +3426,27 @@
             // Save to database
             saveStrategies();
             
-            // Re-render current view if any
-            const currentLocation = document.querySelector('.location-tab.active')?.dataset?.location;
-            if (currentLocation) {
-                grupos.forEach(grupo => {
-                    const currentDay = getCurrentSelectedDay(currentLocation, grupo);
-                    const currentMonth = getCurrentSelectedMonth(currentLocation, grupo);
-                    if (currentDay && currentMonth) {
-                        renderStrategiesList(currentLocation, grupo, currentMonth.number, currentDay);
-                    }
+            // Force re-render for all visible groups
+            setTimeout(() => {
+                locations.forEach(location => {
+                    grupos.forEach(grupo => {
+                        // Try to render for day 1 of January as default
+                        renderStrategiesList(location, grupo, 1, 1);
+                    });
                 });
-            }
+                
+                // Also re-render current selection if any
+                const currentLocation = document.querySelector('.location-tab.active')?.dataset?.location;
+                if (currentLocation) {
+                    grupos.forEach(grupo => {
+                        const currentDay = getCurrentSelectedDay(currentLocation, grupo);
+                        const currentMonth = getCurrentSelectedMonth(currentLocation, grupo);
+                        if (currentDay && currentMonth) {
+                            renderStrategiesList(currentLocation, grupo, currentMonth.number, currentDay);
+                        }
+                    });
+                }
+            }, 100);
             
             showNotification('✅ Default strategies created: Lowest -1.5% for all configurations', 'success');
         }
