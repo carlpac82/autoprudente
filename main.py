@@ -12606,3 +12606,7 @@ async def oauth_outlook_authorize(request: Request):
     </html>
     """
     return HTMLResponse(content=html)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
