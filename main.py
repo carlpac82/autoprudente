@@ -2437,6 +2437,11 @@ async def admin_users_delete(request: Request, user_id: int):
     return RedirectResponse(url="/admin/users", status_code=HTTP_303_SEE_OTHER)
 
 # --- Admin UI ---
+@app.get("/test/carjet-mobile", response_class=HTMLResponse)
+async def test_carjet_mobile(request: Request):
+    """CarJet Mobile Scraping Test Page"""
+    return templates.TemplateResponse("carjet_mobile_test.html", {"request": request})
+
 @app.get("/admin/backup", response_class=HTMLResponse)
 async def admin_backup(request: Request):
     """Backup & Restore page"""
