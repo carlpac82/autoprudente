@@ -7835,17 +7835,6 @@ async def track_carjet(request: Request):
                     date_rotation_max_days = int(row[0])
             finally:
                 con.close()
-        
-        # Apply date rotation if enabled
-        original_pickup_date = pickup_date
-        if date_rotation_enabled and date_rotation_max_days > 0:
-            base_date = datetime.strptime(pickup_date, "%Y-%m-%d")
-            days_offset = random.randint(0, date_rotation_max_days)
-            rotated_date = base_date + timedelta(days=days_offset)
-            pickup_date = rotated_date.strftime("%Y-%m-%d")
-            print(f"[DATE_ROTATION] Original: {original_pickup_date}, Rotated: {pickup_date} (+{days_offset} days)")
-        else:
-            print(f"[DATE_ROTATION] Disabled, using original date: {pickup_date}")
 
         async def run():
             results: List[Dict[str, Any]] = []
@@ -7875,10 +7864,22 @@ async def track_carjet(request: Request):
                 for loc in locations:
                     name = loc.get("name", "")
                     template = loc.get("template", "")
+                    
+                    # Apply date rotation per location for more variation
+                    rotated_pickup_date = pickup_date
+                    if date_rotation_enabled and date_rotation_max_days > 0:
+                        base_date = datetime.strptime(pickup_date, "%Y-%m-%d")
+                        days_offset = random.randint(0, date_rotation_max_days)
+                        rotated_date = base_date + timedelta(days=days_offset)
+                        rotated_pickup_date = rotated_date.strftime("%Y-%m-%d")
+                        print(f"[DATE_ROTATION] Location: {name}, Original: {pickup_date}, Rotated: {rotated_pickup_date} (+{days_offset} days)")
+                    else:
+                        print(f"[DATE_ROTATION] Location: {name}, Disabled, using original date: {pickup_date}")
+                    
                     loc_block = {"location": name, "durations": []}
                     for d in durations:
                         try:
-                            start_dt = datetime.fromisoformat(pickup_date + "T" + pickup_time)
+                            start_dt = datetime.fromisoformat(rotated_pickup_date + "T" + pickup_time)
                             end_dt = start_dt + timedelta(days=int(d))
                             # Try direct POST to CarJet first (faster, no headless)
                             html = try_direct_carjet(name, start_dt, end_dt, lang=lang, currency=currency)
