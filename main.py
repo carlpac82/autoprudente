@@ -433,6 +433,18 @@ import asyncio
 from bs4 import BeautifulSoup
 import sqlite3
 from threading import Lock
+
+# Import database module for PostgreSQL/SQLite hybrid support
+try:
+    from database import _db_connect as _db_connect_new, USE_POSTGRES
+    _USE_NEW_DB = True
+    if USE_POSTGRES:
+        logging.info("🐘 PostgreSQL mode enabled")
+    else:
+        logging.info("📁 SQLite mode (local development)")
+except ImportError:
+    _USE_NEW_DB = False
+    logging.info("📁 Using legacy SQLite connection")
 import time
 import io
 import hashlib
@@ -846,7 +858,11 @@ DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Admin/Users: DB helpers ---
 def _db_connect():
-    return sqlite3.connect(str(DB_PATH))
+    """Database connection - supports both PostgreSQL and SQLite"""
+    if _USE_NEW_DB:
+        return _db_connect_new()
+    else:
+        return sqlite3.connect(str(DB_PATH))
 
 def _ensure_users_table():
     with _db_lock:
