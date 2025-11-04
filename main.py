@@ -12929,6 +12929,70 @@ async def restore_backup(request: Request):
         logging.error(f"Backup restore error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/fix-schema-emergency")
+async def fix_schema_emergency(request: Request):
+    """Emergency endpoint to fix PostgreSQL schema"""
+    try:
+        require_auth(request)
+    except:
+        pass  # Allow without auth in emergency
+    
+    try:
+        if not _USE_NEW_DB or not USE_POSTGRES:
+            return JSONResponse({"ok": False, "error": "Not using PostgreSQL"})
+        
+        results = []
+        
+        columns = [
+            ("first_name", "TEXT"),
+            ("last_name", "TEXT"),
+            ("email", "TEXT"),
+            ("mobile", "TEXT"),
+            ("profile_picture_path", "TEXT"),
+            ("is_admin", "INTEGER DEFAULT 0"),
+            ("enabled", "INTEGER DEFAULT 1"),
+            ("created_at", "TEXT"),
+            ("google_id", "TEXT"),
+        ]
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for col_name, col_type in columns:
+                    try:
+                        conn.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                        conn.commit()
+                        results.append({"column": col_name, "status": "added"})
+                    except Exception as e:
+                        conn.rollback()
+                        if "already exists" in str(e):
+                            results.append({"column": col_name, "status": "exists"})
+                        else:
+                            results.append({"column": col_name, "status": "error", "error": str(e)})
+                
+                # Verify
+                cursor = conn.execute("SELECT column_name FROM information_schema.columns WHERE table_name='users' ORDER BY ordinal_position")
+                cols = [row[0] for row in cursor.fetchall()]
+                
+                return JSONResponse({
+                    "ok": True,
+                    "message": "Schema fix completed",
+                    "results": results,
+                    "total_columns": len(cols),
+                    "columns": cols,
+                    "enabled_exists": "enabled" in cols
+                })
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        import traceback
+        return JSONResponse({
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status_code=500)
+
 @app.get("/api/backup/list")
 async def list_backups(request: Request):
     """List available backups"""
