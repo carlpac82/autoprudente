@@ -1336,9 +1336,9 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     if cat in ['cabrio', 'cabriolet', 'convertible', 'conversível']:
         return "G"
     
-    # Luxury / Premium → G
+    # Luxury / Premium → Others (não oferecemos estas categorias)
     if cat in ['luxury', 'premium', 'luxo']:
-        return "G"
+        return "Others"
     
     # 7 Seater / 7 Seats → M1
     if cat in ['7 seater', '7 seats', '7 lugares', 'people carrier', 'mpv']:
@@ -1431,7 +1431,7 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         except Exception:
             pass  # Se falhar, continuar para próxima prioridade
     
-    # PRIORIDADE 3: CABRIO/CABRIOLET → Sempre Grupo G (Premium)
+    # PRIORIDADE 3: CABRIO/CABRIOLET → Grupo G (apenas descapotáveis)
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
         return "G"
     
@@ -1507,14 +1507,11 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         "suv": "F",
         "jeep": "F",
         
-        # G - Cabrio / Premium / Luxury (do VEHICLES: "Luxury", "Cabrio")
+        # G - Cabrio APENAS (Premium/Luxury → Others)
         "cabrio": "G",
         "cabriolet": "G",
         "convertible": "G",
         "conversível": "G",
-        "premium": "G",
-        "luxury": "G",
-        "luxo": "G",
         
         # J1 - Crossover (do VEHICLES: "Crossover")
         "crossover": "J1",
@@ -1600,8 +1597,11 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     if any(word in cat for word in ['suv', 'jeep', '4x4', '4wd']):
         return "L1" if is_auto else "F"  # SUV
     
-    if any(word in cat for word in ['cabrio', 'cabriolet', 'convertible', 'premium', 'luxury', 'luxo']):
-        return "G"  # Premium/Cabrio
+    if any(word in cat for word in ['cabrio', 'cabriolet', 'convertible']):
+        return "G"  # Cabrio apenas
+    
+    if any(word in cat for word in ['premium', 'luxury', 'luxo']):
+        return "Others"  # Luxury não oferecido
     
     if any(word in cat for word in ['mini', 'small', 'pequeno']):
         # Verificar se é 4 ou 5 lugares pelo nome do carro
