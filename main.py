@@ -5644,7 +5644,12 @@ async def track_by_params(request: Request):
             "days": days,
         })
     except Exception as e:
-        return _no_store_json({"ok": False, "error": str(e)}, status_code=500)
+        print(f"\n{'='*60}")
+        print(f"[API ERROR] track-by-params failed: {str(e)}")
+        print(f"{'='*60}\n")
+        import traceback
+        traceback.print_exc()
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, status_code=500)
 
 @app.get("/debug/vars")
 async def debug_vars():
