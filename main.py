@@ -13723,6 +13723,26 @@ async def test_daily_report(request: Request):
         data = await request.json()
         access_token = data.get('accessToken')
         
+        # Se não veio no request, buscar da BD
+        if not access_token:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    cursor = conn.execute(
+                        """
+                        SELECT access_token FROM oauth_tokens
+                        WHERE provider = 'gmail'
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                        """
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        access_token = row[0]
+                        logging.info("✅ Token loaded from database")
+                finally:
+                    conn.close()
+        
         if not access_token:
             return JSONResponse({
                 "ok": False,
@@ -14273,11 +14293,36 @@ async def test_email_oauth(request: Request):
     require_auth(request)
     
     try:
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from datetime import datetime
+        
         data = await request.json()
         provider = data.get('provider')
         email = data.get('email')
         access_token = data.get('accessToken')
         recipients = data.get('recipients', '')
+        
+        # Se não veio token, buscar da BD
+        if not access_token:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    cursor = conn.execute(
+                        "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        access_token = row[0]
+                        logging.info("✅ Token loaded from database for test email")
+                finally:
+                    conn.close()
+        
+        if not access_token:
+            return JSONResponse({"ok": False, "error": "Token OAuth não encontrado. Conecte Gmail primeiro."})
         
         # Parse recipients (one per line)
         recipient_list = [r.strip() for r in recipients.split('\n') if r.strip()]
@@ -14285,15 +14330,92 @@ async def test_email_oauth(request: Request):
         if not recipient_list:
             return JSONResponse({"ok": False, "error": "Nenhum destinatário especificado"})
         
-        # For now, return success (real implementation would use Gmail API)
-        # In production, you would use the access_token to send via Gmail API
-        logging.info(f"Test email requested from {email} to {recipient_list}")
+        # Create credentials and Gmail service
+        credentials = Credentials(token=access_token)
+        service = build('gmail', 'v1', credentials=credentials)
         
-        return JSONResponse({
-            "ok": True,
-            "message": f"Email de teste seria enviado para {len(recipient_list)} destinatário(s)",
-            "note": "Implementação completa requer Gmail API client"
-        })
+        # Send to each recipient
+        sent_count = 0
+        errors = []
+        
+        for recipient in recipient_list:
+            try:
+                # Create HTML email
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'📧 Email de Teste - Auto Prudente ({datetime.now().strftime("%d/%m/%Y %H:%M")})'
+                
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                </head>
+                <body style="font-family: 'Segoe UI', sans-serif; background: #f8fafc; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px; text-align: center;">
+                            <h1 style="margin: 0; color: white; font-size: 24px;">✅ Email de Teste</h1>
+                            <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">{datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
+                        </div>
+                        <div style="padding: 30px; text-align: center;">
+                            <h2 style="color: #009cb6; margin: 0 0 20px 0;">🎉 Sistema de Email Funcionando!</h2>
+                            <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Este é um email de teste do sistema de notificações automáticas da Auto Prudente.<br>
+                                O sistema está configurado e pronto para enviar relatórios e alertas.
+                            </p>
+                            <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; text-align: left; border-radius: 4px;">
+                                <p style="margin: 0; color: #1e293b; font-size: 14px;">
+                                    <strong style="color: #009cb6;">Informações:</strong><br>
+                                    • Enviado via Gmail OAuth<br>
+                                    • Sistema de relatórios automáticos ativo<br>
+                                    • Notificações de alertas configuradas
+                                </p>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                html_part = MIMEText(html_content, 'html')
+                message.attach(html_part)
+                
+                # Encode and send
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = service.users().messages().send(
+                    userId='me',
+                    body={'raw': raw_message}
+                ).execute()
+                
+                sent_count += 1
+                logging.info(f"✅ Test email sent to {recipient}")
+                
+            except Exception as e:
+                error_msg = f"{recipient}: {str(e)}"
+                errors.append(error_msg)
+                logging.error(f"❌ Failed to send to {recipient}: {str(e)}")
+        
+        if sent_count > 0:
+            message = f"Email enviado com sucesso para {sent_count} destinatário(s)!"
+            if errors:
+                message += f" ({len(errors)} falhou)"
+            return JSONResponse({
+                "ok": True,
+                "message": message,
+                "sent": sent_count,
+                "errors": errors if errors else None
+            })
+        else:
+            return JSONResponse({
+                "ok": False,
+                "error": "Nenhum email foi enviado",
+                "errors": errors
+            }, status_code=500)
         
     except Exception as e:
         logging.error(f"Test email error: {str(e)}")
