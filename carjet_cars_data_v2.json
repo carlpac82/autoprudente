@@ -1,0 +1,1532 @@
+[
+  {
+    "name": "Fiat Panda",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_C45.jpg",
+    "category": "Pequeno",
+    "car_code": "C45",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 1
+  },
+  {
+    "name": "Fiat 500",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_C25.jpg",
+    "category": "Pequeno",
+    "car_code": "C25",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 2
+  },
+  {
+    "name": "Renault Clio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_C04.jpg",
+    "category": "Pequeno",
+    "car_code": "C04",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 3
+  },
+  {
+    "name": "VW Polo",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_C27.jpg",
+    "category": "Pequeno",
+    "car_code": "C27",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 4
+  },
+  {
+    "name": "Opel Corsa",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_C82.jpg",
+    "category": "Pequeno",
+    "car_code": "C82",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 5
+  },
+  {
+    "name": "VW Golf",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_F12.jpg",
+    "category": "Médio",
+    "car_code": "F12",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 6
+  },
+  {
+    "name": "Fiat Panda",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_C30.jpg",
+    "category": "Pequeno",
+    "car_code": "C30",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 7
+  },
+  {
+    "name": "Fiat Panda, Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 8
+  },
+  {
+    "name": "Hyundai i10",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 9
+  },
+  {
+    "name": "Toyota Aygo",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 10
+  },
+  {
+    "name": "Volkswagen UP",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 11
+  },
+  {
+    "name": "Audi A1",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 12
+  },
+  {
+    "name": "Peugeot 208",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 13
+  },
+  {
+    "name": "Citroen C3",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 14
+  },
+  {
+    "name": "Fiat 500 Cabrio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 15
+  },
+  {
+    "name": "Seat Ibiza",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 16
+  },
+  {
+    "name": "Nissan Micra",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 17
+  },
+  {
+    "name": "Mazda 2",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 18
+  },
+  {
+    "name": "Citroen C4 , Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 19
+  },
+  {
+    "name": "VW Polo",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 20
+  },
+  {
+    "name": "Citroen C4",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 21
+  },
+  {
+    "name": "Citroen C4 Cactus",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 22
+  },
+  {
+    "name": "Toyota Yaris",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 24
+  },
+  {
+    "name": "Renault Clio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 25
+  },
+  {
+    "name": "Peugeot 108",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 27
+  },
+  {
+    "name": "Kia Ceed",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 29
+  },
+  {
+    "name": "Nissan Juke",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 30
+  },
+  {
+    "name": "Dacia Sandero",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 31
+  },
+  {
+    "name": "Skoda Scala",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 32
+  },
+  {
+    "name": "Ford Focus",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 33
+  },
+  {
+    "name": "Seat Arona",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 34
+  },
+  {
+    "name": "Ford Ecosport",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 35
+  },
+  {
+    "name": "Opel Crossland X",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 36
+  },
+  {
+    "name": "VW Taigo",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 39
+  },
+  {
+    "name": "Opel Corsa",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 40
+  },
+  {
+    "name": "Opel Adam",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 41
+  },
+  {
+    "name": "VW Golf",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 42
+  },
+  {
+    "name": "Renault Captur",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 43
+  },
+  {
+    "name": "Hyundai i20",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 44
+  },
+  {
+    "name": "Volkswagen T-Cross",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 45
+  },
+  {
+    "name": "Seat Leon",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 46
+  },
+  {
+    "name": "Renault Twingo",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 48
+  },
+  {
+    "name": "Ford Fiesta",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 49
+  },
+  {
+    "name": "Kia Sportage",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 50
+  },
+  {
+    "name": "Opel Mokka , Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_EL47.jpg",
+    "category": "Automático",
+    "car_code": "EL47",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 51
+  },
+  {
+    "name": "Peugeot 2008",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_F91.jpg",
+    "category": "SUVs",
+    "car_code": "F91",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 52
+  },
+  {
+    "name": "Renault Megane",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_F05.jpg",
+    "category": "Médio",
+    "car_code": "F05",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 53
+  },
+  {
+    "name": "Peugeot 308",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/L/car_F22.jpg",
+    "category": "Médio",
+    "car_code": "F22",
+    "is_placeholder": false,
+    "alt_text": "",
+    "index": 54
+  },
+  {
+    "name": "Volkswagen T-Roc",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 55
+  },
+  {
+    "name": "Fiat 500X",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 57
+  },
+  {
+    "name": "Toyota CHR",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 59
+  },
+  {
+    "name": "Ford Puma",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 60
+  },
+  {
+    "name": "Renault Clio SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 62
+  },
+  {
+    "name": "Renault Megane SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 63
+  },
+  {
+    "name": "Nissan Qashqai",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 64
+  },
+  {
+    "name": "Opel Astra",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 65
+  },
+  {
+    "name": "Opel Grandland X",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 66
+  },
+  {
+    "name": "Hyundai Tucson",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 67
+  },
+  {
+    "name": "Peugeot 3008",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 68
+  },
+  {
+    "name": "BMW 1 Series",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 70
+  },
+  {
+    "name": "Ford Focus SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 71
+  },
+  {
+    "name": "Citroen C1",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 72
+  },
+  {
+    "name": "Seat Leon SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 74
+  },
+  {
+    "name": "Toyota Aygo X",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 75
+  },
+  {
+    "name": "Kia Picanto",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 76
+  },
+  {
+    "name": "Fiat 500",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 78
+  },
+  {
+    "name": "Fiat 500, Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 80
+  },
+  {
+    "name": "Peugeot 308 SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 82
+  },
+  {
+    "name": "Toyota Corolla",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 83
+  },
+  {
+    "name": "Kia Stonic",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 84
+  },
+  {
+    "name": "Peugeot 2008",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 86
+  },
+  {
+    "name": "Citroen C5 Aircross",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 89
+  },
+  {
+    "name": "VW Tiguan",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 90
+  },
+  {
+    "name": "Skoda Karoq",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 91
+  },
+  {
+    "name": "Toyota Corolla , Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 93
+  },
+  {
+    "name": "Kia Ceed SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 95
+  },
+  {
+    "name": "Dacia Jogger",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Grande",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 98
+  },
+  {
+    "name": "Peugeot 2008 , Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 99
+  },
+  {
+    "name": "Citroen C3 Aircross",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 101
+  },
+  {
+    "name": "MG ZS",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 102
+  },
+  {
+    "name": "Mazda CX3",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 105
+  },
+  {
+    "name": "Cupra Leon SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 106
+  },
+  {
+    "name": "Peugeot 108 Cabrio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Pequeno",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 108
+  },
+  {
+    "name": "Opel Astra SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 109
+  },
+  {
+    "name": "Renault Megane Sedan",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 111
+  },
+  {
+    "name": "Renault Megane",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 114
+  },
+  {
+    "name": "DS4",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 116
+  },
+  {
+    "name": "Hyundai i30",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 117
+  },
+  {
+    "name": "Toyota Yaris , Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 121
+  },
+  {
+    "name": "Ford Kuga",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 122
+  },
+  {
+    "name": "Hyundai Kauai",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 125
+  },
+  {
+    "name": "Mitsubishi Spacestar",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 126
+  },
+  {
+    "name": "Toyota Yaris Cross",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 128
+  },
+  {
+    "name": "Mercedes A Class",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 129
+  },
+  {
+    "name": "Opel Zafira",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Grande",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 131
+  },
+  {
+    "name": "Toyota Corolla SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 132
+  },
+  {
+    "name": "Skoda Octavia",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Grande",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 133
+  },
+  {
+    "name": "Citroen C4 Picasso",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Grande",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 135
+  },
+  {
+    "name": "Toyota Corolla SW , Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 136
+  },
+  {
+    "name": "Audi A3",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 137
+  },
+  {
+    "name": "Cupra Formentor",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 139
+  },
+  {
+    "name": "Toyota Proace",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 141
+  },
+  {
+    "name": "Mitsubishi ASX",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 142
+  },
+  {
+    "name": "Skoda Fabia SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 143
+  },
+  {
+    "name": "Mercedes GLA",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 144
+  },
+  {
+    "name": "BYD Seal U , Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 150
+  },
+  {
+    "name": "Volvo XC40",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 151
+  },
+  {
+    "name": "Fiat Talento",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 153
+  },
+  {
+    "name": "Volkswagen ID.5 5 Door, Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 156
+  },
+  {
+    "name": "Jeep Renegade",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 158
+  },
+  {
+    "name": "VW Passat",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Grande",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 159
+  },
+  {
+    "name": "Mini Countryman",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Premium",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 161
+  },
+  {
+    "name": "Mercedes CLA Coupe",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 162
+  },
+  {
+    "name": "Seat Ateca",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 164
+  },
+  {
+    "name": "Fiat Tipo SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 165
+  },
+  {
+    "name": "Skoda Kamiq",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 166
+  },
+  {
+    "name": "Peugeot 5008",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 167
+  },
+  {
+    "name": "Dacia Lodgy",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 168
+  },
+  {
+    "name": "Ford Galaxy",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 170
+  },
+  {
+    "name": "BMW 3 Series SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 171
+  },
+  {
+    "name": "VW Caddy",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 173
+  },
+  {
+    "name": "VW Golf SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Station Wagon",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 174
+  },
+  {
+    "name": "Hyundai Kona",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 175
+  },
+  {
+    "name": "Tesla Model 3 , Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 177
+  },
+  {
+    "name": "BMW 2 Series Gran Coupe",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 178
+  },
+  {
+    "name": "Volvo V60",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 179
+  },
+  {
+    "name": "Ford Transit",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 180
+  },
+  {
+    "name": "Mercedes C Class",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 181
+  },
+  {
+    "name": "Renault Austral",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "SUVs",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 183
+  },
+  {
+    "name": "BMW 3 Series",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 188
+  },
+  {
+    "name": "Citroen Spacetourer",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 189
+  },
+  {
+    "name": "Renault Grand Scenic",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 190
+  },
+  {
+    "name": "Mercedes E Class SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 191
+  },
+  {
+    "name": "BMW 5 Series SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 192
+  },
+  {
+    "name": "Mazda MX5 Cabrio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 193
+  },
+  {
+    "name": "VW Beetle Cabrio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Premium",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 194
+  },
+  {
+    "name": "Peugeot Traveller",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 195
+  },
+  {
+    "name": "VW Transporter",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 196
+  },
+  {
+    "name": "Volvo EX30 , Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 197
+  },
+  {
+    "name": "Citroen C4 Grand Spacetourer",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 199
+  },
+  {
+    "name": "Citroen C4 X , Electric",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 200
+  },
+  {
+    "name": "Renault Arkana",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 201
+  },
+  {
+    "name": "Citroen Grand Picasso",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 202
+  },
+  {
+    "name": "VW Multivan",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 203
+  },
+  {
+    "name": "VW Sharan",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 206
+  },
+  {
+    "name": "Renault Trafic",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 207
+  },
+  {
+    "name": "BMW X1",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 208
+  },
+  {
+    "name": "Opel Vivaro",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 211
+  },
+  {
+    "name": "BMW 5 Series",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 213
+  },
+  {
+    "name": "Peugeot Rifter",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 215
+  },
+  {
+    "name": "VW Caravelle",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 216
+  },
+  {
+    "name": "Mercedes Vito",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 217
+  },
+  {
+    "name": "Mercedes CLA",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 220
+  },
+  {
+    "name": "Toyota RAV4 4x4",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 222
+  },
+  {
+    "name": "Mercedes C Class SW",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 224
+  },
+  {
+    "name": "Mercedes CLE Coupe",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Grande",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 225
+  },
+  {
+    "name": "Mercedes E Class Cabrio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 226
+  },
+  {
+    "name": "Mercedes E Class",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 227
+  },
+  {
+    "name": "Volvo XC60",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 229
+  },
+  {
+    "name": "Peugeot 508",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 231
+  },
+  {
+    "name": "Volvo V60 4x4 , Hybrid",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 232
+  },
+  {
+    "name": "Mercedes V Class Auto",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 236
+  },
+  {
+    "name": "Mercedes GLB 7 seater",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 237
+  },
+  {
+    "name": "BMW 4 Series Gran Coupe",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 238
+  },
+  {
+    "name": "Mini One Cabrio",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Médio",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 240
+  },
+  {
+    "name": "Mercedes V Class",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 242
+  },
+  {
+    "name": "Range Rover Evoque",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Premium",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 245
+  },
+  {
+    "name": "Mercedes Benz Vito",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Minivans",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 247
+  },
+  {
+    "name": "BMW X5",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 248
+  },
+  {
+    "name": "Mercedes S Class",
+    "photo_url": "https://www.carjet.com/cdn/img/cars/loading-car@2x.png",
+    "category": "Automático",
+    "car_code": null,
+    "is_placeholder": true,
+    "alt_text": "",
+    "index": 250
+  }
+]

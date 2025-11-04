@@ -469,6 +469,16 @@ VEHICLES = {
     'citroen c5 aircross': 'SUV Auto',  # Sem "auto"
     'volkswagen id.5': 'SUV Auto',  # Variação
     'million jeep renegade': 'Crossover',  # Com supplier no nome
+    'peugeot e-208, electric': 'ECONOMY',
+    'peugeot e-208': 'ECONOMY',
+    'ford ka': 'MINI 4 Lugares',
+    'ford ka': 'MINI 4 Lugares',
+    'ford transit custom': '9 Lugares',
+    'ford kuga': 'SUV',
+    'ford kuga auto': 'SUV Auto',
+    'dacia jogger auto': '7 Lugares Auto',
+    'ds4 auto': 'SUV Auto',
+    'ds4 auto': 'SUV Auto',
 }
 
 
@@ -867,9 +877,26 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 # Foto e nome do carro do atributo alt
                 photo = ''
                 for img in img_tags:
-                    src = img.get('src', '')
-                    # Fotos de carros normalmente têm /cars/ ou /vehicles/ no path
-                    if '/car' in src.lower() or '/vehicle' in src.lower() or '/img' in src:
+                    src = img.get('src', '') or img.get('data-src', '')
+                    alt = img.get('alt', '').lower()
+                    
+                    # IGNORAR logos de fornecedores
+                    if '/logo' in src.lower() or 'logo_' in src.lower():
+                        continue
+                    
+                    # PRIORIZAR imagens com alt text de carro (mais confiável)
+                    has_car_alt = any(brand in alt for brand in ['fiat', 'renault', 'peugeot', 'citroen', 'toyota', 'ford', 'vw', 'volkswagen', 'opel', 'seat', 'hyundai', 'kia', 'nissan', 'mercedes', 'bmw', 'audi', 'mini', 'jeep', 'dacia', 'skoda', 'mazda', 'mitsubishi', 'honda', 'suzuki'])
+                    
+                    # Fotos de carros: tem /car, /vehicle, /img OU tem alt text de carro
+                    is_car_photo = (
+                        '/car' in src.lower() or 
+                        '/vehicle' in src.lower() or 
+                        '/img' in src.lower() or
+                        has_car_alt or
+                        (src and not src.endswith('.svg'))  # Qualquer imagem que não seja SVG
+                    )
+                    
+                    if is_car_photo and src:
                         photo = src if src.startswith('http') else f'https://www.carjet.com{src}'
                         
                         # PRIORIZAR nome do alt da imagem (mais preciso)
@@ -879,8 +906,14 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                             alt_car_name = alt_text.split('ou similar')[0].split('or similar')[0].split('|')[0].strip()
                             if alt_car_name and any(brand in alt_car_name.lower() for brand in ['fiat', 'renault', 'peugeot', 'citroen', 'toyota', 'ford', 'vw', 'volkswagen', 'opel', 'seat', 'hyundai', 'kia', 'nissan', 'mercedes', 'bmw', 'audi', 'mini', 'jeep', 'dacia', 'skoda', 'mazda', 'mitsubishi', 'honda', 'suzuki']):
                                 car_name = alt_car_name
-                                print(f"[PARSE] Nome do alt: {car_name} (foto: {src})")
+                                print(f"[PARSE] Nome do alt: {car_name}")
+                        
+                        print(f"[PARSE] Foto encontrada: {photo[:80]}...")
                         break
+                
+                # Log se não encontrou foto
+                if not photo:
+                    print(f"[PARSE] ⚠️  Sem foto para: {car_name} (imgs: {len(img_tags)})")
                 
                 # Transmissão
                 transmission = ''
