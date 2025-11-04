@@ -1247,7 +1247,13 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
                 vehicle_info = VEHICLES[car_clean]
                 if isinstance(vehicle_info, dict) and 'group' in vehicle_info:
                     return vehicle_info['group']
-        except:
+            else:
+                # DEBUG: Log carros não encontrados no VEHICLES
+                import sys
+                print(f"[MAP_GROUP] ⚠️ '{car_clean}' NOT in VEHICLES (original: '{car_name}')", file=sys.stderr, flush=True)
+        except Exception as e:
+            import sys
+            print(f"[MAP_GROUP] ❌ Error: {e}", file=sys.stderr, flush=True)
             pass  # Se falhar, continuar com mapeamento por categoria
     
     # Converter para lowercase para mapeamento case-insensitive
