@@ -165,10 +165,58 @@ def get_db_connection():
     finally:
         db.close()
 
+class PostgreSQLConnectionWrapper:
+    """Wrapper to add execute() method to PostgreSQL connection"""
+    def __init__(self, conn):
+        self._conn = conn
+        self._cursor = None
+    
+    def execute(self, query, params=None):
+        """Execute query using cursor"""
+        self._cursor = self._conn.cursor()
+        if params:
+            self._cursor.execute(query, params)
+        else:
+            self._cursor.execute(query)
+        return self._cursor
+    
+    def commit(self):
+        return self._conn.commit()
+    
+    def rollback(self):
+        return self._conn.rollback()
+    
+    def close(self):
+        if self._cursor:
+            self._cursor.close()
+        if connection_pool and self._conn:
+            try:
+                connection_pool.putconn(self._conn)
+            except:
+                self._conn.close()
+        elif self._conn:
+            self._conn.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.rollback()
+        self.close()
+
 def get_db():
     """Get a database connection (for backward compatibility)"""
     if USE_POSTGRES:
-        return psycopg2.connect(**DB_CONFIG)
+        if connection_pool:
+            try:
+                conn = connection_pool.getconn()
+            except:
+                conn = psycopg2.connect(**DB_CONFIG)
+        else:
+            conn = psycopg2.connect(**DB_CONFIG)
+        # Wrap to add execute() method
+        return PostgreSQLConnectionWrapper(conn)
     else:
         conn = sqlite3.connect("data.db", check_same_thread=False)
         conn.row_factory = sqlite3.Row
