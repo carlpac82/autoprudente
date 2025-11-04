@@ -23,8 +23,9 @@ openpyxl==3.1.2
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
 
-# Automatic backups scheduler
+# Automatic backups scheduler and reports
 APScheduler==3.10.4
+pytz==2023.3
 
 # Monitoring and error tracking
 sentry-sdk==1.40.0
