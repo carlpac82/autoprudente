@@ -1238,6 +1238,18 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     if not category:
         return "Others"
     
+    # PRIORIDADE 0: Consultar dicionário VEHICLES se car_name fornecido
+    if car_name:
+        try:
+            # Normalizar nome do carro para consulta
+            car_clean = clean_car_name(car_name)
+            if car_clean in VEHICLES:
+                vehicle_info = VEHICLES[car_clean]
+                if isinstance(vehicle_info, dict) and 'group' in vehicle_info:
+                    return vehicle_info['group']
+        except:
+            pass  # Se falhar, continuar com mapeamento por categoria
+    
     # Converter para lowercase para mapeamento case-insensitive
     cat = category.strip().lower()
     car_lower = car_name.lower() if car_name else ""
