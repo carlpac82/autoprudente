@@ -259,7 +259,7 @@
             const photosDownloaded = data.photos_downloaded || 0;
             const photosFailed = data.photos_failed || 0;
             
-            document.getElementById('progressText').textContent = `✅ ${photosDownloaded} de ${totalCars} fotos baixadas`;
+            document.getElementById('progressText').textContent = `${photosDownloaded} de ${totalCars} fotos baixadas`;
             document.getElementById('progressDetails').textContent = `${photosFailed} falharam`;
             
             // Aguardar 2 segundos antes de fechar
@@ -353,7 +353,7 @@
             const totalCars = data.total_scraped || 0;
             const newCars = data.new_cars_count || 0;
             
-            document.getElementById('progressText').textContent = `✅ ${totalCars} carros encontrados`;
+            document.getElementById('progressText').textContent = `${totalCars} carros encontrados`;
             document.getElementById('progressDetails').textContent = `${newCars} carros novos`;
             
             // Aguardar 2 segundos antes de fechar
@@ -362,7 +362,7 @@
               
               if (newCars > 0) {
                 // Mostrar carros novos
-                let message = `✅ Atualização completa!\n\n`;
+                let message = `Atualização completa!\n\n`;
                 message += `Total de carros: ${totalCars}\n`;
                 message += `Carros novos: ${newCars}\n\n`;
                 message += `Carros novos encontrados:\n`;
