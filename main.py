@@ -2752,39 +2752,54 @@ async def admin_users_edit_post(
     new_password: str = Form(""),
     picture: Optional[UploadFile] = File(None),
 ):
+    import sys
     try:
         require_admin(request)
     except HTTPException:
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
-    pic_data = None
-    pic_path = None
-    if picture and picture.filename:
-        # Guardar foto na base de dados como BLOB
-        pic_data = await picture.read()
-        # Manter path para compatibilidade (usar ID do user)
-        pic_path = f"/api/profile-picture/{user_id}"
     
-    with _db_lock:
-        con = _db_connect()
-        try:
-            if pic_data:
-                con.execute(
-                    "UPDATE users SET first_name=?, last_name=?, mobile=?, email=?, profile_picture_path=?, profile_picture_data=?, is_admin=?, enabled=? WHERE id=?",
-                    (first_name, last_name, mobile, email, pic_path, pic_data, 1 if is_admin in ("1","true","on") else 0, 1 if enabled in ("1","true","on") else 0, user_id)
-                )
-            else:
-                con.execute(
-                    "UPDATE users SET first_name=?, last_name=?, mobile=?, email=?, is_admin=?, enabled=? WHERE id=?",
-                    (first_name, last_name, mobile, email, 1 if is_admin in ("1","true","on") else 0, 1 if enabled in ("1","true","on") else 0, user_id)
-                )
-            # Optional password change
-            if new_password and new_password.strip():
-                pw_hash = _hash_password(new_password.strip())
-                con.execute("UPDATE users SET password_hash=? WHERE id=?", (pw_hash, user_id))
-            con.commit()
-        finally:
-            con.close()
-    return RedirectResponse(url="/admin/users", status_code=HTTP_303_SEE_OTHER)
+    try:
+        pic_data = None
+        pic_path = None
+        if picture and picture.filename:
+            # Guardar foto na base de dados como BLOB
+            pic_data = await picture.read()
+            print(f"[UPLOAD] 📸 Profile picture uploaded: {len(pic_data)} bytes", file=sys.stderr, flush=True)
+            # Manter path para compatibilidade (usar ID do user)
+            pic_path = f"/api/profile-picture/{user_id}"
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Converter para boolean (PostgreSQL) ou integer (SQLite)
+                is_admin_val = True if is_admin in ("1","true","on") else False
+                enabled_val = True if enabled in ("1","true","on") else False
+                
+                if pic_data:
+                    print(f"[UPLOAD] 💾 Saving to DB: user_id={user_id}, blob_size={len(pic_data)}", file=sys.stderr, flush=True)
+                    con.execute(
+                        "UPDATE users SET first_name=?, last_name=?, mobile=?, email=?, profile_picture_path=?, profile_picture_data=?, is_admin=?, enabled=? WHERE id=?",
+                        (first_name, last_name, mobile, email, pic_path, pic_data, is_admin_val, enabled_val, user_id)
+                    )
+                else:
+                    con.execute(
+                        "UPDATE users SET first_name=?, last_name=?, mobile=?, email=?, is_admin=?, enabled=? WHERE id=?",
+                        (first_name, last_name, mobile, email, is_admin_val, enabled_val, user_id)
+                    )
+                # Optional password change
+                if new_password and new_password.strip():
+                    pw_hash = _hash_password(new_password.strip())
+                    con.execute("UPDATE users SET password_hash=? WHERE id=?", (pw_hash, user_id))
+                con.commit()
+                print(f"[UPLOAD] ✅ User {user_id} updated successfully", file=sys.stderr, flush=True)
+            finally:
+                con.close()
+        return RedirectResponse(url="/admin/users", status_code=HTTP_303_SEE_OTHER)
+    except Exception as e:
+        print(f"[UPLOAD] ❌ Error updating user {user_id}: {e}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/admin/users/{user_id}/delete")
 async def admin_users_delete(request: Request, user_id: int):
@@ -2965,41 +2980,52 @@ async def admin_users_new_post(
         require_admin(request)
     except HTTPException:
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    import sys
     u = (username or "").strip()
     if not u:
         return templates.TemplateResponse("admin_new_user.html", {"request": request, "error": "Username required"})
-    # generate password
-    gen_pw = secrets.token_urlsafe(8)
-    pw_hash = _hash_password(gen_pw)
-    pic_data = None
-    pic_path = None
-    if picture and picture.filename:
-        # Guardar foto na base de dados como BLOB
-        pic_data = await picture.read()
-        # Path será definido após inserção (precisa do ID)
-        pic_path = ""  # Será atualizado depois
     
-    with _db_lock:
-        con = _db_connect()
-        try:
-            # Convert to boolean for PostgreSQL
-            is_admin_bool = True if (is_admin in ("1","true","on")) else False
-            enabled_bool = True
-            con.execute(
-                "INSERT INTO users (username, password_hash, first_name, last_name, mobile, email, profile_picture_path, profile_picture_data, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                (u, pw_hash, first_name, last_name, mobile, email, pic_path or "", pic_data, is_admin_bool, enabled_bool, time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
-            )
-            
-            # Se tem foto, atualizar path com o ID do user
-            if pic_data:
-                cur = con.execute("SELECT id FROM users WHERE username=?", (u,))
-                user_id = cur.fetchone()[0]
-                con.execute("UPDATE users SET profile_picture_path=? WHERE id=?", (f"/api/profile-picture/{user_id}", user_id))
-            con.commit()
-        except sqlite3.IntegrityError:
-            return templates.TemplateResponse("admin_new_user.html", {"request": request, "error": "Username already exists"})
-        finally:
-            con.close()
+    try:
+        # generate password
+        gen_pw = secrets.token_urlsafe(8)
+        pw_hash = _hash_password(gen_pw)
+        pic_data = None
+        pic_path = None
+        if picture and picture.filename:
+            # Guardar foto na base de dados como BLOB
+            pic_data = await picture.read()
+            print(f"[NEW_USER] 📸 Profile picture uploaded: {len(pic_data)} bytes", file=sys.stderr, flush=True)
+            # Path será definido após inserção (precisa do ID)
+            pic_path = ""  # Será atualizado depois
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Convert to boolean for PostgreSQL
+                is_admin_bool = True if (is_admin in ("1","true","on")) else False
+                enabled_bool = True
+                con.execute(
+                    "INSERT INTO users (username, password_hash, first_name, last_name, mobile, email, profile_picture_path, profile_picture_data, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (u, pw_hash, first_name, last_name, mobile, email, pic_path or "", pic_data, is_admin_bool, enabled_bool, time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
+                )
+                
+                # Se tem foto, atualizar path com o ID do user
+                if pic_data:
+                    cur = con.execute("SELECT id FROM users WHERE username=?", (u,))
+                    user_id = cur.fetchone()[0]
+                    print(f"[NEW_USER] 💾 Updating path for user {user_id}", file=sys.stderr, flush=True)
+                    con.execute("UPDATE users SET profile_picture_path=? WHERE id=?", (f"/api/profile-picture/{user_id}", user_id))
+                con.commit()
+                print(f"[NEW_USER] ✅ User '{u}' created successfully", file=sys.stderr, flush=True)
+            except sqlite3.IntegrityError:
+                return templates.TemplateResponse("admin_new_user.html", {"request": request, "error": "Username already exists"})
+            finally:
+                con.close()
+    except Exception as e:
+        print(f"[NEW_USER] ❌ Error creating user: {e}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc()
+        return templates.TemplateResponse("admin_new_user.html", {"request": request, "error": f"Error: {str(e)}"})
     # send email if provided
     if email:
         _send_creds_email(email, u, gen_pw)
