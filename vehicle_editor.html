@@ -914,11 +914,26 @@
         // NOVAS FUNÇÕES - Refresh Vehicles e Download Photos
         async function refreshVehiclesFromCarjet() {
             console.log('[REFRESH] Iniciando...');
-            const button = document.getElementById('btnRefreshVehicles');
-            const originalHTML = button.innerHTML;
             
-            button.disabled = true;
-            button.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+            // Criar modal de progresso
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4 border-2 border-[#f4ad0f]">
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="w-8 h-8 text-[#f4ad0f] animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <h3 class="text-xl font-bold text-gray-800">Refreshing Vehicles</h3>
+                    </div>
+                    <p class="text-gray-600 mb-4">Fetching latest vehicle data from CarJet...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-[#f4ad0f] h-2 rounded-full animate-pulse" style="width: 100%"></div>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-3 text-center">This may take a few moments</p>
+                </div>
+            `;
+            document.body.appendChild(modal);
             
             try {
                 const response = await fetch('/api/vehicles/refresh', {
@@ -928,9 +943,31 @@
                 
                 const data = await response.json();
                 
+                // Remover modal de progresso
+                modal.remove();
+                
                 if (data.ok) {
-                    const msg = `Atualização completa!\n\nTotal: ${data.total_scraped || 0} carros\nNovos: ${data.new_cars_count || 0} carros`;
-                    showNotification(msg, 'success');
+                    // Mostrar modal de sucesso
+                    const successModal = document.createElement('div');
+                    successModal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+                    successModal.innerHTML = `
+                        <div class="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4 border-2 border-green-500">
+                            <div class="flex items-center gap-3 mb-4">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <h3 class="text-xl font-bold text-gray-800">Refresh Complete</h3>
+                            </div>
+                            <div class="space-y-2 mb-4">
+                                <p class="text-gray-700"><strong>Total vehicles:</strong> ${data.total_scraped || 0}</p>
+                                <p class="text-gray-700"><strong>New vehicles:</strong> ${data.new_cars_count || 0}</p>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="w-full px-4 py-2 bg-[#f4ad0f] text-white rounded-lg hover:bg-[#e39e0e] font-semibold">
+                                Close
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(successModal);
                     
                     // FORÇAR RELOAD COMPLETO DA LISTA
                     console.log('[REFRESH] Recarregando lista e fotos...');
@@ -947,28 +984,73 @@
                         console.log('[REFRESH] Lista e fotos atualizadas!');
                     }, 1000);
                 } else {
-                    showNotification('Erro: ' + (data.error || 'Falha ao atualizar'), 'error');
+                    showNotification('Error: ' + (data.error || 'Failed to refresh'), 'error');
                 }
             } catch (error) {
+                modal.remove();
                 console.error('[REFRESH] Erro:', error);
-                showNotification('Erro: ' + error.message, 'error');
-            } finally {
-                button.disabled = false;
-                button.innerHTML = originalHTML;
+                showNotification('Error: ' + error.message, 'error');
             }
         }
         
         async function downloadAllPhotosFromCarjet() {
             console.log('[DOWNLOAD PHOTOS] Iniciando...');
-            const button = document.getElementById('btnDownloadPhotos');
-            const originalHTML = button.innerHTML;
             
-            if (!confirm('Deseja fazer scraping e baixar TODAS as fotos dos carros?\n\nIsso pode demorar 2-5 minutos.')) {
+            // Criar modal de confirmação
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+            confirmModal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4 border-2 border-[#009cb6]">
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <h3 class="text-xl font-bold text-gray-800">Download All Photos</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6">This will scrape and download ALL car photos from CarJet. This may take 2-5 minutes. Continue?</p>
+                    <div class="flex gap-3">
+                        <button id="cancelDownload" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold">
+                            Cancel
+                        </button>
+                        <button id="confirmDownload" class="flex-1 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8f] font-semibold">
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+            
+            // Aguardar confirmação
+            const confirmed = await new Promise(resolve => {
+                document.getElementById('confirmDownload').onclick = () => resolve(true);
+                document.getElementById('cancelDownload').onclick = () => resolve(false);
+            });
+            
+            confirmModal.remove();
+            
+            if (!confirmed) {
                 return;
             }
             
-            button.disabled = true;
-            button.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+            // Criar modal de progresso
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4 border-2 border-[#009cb6]">
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="w-8 h-8 text-[#009cb6] animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <h3 class="text-xl font-bold text-gray-800">Downloading Photos</h3>
+                    </div>
+                    <p class="text-gray-600 mb-4">Scraping and downloading car photos from CarJet...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-[#009cb6] h-2 rounded-full animate-pulse" style="width: 100%"></div>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-3 text-center">This may take 2-5 minutes</p>
+                </div>
+            `;
+            document.body.appendChild(modal);
             
             try {
                 const response = await fetch('/api/vehicles/download-all-photos', {
@@ -978,9 +1060,32 @@
                 
                 const data = await response.json();
                 
+                // Remover modal de progresso
+                modal.remove();
+                
                 if (data.ok) {
-                    const msg = `Download completo!\n\nTotal: ${data.total_cars || 0} carros\nFotos baixadas: ${data.photos_downloaded || 0}\nFalharam: ${data.photos_failed || 0}`;
-                    showNotification(msg, 'success');
+                    // Mostrar modal de sucesso
+                    const successModal = document.createElement('div');
+                    successModal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+                    successModal.innerHTML = `
+                        <div class="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4 border-2 border-green-500">
+                            <div class="flex items-center gap-3 mb-4">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <h3 class="text-xl font-bold text-gray-800">Download Complete</h3>
+                            </div>
+                            <div class="space-y-2 mb-4">
+                                <p class="text-gray-700"><strong>Total cars:</strong> ${data.total_cars || 0}</p>
+                                <p class="text-gray-700"><strong>Photos downloaded:</strong> ${data.photos_downloaded || 0}</p>
+                                <p class="text-gray-700"><strong>Failed:</strong> ${data.photos_failed || 0}</p>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="w-full px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8f] font-semibold">
+                                Close
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(successModal);
                     
                     // FORÇAR RELOAD COMPLETO DAS FOTOS
                     console.log('[DOWNLOAD PHOTOS] Recarregando fotos...');
@@ -999,14 +1104,12 @@
                         console.log('[DOWNLOAD PHOTOS] Fotos atualizadas!');
                     }, 1000);
                 } else {
-                    showNotification('Erro: ' + (data.error || 'Falha ao baixar fotos'), 'error');
+                    showNotification('Error: ' + (data.error || 'Failed to download photos'), 'error');
                 }
             } catch (error) {
+                modal.remove();
                 console.error('[DOWNLOAD PHOTOS] Erro:', error);
-                showNotification('Erro: ' + error.message, 'error');
-            } finally {
-                button.disabled = false;
-                button.innerHTML = originalHTML;
+                showNotification('Error: ' + error.message, 'error');
             }
         }
         

@@ -6736,12 +6736,15 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                             photo = urljoin(base_url, src)
                         except Exception:
                             photo = src
-                        # Extrair nome limpo do alt
-                        if not car_name:
-                            alt_text = (car_img.get("alt") or "").strip()
-                            if alt_text:
-                                # "Toyota Aygo ou similar | Pequeno" -> "Toyota Aygo"
-                                car_name = alt_text.split('ou similar')[0].split('|')[0].strip()
+                        # SEMPRE extrair nome do alt (é mais preciso que os outros métodos)
+                        alt_text = (car_img.get("alt") or "").strip()
+                        if alt_text:
+                            # "Toyota Aygo ou similar | Pequeno" -> "Toyota Aygo"
+                            # "Skoda Scala ou similar " -> "Skoda Scala"
+                            alt_car_name = alt_text.split('ou similar')[0].split('|')[0].strip()
+                            if alt_car_name:
+                                car_name = alt_car_name
+                                print(f"[SCRAPING] Nome extraído do alt da imagem: {car_name} (foto: {src})")
                 
                 # PRIORIDADE 2: prefer <picture> sources
                 if not photo:

@@ -864,13 +864,22 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 if price == '€0.00':
                     continue
                 
-                # Foto
+                # Foto e nome do carro do atributo alt
                 photo = ''
                 for img in img_tags:
                     src = img.get('src', '')
                     # Fotos de carros normalmente têm /cars/ ou /vehicles/ no path
                     if '/car' in src.lower() or '/vehicle' in src.lower() or '/img' in src:
                         photo = src if src.startswith('http') else f'https://www.carjet.com{src}'
+                        
+                        # PRIORIZAR nome do alt da imagem (mais preciso)
+                        alt_text = (img.get('alt') or '').strip()
+                        if alt_text:
+                            # "Skoda Scala ou similar " -> "Skoda Scala"
+                            alt_car_name = alt_text.split('ou similar')[0].split('or similar')[0].split('|')[0].strip()
+                            if alt_car_name and any(brand in alt_car_name.lower() for brand in ['fiat', 'renault', 'peugeot', 'citroen', 'toyota', 'ford', 'vw', 'volkswagen', 'opel', 'seat', 'hyundai', 'kia', 'nissan', 'mercedes', 'bmw', 'audi', 'mini', 'jeep', 'dacia', 'skoda', 'mazda', 'mitsubishi', 'honda', 'suzuki']):
+                                car_name = alt_car_name
+                                print(f"[PARSE] Nome do alt: {car_name} (foto: {src})")
                         break
                 
                 # Transmissão
