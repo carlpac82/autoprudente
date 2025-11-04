@@ -1280,7 +1280,33 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     if not category:
         return "Others"
     
-    # PRIORIDADE 0: Consultar dicionário VEHICLES se car_name fornecido
+    # PRIORIDADE 0: Consultar tabela car_groups (22 grupos categorizados manualmente)
+    if car_name:
+        try:
+            car_clean = clean_car_name(car_name)
+            car_clean_lower = car_clean.lower()
+            
+            # Buscar na tabela car_groups
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    # Tentar match exato primeiro
+                    row = conn.execute(
+                        "SELECT code FROM car_groups WHERE LOWER(name) = ? OR LOWER(model) = ?",
+                        (car_clean_lower, car_clean_lower)
+                    ).fetchone()
+                    
+                    if row:
+                        # Extrair código do grupo (ex: B1-FIAT500 -> B1)
+                        full_code = row[0]
+                        group_code = full_code.split('-')[0] if '-' in full_code else full_code
+                        return group_code
+                finally:
+                    conn.close()
+        except Exception:
+            pass  # Se falhar, continuar para próxima prioridade
+    
+    # PRIORIDADE 1: Consultar dicionário VEHICLES se car_name fornecido
     if car_name:
         try:
             # Normalizar nome do carro para consulta
