@@ -13591,6 +13591,34 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
             user_picture = userinfo.get('picture', '')  # Google profile picture URL
             google_id = userinfo.get('id', '')
             
+            # Save token to database IMMEDIATELY
+            try:
+                expires_at = int(time.time()) + token_data.get('expires_in', 3600)
+                with _db_lock:
+                    conn = _db_connect()
+                    try:
+                        conn.execute(
+                            """
+                            INSERT INTO oauth_tokens 
+                            (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(provider, user_email) 
+                            DO UPDATE SET 
+                                access_token = excluded.access_token,
+                                refresh_token = excluded.refresh_token,
+                                expires_at = excluded.expires_at,
+                                updated_at = CURRENT_TIMESTAMP
+                            """,
+                            ('gmail', user_email, access_token, token_data.get('refresh_token', ''), 
+                             expires_at, google_id, user_name, user_picture)
+                        )
+                        conn.commit()
+                        logging.info(f"✅ Token saved to database for {user_email}")
+                    finally:
+                        conn.close()
+            except Exception as e:
+                logging.error(f"❌ Failed to save token to database: {str(e)}")
+            
             # Return success page
             html = f"""
             <!DOCTYPE html>
