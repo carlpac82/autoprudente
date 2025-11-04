@@ -193,48 +193,85 @@
           return;
         }
         
-        // Mostrar loading
+        // Criar modal de progresso
+        const modal = document.createElement('div');
+        modal.id = 'progressModal';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+        modal.innerHTML = `
+          <div style="background: white; padding: 30px; border-radius: 10px; min-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #111;">📸 Baixando Fotos</h3>
+            <div style="margin-bottom: 15px;">
+              <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Progresso:</div>
+              <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div id="progressBar" style="background: #10b981; height: 100%; width: 0%; transition: width 0.3s;"></div>
+              </div>
+            </div>
+            <div id="progressText" style="font-size: 16px; font-weight: 500; color: #111; text-align: center;">
+              Iniciando...
+            </div>
+            <div id="progressDetails" style="font-size: 12px; color: #666; text-align: center; margin-top: 10px;">
+              Aguarde...
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Desabilitar botão
         button.disabled = true;
         button.innerHTML = `
           <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
-          <span>Baixando fotos...</span>
+          <span>Baixando...</span>
         `;
         
         try {
           console.log('[DOWNLOAD ALL PHOTOS] Iniciando download em massa...');
+          
+          // Simular progresso enquanto aguarda resposta
+          let simulatedProgress = 0;
+          const progressInterval = setInterval(() => {
+            if (simulatedProgress < 90) {
+              simulatedProgress += Math.random() * 10;
+              document.getElementById('progressBar').style.width = simulatedProgress + '%';
+              document.getElementById('progressText').textContent = `${Math.floor(simulatedProgress)}% concluído`;
+            }
+          }, 500);
           
           const response = await fetch('/api/vehicles/download-all-photos', {
             method: 'POST',
             credentials: 'same-origin'
           });
           
+          clearInterval(progressInterval);
+          
           const data = await response.json();
           
           if (data.ok) {
-            // Sucesso
+            // Sucesso - mostrar 100%
+            document.getElementById('progressBar').style.width = '100%';
             const totalCars = data.total_cars || 0;
             const photosDownloaded = data.photos_downloaded || 0;
             const photosFailed = data.photos_failed || 0;
             
-            let message = `✅ Download completo!\n\n`;
-            message += `Total de carros: ${totalCars}\n`;
-            message += `Fotos baixadas: ${photosDownloaded}\n`;
-            message += `Fotos falhadas: ${photosFailed}\n`;
+            document.getElementById('progressText').textContent = `✅ ${photosDownloaded} de ${totalCars} fotos baixadas`;
+            document.getElementById('progressDetails').textContent = `${photosFailed} falharam`;
             
-            alert(message);
-            
-            // Recarregar página
-            window.location.reload();
+            // Aguardar 2 segundos antes de fechar
+            setTimeout(() => {
+              document.body.removeChild(modal);
+              window.location.reload();
+            }, 2000);
           } else {
             // Erro
+            document.body.removeChild(modal);
             alert(`❌ Erro: ${data.error || 'Falha ao baixar fotos'}`);
             button.disabled = false;
             button.innerHTML = originalHTML;
           }
         } catch (error) {
           console.error('[DOWNLOAD ALL PHOTOS] Erro:', error);
+          document.body.removeChild(modal);
           alert(`❌ Erro ao baixar fotos: ${error.message}`);
           button.disabled = false;
           button.innerHTML = originalHTML;
@@ -245,60 +282,107 @@
         const button = document.getElementById('refreshBtn');
         const originalHTML = button.innerHTML;
         
-        // Mostrar loading
+        // Criar modal de progresso
+        const modal = document.createElement('div');
+        modal.id = 'progressModal';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+        modal.innerHTML = `
+          <div style="background: white; padding: 30px; border-radius: 10px; min-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #111;">🔄 Atualizando Veículos</h3>
+            <div style="margin-bottom: 15px;">
+              <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Progresso:</div>
+              <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div id="progressBar" style="background: #f4ad0f; height: 100%; width: 0%; transition: width 0.3s;"></div>
+              </div>
+            </div>
+            <div id="progressText" style="font-size: 16px; font-weight: 500; color: #111; text-align: center;">
+              Iniciando scraping...
+            </div>
+            <div id="progressDetails" style="font-size: 12px; color: #666; text-align: center; margin-top: 10px;">
+              Aguarde...
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Desabilitar botão
         button.disabled = true;
         button.innerHTML = `
           <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
-          <span>Fazendo scraping...</span>
+          <span>Atualizando...</span>
         `;
         
         try {
           console.log('[REFRESH VEHICLES] Iniciando scraping em Albufeira e Faro...');
+          
+          // Simular progresso enquanto aguarda resposta
+          let simulatedProgress = 0;
+          const progressInterval = setInterval(() => {
+            if (simulatedProgress < 90) {
+              simulatedProgress += Math.random() * 10;
+              document.getElementById('progressBar').style.width = simulatedProgress + '%';
+              document.getElementById('progressText').textContent = `${Math.floor(simulatedProgress)}% concluído`;
+              document.getElementById('progressDetails').textContent = 'Fazendo scraping em Albufeira e Faro...';
+            }
+          }, 500);
           
           const response = await fetch('/api/vehicles/refresh', {
             method: 'POST',
             credentials: 'same-origin'
           });
           
+          clearInterval(progressInterval);
+          
           const data = await response.json();
           
           if (data.ok) {
-            // Sucesso
-            const totalCars = data.total_cars || 0;
+            // Sucesso - mostrar 100%
+            document.getElementById('progressBar').style.width = '100%';
+            const totalCars = data.total_scraped || 0;
             const newCars = data.new_cars_count || 0;
             
-            if (newCars > 0) {
-              // Mostrar carros novos
-              let message = `✅ Scraping completo!\n\n`;
-              message += `Total de carros: ${totalCars}\n`;
-              message += `Carros novos: ${newCars}\n\n`;
-              message += `Carros novos encontrados:\n`;
+            document.getElementById('progressText').textContent = `✅ ${totalCars} carros encontrados`;
+            document.getElementById('progressDetails').textContent = `${newCars} carros novos`;
+            
+            // Aguardar 2 segundos antes de fechar
+            setTimeout(() => {
+              document.body.removeChild(modal);
               
-              (data.new_cars || []).slice(0, 10).forEach(car => {
-                message += `- ${car.car} (${car.category || 'Sem categoria'})\n`;
-              });
-              
-              if (newCars > 10) {
-                message += `\n... e mais ${newCars - 10} carros`;
+              if (newCars > 0) {
+                // Mostrar carros novos
+                let message = `✅ Atualização completa!\n\n`;
+                message += `Total de carros: ${totalCars}\n`;
+                message += `Carros novos: ${newCars}\n\n`;
+                message += `Carros novos encontrados:\n`;
+                
+                (data.new_cars || []).slice(0, 10).forEach(car => {
+                  message += `- ${car.original_name} (${car.category || 'Sem categoria'})\n`;
+                });
+                
+                if (newCars > 10) {
+                  message += `\n... e mais ${newCars - 10} carros`;
+                }
+                
+                alert(message);
               }
               
-              alert(message);
-            } else {
-              alert(`✅ Scraping completo!\n\nTotal de carros: ${totalCars}\nNenhum carro novo encontrado.`);
-            }
-            
-            // Recarregar página
-            window.location.reload();
+              // Recarregar página
+              window.location.reload();
+            }, 2000);
           } else {
             // Erro
+            document.body.removeChild(modal);
             alert(`❌ Erro: ${data.error || 'Falha ao fazer scraping'}`);
             button.disabled = false;
             button.innerHTML = originalHTML;
           }
         } catch (error) {
           console.error('[REFRESH VEHICLES] Erro:', error);
+          if (document.getElementById('progressModal')) {
+            document.body.removeChild(modal);
+          }
           alert(`❌ Erro ao fazer scraping: ${error.message}`);
           button.disabled = false;
           button.innerHTML = originalHTML;
