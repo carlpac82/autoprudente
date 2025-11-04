@@ -1384,8 +1384,9 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
             pass  # Se falhar, continuar para próxima prioridade
     
     # PRIORIDADE 2: Consultar dicionário VEHICLES de carjet_direct.py
-    # APENAS se category estiver vazia (evitar loop infinito na recursão)
-    if car_name and not category:
+    # Tentar SEMPRE que tiver car_name, mesmo se category não estiver vazia
+    # (mas evitar loop infinito: só chamar recursivamente se encontrar categoria diferente)
+    if car_name:
         try:
             from carjet_direct import VEHICLES
             import re
@@ -1411,7 +1412,9 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
                 # VEHICLES retorna categoria descritiva (ex: "ECONOMY", "SUV Auto")
                 # Precisamos mapear para código de grupo (B1, D, F, etc)
                 # Passar car_name também para manter contexto (ex: distinguir automático)
-                return map_category_to_group(category_from_vehicles, car_name)
+                # IMPORTANTE: Só chamar recursivamente se a categoria for diferente (evitar loop)
+                if category_from_vehicles.lower() != cat:
+                    return map_category_to_group(category_from_vehicles, car_name)
             
             # Tentar match parcial (buscar chave que está contida no nome ou vice-versa)
             # Ordenar por tamanho decrescente para pegar matches mais específicos primeiro
@@ -1420,7 +1423,9 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
                 # Ex: "toyota chr auto" contém "toyota chr"
                 if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
                     category_from_vehicles = VEHICLES[vehicle_key]
-                    return map_category_to_group(category_from_vehicles, car_name)
+                    # Só chamar recursivamente se a categoria for diferente
+                    if category_from_vehicles.lower() != cat:
+                        return map_category_to_group(category_from_vehicles, car_name)
         except ImportError:
             pass  # carjet_direct.py não disponível
         except Exception:
