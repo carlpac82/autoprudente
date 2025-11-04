@@ -1180,11 +1180,12 @@ def _verify_password(pw: str, stored: str) -> bool:
 
 def clean_car_name(car_name: str) -> str:
     """
-    Limpa e normaliza nomes de carros
+    Limpa e normaliza nomes de carros EXATAMENTE como o Vehicle Editor
     - Remove duplicações como "Autoautomático" → "Automático"
     - Remove "ou similar"
     - Remove "4p" (4 portas) exceto para 7 e 9 lugares
     - Normaliza espaços
+    - Converte para LOWERCASE (igual ao VEHICLES dictionary)
     """
     if not car_name:
         return ""
@@ -1215,6 +1216,9 @@ def clean_car_name(car_name: str) -> str:
     
     # Normalizar espaços múltiplos
     name = re.sub(r'\s+', ' ', name).strip()
+    
+    # IMPORTANTE: Converter para lowercase (igual ao VEHICLES dictionary)
+    name = name.lower()
     
     return name
 
