@@ -592,33 +592,36 @@ async def startup_event():
     print(f"🚀 APP STARTUP - Rental Price Tracker", flush=True)
     print(f"========================================", flush=True)
     
-    # Fix PostgreSQL schema if needed
-    if _USE_NEW_DB and USE_POSTGRES:
-        try:
-            print(f"🔧 Checking PostgreSQL schema...", flush=True)
-            import subprocess
-            result = subprocess.run(
-                ["python3", "fix_postgres_schema.py"],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.returncode == 0:
-                print(f"   ✅ Schema check complete", flush=True)
-            else:
-                print(f"   ⚠️  Schema check warnings: {result.stderr[:200]}", flush=True)
-        except Exception as e:
-            print(f"⚠️  Schema check error: {e}", flush=True)
-    
-    # Initialize database tables
+    # Initialize database tables FIRST
     try:
         print(f"📊 Initializing database tables...", flush=True)
         _ensure_users_table()
-        print(f"   ✅ users table ready", flush=True)
+        print(f"   ✅ users table created/exists", flush=True)
     except Exception as e:
         print(f"⚠️  Database initialization error: {e}", flush=True)
     
-    # Create default users
+    # Fix PostgreSQL schema AFTER tables exist
+    if _USE_NEW_DB and USE_POSTGRES:
+        try:
+            print(f"🔧 Fixing PostgreSQL schema...", flush=True)
+            # Run inline instead of subprocess for better error handling
+            from fix_postgres_schema import fix_users_table, fix_system_logs_table
+            
+            if fix_users_table():
+                print(f"   ✅ users schema fixed", flush=True)
+            else:
+                print(f"   ⚠️  users schema warnings", flush=True)
+            
+            if fix_system_logs_table():
+                print(f"   ✅ system_logs schema fixed", flush=True)
+            else:
+                print(f"   ⚠️  system_logs schema warnings", flush=True)
+        except Exception as e:
+            print(f"⚠️  Schema fix error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+    
+    # Create default users AFTER schema is fixed
     try:
         print(f"👥 Creating default users...", flush=True)
         _ensure_default_users()
