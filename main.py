@@ -1283,6 +1283,11 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     cat = category.strip().lower() if category else ""
     car_lower = car_name.lower() if car_name else ""
     
+    # PRIORIDADE -1: CABRIO/CABRIOLET no NOME → SEMPRE Grupo G
+    # Independente da categoria (Luxury, Mini, SUV, etc), se tem "cabrio" no nome = G
+    if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
+        return "G"
+    
     # PRIORIDADE 0: Categorias explícitas do CarJet (mais confiáveis que tabela manual)
     # Suporta INGLÊS e PORTUGUÊS
     
