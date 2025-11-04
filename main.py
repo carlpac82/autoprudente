@@ -1455,7 +1455,7 @@ try:
                 "last_name": "Pacheco",
                 "email": "carlpac82@hotmail.com",
                 "mobile": "+351 964 805 750",
-                "profile_picture": "carlpac82.png",
+                "profile_picture": "/static/profiles/carlpac82.png",
                 "is_admin": True
             },
             {
@@ -1465,7 +1465,7 @@ try:
                 "last_name": "Pacheco",
                 "email": "carlpac82@hotmail.com",
                 "mobile": "+351 964 805 750",
-                "profile_picture": "carlpac82.png",
+                "profile_picture": "/static/profiles/carlpac82.png",
                 "is_admin": True
             },
             {
@@ -1475,7 +1475,7 @@ try:
                 "last_name": "Prudente",
                 "email": "comercial.autoprudente@gmail.com",
                 "mobile": "+351 911 747 478",
-                "profile_picture": "dprudente.jpg",
+                "profile_picture": "/static/profiles/dprudente.jpg",
                 "is_admin": False
             }
         ]
