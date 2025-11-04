@@ -1277,10 +1277,87 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     - Mini 4 lugares Automático → E1
     - Premium/Luxury → X
     """
-    if not category:
-        return "Others"
+    # NÃO retornar "Others" aqui! Primeiro tentar categorias explícitas, depois car_groups e VEHICLES
     
-    # PRIORIDADE 0: Consultar tabela car_groups (22 grupos categorizados manualmente)
+    # Converter para lowercase para mapeamento case-insensitive
+    cat = category.strip().lower() if category else ""
+    car_lower = car_name.lower() if car_name else ""
+    
+    # PRIORIDADE 0: Categorias explícitas do CarJet (mais confiáveis que tabela manual)
+    # Suporta INGLÊS e PORTUGUÊS
+    
+    # Mini 4 Seats / Mini 4 Lugares → B1 ou E1 (se automático)
+    if cat in ['mini 4 seats', 'mini 4 doors', 'mini 4 portas', 'mini 4 lugares']:
+        if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
+            return "E1"
+        return "B1"
+    
+    # Mini 5 Seats / Mini 5 Lugares → B2 ou E1 (se automático)
+    if cat in ['mini 5 seats', 'mini 5 doors', 'mini 5 portas', 'mini 5 lugares']:
+        if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
+            return "E1"
+        return "B2"
+    
+    # Mini Automatic / Mini Auto → E1
+    if cat in ['mini automatic', 'mini auto', 'mini automático']:
+        return "E1"
+    
+    # Economy / Económico → D
+    if cat in ['economy', 'económico', 'compact', 'compacto']:
+        return "D"
+    
+    # Economy Automatic / Economy Auto → E2
+    if cat in ['economy automatic', 'economy auto', 'económico automatic', 'económico auto',
+               'compact automatic', 'compact auto']:
+        return "E2"
+    
+    # SUV → F
+    if cat in ['suv', 'jeep']:
+        return "F"
+    
+    # SUV Automatic / SUV Auto → L1
+    if cat in ['suv automatic', 'suv auto', 'jeep automatic', 'jeep auto']:
+        return "L1"
+    
+    # Station Wagon / Estate / Carrinha → J2
+    if cat in ['station wagon', 'estate', 'carrinha', 'estate/station wagon', 'sw', 'touring']:
+        return "J2"
+    
+    # Station Wagon Automatic → L2
+    if cat in ['station wagon automatic', 'station wagon auto', 'estate automatic', 'estate auto',
+               'carrinha automatic', 'carrinha auto', 'sw automatic', 'sw auto']:
+        return "L2"
+    
+    # Crossover → J1
+    if cat in ['crossover']:
+        return "J1"
+    
+    # Cabrio / Cabriolet / Convertible → G
+    if cat in ['cabrio', 'cabriolet', 'convertible', 'conversível']:
+        return "G"
+    
+    # Luxury / Premium → G
+    if cat in ['luxury', 'premium', 'luxo']:
+        return "G"
+    
+    # 7 Seater / 7 Seats → M1
+    if cat in ['7 seater', '7 seats', '7 lugares', 'people carrier', 'mpv']:
+        return "M1"
+    
+    # 7 Seater Automatic / 7 Seats Auto → M2
+    if cat in ['7 seater automatic', '7 seater auto', '7 seats automatic', '7 seats auto',
+               '7 lugares automatic', '7 lugares auto', '7 lugares automático',
+               'mpv automatic', 'mpv auto']:
+        return "M2"
+    
+    # 9 Seater / 9 Seats → N
+    if cat in ['9 seater', '9 seater automatic', '9 seater auto',
+               '9 seats', '9 seats automatic', '9 seats auto',
+               '9 lugares', '9 lugares automatic', '9 lugares auto', '9 lugares automático',
+               'minivan', 'van']:
+        return "N"
+    
+    # PRIORIDADE 1: Consultar tabela car_groups (22 grupos categorizados manualmente)
     if car_name:
         try:
             car_clean = clean_car_name(car_name)
@@ -1306,39 +1383,58 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         except Exception:
             pass  # Se falhar, continuar para próxima prioridade
     
-    # PRIORIDADE 1: Consultar dicionário VEHICLES se car_name fornecido
-    if car_name:
+    # PRIORIDADE 2: Consultar dicionário VEHICLES de carjet_direct.py
+    # APENAS se category estiver vazia (evitar loop infinito na recursão)
+    if car_name and not category:
         try:
-            # Normalizar nome do carro para consulta
+            from carjet_direct import VEHICLES
+            import re
+            
+            # Normalizar nome do carro para consulta (lowercase)
             car_clean = clean_car_name(car_name)
-            # IMPORTANTE: VEHICLES está em lowercase, converter para consulta
-            car_clean_lower = car_clean.lower()
-            if car_clean_lower in VEHICLES:
-                vehicle_info = VEHICLES[car_clean_lower]
-                if isinstance(vehicle_info, dict) and 'group' in vehicle_info:
-                    return vehicle_info['group']
-            else:
-                # DEBUG: Log carros não encontrados no VEHICLES
-                import sys
-                print(f"[MAP_GROUP] ⚠️ '{car_clean_lower}' NOT in VEHICLES (original: '{car_name}')", file=sys.stderr, flush=True)
-        except Exception as e:
-            import sys
-            print(f"[MAP_GROUP] ❌ Error: {e}", file=sys.stderr, flush=True)
-            pass  # Se falhar, continuar com mapeamento por categoria
+            car_clean_lower = car_clean.lower().strip()
+            
+            # Remover sufixos comuns que impedem match
+            # "Peugeot E-208 Electric" → "peugeot e-208"
+            # "Toyota Chr Auto" → "toyota chr auto"
+            car_normalized = car_clean_lower
+            car_normalized = re.sub(r'\s+(electric|hybrid|diesel|petrol|plug-in|phev)$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r'\s+4x4$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r'\s+\d+\s*door(s)?$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r',\s*electric$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r',\s*hybrid$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = car_normalized.strip()
+            
+            # Tentar match direto
+            if car_normalized in VEHICLES:
+                category_from_vehicles = VEHICLES[car_normalized]
+                # VEHICLES retorna categoria descritiva (ex: "ECONOMY", "SUV Auto")
+                # Precisamos mapear para código de grupo (B1, D, F, etc)
+                # Passar car_name também para manter contexto (ex: distinguir automático)
+                return map_category_to_group(category_from_vehicles, car_name)
+            
+            # Tentar match parcial (buscar chave que está contida no nome ou vice-versa)
+            # Ordenar por tamanho decrescente para pegar matches mais específicos primeiro
+            for vehicle_key in sorted(VEHICLES.keys(), key=len, reverse=True):
+                # Match se o nome do carro contém a chave completa
+                # Ex: "toyota chr auto" contém "toyota chr"
+                if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
+                    category_from_vehicles = VEHICLES[vehicle_key]
+                    return map_category_to_group(category_from_vehicles, car_name)
+        except ImportError:
+            pass  # carjet_direct.py não disponível
+        except Exception:
+            pass  # Se falhar, continuar para próxima prioridade
     
-    # Converter para lowercase para mapeamento case-insensitive
-    cat = category.strip().lower()
-    car_lower = car_name.lower() if car_name else ""
-    
-    # PRIORIDADE 1: CABRIO/CABRIOLET → Sempre Grupo G (Premium)
+    # PRIORIDADE 3: CABRIO/CABRIOLET → Sempre Grupo G (Premium)
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
         return "G"
     
-    # PRIORIDADE 2: Toyota Aygo X → F (SUV), não confundir com Aygo normal (B1)
+    # PRIORIDADE 4: Toyota Aygo X → F (SUV), não confundir com Aygo normal (B1)
     if 'aygo x' in car_lower or 'aygo-x' in car_lower:
         return "F"
     
-    # PRIORIDADE 3: Modelos de 4 LUGARES → B1
+    # PRIORIDADE 5: Modelos de 4 LUGARES → B1
     # (Fiat 500, Peugeot 108, C1, VW Up, Kia Picanto, Toyota Aygo)
     b1_4_lugares_models = [
         'fiat 500', 'fiat500',
@@ -1350,29 +1446,36 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     ]
     
     # Se categoria é "mini" OU contém "mini", verificar modelo específico
+    # MAS excluir categorias explícitas (já tratadas acima)
     if 'mini' in cat and not 'countryman' in car_lower:
-        # Verificar se é um modelo de 4 lugares (B1)
-        for model in b1_4_lugares_models:
-            if model in car_lower:
-                # Se é automático de 4 lugares → E1 (Mini Automatic)
-                if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
-                    return "E1"
-                # Se é manual de 4 lugares → B1
-                return "B1"
-        # Se não é B1 específico, é B2 (5 lugares)
-        # Modelos B2: Fiat Panda, Hyundai i10, etc
-        return "B2"
+        # Excluir categorias explícitas que já foram tratadas
+        if cat not in ['mini 4 seats', 'mini 4 doors', 'mini 4 portas', 'mini 4 lugares',
+                       'mini 5 seats', 'mini 5 doors', 'mini 5 portas', 'mini 5 lugares']:
+            # Verificar se é um modelo de 4 lugares (B1)
+            for model in b1_4_lugares_models:
+                if model in car_lower:
+                    # Se é automático de 4 lugares → E1 (Mini Automatic)
+                    if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
+                        return "E1"
+                    # Se é manual de 4 lugares → B1
+                    return "B1"
+            # Se não é B1 específico, é B2 (5 lugares)
+            # Modelos B2: Fiat Panda, Hyundai i10, etc
+            return "B2"
     
     # Mapeamento direto (TUDO EM LOWERCASE)
+    # Suporta INGLÊS (do scraping CarJet) e PORTUGUÊS (do VEHICLES)
     category_map = {
-        # B1 - Mini 4 Lugares
+        # B1 - Mini 4 Lugares / Mini 4 Doors
         "mini 4 doors": "B1",
+        "mini 4 seats": "B1",  # Inglês do CarJet
         "mini 4 portas": "B1",
         "mini 4 lugares": "B1",
         
-        # B2 - Mini 5 Lugares
+        # B2 - Mini 5 Lugares / Mini 5 Doors
         "mini": "B2",
         "mini 5 doors": "B2",
+        "mini 5 seats": "B2",  # Inglês do CarJet
         "mini 5 portas": "B2",
         "mini 5 lugares": "B2",
         
@@ -1380,32 +1483,35 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         "economy": "D",
         "económico": "D",
         "compact": "D",
+        "compacto": "D",
         
-        # E1 - Mini Automatic
+        # E1 - Mini Automatic (do VEHICLES: "MINI Auto")
         "mini automatic": "E1",
         "mini auto": "E1",
+        "mini automático": "E1",
         
-        # E2 - Economy Automatic
+        # E2 - Economy Automatic (do VEHICLES: "ECONOMY Auto")
         "economy automatic": "E2",
         "economy auto": "E2",
         "económico automatic": "E2",
         "económico auto": "E2",
+        "compact automatic": "E2",
+        "compact auto": "E2",
         
         # F - SUV
         "suv": "F",
+        "jeep": "F",
         
-        # G - Cabrio
+        # G - Cabrio / Premium / Luxury (do VEHICLES: "Luxury", "Cabrio")
         "cabrio": "G",
         "cabriolet": "G",
         "convertible": "G",
         "conversível": "G",
+        "premium": "G",
+        "luxury": "G",
+        "luxo": "G",
         
-        # X - Luxury/Premium
-        "premium": "X",
-        "luxury": "X",
-        "luxo": "X",
-        
-        # J1 - Crossover
+        # J1 - Crossover (do VEHICLES: "Crossover")
         "crossover": "J1",
         
         # J2 - Estate/Station Wagon
@@ -1413,43 +1519,96 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         "station wagon": "J2",
         "estate": "J2",
         "carrinha": "J2",
+        "sw": "J2",
+        "touring": "J2",
         
-        # L1 - SUV Automatic
+        # L1 - SUV Automatic (do VEHICLES: "SUV Auto")
         "suv automatic": "L1",
         "suv auto": "L1",
+        "jeep automatic": "L1",
+        "jeep auto": "L1",
         
-        # L2 - Station Wagon Automatic
+        # L2 - Station Wagon Automatic (do VEHICLES: "Station Wagon Auto")
         "station wagon automatic": "L2",
         "station wagon auto": "L2",
         "estate automatic": "L2",
         "estate auto": "L2",
         "carrinha automatic": "L2",
         "carrinha auto": "L2",
+        "sw automatic": "L2",
+        "sw auto": "L2",
         
-        # M1 - 7 Seater
+        # M1 - 7 Seater (do VEHICLES: "7 Lugares")
         "7 seater": "M1",
+        "7 seats": "M1",  # Inglês do CarJet
         "7 lugares": "M1",
         "people carrier": "M1",
+        "mpv": "M1",
         
-        # M2 - 7 Seater Automatic
+        # M2 - 7 Seater Automatic (do VEHICLES: "7 Lugares Auto")
         "7 seater automatic": "M2",
         "7 seater auto": "M2",
+        "7 seats automatic": "M2",  # Inglês do CarJet
+        "7 seats auto": "M2",  # Inglês do CarJet
         "7 lugares automatic": "M2",
         "7 lugares auto": "M2",
         "7 lugares automático": "M2",
+        "mpv automatic": "M2",
+        "mpv auto": "M2",
         
-        # N - 9 Seater
+        # N - 9 Seater (do VEHICLES: "9 Lugares")
         "9 seater": "N",
         "9 seater automatic": "N",
         "9 seater auto": "N",
+        "9 seats": "N",  # Inglês do CarJet
+        "9 seats automatic": "N",  # Inglês do CarJet
+        "9 seats auto": "N",  # Inglês do CarJet
         "9 lugares": "N",
         "9 lugares automatic": "N",
         "9 lugares auto": "N",
         "9 lugares automático": "N",
         "minivan": "N",
+        "van": "N",
     }
     
-    return category_map.get(cat, "Others")
+    # Tentar match direto primeiro
+    if cat in category_map:
+        return category_map[cat]
+    
+    # FALLBACK: Análise inteligente por palavras-chave
+    # Verificar se é automático
+    is_auto = any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico'])
+    
+    # Verificar tipo de veículo por palavras-chave
+    if '9' in cat or 'minivan' in cat or 'van' in cat:
+        return "N"  # 9 Seater
+    
+    if '7' in cat or 'mpv' in cat or 'people carrier' in cat:
+        return "M2" if is_auto else "M1"  # 7 Seater
+    
+    if any(word in cat for word in ['sw', 'station', 'wagon', 'estate', 'carrinha', 'touring']):
+        return "L2" if is_auto else "J2"  # Station Wagon
+    
+    if 'crossover' in cat:
+        return "J1"  # Crossover
+    
+    if any(word in cat for word in ['suv', 'jeep', '4x4', '4wd']):
+        return "L1" if is_auto else "F"  # SUV
+    
+    if any(word in cat for word in ['cabrio', 'cabriolet', 'convertible', 'premium', 'luxury', 'luxo']):
+        return "G"  # Premium/Cabrio
+    
+    if any(word in cat for word in ['mini', 'small', 'pequeno']):
+        # Verificar se é 4 ou 5 lugares pelo nome do carro
+        if any(model in car_lower for model in ['fiat 500', 'fiat500', 'peugeot 108', 'c1', 'vw up', 'picanto', 'aygo']):
+            return "E1" if is_auto else "B1"  # Mini 4 lugares
+        return "E1" if is_auto else "B2"  # Mini 5 lugares (default)
+    
+    if any(word in cat for word in ['economy', 'econom', 'compact', 'compacto']):
+        return "E2" if is_auto else "D"  # Economy
+    
+    # Se chegou aqui, não conseguiu mapear
+    return "Others"
 
 def _send_creds_email(to_email: str, username: str, password: str):
     # Ler configurações SMTP da base de dados (persistente) em vez de env vars
@@ -9472,13 +9631,19 @@ async def save_vehicle(request: Request):
         # Gerar código Python
         code = f"    '{clean_name}': '{category}',"
         
+        # Invalidar cache do frontend para atualizar pesquisa imediatamente
+        global _vehicles_last_update
+        _vehicles_last_update = datetime.utcnow().isoformat()
+        
         return _no_store_json({
             "ok": True,
             "message": message,
             "clean_name": clean_name,
             "category": category,
             "group": group,
-            "code": code
+            "code": code,
+            "cache_invalidated": True,
+            "updated_at": _vehicles_last_update
         })
     except Exception as e:
         import traceback
@@ -10559,39 +10724,101 @@ def detect_category_suggestion(car_name: str) -> str:
 
 @app.get("/api/export/config")
 async def export_configuration(request: Request):
-    """Exporta configurações completas: VEHICLES, users, suppliers, FOTOS"""
+    """
+    Exporta configurações COMPLETAS do sistema de Vehicles:
+    - VEHICLES (mapeamento carro → categoria)
+    - vehicle_name_overrides (nomes editados)
+    - car_groups (grupos manuais)
+    - vehicle_photos (fotos em base64)
+    - vehicle_images (imagens em base64)
+    - suppliers (fornecedores)
+    - users (utilizadores)
+    """
     # Não requer autenticação para funcionar em iframes
     try:
         from carjet_direct import VEHICLES, SUPPLIER_MAP
         import base64
         
-        # Exportar users
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                users_rows = conn.execute("SELECT username, password_hash FROM users").fetchall()
-            finally:
-                conn.close()
+        print("[EXPORT] Iniciando exportação completa...")
         
-        users_data = [{"username": r[0], "password_hash": r[1]} for r in users_rows]
+        # 1. Exportar VEHICLES (mapeamento principal)
+        vehicles_data = dict(VEHICLES)
+        print(f"[EXPORT] VEHICLES: {len(vehicles_data)} carros")
         
-        # Exportar fotos (em base64 para incluir no JSON)
+        # 2. Exportar vehicle_name_overrides (nomes editados)
+        name_overrides_data = []
+        try:
+            _ensure_vehicle_name_overrides_table()
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    rows = conn.execute("""
+                        SELECT original_name, edited_name, updated_at
+                        FROM vehicle_name_overrides
+                    """).fetchall()
+                    
+                    for row in rows:
+                        name_overrides_data.append({
+                            "original_name": row[0],
+                            "edited_name": row[1],
+                            "updated_at": row[2]
+                        })
+                finally:
+                    conn.close()
+            print(f"[EXPORT] Name Overrides: {len(name_overrides_data)} registos")
+        except Exception as e:
+            print(f"[EXPORT] Warning: Could not export name_overrides: {e}")
+        
+        # 3. Exportar car_groups (grupos manuais)
+        car_groups_data = []
+        try:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    rows = conn.execute("""
+                        SELECT code, name, model, brand, category, doors, seats, 
+                               transmission, luggage, photo_url, enabled
+                        FROM car_groups
+                    """).fetchall()
+                    
+                    for row in rows:
+                        car_groups_data.append({
+                            "code": row[0],
+                            "name": row[1],
+                            "model": row[2],
+                            "brand": row[3],
+                            "category": row[4],
+                            "doors": row[5],
+                            "seats": row[6],
+                            "transmission": row[7],
+                            "luggage": row[8],
+                            "photo_url": row[9],
+                            "enabled": row[10]
+                        })
+                finally:
+                    conn.close()
+            print(f"[EXPORT] Car Groups: {len(car_groups_data)} grupos")
+        except Exception as e:
+            print(f"[EXPORT] Warning: Could not export car_groups: {e}")
+        
+        # 4. Exportar vehicle_photos (fotos em base64)
         photos_data = {}
         try:
             _ensure_vehicle_photos_table()
             with _db_lock:
                 conn = _db_connect()
                 try:
-                    photos_rows = conn.execute("""
-                        SELECT vehicle_name, photo_data, content_type, photo_url
+                    rows = conn.execute("""
+                        SELECT vehicle_name, photo_data, content_type, photo_url, updated_at
                         FROM vehicle_photos
                     """).fetchall()
                     
-                    for row in photos_rows:
+                    for row in rows:
                         vehicle_name = row[0]
                         photo_data = row[1]
-                        content_type = row[2]
+                        content_type = row[2] or "image/jpeg"
                         photo_url = row[3]
+                        updated_at = row[4]
                         
                         if photo_data:
                             # Converter BLOB para base64
@@ -10599,24 +10826,92 @@ async def export_configuration(request: Request):
                             photos_data[vehicle_name] = {
                                 "data": photo_base64,
                                 "content_type": content_type,
-                                "url": photo_url
+                                "url": photo_url,
+                                "updated_at": updated_at,
+                                "size": len(photo_data)
                             }
-                except sqlite3.OperationalError:
-                    # Tabela não existe, sem fotos
-                    pass
                 finally:
                     conn.close()
+            print(f"[EXPORT] Photos: {len(photos_data)} fotos")
         except Exception as e:
-            # Erro ao exportar fotos, continuar sem elas
-            print(f"Warning: Could not export photos: {e}")
+            print(f"[EXPORT] Warning: Could not export photos: {e}")
         
+        # 5. Exportar vehicle_images (imagens em base64)
+        images_data = {}
+        try:
+            _ensure_vehicle_images_table()
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    rows = conn.execute("""
+                        SELECT vehicle_name, image_data, source_url, updated_at
+                        FROM vehicle_images
+                    """).fetchall()
+                    
+                    for row in rows:
+                        vehicle_name = row[0]
+                        image_data = row[1]
+                        source_url = row[2]
+                        updated_at = row[3]
+                        
+                        if image_data:
+                            # Converter BLOB para base64
+                            image_base64 = base64.b64encode(image_data).decode('utf-8')
+                            images_data[vehicle_name] = {
+                                "data": image_base64,
+                                "source_url": source_url,
+                                "updated_at": updated_at,
+                                "size": len(image_data)
+                            }
+                finally:
+                    conn.close()
+            print(f"[EXPORT] Images: {len(images_data)} imagens")
+        except Exception as e:
+            print(f"[EXPORT] Warning: Could not export images: {e}")
+        
+        # 6. Exportar suppliers
+        suppliers_data = dict(SUPPLIER_MAP)
+        print(f"[EXPORT] Suppliers: {len(suppliers_data)} fornecedores")
+        
+        # 7. Exportar users
+        users_data = []
+        try:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    rows = conn.execute("SELECT username, password_hash FROM users").fetchall()
+                    users_data = [{"username": r[0], "password_hash": r[1]} for r in rows]
+                finally:
+                    conn.close()
+            print(f"[EXPORT] Users: {len(users_data)} utilizadores")
+        except Exception as e:
+            print(f"[EXPORT] Warning: Could not export users: {e}")
+        
+        # Criar estrutura de export completa
         config = {
-            "version": "1.1",  # Incrementar versão
+            "version": "2.0",  # Nova versão com dados completos
             "exported_at": datetime.utcnow().isoformat(),
-            "vehicles": dict(VEHICLES),
-            "suppliers": dict(SUPPLIER_MAP),
-            "users": users_data,
-            "photos": photos_data  # NOVO: fotos em base64
+            "export_type": "vehicles_complete",
+            "statistics": {
+                "vehicles_count": len(vehicles_data),
+                "name_overrides_count": len(name_overrides_data),
+                "car_groups_count": len(car_groups_data),
+                "photos_count": len(photos_data),
+                "images_count": len(images_data),
+                "suppliers_count": len(suppliers_data),
+                "users_count": len(users_data),
+                "total_photo_size_mb": sum(p.get("size", 0) for p in photos_data.values()) / (1024 * 1024),
+                "total_image_size_mb": sum(i.get("size", 0) for i in images_data.values()) / (1024 * 1024)
+            },
+            "data": {
+                "vehicles": vehicles_data,
+                "name_overrides": name_overrides_data,
+                "car_groups": car_groups_data,
+                "photos": photos_data,
+                "images": images_data,
+                "suppliers": suppliers_data,
+                "users": users_data
+            }
         }
         
         # Retornar como JSON para download
@@ -10625,55 +10920,198 @@ async def export_configuration(request: Request):
         
         json_content = json.dumps(config, indent=2, ensure_ascii=False)
         
+        print(f"[EXPORT] Export completo! Tamanho: {len(json_content) / (1024 * 1024):.2f} MB")
+        
         return Response(
             content=json_content,
             media_type="application/json",
             headers={
-                "Content-Disposition": f"attachment; filename=carrental_config_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+                "Content-Disposition": f"attachment; filename=vehicles_complete_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
             }
         )
         
     except Exception as e:
         import traceback
+        print(f"[EXPORT] ERRO: {e}")
+        print(traceback.format_exc())
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
 @app.post("/api/import/config")
 async def import_configuration(request: Request, file: UploadFile = File(...)):
-    """Importa configurações de ficheiro JSON"""
+    """
+    Importa configurações COMPLETAS do sistema de Vehicles:
+    - VEHICLES (atualiza carjet_direct.py)
+    - vehicle_name_overrides (nomes editados)
+    - car_groups (grupos manuais)
+    - vehicle_photos (fotos)
+    - vehicle_images (imagens)
+    - suppliers (fornecedores)
+    - users (utilizadores)
+    """
     # Não requer autenticação para funcionar em iframes
     try:
         import json
+        import base64
+        
+        print("[IMPORT] Iniciando importação completa...")
         
         # Ler ficheiro
         content = await file.read()
         config = json.loads(content)
         
-        # Validar estrutura
-        if "vehicles" not in config:
+        print(f"[IMPORT] Versão do ficheiro: {config.get('version', 'unknown')}")
+        
+        # Detectar formato (v1.x ou v2.0)
+        is_v2 = config.get("version", "").startswith("2.") and "data" in config
+        
+        # Extrair dados conforme versão
+        if is_v2:
+            data = config["data"]
+            vehicles_data = data.get("vehicles", {})
+            name_overrides_data = data.get("name_overrides", [])
+            car_groups_data = data.get("car_groups", [])
+            photos_data = data.get("photos", {})
+            images_data = data.get("images", {})
+            suppliers_data = data.get("suppliers", {})
+            users_data = data.get("users", [])
+        else:
+            # Formato antigo (v1.x)
+            vehicles_data = config.get("vehicles", {})
+            name_overrides_data = []
+            car_groups_data = []
+            photos_data = config.get("photos", {})
+            images_data = {}
+            suppliers_data = config.get("suppliers", {})
+            users_data = config.get("users", [])
+        
+        # Validar
+        if not vehicles_data:
             return _no_store_json({"ok": False, "error": "Ficheiro inválido: falta 'vehicles'"}, 400)
         
-        # Gerar código Python para VEHICLES
+        print(f"[IMPORT] Importando {len(vehicles_data)} veículos...")
+        
+        # 1. Importar VEHICLES (gerar código Python)
         vehicles_code = "VEHICLES = {\n"
-        for car, category in sorted(config["vehicles"].items()):
+        for car, category in sorted(vehicles_data.items()):
             vehicles_code += f"    '{car}': '{category}',\n"
         vehicles_code += "}\n"
         
-        # Gerar código Python para SUPPLIER_MAP se existir
+        # 2. Importar SUPPLIER_MAP (gerar código Python)
         suppliers_code = ""
-        if "suppliers" in config:
+        if suppliers_data:
             suppliers_code = "\nSUPPLIER_MAP = {\n"
-            for code, name in sorted(config["suppliers"].items()):
+            for code, name in sorted(suppliers_data.items()):
                 suppliers_code += f"    '{code}': '{name}',\n"
             suppliers_code += "}\n"
         
-        # Importar users se existirem
-        imported_users = 0
-        if "users" in config and config["users"]:
+        # 3. Importar vehicle_name_overrides
+        imported_overrides = 0
+        if name_overrides_data:
+            _ensure_vehicle_name_overrides_table()
             with _db_lock:
                 conn = _db_connect()
                 try:
-                    for user in config["users"]:
-                        # Inserir ou atualizar user
+                    for override in name_overrides_data:
+                        conn.execute("""
+                            INSERT OR REPLACE INTO vehicle_name_overrides 
+                            (original_name, edited_name, updated_at)
+                            VALUES (?, ?, ?)
+                        """, (
+                            override["original_name"],
+                            override["edited_name"],
+                            override.get("updated_at", datetime.utcnow().isoformat())
+                        ))
+                        imported_overrides += 1
+                    conn.commit()
+                finally:
+                    conn.close()
+            print(f"[IMPORT] Name Overrides: {imported_overrides} importados")
+        
+        # 4. Importar car_groups
+        imported_groups = 0
+        if car_groups_data:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    for group in car_groups_data:
+                        conn.execute("""
+                            INSERT OR REPLACE INTO car_groups 
+                            (code, name, model, brand, category, doors, seats, 
+                             transmission, luggage, photo_url, enabled)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            group["code"],
+                            group["name"],
+                            group.get("model"),
+                            group.get("brand"),
+                            group.get("category"),
+                            group.get("doors"),
+                            group.get("seats"),
+                            group.get("transmission"),
+                            group.get("luggage"),
+                            group.get("photo_url"),
+                            group.get("enabled", 1)
+                        ))
+                        imported_groups += 1
+                    conn.commit()
+                finally:
+                    conn.close()
+            print(f"[IMPORT] Car Groups: {imported_groups} importados")
+        
+        # 5. Importar vehicle_photos
+        imported_photos = 0
+        if photos_data:
+            _ensure_vehicle_photos_table()
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    for vehicle_name, photo_info in photos_data.items():
+                        # Converter base64 de volta para BLOB
+                        photo_data = base64.b64decode(photo_info["data"])
+                        content_type = photo_info.get("content_type", "image/jpeg")
+                        photo_url = photo_info.get("url")
+                        
+                        conn.execute("""
+                            INSERT OR REPLACE INTO vehicle_photos 
+                            (vehicle_name, photo_data, content_type, photo_url, updated_at)
+                            VALUES (?, ?, ?, ?, datetime('now'))
+                        """, (vehicle_name, photo_data, content_type, photo_url))
+                        imported_photos += 1
+                    conn.commit()
+                finally:
+                    conn.close()
+            print(f"[IMPORT] Photos: {imported_photos} importadas")
+        
+        # 6. Importar vehicle_images
+        imported_images = 0
+        if images_data:
+            _ensure_vehicle_images_table()
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    for vehicle_name, image_info in images_data.items():
+                        # Converter base64 de volta para BLOB
+                        image_data = base64.b64decode(image_info["data"])
+                        source_url = image_info.get("source_url")
+                        
+                        conn.execute("""
+                            INSERT OR REPLACE INTO vehicle_images 
+                            (vehicle_name, image_data, source_url, updated_at)
+                            VALUES (?, ?, ?, datetime('now'))
+                        """, (vehicle_name, image_data, source_url))
+                        imported_images += 1
+                    conn.commit()
+                finally:
+                    conn.close()
+            print(f"[IMPORT] Images: {imported_images} importadas")
+        
+        # 7. Importar users
+        imported_users = 0
+        if users_data:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    for user in users_data:
                         password_hash = user.get("password_hash") or user.get("password")
                         conn.execute(
                             "INSERT OR REPLACE INTO users (username, password_hash) VALUES (?, ?)",
@@ -10683,42 +11121,31 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                     conn.commit()
                 finally:
                     conn.close()
+            print(f"[IMPORT] Users: {imported_users} importados")
         
-        # Importar fotos se existirem
-        imported_photos = 0
-        if "photos" in config and config["photos"]:
-            import base64
-            _ensure_vehicle_photos_table()
-            
-            with _db_lock:
-                conn = _db_connect()
-                try:
-                    for vehicle_name, photo_info in config["photos"].items():
-                        # Converter base64 de volta para BLOB
-                        photo_data = base64.b64decode(photo_info["data"])
-                        content_type = photo_info.get("content_type", "image/jpeg")
-                        photo_url = photo_info.get("url", None)
-                        
-                        conn.execute("""
-                            INSERT OR REPLACE INTO vehicle_photos 
-                            (vehicle_name, photo_data, content_type, photo_url)
-                            VALUES (?, ?, ?, ?)
-                        """, (vehicle_name, photo_data, content_type, photo_url))
-                        imported_photos += 1
-                    conn.commit()
-                finally:
-                    conn.close()
+        # Invalidar cache
+        global _vehicles_last_update
+        _vehicles_last_update = datetime.utcnow().isoformat()
+        
+        print(f"[IMPORT] Importação completa!")
         
         return _no_store_json({
             "ok": True,
             "message": "Configuração importada com sucesso!",
-            "vehicles_count": len(config["vehicles"]),
-            "suppliers_count": len(config.get("suppliers", {})),
-            "users_imported": imported_users,
-            "photos_imported": imported_photos,
+            "imported": {
+                "vehicles": len(vehicles_data),
+                "name_overrides": imported_overrides,
+                "car_groups": imported_groups,
+                "photos": imported_photos,
+                "images": imported_images,
+                "suppliers": len(suppliers_data),
+                "users": imported_users
+            },
             "vehicles_code": vehicles_code,
             "suppliers_code": suppliers_code,
-            "instructions": "Copie o código gerado e cole em carjet_direct.py"
+            "cache_invalidated": True,
+            "updated_at": _vehicles_last_update,
+            "instructions": "✅ Dados importados! Copie o código gerado e cole em carjet_direct.py se necessário."
         })
         
     except Exception as e:
@@ -10752,6 +11179,206 @@ async def get_vehicles_last_update():
         "ok": True,
         "last_update": _vehicles_last_update
     })
+
+@app.post("/api/vehicles/refresh")
+async def refresh_vehicles(request: Request):
+    """
+    Faz scraping em Albufeira + Faro para verificar carros novos/atualizados
+    Retorna lista de carros novos encontrados
+    """
+    require_auth(request)
+    try:
+        from datetime import datetime, timedelta
+        from carjet_direct import scrape_carjet_direct, VEHICLES
+        
+        # Datas para scraping (hoje + 7 dias)
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=7)
+        
+        new_cars = []
+        updated_cars = []
+        total_scraped = 0
+        
+        # Scraping em Albufeira
+        print("[REFRESH] Fazendo scraping em Albufeira...")
+        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=1)
+        total_scraped += len(albufeira_results)
+        
+        # Scraping em Faro
+        print("[REFRESH] Fazendo scraping em Faro...")
+        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=1)
+        total_scraped += len(faro_results)
+        
+        # Combinar resultados
+        all_results = albufeira_results + faro_results
+        
+        # Verificar carros novos
+        for item in all_results:
+            car_name = item.get('car', '').strip()
+            if not car_name:
+                continue
+            
+            car_clean = clean_car_name(car_name).lower()
+            
+            # Verificar se está no VEHICLES
+            if car_clean not in VEHICLES:
+                # Carro novo!
+                category = item.get('category', '')
+                photo_url = item.get('photo', '')
+                
+                new_cars.append({
+                    'original_name': car_name,
+                    'clean_name': car_clean,
+                    'category': category,
+                    'photo_url': photo_url,
+                    'location': item.get('location', ''),
+                    'price': item.get('price', '')
+                })
+        
+        # Remover duplicados
+        seen = set()
+        unique_new_cars = []
+        for car in new_cars:
+            if car['clean_name'] not in seen:
+                seen.add(car['clean_name'])
+                unique_new_cars.append(car)
+        
+        return _no_store_json({
+            "ok": True,
+            "total_scraped": total_scraped,
+            "new_cars_count": len(unique_new_cars),
+            "new_cars": unique_new_cars,
+            "message": f"Scraping completo! {total_scraped} carros encontrados, {len(unique_new_cars)} novos."
+        })
+        
+    except Exception as e:
+        import traceback
+        return _no_store_json({
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, 500)
+
+@app.post("/api/vehicles/{vehicle_name}/download-photo")
+async def download_vehicle_photo_from_carjet(vehicle_name: str, request: Request):
+    """
+    Baixa a foto do CarJet para um veículo específico e atualiza a ficha
+    Faz scraping rápido para encontrar a foto mais recente
+    """
+    require_auth(request)
+    try:
+        from datetime import datetime, timedelta
+        from carjet_direct import scrape_carjet_direct
+        import httpx
+        
+        # Limpar nome do veículo
+        car_clean = clean_car_name(vehicle_name).lower()
+        
+        # Fazer scraping rápido em Faro para encontrar o carro
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=7)
+        
+        print(f"[DOWNLOAD PHOTO] Procurando foto para: {car_clean}")
+        
+        # Tentar Faro primeiro
+        results = scrape_carjet_direct("Faro", start_date, end_date, quick=1)
+        
+        # Se não encontrar, tentar Albufeira
+        if not results:
+            results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=1)
+        
+        # Procurar o carro nos resultados
+        photo_url = None
+        for item in results:
+            car_name = item.get('car', '').strip()
+            if not car_name:
+                continue
+            
+            item_clean = clean_car_name(car_name).lower()
+            
+            if item_clean == car_clean or car_clean in item_clean or item_clean in car_clean:
+                photo_url = item.get('photo', '')
+                if photo_url:
+                    print(f"[DOWNLOAD PHOTO] Foto encontrada: {photo_url}")
+                    break
+        
+        if not photo_url:
+            return _no_store_json({
+                "ok": False,
+                "error": f"Foto não encontrada para '{vehicle_name}' no scraping do CarJet"
+            }, 404)
+        
+        # Baixar a foto
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(photo_url)
+            response.raise_for_status()
+            photo_data = response.content
+        
+        # Salvar no banco de dados
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Verificar se já existe
+                existing = conn.execute(
+                    "SELECT id FROM vehicle_photos WHERE vehicle_name = ?",
+                    (car_clean,)
+                ).fetchone()
+                
+                if existing:
+                    # Atualizar
+                    conn.execute(
+                        "UPDATE vehicle_photos SET photo_data = ?, photo_url = ?, updated_at = datetime('now') WHERE vehicle_name = ?",
+                        (photo_data, photo_url, car_clean)
+                    )
+                else:
+                    # Inserir novo
+                    conn.execute(
+                        "INSERT INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at) VALUES (?, ?, ?, datetime('now'))",
+                        (car_clean, photo_data, photo_url)
+                    )
+                
+                conn.commit()
+            finally:
+                conn.close()
+        
+        # Também salvar em vehicle_images para compatibilidade
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                existing = conn.execute(
+                    "SELECT id FROM vehicle_images WHERE vehicle_name = ?",
+                    (car_clean,)
+                ).fetchone()
+                
+                if existing:
+                    conn.execute(
+                        "UPDATE vehicle_images SET image_data = ?, source_url = ?, updated_at = datetime('now') WHERE vehicle_name = ?",
+                        (photo_data, photo_url, car_clean)
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO vehicle_images (vehicle_name, image_data, source_url, updated_at) VALUES (?, ?, ?, datetime('now'))",
+                        (car_clean, photo_data, photo_url)
+                    )
+                
+                conn.commit()
+            finally:
+                conn.close()
+        
+        return _no_store_json({
+            "ok": True,
+            "message": f"Foto baixada e salva com sucesso para '{vehicle_name}'!",
+            "photo_url": photo_url,
+            "photo_size": len(photo_data)
+        })
+        
+    except Exception as e:
+        import traceback
+        return _no_store_json({
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, 500)
 
 # ============================================================
 # VEHICLE NAME MAPPING FOR FRONTEND
@@ -12363,49 +12990,13 @@ async def fetch_car_photos(request: Request):
                         start_dt = datetime.fromisoformat(f"{date}T10:00")
                         end_dt = start_dt + timedelta(days=days)
                         
-                        # Use mock data for quick testing
-                        print(f"[PHOTOS] Using MOCK data for {location}, {days} days", file=sys.stderr, flush=True)
+                        # SCRAPING REAL do CarJet
+                        print(f"[PHOTOS] Scraping CarJet for {location}, {days} days...", file=sys.stderr, flush=True)
                         
-                        # Generate mock items (same as in track-by-params)
-                        base_price = 12.0 if 'faro' in location.lower() else 14.0
-                        items = []
-                        mock_cars = [
-                            ("Fiat 500", "Group B1", "Greenmotion"),
-                            ("Citroen C1", "Group B1", "Goldcar"),
-                            ("Toyota Aygo", "Group B2", "Surprice"),
-                            ("Volkswagen UP", "Group B2", "Centauro"),
-                            ("Fiat Panda", "Group B2", "OK Mobility"),
-                            ("Renault Clio", "Group D", "Goldcar"),
-                            ("Peugeot 208", "Group D", "Europcar"),
-                            ("Ford Fiesta", "Group D", "Hertz"),
-                            ("Seat Ibiza", "Group D", "Thrifty"),
-                            ("Hyundai i20", "Group D", "Centauro"),
-                            ("Fiat 500 Auto", "Group E1", "OK Mobility"),
-                            ("Peugeot 108 Auto", "Group E1", "Goldcar"),
-                            ("Opel Corsa Auto", "Group E2", "Europcar"),
-                            ("Ford Fiesta Auto", "Group E2", "Hertz"),
-                            ("Nissan Juke", "Group F", "Auto Prudente Rent a Car"),
-                            ("Peugeot 2008", "Group F", "Goldcar"),
-                            ("Renault Captur", "Group F", "Surprice"),
-                        ]
+                        # Use scrape_carjet_direct para obter dados reais
+                        items = scrape_carjet_direct(location, start_dt, end_dt, quick=1)
                         
-                        for idx, (car, cat, sup) in enumerate(mock_cars):
-                            price = base_price + (idx * 1.5) + (days * 0.3)
-                            group_code = cat.replace("Group ", "").strip()
-                            items.append({
-                                "id": idx,
-                                "car": car,
-                                "supplier": sup,
-                                "price": f"€{price * days:.2f}",
-                                "currency": "EUR",
-                                "category": cat,
-                                "group": group_code,
-                                "transmission": "Automatic" if "Auto" in car else "Manual",
-                                "photo": f"https://www.carjet.com/cdn/img/cars/M/car_C{idx+10}.jpg",
-                                "link": "",
-                            })
-                        
-                        print(f"[PHOTOS] Generated {len(items)} mock items", file=sys.stderr, flush=True)
+                        print(f"[PHOTOS] Scraped {len(items)} real items from CarJet", file=sys.stderr, flush=True)
                         
                         # Extract photos from items
                         for item in items:
@@ -12422,8 +13013,10 @@ async def fetch_car_photos(request: Request):
                         
                         print(f"✅ Search completed: {len(items)} cars found, total photos: {len(all_photos)}", file=sys.stderr, flush=True)
                         
-                        # Small delay between searches
-                        await asyncio.sleep(0.1)  # Faster for mock data
+                        # Delay entre searches (0.5-2s aleatório)
+                        delay = random.uniform(0.5, 2.0)
+                        print(f"⏳ Aguardando {delay:.1f}s antes da próxima pesquisa...", file=sys.stderr, flush=True)
+                        await asyncio.sleep(delay)
                         
                     except Exception as e:
                         print(f"❌ Error searching {location}, {date}, {days} days: {e}", file=sys.stderr, flush=True)
@@ -12431,9 +13024,50 @@ async def fetch_car_photos(request: Request):
                         traceback.print_exc()
                         continue
         
+        # SALVAR FOTOS NA BASE DE DADOS
+        downloaded = 0
+        skipped = 0
+        
+        print(f"\n💾 Saving {len(all_photos)} photos to database...", file=sys.stderr, flush=True)
+        
+        for car_name, photo_url in all_photos.items():
+            try:
+                # Verificar se já existe
+                with _db_lock:
+                    conn = _db_connect()
+                    try:
+                        existing = conn.execute(
+                            "SELECT id FROM vehicle_images WHERE vehicle_key = ?",
+                            (car_name,)
+                        ).fetchone()
+                        
+                        if existing:
+                            skipped += 1
+                            print(f"  ⏭️  Skipped (already exists): {car_name}", file=sys.stderr, flush=True)
+                        else:
+                            # Inserir nova foto
+                            conn.execute(
+                                """INSERT INTO vehicle_images 
+                                   (vehicle_key, source_url, downloaded_at, content_type) 
+                                   VALUES (?, ?, datetime('now'), 'image/jpeg')""",
+                                (car_name, photo_url)
+                            )
+                            conn.commit()
+                            downloaded += 1
+                            print(f"  ✅ Saved: {car_name} -> {photo_url}", file=sys.stderr, flush=True)
+                    finally:
+                        conn.close()
+            except Exception as e:
+                print(f"  ❌ Error saving {car_name}: {e}", file=sys.stderr, flush=True)
+                continue
+        
+        print(f"\n✅ Photo import completed: {downloaded} downloaded, {skipped} skipped", file=sys.stderr, flush=True)
+        
         return _no_store_json({
             "ok": True,
             "message": f"Found {len(all_photos)} car photos",
+            "downloaded": downloaded,
+            "skipped": skipped,
             "photos": all_photos
         })
         

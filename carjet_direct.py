@@ -404,6 +404,64 @@ VEHICLES = {
     'vw golf sw auto': 'Station Wagon Auto',
     'vw polo': 'ECONOMY',
     'vw tiguan auto': '7 Lugares',
+    
+    # Carros adicionais que aparecem no scraping (Nov 2025)
+    'toyota chr': 'SUV',  # Sem "auto"
+    'ford ecosport': 'SUV',  # Sem "auto"
+    'opel mokka': 'SUV',  # Sem "auto"
+    'volkswagen id.5 5 door': 'SUV Auto',  # Elétrico
+    'tesla model 3': 'Luxury',  # Elétrico
+    'volvo ex30': 'SUV Auto',  # Elétrico
+    'mg zs': 'SUV',
+    'mg ehs 5 door': 'SUV Auto',  # Híbrido
+    'byd seal u': 'SUV Auto',  # Híbrido
+    'kia niro': 'SUV Auto',  # Híbrido
+    'renault arkana': 'SUV Auto',
+    'bmw 1 series': 'Luxury',  # Sem "auto"
+    'bmw 2 series gran coupe': 'Luxury',  # Sem "auto"
+    'bmw 3 series': 'Luxury',  # Sem "auto"
+    'bmw 3 series sw': 'Station Wagon Auto',
+    'bmw 4 series gran coupe': 'Luxury',  # Sem "auto"
+    'bmw 5 series': 'Luxury',  # Sem "auto"
+    'bmw 5 series sw': 'Station Wagon Auto',
+    'bmw x1': 'SUV Auto',  # Sem "auto" mas é sempre automático
+    'bmw x5': 'Luxury',  # Sem "auto"
+    'mercedes a class': 'Luxury',  # Sem "auto"
+    'mercedes a class hybrid': 'Luxury',
+    'mercedes b class': 'Luxury',  # Sem "auto"
+    'mercedes c class': 'Luxury',  # Sem "auto"
+    'mercedes c class sw': 'Station Wagon Auto',  # Sem "auto"
+    'mercedes cla': 'Luxury',
+    'mercedes cla coupe': 'Luxury',
+    'mercedes e class': 'Luxury',  # Sem "auto"
+    'mercedes e class sw': 'Station Wagon Auto',  # Sem "auto"
+    'mercedes e class cabrio': 'Cabrio',
+    'mercedes gla': 'SUV Auto',  # Sem "auto"
+    'mercedes glb': 'SUV Auto',  # Sem "auto"
+    'mercedes glc': 'SUV Auto',  # Sem "auto"
+    'mercedes glc coupe': 'SUV Auto',  # Sem "auto"
+    'mercedes glc coupe hybrid': 'SUV Auto',
+    'mercedes gle': 'Luxury',  # Sem "auto"
+    'mercedes s class': 'Luxury',  # Sem "auto"
+    'mercedes v class': '7 Lugares',  # Sem "auto" (já existe mas duplicado)
+    'mercedes vito': '9 Lugares',  # Sem "auto" (já existe)
+    'audi a5 sportback': 'Luxury',  # Sem "auto"
+    'cupra leon sw': 'Station Wagon Auto',  # Sem "auto"
+    'ds 4': 'Luxury',  # Sem "auto"
+    'ds4': 'Luxury',  # Variação sem espaço
+    'ds7': '7 Lugares Auto',  # Sem "auto"
+    'volvo v60': 'Station Wagon Auto',
+    'volvo v60 4x4': 'Station Wagon Auto',
+    'volvo xc40': 'SUV Auto',  # Sem "auto"
+    'volvo xc60': 'SUV Auto',  # Sem "auto"
+    'volvo xc90': 'Luxury',  # Sem "auto"
+    'porsche cayenne': 'Luxury',  # Sem "auto"
+    'ford puma': 'Crossover',  # Sem "auto"
+    'ford transit': '9 Lugares',  # Sem "auto"
+    'opel grandland x': 'SUV Auto',  # Sem "auto"
+    'citroen c5 aircross': 'SUV Auto',  # Sem "auto"
+    'volkswagen id.5': 'SUV Auto',  # Variação
+    'million jeep renegade': 'Crossover',  # Com supplier no nome
 }
 
 

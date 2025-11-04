@@ -1395,83 +1395,92 @@
       }
 
       function displayCategory(it) {
-        // Retornar a categoria original (Economy, SUV, Mini, etc)
+        // Retornar a categoria descritiva (Economy, SUV, Mini, etc)
         // NÃO mostrar o código do grupo (B1, D, F, etc)
         if (it.category) {
           return it.category;
         }
         
-        // FALLBACK: Se não tiver 'group', tentar mapear localmente
+        // FALLBACK: Se não tiver category, usar o grupo para inferir categoria descritiva
+        if (it.group) {
+          const groupToCat = {
+            'B1': 'Mini',
+            'B2': 'Mini',
+            'D': 'Economy',
+            'E1': 'Mini Automatic',
+            'E2': 'Economy Automatic',
+            'F': 'SUV',
+            'G': 'Premium',
+            'X': 'Luxury',
+            'J1': 'Crossover',
+            'J2': 'Station Wagon',
+            'L1': 'SUV Automatic',
+            'L2': 'Station Wagon Automatic',
+            'M1': '7 Seater',
+            'M2': '7 Seater Automatic',
+            'N': '9 Seater',
+            'Others': 'Others'
+          };
+          return groupToCat[it.group] || it.group;
+        }
+        
+        // FALLBACK 2: Tentar inferir pela análise do nome do carro
         const car = String(it.car || '').toLowerCase();
-        const cat = String(it.category || '').toLowerCase();
         const transmission = String(it.transmission || it.gearbox || it.gear || it.trans || it.gear_type || it.shift || '').toLowerCase();
-        const details = String(it.details || '').toLowerCase();
         
-        // B1 vs B2 - Mini 4 Lugares vs Mini 5 Lugares
-        // B1: Fiat 500, Peugeot 108, C1, VW Up, Kia Picanto, Toyota Aygo (4 lugares)
+        // Mini 4 Lugares
         if (/^(fiat\s*500|peugeot\s*108|citroen\s*c1|citroën\s*c1|vw\s*up|volkswagen\s*up|kia\s*picanto|toyota\s*aygo)\b(?!.*x)(?!.*cabrio)/i.test(car)) {
-          // Se é automático → E1
-          if (/auto|automatic|automático|automatico/i.test(car + ' ' + cat + ' ' + transmission)) {
-            return 'Group E1';
+          if (/auto|automatic|automático|automatico/i.test(car + ' ' + transmission)) {
+            return 'Mini Automatic';
           }
-          return 'Group B1';
+          return 'Mini 4 Doors';
         }
-        // B2: Fiat Panda, Hyundai i10, etc (5 lugares)
-        if (/^(fiat\s*panda|hyundai\s*i10)/i.test(car)) return 'Group B2';
+        // Mini 5 Lugares
+        if (/^(fiat\s*panda|hyundai\s*i10)/i.test(car)) return 'Mini';
         
-        // Specific overrides
-        if (/^peugeot\s*308\b.*\bauto(matic)?\b/.test(car)) return 'Group E2';
-        if (/^fiat\s*500l\b/.test(car)) return 'Group J1';
-        if (/\bkia\s*ceed\b/.test(car)) return 'Group D';
-        if (/(^mini|^miny)\s*(cooper\s*)?countryman\b/.test(car)) return 'Group G';
-        if (/^(vw|volkswagen)\s*caddy\b.*\bauto(matic)?\b/.test(car)) return 'Group M2';
-        if (/^peugeot\s*rifter\b/.test(car)) return 'Group M1';
-        if (/(^citroen|^citroën)\s*c1\b.*\bauto(matic)?\b/.test(car)) return 'Group E1';
-        // Citroen C3 Aircross: Automatic -> L1 (SUV Automatic); else -> J1 (Crossover)
+        // Specific overrides - retornar categorias descritivas
+        if (/^peugeot\s*308\b.*\bauto(matic)?\b/.test(car)) return 'Economy Automatic';
+        if (/^fiat\s*500l\b/.test(car)) return 'Crossover';
+        if (/\bkia\s*ceed\b/.test(car)) return 'Economy';
+        if (/(^mini|^miny)\s*(cooper\s*)?countryman\b/.test(car)) return 'Premium';
+        if (/^(vw|volkswagen)\s*caddy\b.*\bauto(matic)?\b/.test(car)) return '7 Seater Automatic';
+        if (/^peugeot\s*rifter\b/.test(car)) return '7 Seater';
+        if (/(^citroen|^citroën)\s*c1\b.*\bauto(matic)?\b/.test(car)) return 'Mini Automatic';
+        // Citroen C3 Aircross
         if (/(^citroen|^citroën)\s*c3\s*aircross\b/.test(car)) {
-          const isAutoC3 = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
-            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
-            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
-          return isAutoC3 ? 'Group L1' : 'Group J1';
+          const isAutoC3 = /auto|automatic|automático|automatico/i.test(car + ' ' + transmission);
+          return isAutoC3 ? 'SUV Automatic' : 'Crossover';
         }
-        // Peugeot 5008 is a 7 seater -> Group M1
-        if (/^peugeot\s*5008\b/.test(car)) return 'Group M1';
-        // Fiat 500X: manual -> J1 (Crossover), automatic -> L1 (SUV Automatic)
+        // Peugeot 5008 is a 7 seater
+        if (/^peugeot\s*5008\b/.test(car)) return '7 Seater';
+        // Fiat 500X
         if (/^fiat\s*500x\b/.test(car)) {
-          const isAuto500x = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
-            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
-            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
-          return isAuto500x ? 'Group L1' : 'Group J1';
+          const isAuto500x = /auto|automatic|automático|automatico/i.test(car + ' ' + transmission);
+          return isAuto500x ? 'SUV Automatic' : 'Crossover';
         }
-        // VW T-Cross: manual -> J1 (Crossover), automatic -> L1 (SUV Automatic)
+        // VW T-Cross
         if (/^(vw|volkswagen)\s*t\s*-?\s*cross\b/.test(car)) {
-          const isAutoTCross = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
-            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
-            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
-          return isAutoTCross ? 'Group L1' : 'Group J1';
+          const isAutoTCross = /auto|automatic|automático|automatico/i.test(car + ' ' + transmission);
+          return isAutoTCross ? 'SUV Automatic' : 'Crossover';
         }
-        // Peugeot 308 SW Automatic -> Station Wagon Automatic (L2)
-        if (/^peugeot\s*308\s*sw\b/.test(car) && (
-            /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
-            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
-            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details)
-          )) return 'Group L2';
+        // Peugeot 308 SW Automatic
+        if (/^peugeot\s*308\s*sw\b/.test(car) && /auto|automatic|automático|automatico/i.test(car + ' ' + transmission)) {
+          return 'Station Wagon Automatic';
+        }
         // Generic rules
-        const auto = (
-          /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
-          || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
-          || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details)
-        );
+        const auto = /auto|automatic|automático|automatico/i.test(car + ' ' + transmission);
         const isL1Model = (
-          (/\bcrossland\s*x\b/.test(car)) ||
-          (/\beco\s*sport\b/.test(car) || /\becosport\b/.test(car)) ||
-          (/\barona\b/.test(car)) ||
-          (/(^|\b)(vw|volkswagen)\s*taigo\b/.test(car) || /\btaigo\b/.test(car)) ||
-          (/\bjuke\b/.test(car)) ||
-          (/\bstonic\b/.test(car))
+          /\bcrossland\s*x\b/.test(car) ||
+          /\beco\s*sport\b/.test(car) || /\becosport\b/.test(car) ||
+          /\barona\b/.test(car) ||
+          /(^|\b)(vw|volkswagen)\s*taigo\b/.test(car) || /\btaigo\b/.test(car) ||
+          /\bjuke\b/.test(car) ||
+          /\bstonic\b/.test(car)
         );
-        if (auto && isL1Model) return 'Group L1';
-        return it.category || '';
+        if (auto && isL1Model) return 'SUV Automatic';
+        
+        // Fallback final
+        return '';
       }
 
       function renderSupplierLogo(supplier) {
