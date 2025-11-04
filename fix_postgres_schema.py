@@ -22,8 +22,8 @@ def fix_users_table():
             ("mobile", "TEXT"),
             ("email", "TEXT"),
             ("profile_picture_path", "TEXT"),
-            ("is_admin", "INTEGER DEFAULT 0"),
-            ("enabled", "INTEGER DEFAULT 1"),
+            ("is_admin", "BOOLEAN DEFAULT FALSE"),
+            ("enabled", "BOOLEAN DEFAULT TRUE"),
             ("created_at", "TEXT"),
             ("google_id", "TEXT UNIQUE")
         ]
