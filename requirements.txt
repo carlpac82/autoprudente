@@ -27,5 +27,10 @@ sqlalchemy==2.0.23
 APScheduler==3.10.4
 pytz==2023.3
 
+# Gmail OAuth and API
+google-api-python-client==2.108.0
+google-auth-httplib2==0.1.1
+google-auth-oauthlib==1.1.0
+
 # Monitoring and error tracking
 sentry-sdk==1.40.0
