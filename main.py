@@ -13879,13 +13879,137 @@ async def test_alert_email(request: Request):
     require_auth(request)
     
     try:
-        test_email = "carlpac82@hotmail.com"
-        logging.info("Test alert email requested")
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from datetime import datetime
+        
+        # Buscar token da BD
+        access_token = None
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
+                if row:
+                    access_token = row[0]
+                    logging.info("✅ Token loaded from database for test alert")
+            finally:
+                conn.close()
+        
+        if not access_token:
+            return JSONResponse({
+                "ok": False,
+                "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
+            })
+        
+        # Buscar destinatários
+        report_recipients = []
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT DISTINCT recipient FROM notification_rules 
+                    WHERE enabled = 1 AND notification_type = 'email'
+                """)
+                report_recipients = [row[0] for row in cursor.fetchall() if row[0]]
+            finally:
+                conn.close()
+        
+        if not report_recipients:
+            report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
+        
+        # Create credentials and Gmail service
+        credentials = Credentials(token=access_token)
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        # Send to each recipient
+        sent_count = 0
+        
+        for recipient in report_recipients:
+            try:
+                # Create HTML email with alert sample
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'🚨 Alerta de Preços - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'
+                
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                </head>
+                <body style="font-family: 'Segoe UI', sans-serif; background: #f8fafc; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center;">
+                            <h1 style="margin: 0; color: white; font-size: 24px;">🚨 Alerta de Preços</h1>
+                            <p style="margin: 8px 0 0 0; color: #fee2e2; font-size: 14px;">{datetime.now().strftime('%d/%m/%Y às %H:%M')}</p>
+                        </div>
+                        <div style="padding: 30px;">
+                            <h2 style="color: #ef4444; margin: 0 0 20px 0;">⚠️ Mudanças Significativas Detectadas</h2>
+                            <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Este é um email de teste do sistema de alertas automáticos.<br>
+                                O sistema detecta mudanças significativas de preços e envia notificações.
+                            </p>
+                            
+                            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                                <div style="font-weight: bold; color: #991b1b; margin-bottom: 5px;">BMW 3 Series (Grupo J2) - Faro</div>
+                                <div style="color: #7f1d1d; font-size: 14px;">
+                                    €78.00 → €95.00 <span style="color: #ef4444; font-weight: bold;">(+21.8%)</span>
+                                </div>
+                            </div>
+                            
+                            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                                <div style="font-weight: bold; color: #991b1b; margin-bottom: 5px;">Mercedes C-Class (Grupo J2) - Albufeira</div>
+                                <div style="color: #7f1d1d; font-size: 14px;">
+                                    €85.00 → €105.00 <span style="color: #ef4444; font-weight: bold;">(+23.5%)</span>
+                                </div>
+                            </div>
+                            
+                            <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; border-radius: 4px;">
+                                <p style="margin: 0; color: #1e293b; font-size: 14px;">
+                                    <strong style="color: #009cb6;">Informações:</strong><br>
+                                    • Alertas configurados para mudanças >10%<br>
+                                    • Verificação automática diária<br>
+                                    • Configure limites em Price Validation
+                                </p>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                html_part = MIMEText(html_content, 'html')
+                message.attach(html_part)
+                
+                # Encode and send
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = service.users().messages().send(
+                    userId='me',
+                    body={'raw': raw_message}
+                ).execute()
+                
+                sent_count += 1
+                logging.info(f"✅ Test alert email sent to {recipient}")
+                
+            except Exception as e:
+                logging.error(f"❌ Failed to send alert to {recipient}: {str(e)}")
         
         return JSONResponse({
             "ok": True,
-            "message": f"Template de alertas seria enviado para {test_email}",
-            "note": "Implementação completa requer integração com Gmail API e template HTML"
+            "message": f"Email de alerta enviado com sucesso para {sent_count} destinatário(s)!",
+            "sent": sent_count,
+            "recipients": report_recipients
         })
         
     except Exception as e:
@@ -14275,12 +14399,154 @@ async def test_weekly_report(request: Request):
     require_auth(request)
     
     try:
-        logging.info("Test weekly report requested")
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from datetime import datetime
+        
+        # Buscar token da BD
+        access_token = None
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
+                if row:
+                    access_token = row[0]
+                    logging.info("✅ Token loaded from database for test weekly report")
+            finally:
+                conn.close()
+        
+        if not access_token:
+            return JSONResponse({
+                "ok": False,
+                "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
+            })
+        
+        # Buscar destinatários
+        report_recipients = []
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT DISTINCT recipient FROM notification_rules 
+                    WHERE enabled = 1 AND notification_type = 'email'
+                """)
+                report_recipients = [row[0] for row in cursor.fetchall() if row[0]]
+            finally:
+                conn.close()
+        
+        if not report_recipients:
+            report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
+        
+        # Create credentials and Gmail service
+        credentials = Credentials(token=access_token)
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        # Send to each recipient
+        sent_count = 0
+        
+        for recipient in report_recipients:
+            try:
+                # Create HTML email with weekly report sample
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'📊 Relatório Semanal - Auto Prudente (Semana {datetime.now().strftime("%W/%Y")})'
+                
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                </head>
+                <body style="font-family: 'Segoe UI', sans-serif; background: #f8fafc; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px; text-align: center;">
+                            <h1 style="margin: 0; color: white; font-size: 24px;">📊 Relatório Semanal</h1>
+                            <p style="margin: 8px 0 0 0; color: #dbeafe; font-size: 14px;">Semana {datetime.now().strftime('%W/%Y')} - {datetime.now().strftime('%d/%m/%Y')}</p>
+                        </div>
+                        <div style="padding: 30px;">
+                            <h2 style="color: #3b82f6; margin: 0 0 20px 0;">📈 Análise dos Próximos 3 Meses</h2>
+                            <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Este é um email de teste do relatório semanal.<br>
+                                O sistema analisa tendências e fornece insights sobre os próximos meses.
+                            </p>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                                <div style="background: #eff6ff; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">156</div>
+                                    <div style="font-size: 12px; color: #64748b;">Ofertas Analisadas</div>
+                                </div>
+                                <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: bold; color: #10b981;">↓ 3.2%</div>
+                                    <div style="font-size: 12px; color: #64748b;">Preço Médio</div>
+                                </div>
+                                <div style="background: #fef2f2; padding: 15px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: bold; color: #ef4444;">5</div>
+                                    <div style="font-size: 12px; color: #64748b;">Alertas</div>
+                                </div>
+                            </div>
+                            
+                            <h3 style="color: #1e293b; font-size: 16px; margin: 20px 0 10px 0;">🎯 Tendências Identificadas</h3>
+                            
+                            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin-bottom: 10px; border-radius: 4px;">
+                                <div style="font-weight: bold; color: #065f46; margin-bottom: 5px;">↓ Grupos Económicos (B1, C, D)</div>
+                                <div style="color: #047857; font-size: 14px;">
+                                    Preços em queda (-5.2%) - Boa oportunidade para ajustar
+                                </div>
+                            </div>
+                            
+                            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 10px; border-radius: 4px;">
+                                <div style="font-weight: bold; color: #991b1b; margin-bottom: 5px;">↑ Grupos Premium (J2, L1, M1)</div>
+                                <div style="color: #7f1d1d; font-size: 14px;">
+                                    Preços em alta (+8.7%) - Demanda crescente
+                                </div>
+                            </div>
+                            
+                            <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; border-radius: 4px;">
+                                <p style="margin: 0; color: #1e293b; font-size: 14px;">
+                                    <strong style="color: #009cb6;">Recomendações:</strong><br>
+                                    • Ajustar preços dos grupos económicos<br>
+                                    • Manter competitividade nos premium<br>
+                                    • Monitorizar sazonalidade
+                                </p>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                html_part = MIMEText(html_content, 'html')
+                message.attach(html_part)
+                
+                # Encode and send
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = service.users().messages().send(
+                    userId='me',
+                    body={'raw': raw_message}
+                ).execute()
+                
+                sent_count += 1
+                logging.info(f"✅ Test weekly report sent to {recipient}")
+                
+            except Exception as e:
+                logging.error(f"❌ Failed to send weekly report to {recipient}: {str(e)}")
         
         return JSONResponse({
             "ok": True,
-            "message": "Relatório semanal seria enviado com análise dos próximos 3 meses",
-            "note": "Implementação completa requer scheduler e análise de dados históricos"
+            "message": f"Relatório semanal enviado com sucesso para {sent_count} destinatário(s)!",
+            "sent": sent_count,
+            "recipients": report_recipients
         })
         
     except Exception as e:
