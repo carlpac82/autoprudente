@@ -4025,15 +4025,15 @@ async def track_by_params(request: Request):
                     "method": "playwright_mobile",
                 })
             else:
-                print(f"[PLAYWRIGHT_MOBILE] ⚠️ Retornou 0 items, tentando fallback...", file=sys.stderr, flush=True)
+                print(f"[PLAYWRIGHT_MOBILE] ⚠️ Retornou 0 items, tentando SELENIUM...", file=sys.stderr, flush=True)
         except Exception as e:
             print(f"[PLAYWRIGHT_MOBILE] ❌ Erro: {e}", file=sys.stderr, flush=True)
             import traceback
             traceback.print_exc()
-            print(f"[PLAYWRIGHT_MOBILE] Continuando para métodos alternativos...", file=sys.stderr, flush=True)
+            print(f"[PLAYWRIGHT_MOBILE] Continuando para SELENIUM...", file=sys.stderr, flush=True)
         
-        # MODO REAL: Usar ScraperAPI para scraping dinâmico
-        if TEST_MODE_LOCAL == 0 and SCRAPER_API_KEY:
+        # PULAR ScraperAPI - IR DIRETO PARA SELENIUM (ordem correta)
+        if False and TEST_MODE_LOCAL == 0 and SCRAPER_API_KEY:
             try:
                 import httpx
                 import sys
