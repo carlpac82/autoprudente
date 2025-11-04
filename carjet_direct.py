@@ -187,6 +187,8 @@ VEHICLES = {
     'mazda cx-3': 'Crossover',
     'mitsubishi asx': 'Crossover',
     'skoda karoq': 'Crossover',  # Manual = J1
+    'mg ehs 5 door': 'Crossover',  # Manual = J1
+    'mg ehs': 'Crossover',  # Manual = J1
     
     # Luxury (X)
     'mini cooper': 'Luxury',
@@ -279,7 +281,7 @@ VEHICLES = {
     'vw taigo auto': 'SUV Auto',
     'volvo xc40 auto': 'SUV Auto',
     'volvo xc60 auto': 'SUV Auto',
-    'volvo v60 4x4 auto, hybrid': 'Station Wagon Auto',
+    'volvo v60 4x4 auto, hybrid': 'Luxury',  # Station Wagon premium → Others
     'volkswagen t-roc': 'SUV',
     'volkswagen t-roc cabrio': 'SUV',
     'seat leon': 'ECONOMY',
@@ -299,10 +301,10 @@ VEHICLES = {
     'peugeot 308': 'ECONOMY',
     'nissan qashqai auto': 'SUV',
     'cupra formentor auto': 'SUV Auto',
-    'mercedes c class sw auto': 'Station Wagon Auto',
+    'mercedes c class sw auto': 'Luxury',  # Station Wagon premium → Others
     'mercedes cle coupe auto': 'Luxury',
     'mercedes e class auto': 'Luxury',
-    'mercedes e class sw auto': 'Station Wagon Auto',
+    'mercedes e class sw auto': 'Luxury',  # Station Wagon premium → Others
     'mercedes s class auto': 'Luxury',
     'citroen c4': 'Crossover',
     'fiat 500': 'MINI 4 Portas',
@@ -417,28 +419,29 @@ VEHICLES = {
     'tesla model 3': 'Luxury',  # Elétrico
     'volvo ex30': 'SUV Auto',  # Elétrico
     'mg zs': 'SUV',
-    'mg ehs 5 door': 'SUV Auto',  # Híbrido
+    'mg ehs 5 door auto': 'SUV Auto',  # Híbrido Automático = L1
+    'mg ehs auto': 'SUV Auto',  # Híbrido Automático = L1
     'byd seal u': 'SUV Auto',  # Híbrido
     'kia niro': 'SUV Auto',  # Híbrido
     'renault arkana': 'SUV Auto',
     'bmw 1 series': 'Luxury',  # Sem "auto"
     'bmw 2 series gran coupe': 'Luxury',  # Sem "auto"
     'bmw 3 series': 'Luxury',  # Sem "auto"
-    'bmw 3 series sw': 'Station Wagon Auto',
+    'bmw 3 series sw': 'Luxury',  # Station Wagon premium → Others
     'bmw 4 series gran coupe': 'Luxury',  # Sem "auto"
     'bmw 5 series': 'Luxury',  # Sem "auto"
-    'bmw 5 series sw': 'Station Wagon Auto',
+    'bmw 5 series sw': 'Luxury',  # Station Wagon premium → Others
     'bmw x1': 'SUV Auto',  # Sem "auto" mas é sempre automático
     'bmw x5': 'Luxury',  # Sem "auto"
     'mercedes a class': 'Luxury',  # Sem "auto"
     'mercedes a class hybrid': 'Luxury',
     'mercedes b class': 'Luxury',  # Sem "auto"
     'mercedes c class': 'Luxury',  # Sem "auto"
-    'mercedes c class sw': 'Station Wagon Auto',  # Sem "auto"
+    'mercedes c class sw': 'Luxury',  # Station Wagon premium → Others
     'mercedes cla': 'Luxury',
     'mercedes cla coupe': 'Luxury',
     'mercedes e class': 'Luxury',  # Sem "auto"
-    'mercedes e class sw': 'Station Wagon Auto',  # Sem "auto"
+    'mercedes e class sw': 'Luxury',  # Station Wagon premium → Others
     'mercedes e class cabrio': 'Cabrio',
     'mercedes gla': 'SUV Auto',  # Sem "auto"
     'mercedes glb': 'SUV Auto',  # Sem "auto"
@@ -454,8 +457,8 @@ VEHICLES = {
     'ds 4': 'Luxury',  # Sem "auto"
     'ds4': 'Luxury',  # Variação sem espaço
     'ds7': '7 Lugares Auto',  # Sem "auto"
-    'volvo v60': 'Station Wagon Auto',
-    'volvo v60 4x4': 'Station Wagon Auto',
+    'volvo v60': 'Luxury',  # Station Wagon premium → Others
+    'volvo v60 4x4': 'Luxury',  # Station Wagon premium → Others
     'volvo xc40': 'SUV Auto',  # Sem "auto"
     'volvo xc60': 'SUV Auto',  # Sem "auto"
     'volvo xc90': 'Luxury',  # Sem "auto"
