@@ -4520,7 +4520,7 @@ async def track_by_params(request: Request):
             # ✅ Scroll simulation - 200-500px aleatório
             # ✅ Cache clearing - Context novo por localização
             # ✅ Mobile emulation - Versão mobile mais estável
-            import random
+            # random já importado globalmente
             
             # 1. ROTAÇÃO DE DISPOSITIVOS MOBILE (4 devices)
             mobile_devices = [
@@ -4583,10 +4583,10 @@ async def track_by_params(request: Request):
             print(f"[SELENIUM] Referrer: {selected_referrer if selected_referrer else 'Direct'}", file=sys.stderr, flush=True)
             
             chrome_options = Options()
-            chrome_options.add_argument('--headless')  # Headless para produção
+            # chrome_options.add_argument('--headless')  # DESATIVADO para debug - ver browser
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
+            # chrome_options.add_argument('--disable-gpu')  # GPU ativo para ver melhor
             chrome_options.add_argument(f'user-agent={selected_device["ua"]}')
             chrome_options.add_argument(f'--lang={selected_lang.split(",")[0]}')
             
@@ -4952,7 +4952,7 @@ async def track_by_params(request: Request):
                 
                 # RETRY: Se deu war=X, alterar horas e tentar novamente (até 5x)
                 if 'war=' in final_url:
-                    import random
+                    # random já importado globalmente
                     from selenium.webdriver.support.ui import Select
                     
                     possible_times = ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"]
@@ -8428,7 +8428,7 @@ async def track_carjet(request: Request):
     try:
         from datetime import datetime, timedelta
         from playwright.async_api import async_playwright
-        import random
+        # random já importado globalmente
         
         # Load date rotation settings from database
         date_rotation_enabled = True  # Enabled by default
@@ -12215,7 +12215,7 @@ async def fetch_car_photos(request: Request):
             # DELAY ENTRE LOCATIONS (2-5s aleatório)
             # ============================================
             if loc_idx > 0:  # Não fazer delay na primeira location
-                import random
+                # random já importado globalmente
                 delay_between_locations = random.uniform(2.0, 5.0)
                 print(f"\n⏳ Aguardando {delay_between_locations:.1f}s antes da próxima location...", file=sys.stderr, flush=True)
                 time.sleep(delay_between_locations)
