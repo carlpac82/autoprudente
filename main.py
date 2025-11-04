@@ -13961,18 +13961,23 @@ async def test_alert_email(request: Request):
         
         # Buscar token da BD
         access_token = None
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute(
-                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                )
-                row = cursor.fetchone()
-                if row:
-                    access_token = row[0]
-                    logging.info("✅ Token loaded from database for test alert")
-            finally:
-                conn.close()
+        try:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    cursor = conn.execute(
+                        "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        access_token = row[0]
+                        logging.info("✅ Token loaded from database for test alert")
+                    else:
+                        logging.warning("⚠️ No token found in oauth_tokens table")
+                finally:
+                    conn.close()
+        except Exception as e:
+            logging.error(f"❌ Error loading token from DB: {str(e)}")
         
         if not access_token:
             return JSONResponse({
@@ -14468,18 +14473,23 @@ async def test_weekly_report(request: Request):
         
         # Buscar token da BD
         access_token = None
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute(
-                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                )
-                row = cursor.fetchone()
-                if row:
-                    access_token = row[0]
-                    logging.info("✅ Token loaded from database for test weekly report")
-            finally:
-                conn.close()
+        try:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    cursor = conn.execute(
+                        "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        access_token = row[0]
+                        logging.info("✅ Token loaded from database for test weekly report")
+                    else:
+                        logging.warning("⚠️ No token found in oauth_tokens table")
+                finally:
+                    conn.close()
+        except Exception as e:
+            logging.error(f"❌ Error loading token from DB: {str(e)}")
         
         if not access_token:
             return JSONResponse({
