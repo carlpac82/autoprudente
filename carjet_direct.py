@@ -149,6 +149,8 @@ VEHICLES = {
     'renault austral': 'SUV',
     'skoda kamiq': 'SUV',
     'hyundai tucson': 'SUV',
+    'volkswagen tiguan': 'SUV',  # Manual = F
+    'vw tiguan': 'SUV',  # Manual = F
     
     # SUV Auto
     'peugeot 3008 auto': 'SUV Auto',
@@ -183,6 +185,7 @@ VEHICLES = {
     'citroen c4 cactus': 'Crossover',
     'mazda cx-3': 'Crossover',
     'mitsubishi asx': 'Crossover',
+    'skoda karoq': 'Crossover',  # Manual = J1
     
     # Luxury (X)
     'mini cooper': 'Luxury',
