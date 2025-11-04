@@ -120,6 +120,7 @@ VEHICLES = {
     'renault twingo': 'MINI 4 Lugares',
     'citroen c3': 'ECONOMY',
     'opel adam': 'MINI 4 Lugares',
+    'toyota corolla': 'ECONOMY',  # Manual = D
     
     # ECONOMY Auto
     'renault clio auto': 'ECONOMY Auto',
