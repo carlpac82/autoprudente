@@ -175,7 +175,16 @@ class PostgreSQLConnectionWrapper:
         """Execute query using cursor"""
         # Convert SQLite ? placeholders to PostgreSQL %s
         if '?' in query:
+            # Count number of ? to ensure we have right number of params
+            num_placeholders = query.count('?')
             query = query.replace('?', '%s')
+            
+            # Ensure params is a tuple
+            if params is not None:
+                if not isinstance(params, (tuple, list)):
+                    params = (params,)
+                elif isinstance(params, list):
+                    params = tuple(params)
         
         # Convert SQLite AUTOINCREMENT to PostgreSQL SERIAL
         if 'AUTOINCREMENT' in query.upper():
@@ -183,10 +192,18 @@ class PostgreSQLConnectionWrapper:
             query = query.replace('AUTOINCREMENT', '')
         
         self._cursor = self._conn.cursor()
-        if params:
-            self._cursor.execute(query, params)
-        else:
-            self._cursor.execute(query)
+        try:
+            if params:
+                self._cursor.execute(query, params)
+            else:
+                self._cursor.execute(query)
+        except Exception as e:
+            # Log the error with query and params for debugging
+            import logging
+            logging.error(f"PostgreSQL execute error: {e}")
+            logging.error(f"Query: {query}")
+            logging.error(f"Params: {params}")
+            raise
         return self._cursor
     
     def commit(self):
