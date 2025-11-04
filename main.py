@@ -592,6 +592,24 @@ async def startup_event():
     print(f"🚀 APP STARTUP - Rental Price Tracker", flush=True)
     print(f"========================================", flush=True)
     
+    # Fix PostgreSQL schema if needed
+    if _USE_NEW_DB and USE_POSTGRES:
+        try:
+            print(f"🔧 Checking PostgreSQL schema...", flush=True)
+            import subprocess
+            result = subprocess.run(
+                ["python3", "fix_postgres_schema.py"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0:
+                print(f"   ✅ Schema check complete", flush=True)
+            else:
+                print(f"   ⚠️  Schema check warnings: {result.stderr[:200]}", flush=True)
+        except Exception as e:
+            print(f"⚠️  Schema check error: {e}", flush=True)
+    
     # Initialize database tables
     try:
         print(f"📊 Initializing database tables...", flush=True)
