@@ -2874,6 +2874,11 @@ async def test_mobile_scraping(request: Request):
             "error": str(e)
         }
 
+@app.get("/fix-schema", response_class=HTMLResponse)
+async def fix_schema_page(request: Request):
+    """Emergency page to fix PostgreSQL schema"""
+    return templates.TemplateResponse("fix_schema.html", {"request": request})
+
 @app.get("/admin/backup", response_class=HTMLResponse)
 async def admin_backup(request: Request):
     """Backup & Restore page"""

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix PostgreSQL Schema</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background: #009cb6;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #007a8a;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix PostgreSQL Schema</h1>
+        <p>Este botão vai adicionar as colunas faltantes na tabela <code>users</code> do PostgreSQL.</p>
+        
+        <button id="fixBtn" onclick="fixSchema()">🚀 Corrigir Schema Agora</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function fixSchema() {
+            const btn = document.getElementById('fixBtn');
+            const result = document.getElementById('result');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ A corrigir...';
+            
+            result.style.display = 'block';
+            result.className = 'loading';
+            result.innerHTML = '<strong>⏳ A processar...</strong><br>A adicionar colunas faltantes...';
+            
+            try {
+                const response = await fetch('/api/fix-schema-emergency', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    result.className = 'success';
+                    result.innerHTML = `
+                        <strong>✅ SUCESSO!</strong><br><br>
+                        <strong>Mensagem:</strong> ${data.message}<br>
+                        <strong>Total de colunas:</strong> ${data.total_columns}<br>
+                        <strong>Coluna 'enabled' existe:</strong> ${data.enabled_exists ? '✅ Sim' : '❌ Não'}<br><br>
+                        <strong>Resultados:</strong>
+                        <pre>${JSON.stringify(data.results, null, 2)}</pre>
+                        <strong>Todas as colunas:</strong>
+                        <pre>${data.columns.join(', ')}</pre>
+                    `;
+                    btn.textContent = '✅ Concluído!';
+                } else {
+                    result.className = 'error';
+                    result.innerHTML = `
+                        <strong>❌ ERRO</strong><br><br>
+                        <strong>Mensagem:</strong> ${data.error}<br><br>
+                        ${data.traceback ? `<pre>${data.traceback}</pre>` : ''}
+                    `;
+                    btn.textContent = '🔧 Tentar Novamente';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `
+                    <strong>❌ ERRO DE CONEXÃO</strong><br><br>
+                    ${error.message}
+                `;
+                btn.textContent = '🔧 Tentar Novamente';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
