@@ -1,0 +1,659 @@
+LISTA DE CARROS EXTRAÍDOS DA CARJET
+================================================================================
+
+1. Fiat Panda
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C45.jpg
+
+2. Fiat 500
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C25.jpg
+
+3. Renault Clio
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C04.jpg
+
+4. VW Polo
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C27.jpg
+
+5. Opel Corsa
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C82.jpg
+
+6. VW Golf
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F12.jpg
+
+7. Fiat Panda
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C30.jpg
+
+8. Fiat Panda, Hybrid
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+9. Hyundai i10
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+10. Toyota Aygo
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+11. Volkswagen UP
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+12. Audi A1
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+13. Peugeot 208
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+14. Citroen C3
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+15. Fiat 500 Cabrio
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+16. Seat Ibiza
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+17. Nissan Micra
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+18. Mazda 2
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+19. Citroen C4 , Electric
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+20. VW Polo
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+21. Citroen C4
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+22. Citroen C4 Cactus
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+23. Toyota Yaris
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+24. Renault Clio
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+25. Peugeot 108
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+26. Kia Ceed
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+27. Nissan Juke
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+28. Dacia Sandero
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+29. Skoda Scala
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+30. Ford Focus
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+31. Seat Arona
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+32. Ford Ecosport
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+33. Opel Crossland X
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+34. VW Taigo
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+35. Opel Corsa
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+36. Opel Adam
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+37. VW Golf
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+38. Renault Captur
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+39. Hyundai i20
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+40. Volkswagen T-Cross
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+41. Seat Leon
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+42. Renault Twingo
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+43. Ford Fiesta
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+44. Kia Sportage
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+45. Opel Mokka , Electric
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_EL47.jpg
+
+46. Peugeot 2008
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F91.jpg
+
+47. Renault Megane
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F05.jpg
+
+48. Peugeot 308
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F22.jpg
+
+49. Volkswagen T-Roc
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+50. Fiat 500X
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+51. Toyota CHR
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+52. Ford Puma
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+53. Renault Megane SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+54. Nissan Qashqai
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+55. Opel Astra
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+56. Opel Grandland X
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+57. Hyundai Tucson
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+58. Peugeot 3008
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+59. BMW 1 Series
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+60. Ford Focus SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+61. Citroen C1
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+62. Toyota Aygo X
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+63. Kia Picanto
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+64. Fiat 500
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+65. Fiat 500, Hybrid
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+66. Peugeot 308 SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+67. Toyota Corolla
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+68. Kia Stonic
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+69. Peugeot 2008
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+70. Citroen C5 Aircross
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+71. VW Tiguan
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+72. Skoda Karoq
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+73. Toyota Corolla , Hybrid
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+74. Kia Ceed SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+75. Dacia Jogger
+   Categoria: Grande
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+76. Peugeot 2008 , Electric
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+77. Citroen C3 Aircross
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+78. MG ZS
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+79. Cupra Leon SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+80. Peugeot 108 Cabrio
+   Categoria: Pequeno
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+81. Opel Astra SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+82. Seat Leon SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+83. Renault Megane Sedan
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+84. Renault Megane
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+85. DS4
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+86. Hyundai i30
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+87. Toyota Yaris , Hybrid
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+88. Ford Kuga
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+89. Hyundai Kauai
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+90. Mitsubishi Spacestar
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+91. Toyota Yaris Cross
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+92. Mercedes A Class
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+93. Opel Zafira
+   Categoria: Grande
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+94. Toyota Corolla SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+95. Skoda Octavia
+   Categoria: Grande
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+96. Citroen C4 Picasso
+   Categoria: Grande
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+97. Toyota Corolla SW , Hybrid
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+98. Audi A3
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+99. Cupra Formentor
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+100. Toyota Proace
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+101. Mitsubishi ASX
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+102. Skoda Fabia SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+103. Mercedes GLA
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+104. BYD Seal U , Hybrid
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+105. Volvo XC40
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+106. Fiat Talento
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+107. Volkswagen ID.5 5 Door, Electric
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+108. Jeep Renegade
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+109. VW Passat
+   Categoria: Grande
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+110. Mini Countryman
+   Categoria: Premium
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+111. Mercedes CLA Coupe
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+112. Seat Ateca
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+113. Fiat Tipo SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+114. Skoda Kamiq
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+115. Peugeot 5008
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+116. Dacia Lodgy
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+117. BMW 3 Series SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+118. VW Caddy
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+119. VW Golf SW
+   Categoria: Station Wagon
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+120. Hyundai Kona
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+121. BMW 2 Series Gran Coupe
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+122. Volvo V60
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+123. Mercedes C Class
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+124. Renault Austral
+   Categoria: SUVs
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+125. BMW 3 Series
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+126. Citroen Spacetourer
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+127. Renault Grand Scenic
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+128. Mercedes E Class SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+129. BMW 5 Series SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+130. Mazda MX5 Cabrio
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+131. Peugeot Traveller
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+132. VW Transporter
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+133. Volvo EX30 , Electric
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+134. Citroen C4 Grand Spacetourer
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+135. Citroen C4 X , Electric
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+136. Renault Arkana
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+137. VW Multivan
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+138. VW Sharan
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+139. Renault Trafic
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+140. BMW X1
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+141. Opel Vivaro
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+142. BMW 5 Series
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+143. Peugeot Rifter
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+144. VW Caravelle
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+145. Mercedes Vito
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+146. Mercedes CLA
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+147. Toyota RAV4 4x4
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+148. Mercedes C Class SW
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+149. Mercedes CLE Coupe
+   Categoria: Grande
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+150. Mercedes E Class Cabrio
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+151. Mercedes E Class
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+152. Volvo XC60
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+153. Peugeot 508
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+154. Volvo V60 4x4 , Hybrid
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+155. Ford Transit
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+156. Mercedes V Class Auto
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+157. Mercedes GLB 7 seater
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+158. BMW 4 Series Gran Coupe
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+159. Mini One Cabrio
+   Categoria: Médio
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+160. Mercedes V Class
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+161. Range Rover Evoque
+   Categoria: Premium
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+162. Mercedes Benz Vito
+   Categoria: Minivans
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+163. BMW X5
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+
+164. Mercedes S Class
+   Categoria: Automático
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+

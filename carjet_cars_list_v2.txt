@@ -1,0 +1,1193 @@
+LISTA DE CARROS EXTRAÍDOS DA CARJET (V2 - Mapeamento Preciso)
+================================================================================
+
+1. Fiat Panda
+   Categoria: Pequeno
+   Código: C45
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C45.jpg
+   ALT Text: 
+   Placeholder: Não
+
+2. Fiat 500
+   Categoria: Pequeno
+   Código: C25
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C25.jpg
+   ALT Text: 
+   Placeholder: Não
+
+3. Renault Clio
+   Categoria: Pequeno
+   Código: C04
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C04.jpg
+   ALT Text: 
+   Placeholder: Não
+
+4. VW Polo
+   Categoria: Pequeno
+   Código: C27
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C27.jpg
+   ALT Text: 
+   Placeholder: Não
+
+5. Opel Corsa
+   Categoria: Pequeno
+   Código: C82
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C82.jpg
+   ALT Text: 
+   Placeholder: Não
+
+6. VW Golf
+   Categoria: Médio
+   Código: F12
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F12.jpg
+   ALT Text: 
+   Placeholder: Não
+
+7. Fiat Panda
+   Categoria: Pequeno
+   Código: C30
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_C30.jpg
+   ALT Text: 
+   Placeholder: Não
+
+8. Fiat Panda, Hybrid
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+9. Hyundai i10
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+10. Toyota Aygo
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+11. Volkswagen UP
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+12. Audi A1
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+13. Peugeot 208
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+14. Citroen C3
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+15. Fiat 500 Cabrio
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+16. Seat Ibiza
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+17. Nissan Micra
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+18. Mazda 2
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+19. Citroen C4 , Electric
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+20. VW Polo
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+21. Citroen C4
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+22. Citroen C4 Cactus
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+23. Toyota Yaris
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+24. Renault Clio
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+25. Peugeot 108
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+26. Kia Ceed
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+27. Nissan Juke
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+28. Dacia Sandero
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+29. Skoda Scala
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+30. Ford Focus
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+31. Seat Arona
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+32. Ford Ecosport
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+33. Opel Crossland X
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+34. VW Taigo
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+35. Opel Corsa
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+36. Opel Adam
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+37. VW Golf
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+38. Renault Captur
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+39. Hyundai i20
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+40. Volkswagen T-Cross
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+41. Seat Leon
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+42. Renault Twingo
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+43. Ford Fiesta
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+44. Kia Sportage
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+45. Opel Mokka , Electric
+   Categoria: Automático
+   Código: EL47
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_EL47.jpg
+   ALT Text: 
+   Placeholder: Não
+
+46. Peugeot 2008
+   Categoria: SUVs
+   Código: F91
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F91.jpg
+   ALT Text: 
+   Placeholder: Não
+
+47. Renault Megane
+   Categoria: Médio
+   Código: F05
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F05.jpg
+   ALT Text: 
+   Placeholder: Não
+
+48. Peugeot 308
+   Categoria: Médio
+   Código: F22
+   URL Foto: https://www.carjet.com/cdn/img/cars/L/car_F22.jpg
+   ALT Text: 
+   Placeholder: Não
+
+49. Volkswagen T-Roc
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+50. Fiat 500X
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+51. Toyota CHR
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+52. Ford Puma
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+53. Renault Clio SW
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+54. Renault Megane SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+55. Nissan Qashqai
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+56. Opel Astra
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+57. Opel Grandland X
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+58. Hyundai Tucson
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+59. Peugeot 3008
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+60. BMW 1 Series
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+61. Ford Focus SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+62. Citroen C1
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+63. Seat Leon SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+64. Toyota Aygo X
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+65. Kia Picanto
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+66. Fiat 500
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+67. Fiat 500, Hybrid
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+68. Peugeot 308 SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+69. Toyota Corolla
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+70. Kia Stonic
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+71. Peugeot 2008
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+72. Citroen C5 Aircross
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+73. VW Tiguan
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+74. Skoda Karoq
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+75. Toyota Corolla , Hybrid
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+76. Kia Ceed SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+77. Dacia Jogger
+   Categoria: Grande
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+78. Peugeot 2008 , Electric
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+79. Citroen C3 Aircross
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+80. MG ZS
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+81. Mazda CX3
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+82. Cupra Leon SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+83. Peugeot 108 Cabrio
+   Categoria: Pequeno
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+84. Opel Astra SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+85. Renault Megane Sedan
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+86. Renault Megane
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+87. DS4
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+88. Hyundai i30
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+89. Toyota Yaris , Hybrid
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+90. Ford Kuga
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+91. Hyundai Kauai
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+92. Mitsubishi Spacestar
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+93. Toyota Yaris Cross
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+94. Mercedes A Class
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+95. Opel Zafira
+   Categoria: Grande
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+96. Toyota Corolla SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+97. Skoda Octavia
+   Categoria: Grande
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+98. Citroen C4 Picasso
+   Categoria: Grande
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+99. Toyota Corolla SW , Hybrid
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+100. Audi A3
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+101. Cupra Formentor
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+102. Toyota Proace
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+103. Mitsubishi ASX
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+104. Skoda Fabia SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+105. Mercedes GLA
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+106. BYD Seal U , Hybrid
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+107. Volvo XC40
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+108. Fiat Talento
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+109. Volkswagen ID.5 5 Door, Electric
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+110. Jeep Renegade
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+111. VW Passat
+   Categoria: Grande
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+112. Mini Countryman
+   Categoria: Premium
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+113. Mercedes CLA Coupe
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+114. Seat Ateca
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+115. Fiat Tipo SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+116. Skoda Kamiq
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+117. Peugeot 5008
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+118. Dacia Lodgy
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+119. Ford Galaxy
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+120. BMW 3 Series SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+121. VW Caddy
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+122. VW Golf SW
+   Categoria: Station Wagon
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+123. Hyundai Kona
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+124. Tesla Model 3 , Electric
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+125. BMW 2 Series Gran Coupe
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+126. Volvo V60
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+127. Ford Transit
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+128. Mercedes C Class
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+129. Renault Austral
+   Categoria: SUVs
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+130. BMW 3 Series
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+131. Citroen Spacetourer
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+132. Renault Grand Scenic
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+133. Mercedes E Class SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+134. BMW 5 Series SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+135. Mazda MX5 Cabrio
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+136. VW Beetle Cabrio
+   Categoria: Premium
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+137. Peugeot Traveller
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+138. VW Transporter
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+139. Volvo EX30 , Electric
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+140. Citroen C4 Grand Spacetourer
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+141. Citroen C4 X , Electric
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+142. Renault Arkana
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+143. Citroen Grand Picasso
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+144. VW Multivan
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+145. VW Sharan
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+146. Renault Trafic
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+147. BMW X1
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+148. Opel Vivaro
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+149. BMW 5 Series
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+150. Peugeot Rifter
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+151. VW Caravelle
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+152. Mercedes Vito
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+153. Mercedes CLA
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+154. Toyota RAV4 4x4
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+155. Mercedes C Class SW
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+156. Mercedes CLE Coupe
+   Categoria: Grande
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+157. Mercedes E Class Cabrio
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+158. Mercedes E Class
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+159. Volvo XC60
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+160. Peugeot 508
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+161. Volvo V60 4x4 , Hybrid
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+162. Mercedes V Class Auto
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+163. Mercedes GLB 7 seater
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+164. BMW 4 Series Gran Coupe
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+165. Mini One Cabrio
+   Categoria: Médio
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+166. Mercedes V Class
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+167. Range Rover Evoque
+   Categoria: Premium
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+168. Mercedes Benz Vito
+   Categoria: Minivans
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+169. BMW X5
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
+170. Mercedes S Class
+   Categoria: Automático
+   Código: None
+   URL Foto: https://www.carjet.com/cdn/img/cars/loading-car@2x.png
+   ALT Text: 
+   Placeholder: Sim
+
