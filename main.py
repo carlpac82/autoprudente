@@ -1630,11 +1630,12 @@ def _send_creds_email(to_email: str, username: str, password: str):
     use_tls_val = _get_setting("smtp_tls", os.getenv("SMTP_TLS", "true"))
     use_tls = str(use_tls_val).lower() in ("1", "true", "yes", "y", "on")
     if not host or not to_email:
+        error_msg = f"Missing SMTP configuration: host={bool(host)}, to_email={bool(to_email)}"
         try:
-            (DEBUG_DIR / "mail_error.txt").write_text("Missing SMTP_HOST or recipient\n", encoding="utf-8")
+            (DEBUG_DIR / "mail_error.txt").write_text(error_msg + "\n", encoding="utf-8")
         except Exception:
             pass
-        return
+        raise Exception(error_msg)
     msg = EmailMessage()
     msg["Subject"] = "Your Car Rental Tracker account"
     msg["From"] = from_addr
@@ -1698,10 +1699,12 @@ def _send_creds_email(to_email: str, username: str, password: str):
                     s.login(user, pwd)
                 s.send_message(msg)
     except Exception as e:
+        error_details = f"{type(e).__name__}: {e}\nHost: {host}\nPort: {port}\nUser: {user}\nFrom: {from_addr}\nTo: {to_email}"
         try:
-            (DEBUG_DIR / "mail_error.txt").write_text(f"{type(e).__name__}: {e}\n", encoding="utf-8")
+            (DEBUG_DIR / "mail_error.txt").write_text(error_details + "\n", encoding="utf-8")
         except Exception:
             pass
+        raise  # Re-raise para mostrar erro ao utilizador
 
 # Simple FX cache to avoid repeated HTTP calls
 _FX_CACHE: Dict[str, Tuple[float, float]] = {}  # key "GBP->EUR" -> (rate, ts)
