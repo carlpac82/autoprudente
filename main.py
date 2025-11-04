@@ -4618,11 +4618,22 @@ async def track_by_params(request: Request):
             # Timezone via CDP
             chrome_options.add_argument(f'--timezone={selected_timezone}')
             
-            # Iniciar driver
-            driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()),
-                options=chrome_options
-            )
+            # Caminho do Chrome no Mac
+            chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            
+            # Iniciar driver - tentar com Chrome instalado primeiro
+            try:
+                # Tentar usar Chrome do sistema (melhor para Mac ARM)
+                driver = webdriver.Chrome(options=chrome_options)
+                print(f"[SELENIUM] ✅ Chrome iniciado com sucesso!", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[SELENIUM] ⚠️ Erro ao iniciar Chrome: {e}", file=sys.stderr, flush=True)
+                print(f"[SELENIUM] Tentando com ChromeDriverManager...", file=sys.stderr, flush=True)
+                # Fallback para ChromeDriverManager
+                driver = webdriver.Chrome(
+                    service=Service(ChromeDriverManager().install()),
+                    options=chrome_options
+                )
             
             # FUNÇÃO HELPER: Autodetectar e REJEITAR cookies (mais simples!)
             def reject_cookies_if_present(step_name=""):
