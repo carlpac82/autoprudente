@@ -10592,15 +10592,27 @@ async def upload_vehicle_photo(vehicle_name: str, request: Request, file: Upload
         photo_data = await file.read()
         content_type = file.content_type or 'image/jpeg'
         
-        # Salvar no banco
+        # Salvar no banco (AMBAS as tabelas para compatibilidade)
         _ensure_vehicle_photos_table()
+        _ensure_vehicle_images_table()
+        
+        vehicle_key = vehicle_name.lower().strip()
+        
         with _db_lock:
             conn = _db_connect()
             try:
+                # Salvar em vehicle_photos
                 conn.execute("""
                     INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
                     VALUES (?, ?, ?, NULL)
-                """, (vehicle_name, photo_data, content_type))
+                """, (vehicle_key, photo_data, content_type))
+                
+                # Salvar também em vehicle_images para compatibilidade
+                conn.execute("""
+                    INSERT OR REPLACE INTO vehicle_images (vehicle_key, image_data, content_type, source_url)
+                    VALUES (?, ?, ?, NULL)
+                """, (vehicle_key, photo_data, content_type))
+                
                 conn.commit()
             finally:
                 conn.close()
@@ -10635,15 +10647,27 @@ async def download_vehicle_photo_from_url(vehicle_name: str, request: Request):
             photo_data = response.content
             content_type = response.headers.get('content-type', 'image/jpeg')
         
-        # Salvar no banco
+        # Salvar no banco (AMBAS as tabelas para compatibilidade)
         _ensure_vehicle_photos_table()
+        _ensure_vehicle_images_table()
+        
+        vehicle_key = vehicle_name.lower().strip()
+        
         with _db_lock:
             conn = _db_connect()
             try:
+                # Salvar em vehicle_photos
                 conn.execute("""
                     INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
                     VALUES (?, ?, ?, ?)
-                """, (vehicle_name, photo_data, content_type, photo_url))
+                """, (vehicle_key, photo_data, content_type, photo_url))
+                
+                # Salvar também em vehicle_images para compatibilidade
+                conn.execute("""
+                    INSERT OR REPLACE INTO vehicle_images (vehicle_key, image_data, content_type, source_url)
+                    VALUES (?, ?, ?, ?)
+                """, (vehicle_key, photo_data, content_type, photo_url))
+                
                 conn.commit()
             finally:
                 conn.close()
@@ -11296,27 +11320,19 @@ async def download_all_photos_from_carjet(request: Request):
         start_date = datetime.now() + timedelta(days=days_offset)
         end_date = start_date + timedelta(days=7)
         
-        print(f"[DOWNLOAD ALL PHOTOS] Iniciando scraping para {start_date.strftime('%Y-%m-%d')}...")
+        print(f"[DOWNLOAD ALL PHOTOS] Iniciando scraping para {start_date.strftime('%Y-%m-%d')}...", flush=True)
         
         photos_downloaded = 0
         photos_failed = 0
         total_cars = 0
         
-        # Scraping em Albufeira (SEM quick mode para scraping completo)
-        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping COMPLETO em Albufeira...")
-        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=0)
-        print(f"[DOWNLOAD ALL PHOTOS] Albufeira: {len(albufeira_results)} carros encontrados")
-        
-        # Scraping em Faro (SEM quick mode para scraping completo)
-        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping COMPLETO em Faro...")
-        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=0)
-        print(f"[DOWNLOAD ALL PHOTOS] Faro: {len(faro_results)} carros encontrados")
-        
-        # Combinar resultados
-        all_results = albufeira_results + faro_results
+        # Scraping APENAS em Faro (mais rápido e suficiente para fotos)
+        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping COMPLETO em Faro...", flush=True)
+        all_results = scrape_carjet_direct("Faro", start_date, end_date, quick=0)
         total_cars = len(all_results)
+        print(f"[DOWNLOAD ALL PHOTOS] Faro: {total_cars} carros encontrados", flush=True)
         
-        print(f"[DOWNLOAD ALL PHOTOS] Total de carros encontrados: {total_cars}")
+        print(f"[DOWNLOAD ALL PHOTOS] Total de carros encontrados: {total_cars}", flush=True)
         
         # Baixar fotos
         with _db_lock:
@@ -11326,12 +11342,26 @@ async def download_all_photos_from_carjet(request: Request):
                     car_name = item.get('car', '').strip()
                     photo_url = item.get('photo', '').strip()
                     
-                    if not car_name or not photo_url:
+                    if not car_name:
+                        photos_failed += 1
+                        print(f"[DOWNLOAD ALL PHOTOS] [{idx}/{total_cars}] ❌ Sem nome de carro", flush=True)
                         continue
                     
                     car_clean = clean_car_name(car_name).lower()
                     
-                    print(f"[DOWNLOAD ALL PHOTOS] [{idx}/{total_cars}] Baixando foto: {car_clean}")
+                    if not photo_url:
+                        photos_failed += 1
+                        print(f"[DOWNLOAD ALL PHOTOS] [{idx}/{total_cars}] ❌ Sem URL de foto: {car_clean}", flush=True)
+                        continue
+                    
+                    # IGNORAR placeholders (loading-car.png)
+                    if 'loading-car.png' in photo_url:
+                        photos_failed += 1
+                        print(f"[DOWNLOAD ALL PHOTOS] [{idx}/{total_cars}] ⏭️  Placeholder ignorado: {car_clean}", flush=True)
+                        continue
+                    
+                    print(f"[DOWNLOAD ALL PHOTOS] [{idx}/{total_cars}] Baixando foto: {car_clean}", flush=True)
+                    print(f"                      URL: {photo_url}", flush=True)
                     
                     try:
                         # Baixar foto
@@ -11355,13 +11385,13 @@ async def download_all_photos_from_carjet(request: Request):
                                 conn.commit()
                                 photos_downloaded += 1
                                 
-                                print(f"[DOWNLOAD ALL PHOTOS] ✅ Foto salva: {car_clean} ({len(photo_data)} bytes)")
+                                print(f"[DOWNLOAD ALL PHOTOS] ✅ Foto salva: {car_clean} ({len(photo_data)} bytes)", flush=True)
                             else:
                                 photos_failed += 1
-                                print(f"[DOWNLOAD ALL PHOTOS] ❌ Erro HTTP {photo_response.status_code}: {car_clean}")
+                                print(f"[DOWNLOAD ALL PHOTOS] ❌ Erro HTTP {photo_response.status_code}: {car_clean}", flush=True)
                     except Exception as e:
                         photos_failed += 1
-                        print(f"[DOWNLOAD ALL PHOTOS] ❌ Erro ao baixar {car_clean}: {e}")
+                        print(f"[DOWNLOAD ALL PHOTOS] ❌ Erro ao baixar {car_clean}: {e}", flush=True)
                         continue
             finally:
                 conn.close()
@@ -11999,11 +12029,18 @@ async def get_vehicle_photo(vehicle_name: str):
         with _db_lock:
             con = _db_connect()
             try:
-                # Tentar buscar foto exata
+                # Tentar buscar foto exata em vehicle_images primeiro
                 row = con.execute(
                     "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key = ?",
                     (vehicle_key,)
                 ).fetchone()
+                
+                # Se não encontrar, tentar em vehicle_photos
+                if not row:
+                    row = con.execute(
+                        "SELECT photo_data, content_type FROM vehicle_photos WHERE vehicle_name = ?",
+                        (vehicle_key,)
+                    ).fetchone()
                 
                 # Se não encontrar, tentar buscar variações do mesmo modelo
                 if not row:
@@ -13719,7 +13756,7 @@ async def create_backup(request: Request):
         
         # Create ZIP file
         with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # 1. All Databases
+            # 1. All Databases (SQLite local)
             if data.get('database', True):
                 db_files = ["rental_tracker.db", "data.db", "car_images.db", "carrental.db"]
                 for db_file in db_files:
@@ -13728,6 +13765,39 @@ async def create_backup(request: Request):
                         zipf.write(db_path, f"database/{db_file}")
                         size_kb = db_path.stat().st_size / 1024
                         logging.info(f"✅ Database {db_file} added to backup ({size_kb:.1f} KB)")
+                
+                # 1.1. PostgreSQL Backup (if in production)
+                if _USE_NEW_DB and USE_POSTGRES:
+                    try:
+                        import subprocess
+                        pg_backup_file = f"postgres_backup_{timestamp}.sql"
+                        pg_backup_path = backup_dir / pg_backup_file
+                        
+                        # Get DATABASE_URL
+                        db_url = os.getenv("DATABASE_URL")
+                        if db_url:
+                            logging.info("🐘 Creating PostgreSQL backup...")
+                            result = subprocess.run(
+                                ["pg_dump", db_url],
+                                capture_output=True,
+                                text=True,
+                                timeout=300  # 5 minutes timeout
+                            )
+                            
+                            if result.returncode == 0:
+                                with open(pg_backup_path, 'w') as f:
+                                    f.write(result.stdout)
+                                
+                                zipf.write(pg_backup_path, f"database/{pg_backup_file}")
+                                size_mb = pg_backup_path.stat().st_size / (1024 * 1024)
+                                logging.info(f"✅ PostgreSQL backup added ({size_mb:.2f} MB)")
+                                
+                                # Remove temp file
+                                pg_backup_path.unlink()
+                            else:
+                                logging.error(f"❌ PostgreSQL backup failed: {result.stderr}")
+                    except Exception as e:
+                        logging.error(f"❌ PostgreSQL backup error: {e}")
             
             # 2. Settings (localStorage data stored in DB)
             if data.get('settings', True):
@@ -14313,7 +14383,194 @@ def queue_email(to: str, subject: str, message: str):
 # Iniciar worker thread para emails
 email_thread = threading.Thread(target=email_worker, daemon=True)
 email_thread.start()
-log_to_db("INFO", "Email queue worker started", "main", "email_queue")
+log_to_db("INFO", "Email worker thread started", "main", "startup")
+
+# ============================================================
+# SEARCH HISTORY & NOTIFICATIONS ENDPOINTS
+# ============================================================
+
+@app.post("/api/search-history/save")
+async def save_search_history_endpoint(request: Request):
+    """Salva pesquisa no histórico"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        
+        save_search_to_history(
+            location=data.get('location', ''),
+            start_date=data.get('start_date', ''),
+            end_date=data.get('end_date', ''),
+            days=data.get('days', 0),
+            results_count=data.get('results_count', 0),
+            min_price=data.get('min_price'),
+            max_price=data.get('max_price'),
+            avg_price=data.get('avg_price'),
+            user=request.state.user.get('username', 'admin') if hasattr(request.state, 'user') else 'admin',
+            search_params=json.dumps(data)
+        )
+        
+        return _no_store_json({"ok": True, "message": "Search saved to history"})
+    except Exception as e:
+        logging.error(f"Save search history error: {e}")
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
+
+@app.get("/api/search-history/list")
+async def list_search_history(request: Request, limit: int = 50):
+    """Lista histórico de pesquisas"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT * FROM search_history 
+                    ORDER BY search_timestamp DESC 
+                    LIMIT ?
+                """, (limit,))
+                
+                rows = cursor.fetchall()
+                history = []
+                for row in rows:
+                    history.append({
+                        'id': row[0],
+                        'location': row[1],
+                        'start_date': row[2],
+                        'end_date': row[3],
+                        'days': row[4],
+                        'results_count': row[5],
+                        'min_price': row[6],
+                        'max_price': row[7],
+                        'avg_price': row[8],
+                        'user': row[9],
+                        'search_timestamp': row[10],
+                        'search_params': row[11]
+                    })
+                
+                return _no_store_json({"ok": True, "history": history})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"List search history error: {e}")
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
+
+@app.post("/api/notifications/rules/create")
+async def create_notification_rule(request: Request):
+    """Cria regra de notificação"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute("""
+                    INSERT INTO notification_rules 
+                    (rule_name, notification_type, recipient, trigger_condition, 
+                     trigger_value, message_template, enabled)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    data.get('rule_name'),
+                    data.get('notification_type', 'email'),
+                    data.get('recipient'),
+                    data.get('trigger_condition'),
+                    data.get('trigger_value'),
+                    data.get('message_template'),
+                    True
+                ))
+                conn.commit()
+                return _no_store_json({"ok": True, "message": "Notification rule created"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Create notification rule error: {e}")
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
+
+@app.get("/api/notifications/rules/list")
+async def list_notification_rules(request: Request):
+    """Lista regras de notificação"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT * FROM notification_rules 
+                    ORDER BY created_at DESC
+                """)
+                
+                rows = cursor.fetchall()
+                rules = []
+                for row in rows:
+                    rules.append({
+                        'id': row[0],
+                        'rule_name': row[1],
+                        'notification_type': row[2],
+                        'recipient': row[3],
+                        'trigger_condition': row[4],
+                        'trigger_value': row[5],
+                        'message_template': row[6],
+                        'enabled': row[7],
+                        'created_at': row[8]
+                    })
+                
+                return _no_store_json({"ok": True, "rules": rules})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"List notification rules error: {e}")
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
+
+@app.delete("/api/notifications/rules/{rule_id}")
+async def delete_notification_rule(request: Request, rule_id: int):
+    """Deleta regra de notificação"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute("DELETE FROM notification_rules WHERE id = ?", (rule_id,))
+                conn.commit()
+                return _no_store_json({"ok": True, "message": "Rule deleted"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Delete notification rule error: {e}")
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
+
+@app.get("/api/notifications/history")
+async def list_notification_history(request: Request, limit: int = 50):
+    """Lista histórico de notificações"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT * FROM notification_history 
+                    ORDER BY sent_at DESC 
+                    LIMIT ?
+                """, (limit,))
+                
+                rows = cursor.fetchall()
+                history = []
+                for row in rows:
+                    history.append({
+                        'id': row[0],
+                        'rule_id': row[1],
+                        'notification_type': row[2],
+                        'recipient': row[3],
+                        'subject': row[4],
+                        'message': row[5],
+                        'status': row[6],
+                        'sent_at': row[7]
+                    })
+                
+                return _no_store_json({"ok": True, "history": history})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"List notification history error: {e}")
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
 
 if __name__ == "__main__":
     import uvicorn
