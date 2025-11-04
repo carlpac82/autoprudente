@@ -3014,6 +3014,7 @@ async def admin_users_new_post(
 async def get_profile_picture(user_id: int):
     """Serve profile picture from database BLOB"""
     from fastapi.responses import Response
+    import sys
     
     with _db_lock:
         con = _db_connect()
@@ -3022,9 +3023,21 @@ async def get_profile_picture(user_id: int):
             row = cur.fetchone()
             if row and row[0]:
                 # Retornar imagem do BLOB
-                return Response(content=row[0], media_type="image/png")
+                print(f"[PROFILE_PIC] ✅ Serving BLOB for user {user_id} ({len(row[0])} bytes)", file=sys.stderr, flush=True)
+                # Detectar tipo de imagem pelos magic bytes
+                blob = row[0]
+                if blob[:2] == b'\xff\xd8':
+                    media_type = "image/jpeg"
+                elif blob[:4] == b'\x89PNG':
+                    media_type = "image/png"
+                elif blob[:4] == b'GIF8':
+                    media_type = "image/gif"
+                else:
+                    media_type = "image/png"  # fallback
+                return Response(content=blob, media_type=media_type)
             else:
                 # Retornar imagem default se não tiver foto
+                print(f"[PROFILE_PIC] ⚠️ No BLOB for user {user_id}, using default", file=sys.stderr, flush=True)
                 from pathlib import Path
                 default_pic = Path(__file__).parent / "static" / "profiles" / "default-avatar.png"
                 if default_pic.exists():
