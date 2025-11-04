@@ -35,10 +35,28 @@ def scrape_carjet_simple(location, start_dt, end_dt):
     print(f"[SELENIUM_SIMPLE] Local: {carjet_location}", file=sys.stderr, flush=True)
     print(f"[SELENIUM_SIMPLE] Datas: {start_dt.strftime('%d/%m/%Y')} - {end_dt.strftime('%d/%m/%Y')}", file=sys.stderr, flush=True)
     
-    # Configurar Chrome (IGUAL AO TESTE)
+    # Configurar Chrome
     chrome_options = Options()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
+    
+    # Headless mode (invisível) - pode ser desativado com SHOW_BROWSER=1
+    # No Render (produção), SEMPRE usa headless
+    import os
+    is_render = os.getenv('RENDER') or os.getenv('DATABASE_URL')
+    show_browser = os.getenv('SHOW_BROWSER', '0') == '1' and not is_render
+    
+    if not show_browser:
+        chrome_options.add_argument('--headless=new')  # Invisível
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--window-size=1920,1080')
+        if is_render:
+            print(f"[SELENIUM_SIMPLE] Modo headless (Render/Produção)", file=sys.stderr, flush=True)
+        else:
+            print(f"[SELENIUM_SIMPLE] Modo headless (invisível)", file=sys.stderr, flush=True)
+    else:
+        print(f"[SELENIUM_SIMPLE] Modo visível (debug local)", file=sys.stderr, flush=True)
+    
     chrome_options.add_argument('user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1')
     
     mobile_emulation = {
