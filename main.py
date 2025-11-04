@@ -1232,6 +1232,33 @@ def clean_car_name(car_name: str) -> str:
     
     return name
 
+def capitalize_car_name(car_name: str) -> str:
+    """
+    Capitaliza nomes de carros para display:
+    - Primeira letra de cada palavra em maiúscula
+    - SW, SUV, 4X4 sempre em maiúsculas
+    - Exemplos:
+      - "peugeot 2008 auto" → "Peugeot 2008 Auto"
+      - "renault megane sw auto" → "Renault Megane SW Auto"
+      - "toyota rav4 4x4 auto" → "Toyota Rav4 4X4 Auto"
+    """
+    if not car_name:
+        return ""
+    
+    # Palavras que devem ficar em maiúsculas
+    uppercase_words = {'sw', 'suv', '4x4', 'gt', 'gti', 'rs', 'st', 'amg', 'bmw', 'vw'}
+    
+    words = car_name.lower().split()
+    capitalized = []
+    
+    for word in words:
+        if word in uppercase_words:
+            capitalized.append(word.upper())
+        else:
+            capitalized.append(word.capitalize())
+    
+    return ' '.join(capitalized)
+
 def map_category_to_group(category: str, car_name: str = "") -> str:
     """
     Mapeia categorias descritivas para códigos de grupos definidos:
@@ -7261,9 +7288,11 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             #     continue
             # Mapear categoria para código de grupo
             group_code = map_category_to_group(category, car_name)
+            # Capitalizar nome para display (Peugeot 2008 Auto, Renault Megane SW Auto)
+            car_name_display = capitalize_car_name(car_name)
             items.append({
                 "id": idx,
-                "car": car_name,
+                "car": car_name_display,
                 "supplier": supplier,
                 "price": price_text,
                 "currency": "",
