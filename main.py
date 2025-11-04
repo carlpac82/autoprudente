@@ -1889,18 +1889,6 @@ def init_db():
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_q ON price_snapshots(location, days, ts)")
             
-            # Tabela para configurações globais de automação de preços
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS price_automation_settings (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  key TEXT NOT NULL UNIQUE,
-                  value TEXT NOT NULL,
-                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-            )
-            
             # Tabela para regras automatizadas de preços
             conn.execute(
                 """
@@ -9842,10 +9830,10 @@ async def save_price_automation_settings(request: Request):
                     logging.debug(f"  - {key}: {value_json[:100]}...")
                     conn.execute(
                         """
-                        INSERT INTO price_automation_settings (key, value, updated_at)
-                        VALUES (?, ?, CURRENT_TIMESTAMP)
-                        ON CONFLICT (key) DO UPDATE SET
-                            value = EXCLUDED.value,
+                        INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                        VALUES (?, ?, 'json', CURRENT_TIMESTAMP)
+                        ON CONFLICT (setting_key) DO UPDATE SET
+                            setting_value = EXCLUDED.setting_value,
                             updated_at = CURRENT_TIMESTAMP
                         """,
                         (key, value_json)
@@ -9871,7 +9859,7 @@ async def load_price_automation_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("SELECT key, value FROM price_automation_settings")
+                cursor = conn.execute("SELECT setting_key, setting_value FROM price_automation_settings")
                 rows = cursor.fetchall()
                 
                 settings = {}
@@ -13267,10 +13255,10 @@ async def sync_all_settings(request: Request):
                     
                     conn.execute(
                         """
-                        INSERT INTO price_automation_settings (key, value, updated_at)
-                        VALUES (?, ?, CURRENT_TIMESTAMP)
-                        ON CONFLICT (key) DO UPDATE SET
-                            value = EXCLUDED.value,
+                        INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                        VALUES (?, ?, 'json', CURRENT_TIMESTAMP)
+                        ON CONFLICT (setting_key) DO UPDATE SET
+                            setting_value = EXCLUDED.setting_value,
                             updated_at = CURRENT_TIMESTAMP
                         """,
                         (key, value_str)
@@ -13294,7 +13282,7 @@ async def load_all_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("SELECT key, value FROM price_automation_settings")
+                cursor = conn.execute("SELECT setting_key, setting_value FROM price_automation_settings")
                 rows = cursor.fetchall()
                 
                 settings = {}
