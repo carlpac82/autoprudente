@@ -4484,7 +4484,7 @@ async def track_by_params(request: Request):
             # ============================================
             # ROTAÇÃO DE DATAS (0-4 dias aleatório)
             # ============================================
-            import random
+            # random já importado globalmente
             from datetime import timedelta as td
             
             # Adicionar offset aleatório de 0-4 dias às datas
