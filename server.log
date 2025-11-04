@@ -130,3 +130,54 @@ INFO:     127.0.0.1:62282 - "GET /healthz HTTP/1.1" 200 OK
 [PARSE] Stats: price=275, name=275, blocked=0, items=275
 [PARSE] Returning 275 items from card parsing
 INFO:     127.0.0.1:62299 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50046 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50046 - "GET /healthz HTTP/1.1" 200 OK
+[API] REQUEST: location=Aeroporto de Faro, start_date=2025-11-06, start_time=15:00, days=7
+[DATE_ROTATION] Erro ao carregar configurações: no such column: setting_value
+[DATE_ROTATION] Original: 2025-11-06, Rotated: 2025-11-09 (+3 days)
+[API] COMPUTED: start_dt=2025-11-09, end_dt=2025-11-16, days=7
+[POST_DIRETO] Tentando POST direto ao Carjet...
+[POST_DIRETO] ⚠️ Falhou ou retornou 0 items, continuando para SELENIUM...
+[POST_DIRETO] ⚠️ Retornou 0 items, continuando para SELENIUM...
+[SELENIUM] Iniciando scraping SIMPLES (igual ao teste) para Aeroporto de Faro
+[SELENIUM_SIMPLE] Iniciando scraping...
+[SELENIUM_SIMPLE] Local: Faro Aeroporto (FAO)
+[SELENIUM_SIMPLE] Datas: 09/11/2025 - 16/11/2025
+[SELENIUM_SIMPLE] Modo headless (invisível)
+[SELENIUM_SIMPLE] Navegando para https://www.carjet.com/aluguel-carros/index.htm
+[SELENIUM_SIMPLE] ✅ Cookies rejeitados
+[SELENIUM_SIMPLE] PASSO 1: Escrevendo local...
+[SELENIUM_SIMPLE] ✓ Local digitado
+[SELENIUM_SIMPLE] PASSO 2: Aguardando dropdown...
+[SELENIUM_SIMPLE] ✅ Dropdown clicado
+[SELENIUM_SIMPLE] PASSO 3: Preenchendo datas e horas...
+[SELENIUM_SIMPLE] ✓ Datas preenchidas: {'allFilled': True, 'fechaDevolucion': True, 'fechaRecogida': True, 'horaDevolucion': True, 'horaRecogida': True}
+[SELENIUM_SIMPLE] PASSO 4: Submetendo...
+[SELENIUM_SIMPLE] Aguardando navegação...
+[SELENIUM_SIMPLE] Aguardando página de resultados...
+[SELENIUM_SIMPLE] ✅ Página carregada após 0s
+[SELENIUM_SIMPLE] URL final: https://www.carjet.com/do/list/pt?s=e156dd13-a0fd-42f8-8d92-fd1367b881a0&b=d91207db-0cbc-4776-98ca-184ef494d80a
+[SELENIUM_SIMPLE] ✅ Sucesso! HTML: 1115379 bytes
+[SELENIUM] ✅ Scraping simples bem-sucedido!
+[SELENIUM] Fazendo parse de 1115379 bytes...
+[SELENIUM] Parsed 277 items
+[SELENIUM] 277 após GBP→EUR
+[SELENIUM] 277 após ajustes
+[SELENIUM] ✅ 277 carros encontrados!
+[DEBUG] Primeiro item: cat=Economy, car_clean=Opel Corsa, group=D
+[DEBUG] row tem 'group'? True, valor=D
+
+============================================================
+[API] REQUEST: location=Aeroporto de Faro, start_date=2025-11-06, start_time=15:00, days=7
+[API] end_date_in=, end_time=15:00
+============================================================
+
+[API] COMPUTED: start_dt=2025-11-09, end_dt=2025-11-16, days=7
+[PARSE] Found 0 cards to parse
+[PARSE] Stats: price=0, name=0, blocked=0, items=0
+[DEBUG] TEST_MODE_LOCAL=0, location=aeroporto de faro, days=7
+[PARSE] Found 277 cards to parse
+[PARSE] Stats: price=277, name=277, blocked=0, items=277
+[PARSE] Returning 277 items from card parsing
+INFO:     127.0.0.1:50053 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50046 - "GET /static/logos/logo_SXT.png HTTP/1.1" 304 Not Modified
