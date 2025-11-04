@@ -191,6 +191,41 @@ class PostgreSQLConnectionWrapper:
             query = query.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
             query = query.replace('AUTOINCREMENT', '')
         
+        # Convert SQLite INSERT OR REPLACE to PostgreSQL INSERT ... ON CONFLICT
+        if 'INSERT OR REPLACE INTO' in query.upper():
+            import re
+            # Extract table name and columns
+            match = re.search(r'INSERT OR REPLACE INTO\s+(\w+)\s*\(([^)]+)\)', query, re.IGNORECASE)
+            if match:
+                table_name = match.group(1)
+                columns = [col.strip() for col in match.group(2).split(',')]
+                
+                # Determine primary key column (usually first column or one ending with _key/id)
+                pk_column = columns[0]  # Default to first column
+                for col in columns:
+                    if col.endswith('_key') or col.endswith('_id') or col == 'id' or col == 'key' or col == 'setting_key':
+                        pk_column = col
+                        break
+                
+                # Convert to PostgreSQL syntax
+                query = re.sub(
+                    r'INSERT OR REPLACE INTO',
+                    'INSERT INTO',
+                    query,
+                    flags=re.IGNORECASE
+                )
+                
+                # Add ON CONFLICT clause if not already present
+                if 'ON CONFLICT' not in query.upper():
+                    # Find the VALUES clause
+                    values_match = re.search(r'VALUES\s*\([^)]+\)', query, re.IGNORECASE)
+                    if values_match:
+                        values_end = values_match.end()
+                        # Build UPDATE SET clause for all columns except primary key
+                        update_cols = [f"{col} = EXCLUDED.{col}" for col in columns if col != pk_column]
+                        on_conflict = f"\nON CONFLICT ({pk_column}) DO UPDATE SET\n    {', '.join(update_cols)}"
+                        query = query[:values_end] + on_conflict + query[values_end:]
+        
         self._cursor = self._conn.cursor()
         try:
             if params:

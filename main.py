@@ -9839,8 +9839,11 @@ async def save_price_automation_settings(request: Request):
                     logging.debug(f"  - {key}: {value_json[:100]}...")
                     conn.execute(
                         """
-                        INSERT OR REPLACE INTO price_automation_settings (key, value, updated_at)
+                        INSERT INTO price_automation_settings (key, value, updated_at)
                         VALUES (?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT (key) DO UPDATE SET
+                            value = EXCLUDED.value,
+                            updated_at = CURRENT_TIMESTAMP
                         """,
                         (key, value_json)
                     )
@@ -13044,8 +13047,12 @@ async def save_automation_settings(request: Request):
                         stype = 'string'
                     
                     con.execute("""
-                        INSERT OR REPLACE INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                        INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
                         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT (setting_key) DO UPDATE SET
+                            setting_value = EXCLUDED.setting_value,
+                            setting_type = EXCLUDED.setting_type,
+                            updated_at = CURRENT_TIMESTAMP
                     """, (key, value_str, stype))
                 
                 con.commit()
@@ -13257,8 +13264,11 @@ async def sync_all_settings(request: Request):
                     
                     conn.execute(
                         """
-                        INSERT OR REPLACE INTO price_automation_settings (key, value, updated_at)
+                        INSERT INTO price_automation_settings (key, value, updated_at)
                         VALUES (?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT (key) DO UPDATE SET
+                            value = EXCLUDED.value,
+                            updated_at = CURRENT_TIMESTAMP
                         """,
                         (key, value_str)
                     )
