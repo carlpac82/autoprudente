@@ -13086,6 +13086,7 @@ async def fix_schema_emergency(request: Request):
             ("email", "TEXT"),
             ("mobile", "TEXT"),
             ("profile_picture_path", "TEXT"),
+            ("profile_picture_data", "BYTEA"),
             ("is_admin", "BOOLEAN DEFAULT FALSE"),
             ("enabled", "BOOLEAN DEFAULT TRUE"),
             ("created_at", "TEXT"),
