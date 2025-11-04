@@ -913,7 +913,21 @@
                 if (data.ok) {
                     const msg = `Atualização completa!\n\nTotal: ${data.total_scraped || 0} carros\nNovos: ${data.new_cars_count || 0} carros`;
                     showNotification(msg, 'success');
+                    
+                    // FORÇAR RELOAD COMPLETO DA LISTA
+                    console.log('[REFRESH] Recarregando lista e fotos...');
                     await loadVehicles(); // Recarregar lista
+                    
+                    // Forçar reload de TODAS as imagens
+                    setTimeout(() => {
+                        const allImages = document.querySelectorAll('img[src*="/api/vehicles/"]');
+                        console.log(`[REFRESH] Recarregando ${allImages.length} imagens...`);
+                        allImages.forEach(img => {
+                            const originalSrc = img.src.split('?')[0];
+                            img.src = originalSrc + '?t=' + Date.now();
+                        });
+                        console.log('[REFRESH] Lista e fotos atualizadas!');
+                    }, 1000);
                 } else {
                     showNotification('Erro: ' + (data.error || 'Falha ao atualizar'), 'error');
                 }
@@ -949,7 +963,23 @@
                 if (data.ok) {
                     const msg = `Download completo!\n\nTotal: ${data.total_cars || 0} carros\nFotos baixadas: ${data.photos_downloaded || 0}\nFalharam: ${data.photos_failed || 0}`;
                     showNotification(msg, 'success');
-                    await loadVehicles(); // Recarregar lista
+                    
+                    // FORÇAR RELOAD COMPLETO DAS FOTOS
+                    console.log('[DOWNLOAD PHOTOS] Recarregando fotos...');
+                    
+                    // 1. Recarregar lista de veículos
+                    await loadVehicles();
+                    
+                    // 2. Forçar reload de TODAS as imagens (adicionar timestamp para evitar cache)
+                    setTimeout(() => {
+                        const allImages = document.querySelectorAll('img[src*="/api/vehicles/"]');
+                        console.log(`[DOWNLOAD PHOTOS] Recarregando ${allImages.length} imagens...`);
+                        allImages.forEach(img => {
+                            const originalSrc = img.src.split('?')[0]; // Remover query string antiga
+                            img.src = originalSrc + '?t=' + Date.now(); // Adicionar timestamp novo
+                        });
+                        console.log('[DOWNLOAD PHOTOS] Fotos atualizadas!');
+                    }, 1000);
                 } else {
                     showNotification('Erro: ' + (data.error || 'Falha ao baixar fotos'), 'error');
                 }
