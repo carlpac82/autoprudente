@@ -3053,9 +3053,14 @@ async def get_profile_picture(user_id: int):
             row = cur.fetchone()
             if row and row[0]:
                 # Retornar imagem do BLOB
-                print(f"[PROFILE_PIC] ✅ Serving BLOB for user {user_id} ({len(row[0])} bytes)", file=sys.stderr, flush=True)
-                # Detectar tipo de imagem pelos magic bytes
+                # PostgreSQL retorna memoryview, converter para bytes
                 blob = row[0]
+                if isinstance(blob, memoryview):
+                    blob = bytes(blob)
+                
+                print(f"[PROFILE_PIC] ✅ Serving BLOB for user {user_id} ({len(blob)} bytes)", file=sys.stderr, flush=True)
+                
+                # Detectar tipo de imagem pelos magic bytes
                 if blob[:2] == b'\xff\xd8':
                     media_type = "image/jpeg"
                 elif blob[:4] == b'\x89PNG':
