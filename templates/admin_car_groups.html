@@ -185,7 +185,9 @@
     
     <script>
       async function downloadAllPhotos() {
+        console.log('[DEBUG] downloadAllPhotos chamada');
         const button = document.getElementById('downloadPhotosBtn');
+        console.log('[DEBUG] Botão encontrado:', button);
         const originalHTML = button.innerHTML;
         
         // Confirmar ação
@@ -284,7 +286,9 @@
       }
       
       async function refreshVehicles() {
+        console.log('[DEBUG] refreshVehicles chamada');
         const button = document.getElementById('refreshBtn');
+        console.log('[DEBUG] Botão encontrado:', button);
         const originalHTML = button.innerHTML;
         
         // Criar modal de progresso
