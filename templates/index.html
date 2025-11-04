@@ -17,10 +17,19 @@
     <meta name="apple-mobile-web-app-title" content="Car Rental Tracker">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Preload all supplier logos from database for faster rendering -->
-    {% for logo_path in supplier_logos %}
-    <link rel="preload" as="image" href="{{ logo_path }}" />
-    {% endfor %}
+    <!-- Preload top 12 supplier logos for instant loading -->
+    <link rel="preload" as="image" href="/static/logos/logo_AUP.png" />
+    <link rel="preload" as="image" href="/static/logos/logo_HER.png" />
+    <link rel="preload" as="image" href="/static/logos/logo_SXT.png" />
+    <link rel="preload" as="image" href="/static/logos/logo_THR.png.avif" />
+    <link rel="preload" as="image" href="/static/logos/logo_ECR.png.avif" />
+    <link rel="preload" as="image" href="/static/logos/logo_BGX.png.avif" />
+    <link rel="preload" as="image" href="/static/logos/logo_CEN.png.avif" />
+    <link rel="preload" as="image" href="/static/logos/logo_OKR.png" />
+    <link rel="preload" as="image" href="/static/logos/logo_SUR.png" />
+    <link rel="preload" as="image" href="/static/logos/logo_TAN.png" />
+    <link rel="preload" as="image" href="/static/logos/logo_YNO.png.avif" />
+    <link rel="preload" as="image" href="/static/logos/logo_ICT.png" />
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
