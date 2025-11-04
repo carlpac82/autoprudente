@@ -346,20 +346,46 @@ POST /api/reports/test-daily
 
 ## 📧 EMAILS DE DESTINO
 
-### Atual (Hardcoded):
+### ✅ Sistema Automático (Implementado):
+
+**Relatórios usam destinatários das Notification Rules!**
+
 ```python
-test_email = "carlpac82@hotmail.com"  # Linha 13633
+# Busca destinatários ativos
+SELECT DISTINCT recipient FROM notification_rules 
+WHERE enabled = 1 AND notification_type = 'email'
 ```
 
-### Para Mudar:
-1. Editar `main.py` linha 13633
-2. Ou adicionar campo no frontend
-3. Ou ler da configuração da BD
+**Prioridade:**
+1. 🥇 Destinatários das Notification Rules (ativas)
+2. 🥈 Configuração `report_email` na BD
+3. 🥉 Email padrão: carlpac82@hotmail.com
 
-### Recomendação:
-- Adicionar campo "Report Email" em Settings
-- Guardar na BD
-- Ler dinamicamente
+### Como Configurar:
+
+**Opção 1: Via Notification Rules (Recomendado)**
+```
+1. Settings → Notifications
+2. Adiciona nova regra
+3. Tipo: Email
+4. Destinatário: teu-email@example.com
+5. Ativa regra
+6. ✅ Relatórios vão para esse email!
+```
+
+**Opção 2: Via Configuração**
+```
+1. Settings → Admin Settings
+2. Adiciona: report_email = teu-email@example.com
+3. Guarda
+4. ✅ Usado se não houver notification rules
+```
+
+**Múltiplos Destinatários:**
+- Cria múltiplas notification rules
+- Cada uma com email diferente
+- Todas ativas
+- ✅ Relatórios enviados para todos!
 
 ---
 
