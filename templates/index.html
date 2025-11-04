@@ -1394,6 +1394,31 @@
         return s;
       }
 
+      function displayCarName(it) {
+        // Exibir nome do carro com indicação de "Auto" se for automático
+        const carName = String(it.car || '-').trim();
+        const transmission = String(it.transmission || '').toLowerCase();
+        const category = String(it.category || '').toLowerCase();
+        const group = String(it.group || '');
+        
+        // Verificar se já tem "auto", "automatic" ou "aut" no nome
+        if (/\b(auto|automatic|aut)\b/i.test(carName)) {
+          return carName;  // Já tem indicação
+        }
+        
+        // Verificar se é automático por transmission, category ou group
+        const isAutomatic = 
+          /automatic|automático|automatico/i.test(transmission) ||
+          /automatic|auto/i.test(category) ||
+          ['E1', 'E2', 'L1', 'L2', 'M2'].includes(group);
+        
+        if (isAutomatic) {
+          return carName + ' Auto';
+        }
+        
+        return carName;
+      }
+
       function displayCategory(it) {
         // Retornar a categoria descritiva (Economy, SUV, Mini, etc)
         // NÃO mostrar o código do grupo (B1, D, F, etc)
@@ -1509,7 +1534,7 @@
                   ${imgTagFor(it, 'card')}
                   <div class="min-w-0 flex-1">
                     <div class="text-xs text-gray-500 flex items-center">${renderSupplierLogo(it.supplier)}</div>
-                    <div class="text-sm font-medium text-gray-900 truncate">${escapeHtml(it.car || '-')}</div>
+                    <div class="text-sm font-medium text-gray-900 truncate">${escapeHtml(displayCarName(it))}</div>
                     <div class="text-xs text-gray-600">${escapeHtml(displayCategory(it))}</div>
                   </div>
                   <div class="text-right">
@@ -1544,7 +1569,7 @@
                         ${imgTagFor(it, 'table')}
                       </td>
                       <td class="px-4 py-2 text-sm">${renderSupplierLogo(it.supplier)}</td>
-                      <td class="px-4 py-2 text-sm">${escapeHtml(it.car || '-')}</td>
+                      <td class="px-4 py-2 text-sm">${escapeHtml(displayCarName(it))}</td>
                       <td class="px-4 py-2 text-sm">${escapeHtml(displayCategory(it))}</td>
                       <td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price || '')}</td>
                     </tr>
@@ -2144,7 +2169,7 @@
                 tr.innerHTML = `
                   <td class="px-4 py-2 text-sm text-gray-600">${i + 1}</td>
                   <td class="px-4 py-2 text-sm">${escapeHtml(it.supplier || '')}</td>
-                  <td class="px-4 py-2 text-sm">${escapeHtml(it.car || '')}</td>
+                  <td class="px-4 py-2 text-sm">${escapeHtml(displayCarName(it))}</td>
                   <td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price || '')}</td>`;
                 tbody.appendChild(tr);
               }
