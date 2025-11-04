@@ -1489,6 +1489,9 @@ try:
                         row = cur.fetchone()
                         if not row:
                             pw_hash = _hash_password(user["password"])
+                            # Convert integers to boolean for PostgreSQL
+                            is_admin_val = True if user.get("is_admin", 0) == 1 else False
+                            enabled_val = True if user.get("enabled", 1) == 1 else False
                             con.execute(
                                 "INSERT INTO users (username, password_hash, first_name, last_name, email, mobile, profile_picture_path, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
                                 (
@@ -1499,8 +1502,8 @@ try:
                                     user["email"],
                                     user["mobile"],
                                     user["profile_picture"],
-                                    1 if user["is_admin"] else 0,
-                                    1,
+                                    is_admin_val,
+                                    enabled_val,
                                     time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
                                 )
                             )
@@ -2951,9 +2954,12 @@ async def admin_users_new_post(
     with _db_lock:
         con = _db_connect()
         try:
+            # Convert to boolean for PostgreSQL
+            is_admin_bool = True if (is_admin in ("1","true","on")) else False
+            enabled_bool = True
             con.execute(
                 "INSERT INTO users (username, password_hash, first_name, last_name, mobile, email, profile_picture_path, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (u, pw_hash, first_name, last_name, mobile, email, pic_path or "", 1 if (is_admin in ("1","true","on")) else 0, 1, time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
+                (u, pw_hash, first_name, last_name, mobile, email, pic_path or "", is_admin_bool, enabled_bool, time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
             )
             con.commit()
         except sqlite3.IntegrityError:
