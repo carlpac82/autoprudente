@@ -9490,6 +9490,18 @@ async def admin_vehicles_editor(request: Request):
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Erro: vehicle_editor.html não encontrado</h1>", status_code=500)
 
+@app.get("/vehicle-editor", response_class=HTMLResponse)
+async def vehicle_editor(request: Request):
+    """Vehicle Editor - Alias para /admin/car-groups"""
+    require_auth(request)
+    
+    html_path = os.path.join(os.path.dirname(__file__), "vehicle_editor.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: vehicle_editor.html não encontrado</h1>", status_code=500)
+
 @app.get("/admin/price-validation", response_class=HTMLResponse)
 async def admin_price_validation(request: Request):
     """Página de configuração de regras de validação de preços"""
@@ -10466,12 +10478,8 @@ async def get_uncategorized_vehicles(request: Request):
         for row in rows:
             original_name = row[0]
             
-            # Limpar nome para verificar se está no VEHICLES
-            clean = original_name.lower().strip()
-            clean = re.sub(r'\s+(ou\s*similar|or\s*similar).*$', '', clean, flags=re.IGNORECASE)
-            clean = re.sub(r'\s*\|\s*.*$', '', clean)
-            clean = re.sub(r'\s+(pequeno|médio|medio|grande|compacto|economico|econômico|familiar|luxo|premium|standard)\s*$', '', clean, flags=re.IGNORECASE)
-            clean = re.sub(r'\s+', ' ', clean).strip()
+            # Usar a MESMA função de limpeza que o scraping
+            clean = clean_car_name(original_name)
             
             # Se não está no VEHICLES, adicionar à lista
             if clean and clean not in VEHICLES:
