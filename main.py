@@ -12960,11 +12960,35 @@ async def fix_schema_emergency(request: Request):
             ("email", "TEXT"),
             ("mobile", "TEXT"),
             ("profile_picture_path", "TEXT"),
-            ("is_admin", "INTEGER DEFAULT 0"),
-            ("enabled", "INTEGER DEFAULT 1"),
+            ("is_admin", "BOOLEAN DEFAULT FALSE"),
+            ("enabled", "BOOLEAN DEFAULT TRUE"),
             ("created_at", "TEXT"),
             ("google_id", "TEXT"),
         ]
+        
+        # Se as colunas já existem como INTEGER, converter para BOOLEAN
+        try:
+            # Verificar tipo atual
+            cursor = conn.execute("""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name IN ('is_admin', 'enabled')
+            """)
+            existing = {row[0]: row[1] for row in cursor.fetchall()}
+            
+            # Converter INTEGER para BOOLEAN se necessário
+            if existing.get('is_admin') == 'integer':
+                conn.execute("ALTER TABLE users ALTER COLUMN is_admin TYPE BOOLEAN USING is_admin::boolean")
+                conn.commit()
+                results.append({"column": "is_admin", "status": "converted to BOOLEAN"})
+            
+            if existing.get('enabled') == 'integer':
+                conn.execute("ALTER TABLE users ALTER COLUMN enabled TYPE BOOLEAN USING enabled::boolean")
+                conn.commit()
+                results.append({"column": "enabled", "status": "converted to BOOLEAN"})
+        except Exception as e:
+            conn.rollback()
+            results.append({"column": "type_conversion", "status": "error", "error": str(e)})
         
         with _db_lock:
             conn = _db_connect()
