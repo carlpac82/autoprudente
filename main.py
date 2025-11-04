@@ -9670,17 +9670,20 @@ async def save_vehicle(request: Request):
 
 @app.get("/admin/car-groups", response_class=HTMLResponse)
 async def admin_car_groups(request: Request):
-    """Página de administração dos grupos de carros - NOVA versão com abas e criação de categorias"""
+    """Página de administração dos grupos de carros"""
     require_auth(request)
     
-    # Ler o ficheiro HTML NOVO (vehicle_editor.html)
-    html_path = os.path.join(os.path.dirname(__file__), "vehicle_editor.html")
-    try:
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)
-    except FileNotFoundError:
-        return HTMLResponse(content="<h1>Erro: Ficheiro vehicle_editor.html não encontrado</h1>", status_code=500)
+    with _db_lock:
+        conn = _db_connect()
+        try:
+            groups = conn.execute("SELECT * FROM car_groups ORDER BY brand, model").fetchall()
+        finally:
+            conn.close()
+    
+    return templates.TemplateResponse("admin_car_groups.html", {
+        "request": request,
+        "groups": groups
+    })
 
 @app.get("/admin/vehicles-editor", response_class=HTMLResponse)
 async def admin_vehicles_editor(request: Request):
