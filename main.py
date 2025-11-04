@@ -2110,6 +2110,26 @@ def init_db():
                 """
             )
             
+            # Tabela para OAuth Tokens (Gmail, etc)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS oauth_tokens (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  provider TEXT NOT NULL,
+                  user_email TEXT NOT NULL,
+                  access_token TEXT NOT NULL,
+                  refresh_token TEXT,
+                  expires_at INTEGER,
+                  google_id TEXT,
+                  user_name TEXT,
+                  user_picture TEXT,
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  UNIQUE(provider, user_email)
+                )
+                """
+            )
+            
             # Tabela para Price Validation Rules
             conn.execute(
                 """
@@ -13553,6 +13573,97 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
     except Exception as e:
         logging.error(f"OAuth callback error: {str(e)}")
         return HTMLResponse(f"<h1>Error</h1><p>Failed to complete OAuth: {str(e)}</p>")
+
+@app.post("/api/oauth/save-token")
+async def save_oauth_token(request: Request):
+    """Save OAuth token to database (persists across deploys)"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        provider = data.get('provider', 'gmail')
+        user_email = data.get('email')
+        access_token = data.get('token')
+        refresh_token = data.get('refreshToken', '')
+        expires_at = data.get('expiresAt', 0)
+        google_id = data.get('googleId', '')
+        user_name = data.get('name', '')
+        user_picture = data.get('picture', '')
+        
+        if not user_email or not access_token:
+            return JSONResponse({"ok": False, "error": "Missing email or token"})
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO oauth_tokens 
+                    (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT (provider, user_email) DO UPDATE SET
+                        access_token = EXCLUDED.access_token,
+                        refresh_token = EXCLUDED.refresh_token,
+                        expires_at = EXCLUDED.expires_at,
+                        google_id = EXCLUDED.google_id,
+                        user_name = EXCLUDED.user_name,
+                        user_picture = EXCLUDED.user_picture,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
+                )
+                conn.commit()
+                logging.info(f"✅ OAuth token saved to database for {user_email}")
+                return JSONResponse({"ok": True, "message": "Token saved successfully"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error saving OAuth token: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/oauth/load-token")
+async def load_oauth_token(request: Request):
+    """Load OAuth token from database"""
+    require_auth(request)
+    
+    try:
+        provider = request.query_params.get('provider', 'gmail')
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture
+                    FROM oauth_tokens
+                    WHERE provider = ?
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """,
+                    (provider,)
+                )
+                row = cursor.fetchone()
+                
+                if row:
+                    return JSONResponse({
+                        "ok": True,
+                        "token": {
+                            "email": row[0],
+                            "token": row[1],
+                            "refreshToken": row[2],
+                            "expiresAt": row[3],
+                            "googleId": row[4],
+                            "name": row[5],
+                            "picture": row[6]
+                        }
+                    })
+                else:
+                    return JSONResponse({"ok": False, "error": "No token found"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error loading OAuth token: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/user/update-google-profile")
 async def update_google_profile(request: Request):
