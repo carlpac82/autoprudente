@@ -58,13 +58,19 @@
       </div>
 
       <!-- Add New Vehicle Button -->
-      <div class="mb-6">
+      <div class="mb-6 flex items-center gap-3">
         <a href="/admin/car-groups/new" class="inline-flex items-center gap-2 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8f] transition-colors shadow-sm">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           <span data-i18n="vehicles.newVehicle">New Vehicle</span>
         </a>
+        <button onclick="refreshVehicles()" id="refreshBtn" class="inline-flex items-center gap-2 px-4 py-2 bg-[#f4ad0f] text-white rounded-lg hover:bg-[#e39e0e] transition-colors shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span data-i18n="vehicles.refresh">Refresh Vehicles</span>
+        </button>
       </div>
       {% if groups %}
       <!-- Vehicles Grid -->
@@ -177,6 +183,70 @@
     </div>
     
     <script>
+      async function refreshVehicles() {
+        const button = document.getElementById('refreshBtn');
+        const originalHTML = button.innerHTML;
+        
+        // Mostrar loading
+        button.disabled = true;
+        button.innerHTML = `
+          <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Fazendo scraping...</span>
+        `;
+        
+        try {
+          console.log('[REFRESH VEHICLES] Iniciando scraping em Albufeira e Faro...');
+          
+          const response = await fetch('/api/vehicles/refresh', {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
+          
+          const data = await response.json();
+          
+          if (data.ok) {
+            // Sucesso
+            const totalCars = data.total_cars || 0;
+            const newCars = data.new_cars_count || 0;
+            
+            if (newCars > 0) {
+              // Mostrar carros novos
+              let message = `✅ Scraping completo!\n\n`;
+              message += `Total de carros: ${totalCars}\n`;
+              message += `Carros novos: ${newCars}\n\n`;
+              message += `Carros novos encontrados:\n`;
+              
+              (data.new_cars || []).slice(0, 10).forEach(car => {
+                message += `- ${car.car} (${car.category || 'Sem categoria'})\n`;
+              });
+              
+              if (newCars > 10) {
+                message += `\n... e mais ${newCars - 10} carros`;
+              }
+              
+              alert(message);
+            } else {
+              alert(`✅ Scraping completo!\n\nTotal de carros: ${totalCars}\nNenhum carro novo encontrado.`);
+            }
+            
+            // Recarregar página
+            window.location.reload();
+          } else {
+            // Erro
+            alert(`❌ Erro: ${data.error || 'Falha ao fazer scraping'}`);
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+          }
+        } catch (error) {
+          console.error('[REFRESH VEHICLES] Erro:', error);
+          alert(`❌ Erro ao fazer scraping: ${error.message}`);
+          button.disabled = false;
+          button.innerHTML = originalHTML;
+        }
+      }
+      
       async function downloadPhoto(vehicleName) {
         const button = event.target.closest('button');
         const originalHTML = button.innerHTML;
