@@ -2397,7 +2397,95 @@ def send_notification(rule_id: int, notification_type: str, recipient: str, subj
         log_to_db("ERROR", f"Failed to send notification: {str(e)}", "main", "send_notification")
 
 def _send_notification_email(to_email: str, subject: str, message: str):
-    """Enviar email de notificação"""
+    """Enviar email de notificação via Gmail OAuth"""
+    try:
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        # Buscar token OAuth da BD
+        access_token = None
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
+                if row:
+                    access_token = row[0]
+                    logging.info("✅ Token loaded from database for notification email")
+            finally:
+                conn.close()
+        
+        if not access_token:
+            # Fallback para SMTP se não houver token OAuth
+            logging.warning("⚠️ No OAuth token found, trying SMTP fallback")
+            _send_notification_email_smtp(to_email, subject, message)
+            return
+        
+        # Criar email HTML
+        email_message = MIMEMultipart('alternative')
+        email_message['to'] = to_email
+        email_message['subject'] = subject
+        
+        # Se a mensagem já é HTML, usar diretamente
+        if message.strip().startswith('<!DOCTYPE') or message.strip().startswith('<html'):
+            html_part = MIMEText(message, 'html')
+        else:
+            # Converter texto simples para HTML
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+            </head>
+            <body style="font-family: 'Segoe UI', sans-serif; background: #f8fafc; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: white; font-size: 24px;">🔔 Notificação Auto Prudente</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                        <div style="color: #1e293b; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">{message}</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                            Auto Prudente © 2025 - Sistema de Monitorização de Preços
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            html_part = MIMEText(html_content, 'html')
+        
+        email_message.attach(html_part)
+        
+        # Enviar via Gmail API
+        credentials = Credentials(token=access_token)
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        raw_message = base64.urlsafe_b64encode(email_message.as_bytes()).decode()
+        send_message = service.users().messages().send(
+            userId='me',
+            body={'raw': raw_message}
+        ).execute()
+        
+        logging.info(f"✅ Notification email sent via Gmail OAuth to {to_email}")
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to send notification email via OAuth: {str(e)}")
+        # Tentar SMTP como fallback
+        try:
+            _send_notification_email_smtp(to_email, subject, message)
+        except Exception as smtp_error:
+            logging.error(f"❌ SMTP fallback also failed: {str(smtp_error)}")
+            raise
+
+def _send_notification_email_smtp(to_email: str, subject: str, message: str):
+    """Enviar email de notificação via SMTP (fallback)"""
     host = _get_setting("smtp_host", "").strip()
     port = int(_get_setting("smtp_port", "587") or 587)
     user = _get_setting("smtp_username", "").strip()
