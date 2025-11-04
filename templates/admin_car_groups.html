@@ -71,6 +71,12 @@
           </svg>
           <span data-i18n="vehicles.refresh">Refresh Vehicles</span>
         </button>
+        <button onclick="downloadAllPhotos()" id="downloadPhotosBtn" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <span data-i18n="vehicles.downloadPhotos">Download All Photos</span>
+        </button>
       </div>
       {% if groups %}
       <!-- Vehicles Grid -->
@@ -114,11 +120,6 @@
                 
                 <!-- Actions -->
                 <div class="flex items-center gap-2">
-                  <button onclick="downloadPhoto('{{g.name}}')" class="p-2 text-green-600 hover:bg-green-50 rounded transition-colors" title="Download Photo from CarJet">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                  </button>
                   <a href="/admin/car-groups/{{g.id}}/edit" class="p-2 text-[#009cb6] hover:bg-[#009cb6]/10 rounded transition-colors" title="Edit">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -183,6 +184,63 @@
     </div>
     
     <script>
+      async function downloadAllPhotos() {
+        const button = document.getElementById('downloadPhotosBtn');
+        const originalHTML = button.innerHTML;
+        
+        // Confirmar ação
+        if (!confirm('Deseja fazer scraping e baixar TODAS as fotos dos carros?\n\nIsso pode demorar 2-5 minutos.')) {
+          return;
+        }
+        
+        // Mostrar loading
+        button.disabled = true;
+        button.innerHTML = `
+          <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Baixando fotos...</span>
+        `;
+        
+        try {
+          console.log('[DOWNLOAD ALL PHOTOS] Iniciando download em massa...');
+          
+          const response = await fetch('/api/vehicles/download-all-photos', {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
+          
+          const data = await response.json();
+          
+          if (data.ok) {
+            // Sucesso
+            const totalCars = data.total_cars || 0;
+            const photosDownloaded = data.photos_downloaded || 0;
+            const photosFailed = data.photos_failed || 0;
+            
+            let message = `✅ Download completo!\n\n`;
+            message += `Total de carros: ${totalCars}\n`;
+            message += `Fotos baixadas: ${photosDownloaded}\n`;
+            message += `Fotos falhadas: ${photosFailed}\n`;
+            
+            alert(message);
+            
+            // Recarregar página
+            window.location.reload();
+          } else {
+            // Erro
+            alert(`❌ Erro: ${data.error || 'Falha ao baixar fotos'}`);
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+          }
+        } catch (error) {
+          console.error('[DOWNLOAD ALL PHOTOS] Erro:', error);
+          alert(`❌ Erro ao baixar fotos: ${error.message}`);
+          button.disabled = false;
+          button.innerHTML = originalHTML;
+        }
+      }
+      
       async function refreshVehicles() {
         const button = document.getElementById('refreshBtn');
         const originalHTML = button.innerHTML;
@@ -242,46 +300,6 @@
         } catch (error) {
           console.error('[REFRESH VEHICLES] Erro:', error);
           alert(`❌ Erro ao fazer scraping: ${error.message}`);
-          button.disabled = false;
-          button.innerHTML = originalHTML;
-        }
-      }
-      
-      async function downloadPhoto(vehicleName) {
-        const button = event.target.closest('button');
-        const originalHTML = button.innerHTML;
-        
-        // Mostrar loading
-        button.disabled = true;
-        button.innerHTML = `
-          <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-        `;
-        
-        try {
-          console.log(`[DOWNLOAD PHOTO] Baixando foto para: ${vehicleName}`);
-          
-          const response = await fetch(`/api/vehicles/${encodeURIComponent(vehicleName)}/download-photo`, {
-            method: 'POST',
-            credentials: 'same-origin'
-          });
-          
-          const data = await response.json();
-          
-          if (data.ok) {
-            // Sucesso - recarregar página para mostrar nova foto
-            alert(`✅ Foto baixada com sucesso! (${(data.photo_size / 1024).toFixed(1)} KB)`);
-            window.location.reload();
-          } else {
-            // Erro
-            alert(`❌ Erro: ${data.error || 'Falha ao baixar foto'}`);
-            button.disabled = false;
-            button.innerHTML = originalHTML;
-          }
-        } catch (error) {
-          console.error('[DOWNLOAD PHOTO] Erro:', error);
-          alert(`❌ Erro ao baixar foto: ${error.message}`);
           button.disabled = false;
           button.innerHTML = originalHTML;
         }

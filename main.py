@@ -11269,6 +11269,108 @@ async def refresh_vehicles(request: Request):
             "traceback": traceback.format_exc()
         }, 500)
 
+@app.post("/api/vehicles/download-all-photos")
+async def download_all_photos_from_carjet(request: Request):
+    """
+    Faz scraping em Albufeira + Faro e baixa TODAS as fotos dos carros
+    Mostra progresso em tempo real
+    """
+    require_auth(request)
+    try:
+        from datetime import datetime, timedelta
+        from carjet_direct import scrape_carjet_direct
+        import httpx
+        
+        # Datas aleatórias (hoje + 3 a 10 dias)
+        import random
+        days_offset = random.randint(3, 10)
+        start_date = datetime.now() + timedelta(days=days_offset)
+        end_date = start_date + timedelta(days=7)
+        
+        print(f"[DOWNLOAD ALL PHOTOS] Iniciando scraping para {start_date.strftime('%Y-%m-%d')}...")
+        
+        photos_downloaded = 0
+        photos_failed = 0
+        total_cars = 0
+        
+        # Scraping em Albufeira
+        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping em Albufeira...")
+        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=1)
+        
+        # Scraping em Faro
+        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping em Faro...")
+        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=1)
+        
+        # Combinar resultados
+        all_results = albufeira_results + faro_results
+        total_cars = len(all_results)
+        
+        print(f"[DOWNLOAD ALL PHOTOS] Total de carros encontrados: {total_cars}")
+        
+        # Baixar fotos
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for idx, item in enumerate(all_results, 1):
+                    car_name = item.get('car', '').strip()
+                    photo_url = item.get('photo', '').strip()
+                    
+                    if not car_name or not photo_url:
+                        continue
+                    
+                    car_clean = clean_car_name(car_name).lower()
+                    
+                    print(f"[DOWNLOAD ALL PHOTOS] [{idx}/{total_cars}] Baixando foto: {car_clean}")
+                    
+                    try:
+                        # Baixar foto
+                        async with httpx.AsyncClient(timeout=30.0) as client:
+                            photo_response = await client.get(photo_url)
+                            if photo_response.status_code == 200:
+                                photo_data = photo_response.content
+                                
+                                # Salvar na tabela vehicle_photos
+                                conn.execute("""
+                                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at)
+                                    VALUES (?, ?, ?, ?)
+                                """, (car_clean, photo_data, photo_url, datetime.now().isoformat()))
+                                
+                                # Salvar na tabela vehicle_images também
+                                conn.execute("""
+                                    INSERT OR REPLACE INTO vehicle_images (vehicle_name, image_data, image_url, updated_at)
+                                    VALUES (?, ?, ?, ?)
+                                """, (car_clean, photo_data, photo_url, datetime.now().isoformat()))
+                                
+                                conn.commit()
+                                photos_downloaded += 1
+                                
+                                print(f"[DOWNLOAD ALL PHOTOS] ✅ Foto salva: {car_clean} ({len(photo_data)} bytes)")
+                            else:
+                                photos_failed += 1
+                                print(f"[DOWNLOAD ALL PHOTOS] ❌ Erro HTTP {photo_response.status_code}: {car_clean}")
+                    except Exception as e:
+                        photos_failed += 1
+                        print(f"[DOWNLOAD ALL PHOTOS] ❌ Erro ao baixar {car_clean}: {e}")
+                        continue
+            finally:
+                conn.close()
+        
+        return _no_store_json({
+            "ok": True,
+            "total_cars": total_cars,
+            "photos_downloaded": photos_downloaded,
+            "photos_failed": photos_failed,
+            "message": f"Download completo! {photos_downloaded} fotos baixadas, {photos_failed} falharam."
+        })
+        
+    except Exception as e:
+        import traceback
+        return _no_store_json({
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, 500)
+
 @app.post("/api/vehicles/{vehicle_name}/download-photo")
 async def download_vehicle_photo_from_carjet(vehicle_name: str, request: Request):
     """
