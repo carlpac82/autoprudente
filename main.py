@@ -13630,10 +13630,26 @@ async def test_daily_report(request: Request):
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
             })
         
-        test_email = "carlpac82@hotmail.com"
-        username = request.session.get('username')
+        # Buscar destinatários das notification_rules ou usar configuração
+        report_recipients = []
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Buscar destinatários das regras de notificação ativas
+                cursor = conn.execute("""
+                    SELECT DISTINCT recipient FROM notification_rules 
+                    WHERE enabled = 1 AND notification_type = 'email'
+                """)
+                report_recipients = [row[0] for row in cursor.fetchall() if row[0]]
+            finally:
+                conn.close()
         
-        logging.info(f"Test daily report requested by {username}")
+        # Se não houver destinatários, usar email padrão
+        if not report_recipients:
+            report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
+        
+        username = request.session.get('username')
+        logging.info(f"Test daily report requested by {username} for {len(report_recipients)} recipient(s)")
         
         # Create credentials from access token
         credentials = Credentials(token=access_token)
@@ -13695,28 +13711,40 @@ async def test_daily_report(request: Request):
         </html>
         """
         
-        # Create message
-        message = MIMEMultipart('alternative')
-        message['to'] = test_email
-        message['subject'] = f'📊 Relatório Diário de Preços - Teste ({datetime.now().strftime("%d/%m/%Y")})'
+        # Enviar para todos os destinatários
+        sent_count = 0
+        message_ids = []
         
-        # Attach HTML
-        html_part = MIMEText(html_content, 'html')
-        message.attach(html_part)
-        
-        # Encode and send
-        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        send_message = service.users().messages().send(
-            userId='me',
-            body={'raw': raw_message}
-        ).execute()
-        
-        logging.info(f"✅ Test email sent successfully to {test_email}")
+        for recipient in report_recipients:
+            try:
+                # Create message
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'📊 Relatório Diário de Preços - Teste ({datetime.now().strftime("%d/%m/%Y")})'
+                
+                # Attach HTML
+                html_part = MIMEText(html_content, 'html')
+                message.attach(html_part)
+                
+                # Encode and send
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = service.users().messages().send(
+                    userId='me',
+                    body={'raw': raw_message}
+                ).execute()
+                
+                message_ids.append(send_message.get('id'))
+                sent_count += 1
+                logging.info(f"✅ Test email sent successfully to {recipient}")
+            except Exception as e:
+                logging.error(f"❌ Failed to send to {recipient}: {str(e)}")
         
         return JSONResponse({
             "ok": True,
-            "message": f"Email de teste enviado com sucesso para {test_email}!",
-            "messageId": send_message.get('id')
+            "message": f"Email de teste enviado com sucesso para {sent_count} destinatário(s)!",
+            "recipients": report_recipients,
+            "sent": sent_count,
+            "messageIds": message_ids
         })
         
     except Exception as e:
