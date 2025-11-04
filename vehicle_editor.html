@@ -671,6 +671,12 @@
         function closeEditModal() {
             document.getElementById('editModal').classList.add('hidden');
             editingVehicle = null;
+            
+            // Atualizar timestamp para forçar reload das fotos
+            photoTimestamp = Date.now();
+            
+            // Recarregar lista para mostrar foto atualizada
+            loadVehicles();
         }
         
         async function saveEdit() {
