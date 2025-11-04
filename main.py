@@ -4466,18 +4466,18 @@ async def track_by_params(request: Request):
             ]
             
             # Selecionar idioma aleatoriamente
-            selected_lang = random.choice(languages)
+            selected_language = random.choice(languages)
             
             # Mapear location para formato CarJet no idioma selecionado
             carjet_location = location
             if 'faro' in location.lower():
-                carjet_location = selected_lang['faro']
+                carjet_location = selected_language['faro']
             elif 'albufeira' in location.lower():
-                carjet_location = selected_lang['albufeira']
+                carjet_location = selected_language['albufeira']
             
-            carjet_url = selected_lang['url']
+            carjet_url = selected_language['url']
             
-            print(f"[SELENIUM] Idioma selecionado: {selected_lang['name']}", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Idioma selecionado: {selected_language['name']}", file=sys.stderr, flush=True)
             print(f"[SELENIUM] URL: {carjet_url}", file=sys.stderr, flush=True)
             print(f"[SELENIUM] Local traduzido: {carjet_location}", file=sys.stderr, flush=True)
             
@@ -4693,7 +4693,7 @@ async def track_by_params(request: Request):
                         'headers': {'Referer': selected_referrer}
                     })
                 
-                print(f"[SELENIUM] Acessando CarJet ({selected_lang['name']})...", file=sys.stderr, flush=True)
+                print(f"[SELENIUM] Acessando CarJet ({selected_language['name']})...", file=sys.stderr, flush=True)
                 driver.get(carjet_url)
                 
                 # REJEITAR COOKIES RAPIDAMENTE (0.3 segundos após carregar)
