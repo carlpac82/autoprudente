@@ -5788,6 +5788,26 @@ async def img_lookup(car: str):
     except Exception:
         return await placeholder_image(car)
 
+@app.get("/api/debug/check-vehicle")
+async def debug_check_vehicle(car_name: str):
+    """Verifica se um carro está no dicionário VEHICLES"""
+    car_clean = clean_car_name(car_name)
+    in_vehicles = car_clean in VEHICLES
+    
+    result = {
+        "original": car_name,
+        "cleaned": car_clean,
+        "in_vehicles": in_vehicles
+    }
+    
+    if in_vehicles:
+        vehicle_info = VEHICLES[car_clean]
+        result["vehicle_info"] = vehicle_info
+        if isinstance(vehicle_info, dict) and 'group' in vehicle_info:
+            result["group"] = vehicle_info['group']
+    
+    return JSONResponse(result)
+
 @app.get("/api/debug_direct")
 async def debug_direct(request: Request):
     params = request.query_params
