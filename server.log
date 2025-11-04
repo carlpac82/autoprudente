@@ -1,14 +1,132 @@
-/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:499: DeprecationWarning: 
+WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
+/Users/filipepacheco/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:588: DeprecationWarning: 
         on_event is deprecated, use lifespan event handlers instead.
 
         Read more about it in the
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:9189: DeprecationWarning: 
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:10175: DeprecationWarning: 
         on_event is deprecated, use lifespan event handlers instead.
 
         Read more about it in the
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
+INFO:     Started server process [68964]
+INFO:     Waiting for application startup.
+========================================
+🚀 APP STARTUP - Rental Price Tracker
+========================================
+📊 Initializing database tables...
+   ✅ users table created/exists
+👥 Creating default users...
+✅ Default users ready (admin/admin)
+========================================
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[API] REQUEST: location=Faro, start_date=2025-11-11, start_time=15:00, days=0
+[DATE_ROTATION] Erro ao carregar configurações: no such column: setting_value
+[DATE_ROTATION] Original: 2025-11-11, Rotated: 2025-11-14 (+3 days)
+[API] COMPUTED: start_dt=2025-11-14, end_dt=2025-11-19, days=5
+[POST_DIRETO] Tentando POST direto ao Carjet...
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:7138: DeprecationWarning: The 'text' argument to find()-type methods is deprecated. Use 'string' instead.
+  for el in soup.find_all(text=price_regex):
+[POST_DIRETO] ⚠️ Falhou ou retornou 0 items, continuando para SELENIUM...
+[POST_DIRETO] ⚠️ Retornou 0 items, continuando para SELENIUM...
+[SELENIUM] Iniciando scraping SIMPLES (igual ao teste) para Faro
+[SELENIUM_SIMPLE] Iniciando scraping...
+[SELENIUM_SIMPLE] Local: Faro Aeroporto (FAO)
+[SELENIUM_SIMPLE] Datas: 14/11/2025 - 19/11/2025
+[SELENIUM_SIMPLE] Modo headless (invisível)
+[SELENIUM_SIMPLE] Navegando para https://www.carjet.com/aluguel-carros/index.htm
+[SELENIUM_SIMPLE] ✅ Cookies rejeitados
+[SELENIUM_SIMPLE] PASSO 1: Escrevendo local...
+[SELENIUM_SIMPLE] ✓ Local digitado
+[SELENIUM_SIMPLE] PASSO 2: Aguardando dropdown...
+[SELENIUM_SIMPLE] ✅ Dropdown clicado
+[SELENIUM_SIMPLE] PASSO 3: Preenchendo datas e horas...
+[SELENIUM_SIMPLE] ✓ Datas preenchidas: {'allFilled': True, 'fechaDevolucion': True, 'fechaRecogida': True, 'horaDevolucion': True, 'horaRecogida': True}
+[SELENIUM_SIMPLE] PASSO 4: Submetendo...
+[SELENIUM_SIMPLE] Aguardando navegação...
+[SELENIUM_SIMPLE] Aguardando página de resultados...
+[SELENIUM_SIMPLE] ✅ Página carregada após 0s
+[SELENIUM_SIMPLE] URL final: https://www.carjet.com/do/list/pt?s=729b9bbb-086c-4b54-bb34-e25617aac26e&b=0ed7aaab-92d1-4a43-84c6-debb21c299f7
+[SELENIUM_SIMPLE] ✅ Sucesso! HTML: 1119084 bytes
+[SELENIUM] ✅ Scraping simples bem-sucedido!
+[SELENIUM] Fazendo parse de 1119084 bytes...
+[SELENIUM] Parsed 278 items
+[SELENIUM] 278 após GBP→EUR
+[SELENIUM] 278 após ajustes
+[SELENIUM] ✅ 278 carros encontrados!
+[DEBUG] Primeiro item: cat=Mini, car_clean=Fiat 500, group=B1
+[DEBUG] row tem 'group'? True, valor=B1
+
+============================================================
+[API] REQUEST: location=Faro, start_date=2025-11-11, start_time=15:00, days=0
+[API] end_date_in=2025-11-19, end_time=15:00
+============================================================
+
+[API] COMPUTED: start_dt=2025-11-14, end_dt=2025-11-19, days=5
+[PARSE] Found 0 cards to parse
+[PARSE] Stats: price=0, name=0, blocked=0, items=0
+[DEBUG] TEST_MODE_LOCAL=0, location=faro, days=5
+[PARSE] Found 278 cards to parse
+[PARSE] Stats: price=278, name=278, blocked=0, items=278
+[PARSE] Returning 278 items from card parsing
+INFO:     127.0.0.1:62142 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62282 - "GET / HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:62282 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62282 - "POST /login HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:62282 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62282 - "GET /healthz HTTP/1.1" 200 OK
+[API] REQUEST: location=Aeroporto de Faro, start_date=2025-11-14, start_time=15:00, days=7
+[DATE_ROTATION] Erro ao carregar configurações: no such column: setting_value
+[DATE_ROTATION] Original: 2025-11-14, Rotated: 2025-11-15 (+1 days)
+[API] COMPUTED: start_dt=2025-11-15, end_dt=2025-11-22, days=7
+[POST_DIRETO] Tentando POST direto ao Carjet...
+[POST_DIRETO] ⚠️ Falhou ou retornou 0 items, continuando para SELENIUM...
+[POST_DIRETO] ⚠️ Retornou 0 items, continuando para SELENIUM...
+[SELENIUM] Iniciando scraping SIMPLES (igual ao teste) para Aeroporto de Faro
+[SELENIUM_SIMPLE] Iniciando scraping...
+[SELENIUM_SIMPLE] Local: Faro Aeroporto (FAO)
+[SELENIUM_SIMPLE] Datas: 15/11/2025 - 22/11/2025
+[SELENIUM_SIMPLE] Modo headless (invisível)
+[SELENIUM_SIMPLE] Navegando para https://www.carjet.com/aluguel-carros/index.htm
+[SELENIUM_SIMPLE] ✅ Cookies rejeitados
+[SELENIUM_SIMPLE] PASSO 1: Escrevendo local...
+[SELENIUM_SIMPLE] ✓ Local digitado
+[SELENIUM_SIMPLE] PASSO 2: Aguardando dropdown...
+[SELENIUM_SIMPLE] ✅ Dropdown clicado
+[SELENIUM_SIMPLE] PASSO 3: Preenchendo datas e horas...
+[SELENIUM_SIMPLE] ✓ Datas preenchidas: {'allFilled': True, 'fechaDevolucion': True, 'fechaRecogida': True, 'horaDevolucion': True, 'horaRecogida': True}
+[SELENIUM_SIMPLE] PASSO 4: Submetendo...
+[SELENIUM_SIMPLE] Aguardando navegação...
+[SELENIUM_SIMPLE] Aguardando página de resultados...
+[SELENIUM_SIMPLE] ✅ Página carregada após 0s
+[SELENIUM_SIMPLE] URL final: https://www.carjet.com/do/list/pt?s=29d2cab6-9cf9-482a-a900-4bf592b5e98d&b=272863b4-86f9-40f0-bfac-ac55e7afa51c
+[SELENIUM_SIMPLE] ✅ Sucesso! HTML: 1108332 bytes
+[SELENIUM] ✅ Scraping simples bem-sucedido!
+[SELENIUM] Fazendo parse de 1108332 bytes...
+[SELENIUM] Parsed 275 items
+[SELENIUM] 275 após GBP→EUR
+[SELENIUM] 275 após ajustes
+[SELENIUM] ✅ 275 carros encontrados!
+[DEBUG] Primeiro item: cat=Mini, car_clean=Fiat 500, group=B1
+[DEBUG] row tem 'group'? True, valor=B1
+
+============================================================
+[API] REQUEST: location=Aeroporto de Faro, start_date=2025-11-14, start_time=15:00, days=7
+[API] end_date_in=, end_time=15:00
+============================================================
+
+[API] COMPUTED: start_dt=2025-11-15, end_dt=2025-11-22, days=7
+[PARSE] Found 0 cards to parse
+[PARSE] Stats: price=0, name=0, blocked=0, items=0
+[DEBUG] TEST_MODE_LOCAL=0, location=aeroporto de faro, days=7
+[PARSE] Found 275 cards to parse
+[PARSE] Stats: price=275, name=275, blocked=0, items=275
+[PARSE] Returning 275 items from card parsing
+INFO:     127.0.0.1:62299 - "POST /api/track-by-params HTTP/1.1" 200 OK
