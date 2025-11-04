@@ -1030,8 +1030,7 @@ def _ensure_users_table():
     with _db_lock:
         con = _db_connect()
         try:
-            con.execute(
-                """
+            con.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
                   username TEXT UNIQUE NOT NULL,
@@ -1041,19 +1040,28 @@ def _ensure_users_table():
                   mobile TEXT,
                   email TEXT,
                   profile_picture_path TEXT,
+                  profile_picture_data BLOB,
                   is_admin INTEGER DEFAULT 0,
                   enabled INTEGER DEFAULT 1,
                   created_at TEXT,
                   google_id TEXT UNIQUE
-                );
-                """
-            )
+                )
+            """)
             
             # Migration: Add google_id column if it doesn't exist
             try:
                 con.execute("ALTER TABLE users ADD COLUMN google_id TEXT UNIQUE")
                 con.commit()
                 logging.info("✅ Added google_id column to users table")
+            except Exception as e:
+                # Column already exists, ignore
+                pass
+            
+            # Migration: Add profile_picture_data column if it doesn't exist
+            try:
+                con.execute("ALTER TABLE users ADD COLUMN profile_picture_data BLOB")
+                con.commit()
+                logging.info("✅ Added profile_picture_data column to users table")
             except Exception as e:
                 # Column already exists, ignore
                 pass
@@ -2730,20 +2738,21 @@ async def admin_users_edit_post(
         require_admin(request)
     except HTTPException:
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    pic_data = None
     pic_path = None
     if picture and picture.filename:
-        safe_name = f"{int(time.time())}_{os.path.basename(picture.filename)}".replace("..", ".")
-        dest = UPLOADS_DIR / safe_name
-        data = await picture.read()
-        dest.write_bytes(data)
-        pic_path = f"/uploads/profiles/{safe_name}"
+        # Guardar foto na base de dados como BLOB
+        pic_data = await picture.read()
+        # Manter path para compatibilidade (usar ID do user)
+        pic_path = f"/api/profile-picture/{user_id}"
+    
     with _db_lock:
         con = _db_connect()
         try:
-            if pic_path:
+            if pic_data:
                 con.execute(
-                    "UPDATE users SET first_name=?, last_name=?, mobile=?, email=?, profile_picture_path=?, is_admin=?, enabled=? WHERE id=?",
-                    (first_name, last_name, mobile, email, pic_path, 1 if is_admin in ("1","true","on") else 0, 1 if enabled in ("1","true","on") else 0, user_id)
+                    "UPDATE users SET first_name=?, last_name=?, mobile=?, email=?, profile_picture_path=?, profile_picture_data=?, is_admin=?, enabled=? WHERE id=?",
+                    (first_name, last_name, mobile, email, pic_path, pic_data, 1 if is_admin in ("1","true","on") else 0, 1 if enabled in ("1","true","on") else 0, user_id)
                 )
             else:
                 con.execute(
@@ -2944,13 +2953,14 @@ async def admin_users_new_post(
     # generate password
     gen_pw = secrets.token_urlsafe(8)
     pw_hash = _hash_password(gen_pw)
+    pic_data = None
     pic_path = None
     if picture and picture.filename:
-        safe_name = f"{int(time.time())}_{os.path.basename(picture.filename)}".replace("..", ".")
-        dest = UPLOADS_DIR / safe_name
-        data = await picture.read()
-        dest.write_bytes(data)
-        pic_path = f"/uploads/profiles/{safe_name}"
+        # Guardar foto na base de dados como BLOB
+        pic_data = await picture.read()
+        # Path será definido após inserção (precisa do ID)
+        pic_path = ""  # Será atualizado depois
+    
     with _db_lock:
         con = _db_connect()
         try:
@@ -2958,9 +2968,15 @@ async def admin_users_new_post(
             is_admin_bool = True if (is_admin in ("1","true","on")) else False
             enabled_bool = True
             con.execute(
-                "INSERT INTO users (username, password_hash, first_name, last_name, mobile, email, profile_picture_path, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (u, pw_hash, first_name, last_name, mobile, email, pic_path or "", is_admin_bool, enabled_bool, time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
+                "INSERT INTO users (username, password_hash, first_name, last_name, mobile, email, profile_picture_path, profile_picture_data, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (u, pw_hash, first_name, last_name, mobile, email, pic_path or "", pic_data, is_admin_bool, enabled_bool, time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
             )
+            
+            # Se tem foto, atualizar path com o ID do user
+            if pic_data:
+                cur = con.execute("SELECT id FROM users WHERE username=?", (u,))
+                user_id = cur.fetchone()[0]
+                con.execute("UPDATE users SET profile_picture_path=? WHERE id=?", (f"/api/profile-picture/{user_id}", user_id))
             con.commit()
         except sqlite3.IntegrityError:
             return templates.TemplateResponse("admin_new_user.html", {"request": request, "error": "Username already exists"})
@@ -2974,6 +2990,31 @@ async def admin_users_new_post(
     except Exception:
         pass
     return RedirectResponse(url="/admin/users", status_code=HTTP_303_SEE_OTHER)
+
+
+@app.get("/api/profile-picture/{user_id}")
+async def get_profile_picture(user_id: int):
+    """Serve profile picture from database BLOB"""
+    from fastapi.responses import Response
+    
+    with _db_lock:
+        con = _db_connect()
+        try:
+            cur = con.execute("SELECT profile_picture_data FROM users WHERE id=?", (user_id,))
+            row = cur.fetchone()
+            if row and row[0]:
+                # Retornar imagem do BLOB
+                return Response(content=row[0], media_type="image/png")
+            else:
+                # Retornar imagem default se não tiver foto
+                from pathlib import Path
+                default_pic = Path(__file__).parent / "static" / "profiles" / "default-avatar.png"
+                if default_pic.exists():
+                    return Response(content=default_pic.read_bytes(), media_type="image/png")
+                # Se não existir default, retornar 404
+                raise HTTPException(status_code=404, detail="No profile picture")
+        finally:
+            con.close()
 
 
 @app.get("/api/prices")
