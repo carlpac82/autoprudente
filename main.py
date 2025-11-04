@@ -13837,23 +13837,8 @@ async def test_daily_report(request: Request):
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
             })
         
-        # Buscar destinatários das notification_rules ou usar configuração
-        report_recipients = []
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                # Buscar destinatários das regras de notificação ativas
-                cursor = conn.execute("""
-                    SELECT DISTINCT recipient FROM notification_rules 
-                    WHERE enabled = 1 AND notification_type = 'email'
-                """)
-                report_recipients = [row[0] for row in cursor.fetchall() if row[0]]
-            finally:
-                conn.close()
-        
-        # Se não houver destinatários, usar email padrão
-        if not report_recipients:
-            report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
+        # Usar email de configuração como destinatário
+        report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
         username = request.session.get('username')
         logging.info(f"Test daily report requested by {username} for {len(report_recipients)} recipient(s)")
@@ -13995,21 +13980,8 @@ async def test_alert_email(request: Request):
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
             })
         
-        # Buscar destinatários
-        report_recipients = []
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute("""
-                    SELECT DISTINCT recipient FROM notification_rules 
-                    WHERE enabled = 1 AND notification_type = 'email'
-                """)
-                report_recipients = [row[0] for row in cursor.fetchall() if row[0]]
-            finally:
-                conn.close()
-        
-        if not report_recipients:
-            report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
+        # Usar email de configuração como destinatário
+        report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
         # Create credentials and Gmail service
         credentials = Credentials(token=access_token)
@@ -14515,21 +14487,8 @@ async def test_weekly_report(request: Request):
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
             })
         
-        # Buscar destinatários
-        report_recipients = []
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute("""
-                    SELECT DISTINCT recipient FROM notification_rules 
-                    WHERE enabled = 1 AND notification_type = 'email'
-                """)
-                report_recipients = [row[0] for row in cursor.fetchall() if row[0]]
-            finally:
-                conn.close()
-        
-        if not report_recipients:
-            report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
+        # Usar email de configuração como destinatário
+        report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
         # Create credentials and Gmail service
         credentials = Credentials(token=access_token)
