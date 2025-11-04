@@ -67,7 +67,18 @@ def scrape_carjet_simple(location, start_dt, end_dt):
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
-    chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    
+    # Detectar sistema operacional e definir caminho do Chrome
+    import platform
+    import os
+    system = platform.system()
+    if system == 'Darwin':  # macOS
+        chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    elif system == 'Linux':  # Linux (Render)
+        # No Linux com Docker, o Chrome está em /usr/bin/google-chrome-stable
+        if os.path.exists('/usr/bin/google-chrome-stable'):
+            chrome_options.binary_location = '/usr/bin/google-chrome-stable'
+        # Não definir binary_location deixa o Selenium encontrar automaticamente
     
     driver = webdriver.Chrome(options=chrome_options)
     

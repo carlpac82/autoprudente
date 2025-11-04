@@ -4641,8 +4641,16 @@ async def track_by_params(request: Request):
             #     "intl.accept_languages": selected_lang,
             # })
             
-            # Caminho do Chrome no Mac
-            chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            # Detectar sistema operacional e definir caminho do Chrome
+            import platform
+            system = platform.system()
+            if system == 'Darwin':  # macOS
+                chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            elif system == 'Linux':  # Linux (Render)
+                # No Linux com Docker, o Chrome está em /usr/bin/google-chrome-stable
+                if os.path.exists('/usr/bin/google-chrome-stable'):
+                    chrome_options.binary_location = '/usr/bin/google-chrome-stable'
+                # Não definir binary_location deixa o Selenium encontrar automaticamente
             
             # Iniciar driver - tentar com Chrome instalado primeiro
             try:
