@@ -1227,8 +1227,9 @@ def clean_car_name(car_name: str) -> str:
     # Normalizar espaços múltiplos
     name = re.sub(r'\s+', ' ', name).strip()
     
-    # IMPORTANTE: Converter para lowercase (igual ao VEHICLES dictionary)
-    name = name.lower()
+    # NÃO converter para lowercase aqui! 
+    # Manter capitalização original para display bonito
+    # O lowercase é feito apenas quando consultar VEHICLES
     
     return name
 
@@ -1284,14 +1285,16 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         try:
             # Normalizar nome do carro para consulta
             car_clean = clean_car_name(car_name)
-            if car_clean in VEHICLES:
-                vehicle_info = VEHICLES[car_clean]
+            # IMPORTANTE: VEHICLES está em lowercase, converter para consulta
+            car_clean_lower = car_clean.lower()
+            if car_clean_lower in VEHICLES:
+                vehicle_info = VEHICLES[car_clean_lower]
                 if isinstance(vehicle_info, dict) and 'group' in vehicle_info:
                     return vehicle_info['group']
             else:
                 # DEBUG: Log carros não encontrados no VEHICLES
                 import sys
-                print(f"[MAP_GROUP] ⚠️ '{car_clean}' NOT in VEHICLES (original: '{car_name}')", file=sys.stderr, flush=True)
+                print(f"[MAP_GROUP] ⚠️ '{car_clean_lower}' NOT in VEHICLES (original: '{car_name}')", file=sys.stderr, flush=True)
         except Exception as e:
             import sys
             print(f"[MAP_GROUP] ❌ Error: {e}", file=sys.stderr, flush=True)
@@ -10480,9 +10483,11 @@ async def get_uncategorized_vehicles(request: Request):
             
             # Usar a MESMA função de limpeza que o scraping
             clean = clean_car_name(original_name)
+            # VEHICLES está em lowercase, converter para comparação
+            clean_lower = clean.lower()
             
             # Se não está no VEHICLES, adicionar à lista
-            if clean and clean not in VEHICLES:
+            if clean and clean_lower not in VEHICLES:
                 # Extrair marca
                 parts = clean.split(' ')
                 brand = parts[0] if parts else ''
