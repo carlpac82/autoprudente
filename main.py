@@ -11200,24 +11200,30 @@ async def refresh_vehicles(request: Request):
     try:
         from datetime import datetime, timedelta
         from carjet_direct import scrape_carjet_direct, VEHICLES
+        import random
         
-        # Datas para scraping (hoje + 7 dias)
-        start_date = datetime.now()
+        # Datas ALEATÓRIAS para scraping (3-10 dias no futuro)
+        days_offset = random.randint(3, 10)
+        start_date = datetime.now() + timedelta(days=days_offset)
         end_date = start_date + timedelta(days=7)
+        
+        print(f"[REFRESH] Usando datas aleatórias: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
         
         new_cars = []
         updated_cars = []
         total_scraped = 0
         
-        # Scraping em Albufeira
-        print("[REFRESH] Fazendo scraping em Albufeira...")
-        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=1)
+        # Scraping em Albufeira (SEM quick mode para scraping completo)
+        print("[REFRESH] Fazendo scraping COMPLETO em Albufeira...")
+        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=0)
         total_scraped += len(albufeira_results)
+        print(f"[REFRESH] Albufeira: {len(albufeira_results)} carros encontrados")
         
-        # Scraping em Faro
-        print("[REFRESH] Fazendo scraping em Faro...")
-        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=1)
+        # Scraping em Faro (SEM quick mode para scraping completo)
+        print("[REFRESH] Fazendo scraping COMPLETO em Faro...")
+        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=0)
         total_scraped += len(faro_results)
+        print(f"[REFRESH] Faro: {len(faro_results)} carros encontrados")
         
         # Combinar resultados
         all_results = albufeira_results + faro_results
@@ -11293,13 +11299,15 @@ async def download_all_photos_from_carjet(request: Request):
         photos_failed = 0
         total_cars = 0
         
-        # Scraping em Albufeira
-        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping em Albufeira...")
-        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=1)
+        # Scraping em Albufeira (SEM quick mode para scraping completo)
+        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping COMPLETO em Albufeira...")
+        albufeira_results = scrape_carjet_direct("Albufeira", start_date, end_date, quick=0)
+        print(f"[DOWNLOAD ALL PHOTOS] Albufeira: {len(albufeira_results)} carros encontrados")
         
-        # Scraping em Faro
-        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping em Faro...")
-        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=1)
+        # Scraping em Faro (SEM quick mode para scraping completo)
+        print("[DOWNLOAD ALL PHOTOS] Fazendo scraping COMPLETO em Faro...")
+        faro_results = scrape_carjet_direct("Faro", start_date, end_date, quick=0)
+        print(f"[DOWNLOAD ALL PHOTOS] Faro: {len(faro_results)} carros encontrados")
         
         # Combinar resultados
         all_results = albufeira_results + faro_results
