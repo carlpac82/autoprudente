@@ -43,6 +43,24 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </button>
+                
+                <!-- Separador -->
+                <div class="h-6 w-px bg-white/20"></div>
+                
+                <!-- Botão Export - Exportar configuração com fotos -->
+                <button onclick="exportConfiguration()" class="p-2 hover:bg-white/10 transition-all rounded" title="Export Config (with photos)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                </button>
+                
+                <!-- Botão Import - Importar configuração com fotos -->
+                <button onclick="document.getElementById('importFile').click()" class="p-2 hover:bg-white/10 transition-all rounded" title="Import Config (with photos)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                </button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importConfiguration(event)">
             </div>
         </div>
     </header>
