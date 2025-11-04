@@ -536,6 +536,13 @@ except Exception:
     _HTTPX_CLIENT = None
     _HTTPX_ASYNC = None
 
+# Import VEHICLES dictionary from carjet_direct
+try:
+    from carjet_direct import VEHICLES
+except ImportError:
+    logging.warning("⚠️  Could not import VEHICLES from carjet_direct")
+    VEHICLES = {}
+
 # Load environment variables FIRST before checking USE_PLAYWRIGHT
 load_dotenv()
 
