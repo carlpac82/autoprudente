@@ -106,6 +106,8 @@ VEHICLES = {
     # ECONOMY
     'renault clio': 'ECONOMY',
     'peugeot 208': 'ECONOMY',
+    'peugeot e-208': 'ECONOMY',  # Variação elétrica
+    'peugeot e-208, electric': 'ECONOMY',  # Variação com vírgula
     'ford fiesta': 'ECONOMY',
     'seat ibiza': 'ECONOMY',
     'hyundai i20': 'ECONOMY',
@@ -320,6 +322,7 @@ VEHICLES = {
     'jeep renegade': 'Crossover',
     'jeep renegade auto': 'SUV Auto',
     'kia stonic auto': 'SUV Auto',
+    'mazda 2': 'ECONOMY',  # Variação sem "auto"
     'mazda 2 auto': 'ECONOMY Auto',
     'mazda cx3': 'SUV',
     'citroen c1': 'MINI 4 Lugares',
