@@ -1207,6 +1207,9 @@ def clean_car_name(car_name: str) -> str:
     name = re.sub(r'\s*ou\s+similar(es)?.*$', '', name, flags=re.IGNORECASE)
     name = re.sub(r'\s*or\s+similar.*$', '', name, flags=re.IGNORECASE)
     
+    # Remover vírgulas e espaços extras (ex: "2008 , Electric" → "2008 Electric")
+    name = re.sub(r'\s*,\s*', ' ', name)
+    
     # Remover "Special Edition" e variantes
     name = re.sub(r'\s+special\s+edition\b', '', name, flags=re.IGNORECASE)
     name = re.sub(r'\s+edition\b', '', name, flags=re.IGNORECASE)

@@ -237,7 +237,10 @@ VEHICLES = {
     'vw caddy auto': '7 Lugares Auto',
     'volkswagen multivan auto': '7 Lugares Auto',
     'vw multivan auto': '7 Lugares Auto',
+    'vw multivan': '7 Lugares',  # Variação sem "auto"
+    'volkswagen multivan': '7 Lugares',  # Variação sem "auto"
     'citroen c4 grand spacetourer auto': '7 Lugares Auto',
+    'citroen c4 grand spacetourer': '7 Lugares',  # Variação sem "auto"
     'citroen c4 picasso auto': '7 Lugares Auto',
     'renault grand scenic auto': '7 Lugares Auto',
     'mercedes glb auto': '7 Lugares Auto',
@@ -281,9 +284,13 @@ VEHICLES = {
     'renault megane auto': 'ECONOMY Auto',
     'renault megane sw': 'Station Wagon',
     'renault megane sw auto': 'Station Wagon Auto',
+    'renault megane sw auto hybrid': 'Station Wagon Auto',  # Sem vírgula
+    'renault megane sw hybrid': 'Station Wagon',  # Sem auto
     'renault megane sw auto, hybrid': 'Station Wagon Auto',
     'peugeot 108 cabrio': 'Cabrio',
     'peugeot 2008 auto': 'SUV Auto',
+    'peugeot 2008 auto electric': 'SUV Auto',  # Sem vírgula
+    'peugeot 2008 electric': 'SUV',  # Sem auto
     'peugeot 2008 auto, electric': 'SUV Auto',
     'peugeot 308': 'ECONOMY',
     'nissan qashqai auto': 'SUV',
