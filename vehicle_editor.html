@@ -29,22 +29,20 @@
             <h1 class="text-white text-xl font-bold" data-i18n="vehicles.vehicleNamesEditor">Vehicle Names Editor</h1>
             <div class="flex items-center gap-3 text-white text-sm">
                 <span id="totalVehicles">0</span> <span data-i18n="vehicles.vehicles">vehicles</span>
-                <button onclick="fetchCarPhotos()" class="p-2 hover:bg-white/10 transition-all" title="Fetch Car Photos from CarJet" id="btnFetchPhotos">
+                
+                <!-- Botão Refresh Vehicles - Atualiza lista do CarJet -->
+                <button onclick="refreshVehiclesFromCarjet()" class="p-2 hover:bg-white/10 transition-all rounded" title="Refresh Vehicles from CarJet" id="btnRefreshVehicles">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
                 </button>
-                <button onclick="exportConfiguration()" class="p-2 hover:bg-white/10 transition-all" title="Export Config (with photos)">
+                
+                <!-- Botão Download Photos - Baixa fotos do CarJet -->
+                <button onclick="downloadAllPhotosFromCarjet()" class="p-2 hover:bg-white/10 transition-all rounded" title="Download All Photos from CarJet" id="btnDownloadPhotos">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </button>
-                <button onclick="document.getElementById('importFile').click()" class="p-2 hover:bg-white/10 transition-all" title="Import Config (with photos)">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
-                </button>
-                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importConfiguration(event)">
             </div>
         </div>
     </header>
@@ -892,6 +890,75 @@
                 showNotification('Import error: ' + error.message, 'error');
             } finally {
                 event.target.value = '';
+            }
+        }
+        
+        // NOVAS FUNÇÕES - Refresh Vehicles e Download Photos
+        async function refreshVehiclesFromCarjet() {
+            console.log('[REFRESH] Iniciando...');
+            const button = document.getElementById('btnRefreshVehicles');
+            const originalHTML = button.innerHTML;
+            
+            button.disabled = true;
+            button.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+            
+            try {
+                const response = await fetch('/api/vehicles/refresh', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    const msg = `Atualização completa!\n\nTotal: ${data.total_scraped || 0} carros\nNovos: ${data.new_cars_count || 0} carros`;
+                    showNotification(msg, 'success');
+                    await loadVehicles(); // Recarregar lista
+                } else {
+                    showNotification('Erro: ' + (data.error || 'Falha ao atualizar'), 'error');
+                }
+            } catch (error) {
+                console.error('[REFRESH] Erro:', error);
+                showNotification('Erro: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+            }
+        }
+        
+        async function downloadAllPhotosFromCarjet() {
+            console.log('[DOWNLOAD PHOTOS] Iniciando...');
+            const button = document.getElementById('btnDownloadPhotos');
+            const originalHTML = button.innerHTML;
+            
+            if (!confirm('Deseja fazer scraping e baixar TODAS as fotos dos carros?\n\nIsso pode demorar 2-5 minutos.')) {
+                return;
+            }
+            
+            button.disabled = true;
+            button.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+            
+            try {
+                const response = await fetch('/api/vehicles/download-all-photos', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    const msg = `Download completo!\n\nTotal: ${data.total_cars || 0} carros\nFotos baixadas: ${data.photos_downloaded || 0}\nFalharam: ${data.photos_failed || 0}`;
+                    showNotification(msg, 'success');
+                    await loadVehicles(); // Recarregar lista
+                } else {
+                    showNotification('Erro: ' + (data.error || 'Falha ao baixar fotos'), 'error');
+                }
+            } catch (error) {
+                console.error('[DOWNLOAD PHOTOS] Erro:', error);
+                showNotification('Erro: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
             }
         }
         
