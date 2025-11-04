@@ -173,6 +173,15 @@ class PostgreSQLConnectionWrapper:
     
     def execute(self, query, params=None):
         """Execute query using cursor"""
+        # Convert SQLite ? placeholders to PostgreSQL %s
+        if '?' in query:
+            query = query.replace('?', '%s')
+        
+        # Convert SQLite AUTOINCREMENT to PostgreSQL SERIAL
+        if 'AUTOINCREMENT' in query.upper():
+            query = query.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
+            query = query.replace('AUTOINCREMENT', '')
+        
         self._cursor = self._conn.cursor()
         if params:
             self._cursor.execute(query, params)
