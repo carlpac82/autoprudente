@@ -13686,6 +13686,104 @@ def _ensure_damage_report_tables():
         finally:
             conn.close()
 
+@app.post("/api/damage-reports/import-bulk")
+async def import_damage_reports_bulk(request: Request):
+    """Importar múltiplos Damage Reports de uma vez (migração)"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        import json
+        
+        data = await request.json()
+        reports = data.get('reports', [])
+        
+        if not reports:
+            return {"ok": False, "error": "Nenhum relatório fornecido"}
+        
+        _ensure_damage_report_tables()
+        
+        imported = 0
+        errors = []
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for report in reports:
+                    try:
+                        # Extrair dados do relatório
+                        dr_number = report.get('dr_number')
+                        
+                        # Verificar se já existe
+                        cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                        if cursor.fetchone()[0] > 0:
+                            errors.append(f"{dr_number} já existe")
+                            continue
+                        
+                        # Inserir na BD
+                        conn.execute("""
+                            INSERT INTO damage_reports (
+                                dr_number, ra_number, contract_number, date,
+                                client_name, client_email, client_phone,
+                                client_address, client_city, client_postal_code, client_country,
+                                vehicle_plate, vehicle_brand, vehicle_model, vehicle_color, vehicle_km,
+                                pickup_date, return_date, pickup_location, return_location,
+                                fuel_level_pickup, fuel_level_return,
+                                damage_description, total_repair_cost,
+                                inspector_name, inspection_date,
+                                created_at, created_by
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            dr_number,
+                            report.get('ra_number'),
+                            report.get('contract_number'),
+                            report.get('date'),
+                            report.get('client_name'),
+                            report.get('client_email'),
+                            report.get('client_phone'),
+                            report.get('client_address'),
+                            report.get('client_city'),
+                            report.get('client_postal_code'),
+                            report.get('client_country'),
+                            report.get('vehicle_plate'),
+                            report.get('vehicle_brand'),
+                            report.get('vehicle_model'),
+                            report.get('vehicle_color'),
+                            report.get('vehicle_km'),
+                            report.get('pickup_date'),
+                            report.get('return_date'),
+                            report.get('pickup_location'),
+                            report.get('return_location'),
+                            report.get('fuel_level_pickup'),
+                            report.get('fuel_level_return'),
+                            report.get('damage_description'),
+                            report.get('total_repair_cost'),
+                            report.get('inspector_name'),
+                            report.get('inspection_date'),
+                            datetime.now().isoformat(),
+                            request.session.get('username', 'admin')
+                        ))
+                        
+                        imported += 1
+                    except Exception as e:
+                        errors.append(f"{dr_number}: {str(e)}")
+                
+                conn.commit()
+                
+                logging.info(f"✅ {imported} Damage Reports importados")
+                
+                return {
+                    "ok": True,
+                    "imported": imported,
+                    "total": len(reports),
+                    "errors": errors
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error importing damage reports: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/damage-reports/numbering/get")
 async def get_dr_numbering(request: Request):
     """Obter configuração de numeração atual"""
