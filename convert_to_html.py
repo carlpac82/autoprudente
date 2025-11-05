@@ -8,7 +8,7 @@ import markdown2
 import base64
 import os
 
-# Template HTML idêntico ao convert_to_pdf.py mas para browser
+# Template HTML profissional moderno
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="pt">
@@ -16,81 +16,134 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @page {{
             size: A4;
-            margin: 2cm;
+            margin: 1.5cm;
         }}
         
         @media print {{
             .no-print {{ display: none; }}
             body {{ background: white; }}
+            .page-break {{ page-break-before: always; }}
+        }}
+        
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }}
         
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.8;
+            line-height: 1.6;
             color: #2d3748;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f7fafc 100%);
+            background: #ffffff;
         }}
         
+        /* Header compacto como website */
         .header {{
-            background: linear-gradient(135deg, #009cb6 0%, #00b8d4 100%);
-            color: white;
-            padding: 25px;
-            text-align: center;
-            border-radius: 15px;
-            box-shadow: 0 6px 12px rgba(0, 156, 182, 0.3);
-            margin-bottom: 40px;
+            background: #009cb6;
+            padding: 15px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #00758a;
+            margin-bottom: 30px;
         }}
         
-        .header h1 {{
-            margin: 10px 0;
-            font-size: 28pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }}
-        
-        .header .subtitle {{
-            margin: 5px 0 0 0;
-            font-size: 14pt;
-            opacity: 0.9;
+        .header-left {{
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }}
         
         .logo {{
-            width: 200px;
-            height: auto;
-            margin: 0 auto 15px auto;
-            display: block;
+            height: 40px;
+            width: auto;
         }}
         
+        .header-title {{
+            color: white;
+            font-size: 16pt;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }}
+        
+        .header-right {{
+            text-align: right;
+            color: white;
+            font-size: 10pt;
+        }}
+        
+        .header-right .subtitle {{
+            opacity: 0.9;
+            font-weight: 300;
+        }}
+        
+        .container {{
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 40px 40px 40px;
+        }}
+        
+        /* Títulos com ícones monocromáticos */
         h1 {{
-            color: #009cb6;
-            border-bottom: 4px solid #009cb6;
-            padding-bottom: 12px;
-            margin-top: 35px;
+            color: #1a202c;
+            font-size: 24pt;
             font-weight: 700;
+            margin: 40px 0 20px 0;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #009cb6;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }}
+        
+        h1::before {{
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 40px;
+            background: #009cb6;
+            border-radius: 3px;
         }}
         
         h2 {{
-            color: #009cb6;
-            margin-top: 28px;
-            border-left: 5px solid #00b8d4;
-            padding-left: 18px;
+            color: #2d3748;
+            font-size: 18pt;
             font-weight: 600;
-            background: linear-gradient(90deg, rgba(0, 156, 182, 0.05) 0%, transparent 100%);
-            padding: 10px 10px 10px 18px;
-            border-radius: 0 8px 8px 0;
+            margin: 35px 0 15px 0;
+            padding: 12px 20px;
+            background: #f7fafc;
+            border-left: 4px solid #009cb6;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }}
+        
+        h2 i {{
+            color: #009cb6;
+            font-size: 20pt;
+            width: 30px;
+            text-align: center;
         }}
         
         h3 {{
-            color: #00758a;
-            margin-top: 22px;
+            color: #4a5568;
+            font-size: 14pt;
             font-weight: 600;
+            margin: 25px 0 12px 0;
+            padding-left: 15px;
+            border-left: 3px solid #cbd5e0;
+        }}
+        
+        h4 {{
+            color: #718096;
+            font-size: 12pt;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
         }}
         
         code {{
@@ -177,25 +230,61 @@ HTML_TEMPLATE = """
             font-weight: bold;
         }}
         
+        /* Footer compacto */
         .footer {{
             margin-top: 60px;
-            padding: 25px;
-            background: linear-gradient(135deg, #009cb6 0%, #00b8d4 100%);
-            color: white;
+            padding: 20px 40px;
+            background: #f7fafc;
+            border-top: 3px solid #009cb6;
             text-align: center;
-            font-size: 10pt;
-            border-radius: 15px;
-            box-shadow: 0 4px 12px rgba(0, 156, 182, 0.2);
+            font-size: 9pt;
+            color: #718096;
         }}
         
         .footer strong {{
-            font-size: 12pt;
-            letter-spacing: 1px;
+            color: #009cb6;
+            font-weight: 600;
         }}
         
-        .footer p {{
-            margin: 8px 0;
-            opacity: 0.95;
+        /* Listas com ícones */
+        ul {{
+            list-style: none;
+            padding-left: 0;
+            margin: 15px 0;
+        }}
+        
+        ul li {{
+            padding: 8px 0 8px 35px;
+            position: relative;
+            line-height: 1.6;
+        }}
+        
+        ul li::before {{
+            content: '\\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: #009cb6;
+            font-size: 12pt;
+        }}
+        
+        /* Boxes informativos modernos */
+        .info-box {{
+            background: #f0f9ff;
+            border-left: 4px solid #009cb6;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+        }}
+        
+        .info-box::before {{
+            content: '\\f05a';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #009cb6;
+            font-size: 18pt;
+            margin-right: 15px;
         }}
         
         .print-button {{
@@ -228,22 +317,30 @@ HTML_TEMPLATE = """
     </style>
 </head>
 <body>
-    <button class="print-button no-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="print-button no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimir / Guardar PDF
+    </button>
     
+    <!-- Header compacto como website -->
     <div class="header">
-        <img src="{logo_data}" alt="AUTOPRUDENTE" class="logo">
-        <h1>{title}</h1>
-        <div class="subtitle">{subtitle}</div>
+        <div class="header-left">
+            <img src="{logo_data}" alt="AUTOPRUDENTE" class="logo">
+            <div class="header-title">{title}</div>
+        </div>
+        <div class="header-right">
+            <div class="subtitle">{subtitle}</div>
+            <div>Versão 2.0 | Novembro 2025</div>
+        </div>
     </div>
     
-    <div class="content">
+    <!-- Conteúdo -->
+    <div class="container">
         {content}
     </div>
     
+    <!-- Footer compacto -->
     <div class="footer">
-        <p><strong>AUTOPRUDENTE</strong> - Sistema de Gestão de Preços de Aluguer de Viaturas</p>
-        <p>© 2025 AUTOPRUDENTE - Todos os direitos reservados</p>
-        <p>Versão 2.0 | Última Atualização: Novembro 2025</p>
+        <p><strong>AUTOPRUDENTE</strong> - Sistema de Gestão de Preços de Aluguer de Viaturas | © 2025 Todos os direitos reservados</p>
     </div>
 </body>
 </html>
@@ -253,12 +350,18 @@ def convert_markdown_to_html(md_file, title, subtitle):
     """Converter Markdown para HTML"""
     
     try:
-        # Converter logo para base64
+        # Converter logo do header do website para base64
         logo_base64 = ""
-        logo_path = "logo_autoprudente.png"
+        logo_path = "static/ap-heather.png"
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as img_file:
                 logo_base64 = f"data:image/png;base64,{base64.b64encode(img_file.read()).decode('utf-8')}"
+        else:
+            # Fallback para logo alternativo
+            logo_path = "logo_autoprudente.png"
+            if os.path.exists(logo_path):
+                with open(logo_path, 'rb') as img_file:
+                    logo_base64 = f"data:image/png;base64,{base64.b64encode(img_file.read()).decode('utf-8')}"
         
         # Ler ficheiro Markdown
         with open(md_file, 'r', encoding='utf-8') as f:
