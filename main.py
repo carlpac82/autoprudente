@@ -14059,6 +14059,62 @@ async def import_damage_reports_bulk(request: Request):
         logging.error(f"Error importing damage reports: {e}")
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/damage-reports/debug")
+async def debug_damage_reports(request: Request):
+    """DEBUG: Ver todos os DRs na BD"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT 
+                                dr_number, 
+                                pdf_filename, 
+                                CASE WHEN pdf_data IS NULL THEN false ELSE true END as has_pdf,
+                                is_protected,
+                                created_at
+                            FROM damage_reports
+                            ORDER BY dr_number
+                        """)
+                        rows = cur.fetchall()
+                else:
+                    cursor = conn.execute("""
+                        SELECT 
+                            dr_number, 
+                            pdf_filename, 
+                            CASE WHEN pdf_data IS NULL THEN 0 ELSE 1 END as has_pdf,
+                            is_protected,
+                            created_at
+                        FROM damage_reports
+                        ORDER BY dr_number
+                    """)
+                    rows = cursor.fetchall()
+                
+                drs = []
+                for row in rows:
+                    drs.append({
+                        'dr_number': row[0],
+                        'pdf_filename': row[1],
+                        'has_pdf': bool(row[2]),
+                        'is_protected': bool(row[3]) if row[3] is not None else False,
+                        'created_at': row[4]
+                    })
+                
+                return {
+                    "ok": True,
+                    "total": len(drs),
+                    "drs": drs
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error in debug endpoint: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/damage-reports/stats")
 async def get_damage_reports_stats(request: Request):
     """Obter estatísticas dos Damage Reports"""
