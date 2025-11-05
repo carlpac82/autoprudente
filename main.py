@@ -1947,6 +1947,11 @@ def init_db():
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_strategies ON pricing_strategies(location, grupo, month, day, priority)")
             except Exception as idx_err:
                 logging.warning(f"Could not create idx_strategies index (run fix_pricing_strategies_table.py): {idx_err}")
+                # CRITICAL: Rollback transaction to continue after error in PostgreSQL
+                try:
+                    conn.rollback()
+                except:
+                    pass
             
             # Tabela para histórico de preços automatizados
             conn.execute(
