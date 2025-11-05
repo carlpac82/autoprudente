@@ -13858,7 +13858,7 @@ async def list_damage_reports(request: Request):
         logging.error(f"Error listing damage reports: {e}")
         return {"ok": False, "error": str(e)}
 
-@app.get("/api/damage-reports/{dr_number}")
+@app.get("/api/damage-reports/{dr_number:path}")
 async def get_damage_report(request: Request, dr_number: str):
     """Obtém um Damage Report específico"""
     require_auth(request)
@@ -14095,7 +14095,7 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
         logging.error(f"Error bulk uploading PDFs: {e}")
         return {"ok": False, "error": str(e)}
 
-@app.post("/api/damage-reports/upload-pdf/{dr_number}")
+@app.post("/api/damage-reports/upload-pdf/{dr_number:path}")
 async def upload_damage_report_pdf(request: Request, dr_number: str):
     """Upload PDF para um Damage Report existente"""
     require_auth(request)
@@ -14459,7 +14459,7 @@ async def cleanup_invalid_drs():
         logging.error(f"Error cleaning up DRs: {e}")
         return {"ok": False, "error": str(e)}
 
-@app.delete("/api/damage-reports/{dr_number}")
+@app.delete("/api/damage-reports/{dr_number:path}")
 async def delete_damage_report(request: Request, dr_number: str):
     """Eliminar DR - APENAS se não for protegido"""
     require_auth(request)
@@ -15048,7 +15048,7 @@ async def preview_damage_report_pdf(request: Request):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/damage-reports/{dr_number}/pdf-original")
+@app.get("/api/damage-reports/{dr_number:path}/pdf-original")
 async def download_original_pdf(request: Request, dr_number: str, preview: bool = False):
     """Download ou preview do PDF original que foi feito upload"""
     require_auth(request)
@@ -15124,7 +15124,7 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/damage-reports/{dr_number}/pdf")
+@app.get("/api/damage-reports/{dr_number:path}/pdf")
 async def download_damage_report_pdf(request: Request, dr_number: str):
     """Download do Damage Report em PDF - Gera PDF do zero idêntico ao template"""
     require_auth(request)
