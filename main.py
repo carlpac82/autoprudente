@@ -14556,24 +14556,49 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
     require_auth(request)
     
     try:
+        logging.info(f"🔍 Procurando PDF para DR: {dr_number}")
+        
         with _db_lock:
             conn = _db_connect()
             try:
-                # Usar cursor() para PostgreSQL
+                # Primeiro listar todos os DRs para debug
+                logging.info("📋 Listando todos os DRs na BD:")
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT dr_number, pdf_filename, CASE WHEN pdf_data IS NULL THEN 'NULL' ELSE 'OK' END as pdf_status FROM damage_reports")
+                        all_drs = cur.fetchall()
+                        for dr in all_drs:
+                            logging.info(f"  - {dr[0]} | PDF: {dr[1]} | Data: {dr[2]}")
+                else:
+                    cursor = conn.execute("SELECT dr_number, pdf_filename, CASE WHEN pdf_data IS NULL THEN 'NULL' ELSE 'OK' END as pdf_status FROM damage_reports")
+                    all_drs = cursor.fetchall()
+                    for dr in all_drs:
+                        logging.info(f"  - {dr[0]} | PDF: {dr[1]} | Data: {dr[2]}")
+                
+                # Agora buscar o DR específico
                 if hasattr(conn, 'cursor'):
                     with conn.cursor() as cur:
                         cur.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = %s", (dr_number,))
                         row = cur.fetchone()
+                        logging.info(f"🔍 Resultado PostgreSQL: {row is not None}")
                 else:
                     # SQLite
                     cursor = conn.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = ?", (dr_number,))
                     row = cursor.fetchone()
+                    logging.info(f"🔍 Resultado SQLite: {row is not None}")
                 
-                if not row or not row[0]:
-                    raise HTTPException(status_code=404, detail="PDF not found")
+                if not row:
+                    logging.error(f"❌ DR {dr_number} não encontrado na BD")
+                    raise HTTPException(status_code=404, detail=f"DR {dr_number} not found")
+                
+                if not row[0]:
+                    logging.error(f"❌ DR {dr_number} não tem PDF (pdf_data é NULL)")
+                    raise HTTPException(status_code=404, detail=f"PDF not found for DR {dr_number}")
                 
                 pdf_data = row[0]
                 pdf_filename = row[1] or f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+                
+                logging.info(f"✅ PDF encontrado: {pdf_filename}, size: {len(pdf_data) if pdf_data else 0} bytes")
                 
                 # Converter bytes se necessário (PostgreSQL retorna memoryview)
                 if isinstance(pdf_data, memoryview):
