@@ -12355,6 +12355,10 @@ async def get_vehicle_photo(vehicle_name: str):
                     image_data = row[0]
                     content_type = row[1] or 'image/jpeg'
                     
+                    # Convert memoryview to bytes (PostgreSQL compatibility)
+                    if isinstance(image_data, memoryview):
+                        image_data = bytes(image_data)
+                    
                     return Response(
                         content=image_data,
                         media_type=content_type,
