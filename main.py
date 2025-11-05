@@ -14543,8 +14543,8 @@ async def export_automated_prices_excel(request: Request):
             Get exact price for each period - NO division, use values as-is
             These are FIXED prices per period (1 day fixed, 2 days fixed, etc.)
             """
-            # Simply return the exact price for the day period
-            price = group_prices.get(str(day), '')
+            # Try both string and integer keys (frontend sends integers)
+            price = group_prices.get(day) or group_prices.get(str(day), '')
             return float(price) if price else ''
         
         # Get Abbycar price adjustments
@@ -14610,20 +14610,22 @@ async def export_automated_prices_excel(request: Request):
                 ws.cell(row_num, 6).fill = low_deposit_fill
             
             # Columns 7-18: Prices (1 day fixed through 22-28 daily)
-            # Map: 1-7 days fixed, then 8-10, 11-12, 13-14, 15-21, 22-28 daily
+            # Map frontend days to Excel columns
+            # Frontend: 1,2,3,4,5,6,7,8,9,14,22,28
+            # Excel cols: 7,8,9,10,11,12,13,14,15,16,17,18
             price_columns = [
-                ('1', 7),   # 1 day fixed
-                ('2', 8),   # 2 days fixed
-                ('3', 9),   # 3 days fixed
-                ('4', 10),  # 4 days fixed
-                ('5', 11),  # 5 days fixed
-                ('6', 12),  # 6 days fixed
-                ('7', 13),  # 7 days fixed
-                ('8', 14),  # 8-10 daily
-                ('9', 15),  # 11-12 daily
-                ('14', 16), # 13-14 daily
-                ('22', 17), # 15-21 daily
-                ('28', 18)  # 22-28 daily
+                (1, 7),   # 1 day fixed → Col 7
+                (2, 8),   # 2 days fixed → Col 8
+                (3, 9),   # 3 days fixed → Col 9
+                (4, 10),  # 4 days fixed → Col 10
+                (5, 11),  # 5 days fixed → Col 11
+                (6, 12),  # 6 days fixed → Col 12
+                (7, 13),  # 7 days fixed → Col 13
+                (8, 14),  # 8 days → Col 14 (8-10 daily)
+                (9, 15),  # 9 days → Col 15 (11-12 daily) 
+                (14, 16), # 14 days → Col 16 (13-14 daily)
+                (22, 17), # 22 days → Col 17 (15-21 daily)
+                (28, 18)  # 28 days → Col 18 (22-28 daily)
             ]
             
             for day_key, col_idx in price_columns:
