@@ -8,14 +8,14 @@ WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:11180: DeprecationWarning: 
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:11192: DeprecationWarning: 
         on_event is deprecated, use lifespan event handlers instead.
 
         Read more about it in the
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [29006]
+INFO:     Started server process [33280]
 INFO:     Waiting for application startup.
 ========================================
 🚀 APP STARTUP - Rental Price Tracker
@@ -28,17 +28,3 @@ INFO:     Waiting for application startup.
 ========================================
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:51214 - "POST /api/user-settings/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51214 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51214 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "POST /api/user-settings/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51278 - "POST /api/user-settings/save HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51279 - "GET /price-automation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51278 - "GET /api/user-settings/load?user_key=default HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51279 - "GET /api/ai/learning/load HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51278 - "GET /api/price-automation/rules/load HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51279 - "GET /api/price-automation/settings/load HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51278 - "GET /api/vans-pricing HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51279 - "GET /admin/env-summary HTTP/1.1" 200 OK

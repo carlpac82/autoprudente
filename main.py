@@ -2835,6 +2835,18 @@ async def price_history(request: Request):
         "current_user": current_user
     })
 
+@app.get("/test_abbycar_download.html", response_class=HTMLResponse)
+async def test_abbycar_download(request: Request):
+    """Página de teste para debug do download Abbycar"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("test_abbycar_download.html", {
+        "request": request
+    })
+
 @app.get("/price-automation", response_class=HTMLResponse)
 async def price_automation(request: Request):
     """Página de automação de preços com upload de Excel"""
