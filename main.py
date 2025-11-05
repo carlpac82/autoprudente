@@ -13998,6 +13998,45 @@ async def import_damage_reports_bulk(request: Request):
         logging.error(f"Error importing damage reports: {e}")
         return {"ok": False, "error": str(e)}
 
+@app.post("/api/damage-reports/fix-columns")
+async def fix_damage_reports_columns(request: Request):
+    """Adicionar colunas pdf_data e pdf_filename se não existirem - TEMPORÁRIO"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Adicionar coluna pdf_data
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BLOB")
+                    conn.commit()
+                    logging.info("✅ Coluna pdf_data adicionada ao PostgreSQL")
+                    pdf_data_added = True
+                except Exception as e:
+                    pdf_data_added = False
+                    logging.info(f"Coluna pdf_data já existe: {e}")
+                
+                # Adicionar coluna pdf_filename
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                    conn.commit()
+                    logging.info("✅ Coluna pdf_filename adicionada ao PostgreSQL")
+                    pdf_filename_added = True
+                except Exception as e:
+                    pdf_filename_added = False
+                    logging.info(f"Coluna pdf_filename já existe: {e}")
+                
+                return {
+                    "ok": True,
+                    "pdf_data_added": pdf_data_added,
+                    "pdf_filename_added": pdf_filename_added,
+                    "message": "Colunas verificadas e adicionadas se necessário"
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error fixing columns: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/damage-reports/numbering/get")
 async def get_dr_numbering(request: Request):
     """Obter configuração de numeração atual"""
