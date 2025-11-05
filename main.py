@@ -13636,6 +13636,28 @@ async def list_damage_reports(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # TEMPORÁRIO: Marcar todos os DRs com PDF como protegidos
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE damage_reports 
+                            SET is_protected = 1 
+                            WHERE pdf_data IS NOT NULL AND pdf_filename IS NOT NULL
+                        """)
+                    conn.commit()
+                else:
+                    conn.execute("""
+                        UPDATE damage_reports 
+                        SET is_protected = 1 
+                        WHERE pdf_data IS NOT NULL AND pdf_filename IS NOT NULL
+                    """)
+                    conn.commit()
+                logging.info("✅ DRs com PDF marcados como protegidos")
+                
+            except Exception as e:
+                logging.error(f"Error protecting DRs: {e}")
+            
+            try:
                 # Primeiro verificar se a coluna is_protected existe
                 # Tentar detectar se é PostgreSQL ou SQLite
                 try:
