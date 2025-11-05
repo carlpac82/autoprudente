@@ -14384,6 +14384,7 @@ async def download_export_history(request: Request, export_id: int):
 @app.post("/api/export-automated-prices-excel")
 async def export_automated_prices_excel(request: Request):
     """Export automated prices to Excel (Abbycar format)"""
+    print("[BACKEND] ========== EXPORT AUTOMATED PRICES EXCEL REQUEST RECEIVED ==========")
     require_auth(request)
     try:
         from openpyxl import Workbook
@@ -14391,10 +14392,12 @@ async def export_automated_prices_excel(request: Request):
         from datetime import datetime
         import io
         
+        print("[BACKEND] Reading request data...")
         data = await request.json()
         location = data.get('location', 'Unknown')
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         prices = data.get('prices', {})  # { 'B1': { '1': 25.00, '2': 24.50, ... }, 'B2': {...}, ... }
+        print(f"[BACKEND] Location: {location}, Date: {date}, Prices groups: {len(prices)}")
         
         # Car group mapping (SIPP codes to groups)
         car_group_mapping = {

@@ -2540,93 +2540,52 @@
         
         // ===== DOWNLOAD EXCEL (ABBYCAR FORMAT) =====
         
-        async function downloadAutomatedPricesExcel() {
-            try {
-                console.log('[DEBUG] Starting Abbycar Excel download...');
-                showNotification('Generating Excel file...', 'info');
+        function downloadAutomatedPricesExcel() {
+            // FRONTEND ONLY - Generate CSV like BROKERS (no backend call)
+            console.log('Generating Abbycar CSV...');
+            showNotification('Generating Excel file...', 'info');
+            
+            // Get location and date
+            const location = document.getElementById('locationAuto')?.value || 'Faro';
+            const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+            
+            // Abbycar groups and days
+            const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+            const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+            
+            // Build CSV content (similar to Excel format)
+            let csvContent = 'Group;' + days.join(';') + '\n';
+            
+            groups.forEach(group => {
+                const rowData = [group];
                 
-                // Get location and date
-                const location = document.getElementById('locationAuto')?.value || 'Unknown';
-                const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
-                console.log('[DEBUG] Location:', location, 'Date:', date);
-                
-                // Collect prices from table (only AUTO column) - ALLOW EMPTY
-                const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
-                const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
-                
-                const prices = {};
-                let totalPrices = 0;
-                
-                groups.forEach(group => {
-                    prices[group] = {};
-                    days.forEach(day => {
-                        const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
-                        if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
-                            prices[group][day] = parseFloat(inputAuto.value);
-                            totalPrices++;
-                        }
-                    });
+                days.forEach(day => {
+                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
+                    if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                        rowData.push(parseFloat(inputAuto.value).toFixed(2));
+                    } else {
+                        rowData.push('');
+                    }
                 });
                 
-                console.log('[DEBUG] Collected', totalPrices, 'prices from table');
-                console.log('[DEBUG] Prices object:', prices);
-                
-                // Send to backend (even if empty)
-                console.log('[DEBUG] Sending request to backend...');
-                const response = await fetch('/api/export-automated-prices-excel', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        location: location,
-                        date: date,
-                        prices: prices
-                    })
-                });
-                
-                console.log('[DEBUG] Response status:', response.status);
-                console.log('[DEBUG] Response headers:', response.headers);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('[ERROR] Backend error:', errorText);
-                    throw new Error(`Server error: ${response.status}`);
-                }
-                
-                // Download file
-                console.log('[DEBUG] Creating blob...');
-                const blob = await response.blob();
-                console.log('[DEBUG] Blob size:', blob.size, 'bytes, type:', blob.type);
-                
-                if (blob.size < 100) {
-                    throw new Error('Excel file is too small - likely corrupted');
-                }
-                
-                console.log('[DEBUG] Creating download link...');
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
-                a.download = filename;
-                document.body.appendChild(a);
-                console.log('[DEBUG] Triggering download...');
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                console.log('[DEBUG] Download triggered successfully');
-                
-                // Save to downloads history
-                saveDownloadToHistory(filename, 'abbycar', location);
-                
-                showNotification('Excel file downloaded successfully!', 'success');
-                
-            } catch (error) {
-                console.error('[ERROR] Error downloading Excel:', error);
-                console.error('[ERROR] Stack:', error.stack);
-                showNotification('Error: ' + error.message, 'error');
-            }
+                csvContent += rowData.join(';') + '\n';
+            });
+            
+            // Download CSV (like BROKERS)
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.csv`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Save to downloads history
+            saveDownloadToHistory(filename, 'abbycar', location);
+            
+            console.log(`Abbycar CSV exported: ${filename}`);
+            showNotification('Excel file downloaded successfully!', 'success');
         }
         
         // ===== HISTÓRICO =====
