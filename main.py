@@ -14007,6 +14007,49 @@ async def import_damage_reports_bulk(request: Request):
         logging.error(f"Error importing damage reports: {e}")
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/damage-reports/stats")
+async def get_damage_reports_stats(request: Request):
+    """Obter estatísticas dos Damage Reports"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Total de DRs
+                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports")
+                total = cursor.fetchone()[0]
+                
+                # DRs protegidos
+                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE is_protected = 1")
+                protected = cursor.fetchone()[0]
+                
+                # DRs por ano
+                cursor = conn.execute("""
+                    SELECT 
+                        CASE 
+                            WHEN dr_number LIKE '%/%' THEN SUBSTR(dr_number, INSTR(dr_number, '/') + 1)
+                            ELSE 'Outros'
+                        END as year,
+                        COUNT(*) as count
+                    FROM damage_reports
+                    GROUP BY year
+                    ORDER BY year DESC
+                """)
+                by_year = {row[0]: row[1] for row in cursor.fetchall()}
+                
+                return {
+                    "ok": True,
+                    "total": total,
+                    "protected": protected,
+                    "by_year": by_year
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting stats: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.post("/api/damage-reports/fix-columns")
 async def fix_damage_reports_columns(request: Request):
     """Adicionar colunas pdf_data e pdf_filename se não existirem - TEMPORÁRIO"""
