@@ -15363,65 +15363,6 @@ async def list_notification_history(request: Request, limit: int = 50):
         logging.error(f"List notification history error: {e}")
         return _no_store_json({"ok": False, "error": str(e)}, 500)
 
-# TEMPORARY: Endpoint público para upload de fotos (REMOVER DEPOIS!)
-@app.post("/api/temp/upload-photo/{vehicle_name}")
-async def temp_upload_photo(vehicle_name: str, file: UploadFile = File(...)):
-    """TEMPORÁRIO: Upload de foto SEM autenticação - REMOVER DEPOIS!"""
-    try:
-        photo_data = await file.read()
-        content_type = file.content_type or 'image/jpeg'
-        
-        _ensure_vehicle_photos_table()
-        _ensure_vehicle_images_table()
-        
-        vehicle_key = vehicle_name.lower().strip()
-        
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                # PostgreSQL compatible upsert
-                use_postgres = _USE_NEW_DB and globals().get('USE_POSTGRES', False)
-                if use_postgres:
-                    # PostgreSQL
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
-                        VALUES (%s, %s, %s, NULL)
-                        ON CONFLICT (vehicle_name) 
-                        DO UPDATE SET photo_data = EXCLUDED.photo_data, content_type = EXCLUDED.content_type
-                    """, (vehicle_key, photo_data, content_type))
-                    
-                    cursor.execute("""
-                        INSERT INTO vehicle_images (vehicle_key, image_data, content_type)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (vehicle_key)
-                        DO UPDATE SET image_data = EXCLUDED.image_data, content_type = EXCLUDED.content_type
-                    """, (vehicle_key, photo_data, content_type))
-                else:
-                    # SQLite
-                    conn.execute("""
-                        INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
-                        VALUES (?, ?, ?, NULL)
-                    """, (vehicle_key, photo_data, content_type))
-                    
-                    conn.execute("""
-                        INSERT OR REPLACE INTO vehicle_images (vehicle_key, image_data, content_type)
-                        VALUES (?, ?, ?)
-                    """, (vehicle_key, photo_data, content_type))
-                
-                conn.commit()
-            finally:
-                conn.close()
-        
-        return _no_store_json({
-            "ok": True,
-            "message": "Foto enviada",
-            "vehicle": vehicle_name,
-            "size": len(photo_data)
-        })
-    except Exception as e:
-        return _no_store_json({"ok": False, "error": str(e)}, 500)
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
