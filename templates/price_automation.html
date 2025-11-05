@@ -2162,8 +2162,6 @@
         }
         
         async function exportWebsiteCSV() {
-            console.log('📤 Starting Website CSV export...');
-            
             try {
                 showNotification('Generating Website CSV...', 'info');
                 
@@ -2177,47 +2175,41 @@
                 
                 const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
                 
-                console.log('✅ Variables initialized');
-            
-            // Get website adjustment from settings (fetch from backend)
-            let websiteAdjustment = 14;
-            try {
-                const response = await fetch('/admin/env-summary');
-                const settings = await response.json();
-                websiteAdjustment = parseFloat(settings.website_pct || 14);
-                console.log(`📊 Website adjustment: ${websiteAdjustment}%`);
-            } catch (error) {
-                console.warn('⚠️ Could not fetch website adjustment, using 14%');
-            }
-            
-            // Commission: 13.66%
-            const commission = 0.1366;
-            
-            // Get vans pricing from server
-            const vansPricing = await getVansPricing();
-            console.log('✅ Vans pricing loaded:', vansPricing);
-            
-            // Filename
-            const location = document.getElementById('location').value;
-            const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
-            const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
-            const timestamp = new Date().toISOString().slice(0, 10);
-            const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
-            
-            // Get prices from table (allow empty - will use parametrizations)
-            const pricesData = {};
-            grupos.forEach(grupo => {
-                pricesData[grupo] = {};
-                dias.forEach(day => {
-                    const cellId = `price_${grupo}_${day}`;
-                    const cell = document.getElementById(cellId);
-                    if (cell && cell.value) {
-                        pricesData[grupo][day] = parseFloat(cell.value);
-                    }
+                // Get website adjustment from settings (fetch from backend)
+                let websiteAdjustment = 14;
+                try {
+                    const response = await fetch('/admin/env-summary');
+                    const settings = await response.json();
+                    websiteAdjustment = parseFloat(settings.website_pct || 14);
+                } catch (error) {
+                    console.warn('Could not fetch website adjustment, using 14%');
+                }
+                
+                // Commission: 13.66%
+                const commission = 0.1366;
+                
+                // Get vans pricing from server (with fallback)
+                const vansPricing = await getVansPricing();
+                
+                // Filename
+                const location = document.getElementById('location').value;
+                const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
+                const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
+                const timestamp = new Date().toISOString().slice(0, 10);
+                const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
+                
+                // Get prices from table (allow empty - will use parametrizations)
+                const pricesData = {};
+                grupos.forEach(grupo => {
+                    pricesData[grupo] = {};
+                    dias.forEach(day => {
+                        const cellId = `price_${grupo}_${day}`;
+                        const cell = document.getElementById(cellId);
+                        if (cell && cell.value) {
+                            pricesData[grupo][day] = parseFloat(cell.value);
+                        }
+                    });
                 });
-            });
-            
-            console.log('📊 Prices from table:', Object.keys(pricesData).length, 'groups');
             
             // Build CSV content
             let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
@@ -2279,12 +2271,8 @@
                 csvContent += rowData.join(';') + '\n';
             });
             
-            console.log('📦 Creating CSV blob...');
-            
             // Download CSV
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            console.log('Blob size:', blob.size, 'bytes');
-            
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
@@ -2292,17 +2280,14 @@
             link.click();
             document.body.removeChild(link);
             
-            console.log('✅ File downloaded:', filename);
-            
             // Save to downloads history
             saveDownloadToHistory(filename, 'website', location);
             
-            console.log(`✅ Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
-            showNotification(`✅ Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+            showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
             
             } catch (error) {
-                console.error('❌ Error exporting Website CSV:', error);
-                showNotification(`❌ Error exporting: ${error.message}`, 'error');
+                console.error('Error exporting Website CSV:', error);
+                showNotification(`Error exporting: ${error.message}`, 'error');
             }
         }
         
@@ -2525,13 +2510,27 @@
                 const result = await response.json();
                 
                 if (result.ok && result.pricing) {
+                    console.log('✅ Vans pricing loaded from PostgreSQL');
                     return result.pricing;
                 }
             } catch (error) {
-                console.error('Error fetching vans pricing:', error);
+                console.warn('⚠️ Error fetching vans pricing from server, using defaults:', error);
             }
             
-            // Default values if fetch fails
+            // Fallback: try localStorage (compatibility)
+            try {
+                const saved = localStorage.getItem('vansPricing');
+                if (saved) {
+                    const pricing = JSON.parse(saved);
+                    console.log('✅ Vans pricing loaded from localStorage (fallback)');
+                    return pricing;
+                }
+            } catch (error) {
+                console.warn('⚠️ Error loading from localStorage:', error);
+            }
+            
+            // Default values if everything fails
+            console.log('Using default vans pricing');
             return {
                 c3_1day: 112, c3_2days: 144, c3_3days: 180,
                 c4_1day: 152, c4_2days: 170, c4_3days: 210,
@@ -2543,14 +2542,11 @@
         
         async function downloadAutomatedPricesExcel() {
             try {
-                console.log('📊 Starting Excel download...');
                 showNotification('Generating Excel file...', 'info');
                 
                 // Get location and date
                 const location = document.getElementById('locationAuto')?.value || 'Unknown';
                 const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
-                
-                console.log('Location:', location, 'Date:', date);
                 
                 // Collect prices from table (only AUTO column)
                 const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
@@ -2568,10 +2564,7 @@
                     });
                 });
                 
-                console.log('📊 Collected prices:', Object.keys(prices).length, 'groups');
-                
                 // Send to backend
-                console.log('📤 Sending request to backend...');
                 const response = await fetch('/api/export-automated-prices-excel', {
                     method: 'POST',
                     headers: {
@@ -2584,19 +2577,14 @@
                     })
                 });
                 
-                console.log('Response status:', response.status);
-                
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Backend error:', errorText);
-                    throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}`);
+                    throw new Error(`Server error: ${response.status}`);
                 }
-                
-                console.log('✅ Response OK, creating blob...');
                 
                 // Download file
                 const blob = await response.blob();
-                console.log('Blob size:', blob.size, 'bytes, type:', blob.type);
                 
                 if (blob.size < 100) {
                     throw new Error('Excel file is too small - likely corrupted');
@@ -2612,15 +2600,13 @@
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                console.log('✅ File downloaded:', filename);
-                
                 // Save to downloads history
                 saveDownloadToHistory(filename, 'abbycar', location);
                 
                 showNotification('Excel file downloaded successfully!', 'success');
                 
             } catch (error) {
-                console.error('❌ Error downloading Excel:', error);
+                console.error('Error downloading Excel:', error);
                 showNotification('Error: ' + error.message, 'error');
             }
         }
