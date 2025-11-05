@@ -1942,7 +1942,11 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_strategies ON pricing_strategies(location, grupo, month, day, priority)")
+            # Try to create index - may fail if column 'priority' doesn't exist yet
+            try:
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_strategies ON pricing_strategies(location, grupo, month, day, priority)")
+            except Exception as idx_err:
+                logging.warning(f"Could not create idx_strategies index (run fix_pricing_strategies_table.py): {idx_err}")
             
             # Tabela para histórico de preços automatizados
             conn.execute(
