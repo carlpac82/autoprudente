@@ -495,19 +495,12 @@
                         // Aguardar um pouco para o ficheiro ser escrito
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         
-                        // Carregar iframe APENAS com o tab de mapeamento (sem header, sem outros tabs)
-                        iframe.src = '/damage-report?iframe=1&tab=mapper&t=' + Date.now();
+                        // Carregar iframe com página dedicada do mapeador
+                        iframe.src = '/damage-report-mapper?t=' + Date.now();
                         
                         // Esconder loading quando carregar
                         iframe.onload = function() {
                             loading.style.display = 'none';
-                            
-                            // Forçar o iframe a mostrar apenas o mapeador via postMessage
-                            try {
-                                iframe.contentWindow.postMessage({ action: 'showMapperOnly' }, '*');
-                            } catch (e) {
-                                console.log('Could not send message to iframe:', e);
-                            }
                         };
                         
                         // Scroll suave para o mapeador
