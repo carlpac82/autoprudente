@@ -392,44 +392,9 @@
                     const gridSuccess = await regenerateGrid();
                     
                     if (gridSuccess) {
-                        // Abrir mapeador automaticamente
-                        const container = document.getElementById('mapperContainer');
-                        const iframe = document.getElementById('mapperIframe');
-                        const icon = document.getElementById('toggleIcon');
-                        const loading = document.getElementById('iframeLoading');
-                        
-                        if (container.style.display === 'none') {
-                            container.style.display = 'block';
-                            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>';
-                        }
-                        
-                        // Mostrar loading
-                        loading.style.display = 'flex';
-                        
-                        // Aguardar um pouco para o ficheiro ser escrito
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        // Carregar iframe APENAS com o tab de mapeamento (sem header, sem outros tabs)
-                        iframe.src = '/damage-report?iframe=1&tab=mapper&t=' + Date.now();
-                        
-                        // Esconder loading quando carregar
-                        iframe.onload = function() {
-                            loading.style.display = 'none';
-                            
-                            // Forçar o iframe a mostrar apenas o mapeador via postMessage
-                            try {
-                                iframe.contentWindow.postMessage({ action: 'showMapperOnly' }, '*');
-                            } catch (e) {
-                                console.log('Could not send message to iframe:', e);
-                            }
-                        };
-                        
-                        // Scroll suave para o mapeador
-                        setTimeout(() => {
-                            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 500);
-                        
-                        showSuccessMessage('PDF pronto para mapear!');
+                        showSuccessMessage('Template carregado com sucesso! Acede a Damage Report para mapear campos.');
+                        // Recarregar coordenadas
+                        loadCoordinates();
                     } else {
                         showErrorMessage('Grid regenerado mas pode haver problemas. Tenta recarregar a página.');
                     }
