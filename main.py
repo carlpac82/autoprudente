@@ -15059,6 +15059,16 @@ async def preview_damage_report_pdf(request: Request):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/damage-reports/test/{dr_number:path}")
+async def test_dr_number(dr_number: str):
+    """TESTE: Verificar como dr_number é recebido"""
+    return {
+        "received": dr_number,
+        "length": len(dr_number),
+        "repr": repr(dr_number),
+        "has_space": " " in dr_number
+    }
+
 @app.get("/api/damage-reports/{dr_number:path}/pdf-original")
 async def download_original_pdf(request: Request, dr_number: str, preview: bool = False):
     """Download ou preview do PDF original que foi feito upload"""
