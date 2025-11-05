@@ -13674,8 +13674,8 @@ async def create_damage_report(request: Request):
                         cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
                         count = cursor.fetchone()[0] + 1
                     
-                    # Formato correto: DR XX/YYYY
-                    dr_number = f"DR {count:02d}/{year}"
+                    # Formato: DR01/2025 (sem espaço para facilitar URLs)
+                    dr_number = f"DR{count:02d}/{year}"
                     
                     logging.info(f"✨ Criando novo DR {dr_number}")
                     
@@ -13822,13 +13822,13 @@ async def list_damage_reports(request: Request):
                     # FORÇAR proteção para DRs 01-39/2025 e 01-03/2024
                     is_protected = False
                     if dr_number:
-                        # Verificar se é um dos DRs que fizeste upload
+                        # Verificar se é um dos DRs que fizeste upload (sem espaço: DR01/2025)
                         for i in range(1, 40):
-                            if dr_number == f"DR {i:02d}/2025":
+                            if dr_number == f"DR{i:02d}/2025":
                                 is_protected = True
                                 break
                         for i in range(1, 4):
-                            if dr_number == f"DR {i:02d}/2024":
+                            if dr_number == f"DR{i:02d}/2024":
                                 is_protected = True
                                 break
                     
@@ -14673,7 +14673,7 @@ async def get_dr_numbering(request: Request):
                 
                 if row:
                     current_year, current_number, prefix, updated_at = row
-                    next_number = f"{prefix} {current_number + 1:02d}/{current_year}"
+                    next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
                     return {
                         "ok": True,
                         "current_year": current_year,
@@ -14727,7 +14727,7 @@ async def update_dr_numbering(request: Request):
                 
                 conn.commit()
                 
-                next_number = f"{prefix} {current_number + 1:02d}/{current_year}"
+                next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
                 logging.info(f"✅ Numeração DR atualizada: próximo será {next_number}")
                 
                 return {
