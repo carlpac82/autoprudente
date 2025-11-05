@@ -14708,11 +14708,22 @@ async def update_dr_numbering(request: Request):
             try:
                 current_year = datetime.now().year
                 
-                conn.execute("""
-                    UPDATE damage_report_numbering
-                    SET current_number = ?, prefix = ?, current_year = ?, updated_at = ?, updated_by = ?
-                    WHERE id = 1
-                """, (current_number, prefix, current_year, datetime.now().isoformat(), username))
+                # Atualizar numeração (sem updated_by pois coluna não existe)
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE damage_report_numbering
+                            SET current_number = %s, prefix = %s, current_year = %s, updated_at = %s
+                            WHERE id = 1
+                        """, (current_number, prefix, current_year, datetime.now().isoformat()))
+                else:
+                    # SQLite
+                    conn.execute("""
+                        UPDATE damage_report_numbering
+                        SET current_number = ?, prefix = ?, current_year = ?, updated_at = ?
+                        WHERE id = 1
+                    """, (current_number, prefix, current_year, datetime.now().isoformat()))
                 
                 conn.commit()
                 
