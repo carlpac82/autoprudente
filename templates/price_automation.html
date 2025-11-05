@@ -1934,13 +1934,13 @@
             });
         }
 
-        function downloadExcel(broker) {
+        async function downloadExcel(broker) {
             // Copiar C de D antes de descarregar
             copyGroupCFromD();
             
             // Special handling for Abbycar - use backend endpoint
             if (broker === 'abbycar') {
-                downloadAutomatedPricesExcel();
+                await downloadAutomatedPricesExcel();
                 return;
             }
             
@@ -1952,7 +1952,7 @@
             
             // Special handling for Website CSV export
             if (broker === 'website') {
-                exportWebsiteCSV();
+                await exportWebsiteCSV();
                 return;
             }
             
@@ -4465,13 +4465,13 @@
             showRemoveColumnDialog(); // Reuse same function
         }
         
-        function downloadExcelAuto(format) {
+        async function downloadExcelAuto(format) {
             if (format === 'way2rentals') {
                 exportWay2RentalsCSVFromAuto();
             } else if (format === 'website') {
-                exportWebsiteCSVFromAuto();
+                await exportWebsiteCSVFromAuto();
             } else if (format === 'abbycar') {
-                downloadAutomatedPricesExcel();
+                await downloadAutomatedPricesExcel();
             } else {
                 console.error('Unknown format:', format);
             }

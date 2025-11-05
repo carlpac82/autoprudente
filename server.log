@@ -8,43 +8,25 @@ WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:10579: DeprecationWarning: 
+/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:11180: DeprecationWarning: 
         on_event is deprecated, use lifespan event handlers instead.
 
         Read more about it in the
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [41976]
+INFO:     Started server process [21005]
 INFO:     Waiting for application startup.
 ========================================
 🚀 APP STARTUP - Rental Price Tracker
 ========================================
 📊 Initializing database tables...
    ✅ users table created/exists
+   ✅ All tables created/verified (19 tables total)
 👥 Creating default users...
 ✅ Default users ready (admin/admin)
 ========================================
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     None:0 - "GET / HTTP/1.1" 303 See Other
-INFO:     None:0 - "GET /login HTTP/1.1" 200 OK
-INFO:     None:0 - "POST /login HTTP/1.1" 303 See Other
-INFO:     None:0 - "GET / HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /healthz HTTP/1.1" 200 OK
-INFO:     None:0 - "GET / HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /healthz HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin?section=profile HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin/users?iframe=1 HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin/customization/branding?iframe=1 HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /static/branding.js HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin/customization/company-info?iframe=1 HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin/customization/language?iframe=1 HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin/customization/email?iframe=1 HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /admin/customization/automated-reports?iframe=1 HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /static/auto-sync.js HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /api/settings/load-all HTTP/1.1" 200 OK
-INFO:     None:0 - "POST /api/settings/sync HTTP/1.1" 200 OK
-INFO:     None:0 - "POST /api/settings/sync HTTP/1.1" 200 OK
-INFO:     None:0 - "GET / HTTP/1.1" 200 OK
-INFO:     None:0 - "GET /healthz HTTP/1.1" 200 OK
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
