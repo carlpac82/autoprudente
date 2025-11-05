@@ -13625,7 +13625,8 @@ async def save_damage_report_coordinates(request: Request):
         _ensure_damage_report_tables()
         
         # Receber coordenadas
-        coordinates = await request.json()
+        data = await request.json()
+        coordinates = data.get('coordinates', data)  # Suportar ambos os formatos
         
         # Obter usuário atual
         username = request.session.get('username', 'system')
