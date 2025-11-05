@@ -2638,6 +2638,40 @@ def require_admin(request: Request):
     if not request.session.get("is_admin", False):
         raise HTTPException(status_code=403, detail="Forbidden")
 
+@app.get("/api/current-user")
+async def get_current_user(request: Request):
+    """Retorna informações do utilizador logado"""
+    require_auth(request)
+    
+    username = request.session.get("username", "")
+    
+    # Buscar nome completo do utilizador na base de dados
+    with _db_lock:
+        conn = _db_connect()
+        try:
+            cursor = conn.execute(
+                "SELECT first_name, last_name FROM users WHERE username = ?",
+                (username,)
+            )
+            row = cursor.fetchone()
+            
+            if row and row[0] and row[1]:
+                full_name = f"{row[0]} {row[1]}".strip()
+            elif row and row[0]:
+                full_name = row[0].strip()
+            else:
+                full_name = username
+        except:
+            full_name = username
+        finally:
+            conn.close()
+    
+    return {
+        "username": username,
+        "full_name": full_name,
+        "is_admin": request.session.get("is_admin", False)
+    }
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     if request.session.get("auth"):
@@ -9896,6 +9930,270 @@ async def admin_price_automation_settings(request: Request):
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Erro: price_automation_settings.html não encontrado</h1>", status_code=500)
 
+@app.get("/admin/damage-report", response_class=HTMLResponse)
+async def admin_damage_report(request: Request):
+    """Página de administração do Damage Report"""
+    require_auth(request)
+    
+    # Contar campos mapeados
+    mapped_fields = 0
+    try:
+        import json
+        if os.path.exists('damage_report_coordinates.json'):
+            with open('damage_report_coordinates.json', 'r') as f:
+                coordinates = json.load(f)
+                mapped_fields = len(coordinates)
+    except Exception as e:
+        logging.error(f"Error counting mapped fields: {e}")
+    
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "admin_damage_report.html")
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            # Replace template variables
+            content = content.replace('{{ mapped_fields }}', str(mapped_fields))
+            return HTMLResponse(content=content)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Erro: admin_damage_report.html não encontrado</h1>", status_code=500)
+
+@app.post("/api/damage-reports/upload-template")
+async def upload_damage_report_template(request: Request):
+    """Upload de novo template PDF"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        from PyPDF2 import PdfReader
+        
+        # Garantir tabelas existem
+        _ensure_damage_report_tables()
+        
+        # Receber form data
+        form = await request.form()
+        file = form.get('file')
+        notes = form.get('notes', '')
+        
+        if not file:
+            return {"ok": False, "error": "Nenhum ficheiro enviado"}
+        
+        # Ler conteúdo do PDF
+        pdf_content = await file.read()
+        filename = file.filename
+        
+        # Obter número de páginas
+        from io import BytesIO
+        pdf_reader = PdfReader(BytesIO(pdf_content))
+        num_pages = len(pdf_reader.pages)
+        
+        # Obter usuário atual
+        username = request.session.get('username', 'system')
+        
+        # Obter próxima versão
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("SELECT MAX(version) FROM damage_report_templates")
+                row = cursor.fetchone()
+                next_version = (row[0] or 0) + 1
+                
+                # Desativar templates anteriores
+                conn.execute("UPDATE damage_report_templates SET is_active = 0")
+                
+                # Inserir novo template
+                conn.execute("""
+                    INSERT INTO damage_report_templates 
+                    (version, filename, file_data, num_pages, uploaded_by, uploaded_at, is_active, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+                """, (
+                    next_version,
+                    filename,
+                    pdf_content,
+                    num_pages,
+                    username,
+                    datetime.now().isoformat(),
+                    notes
+                ))
+                
+                conn.commit()
+                
+                # Guardar também como ficheiro
+                with open('Damage Report.pdf', 'wb') as f:
+                    f.write(pdf_content)
+                
+                logging.info(f"✅ Template v{next_version} carregado por {username}")
+                
+                return {
+                    "ok": True, 
+                    "version": next_version, 
+                    "num_pages": num_pages,
+                    "filename": filename
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error uploading template: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/damage-reports/get-coordinates")
+async def get_damage_report_coordinates(request: Request):
+    """Obter coordenadas dos campos do PDF"""
+    require_auth(request)
+    
+    try:
+        # Garantir tabelas existem
+        _ensure_damage_report_tables()
+        
+        # Ler da BD
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT field_id, x, y, width, height, page, field_type, template_version
+                    FROM damage_report_coordinates
+                    ORDER BY field_id
+                """)
+                
+                coordinates = {}
+                template_version = 1
+                for row in cursor.fetchall():
+                    field_id = row[0]
+                    coordinates[field_id] = {
+                        'x': row[1],
+                        'y': row[2],
+                        'width': row[3],
+                        'height': row[4],
+                        'page': row[5] if row[5] else 1
+                    }
+                    template_version = row[7] if row[7] else 1
+                
+                return {"ok": True, "coordinates": coordinates, "version": template_version}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting coordinates: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/damage-reports/regenerate-grid")
+async def regenerate_damage_report_grid(request: Request):
+    """Regenerar PDF com grid a partir do template ativo"""
+    require_auth(request)
+    
+    try:
+        from PyPDF2 import PdfReader, PdfWriter
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from io import BytesIO
+        
+        # Garantir tabelas existem
+        _ensure_damage_report_tables()
+        
+        # Obter template ativo da BD
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT file_data, num_pages 
+                    FROM damage_report_templates 
+                    WHERE is_active = 1 
+                    ORDER BY version DESC LIMIT 1
+                """)
+                row = cursor.fetchone()
+                
+                if not row:
+                    return {"ok": False, "error": "Nenhum template ativo encontrado"}
+                
+                pdf_data = row[0]
+                num_pages = row[1]
+            finally:
+                conn.close()
+        
+        # Criar overlay com grid
+        def create_grid_overlay():
+            packet = BytesIO()
+            c = canvas.Canvas(packet, pagesize=A4)
+            width, height = A4
+            
+            # Grid semi-transparente
+            c.setStrokeColor(colors.Color(0, 0, 1, alpha=0.3))
+            c.setLineWidth(0.5)
+            
+            # Linhas verticais a cada 1cm
+            for x in range(0, int(width/cm) + 1):
+                x_pos = x * cm
+                c.line(x_pos, 0, x_pos, height)
+                if x % 2 == 0:
+                    c.setFont('Helvetica', 7)
+                    c.setFillColor(colors.Color(0, 0, 1, alpha=0.7))
+                    c.drawString(x_pos + 2, height - 12, str(x))
+                    c.drawString(x_pos + 2, 8, str(x))
+            
+            # Linhas horizontais a cada 1cm
+            for y in range(0, int(height/cm) + 1):
+                y_pos = y * cm
+                c.line(0, y_pos, width, y_pos)
+                if y % 2 == 0:
+                    c.setFont('Helvetica', 7)
+                    c.setFillColor(colors.Color(0, 0, 1, alpha=0.7))
+                    c.drawString(8, y_pos + 2, str(y))
+                    c.drawString(width - 18, y_pos + 2, str(y))
+            
+            # Legenda
+            c.setFont('Helvetica-Bold', 11)
+            c.setFillColor(colors.Color(1, 0, 0, alpha=0.9))
+            c.drawString(2*cm, height - 0.8*cm, 'GRID DE COORDENADAS (em cm)')
+            
+            c.save()
+            packet.seek(0)
+            return packet
+        
+        # Ler PDF original
+        reader = PdfReader(BytesIO(pdf_data))
+        writer = PdfWriter()
+        
+        # Processar cada página
+        for page_num in range(len(reader.pages)):
+            original_page = reader.pages[page_num]
+            
+            # Criar overlay com grid
+            grid_overlay = create_grid_overlay()
+            overlay_pdf = PdfReader(grid_overlay)
+            overlay_page = overlay_pdf.pages[0]
+            
+            # Merge
+            original_page.merge_page(overlay_page)
+            writer.add_page(original_page)
+        
+        # Salvar
+        with open('static/damage_report_with_grid.pdf', 'wb') as f:
+            writer.write(f)
+        
+        logging.info(f"✅ Grid regenerado com {len(reader.pages)} páginas")
+        
+        return {"ok": True, "pages": len(reader.pages)}
+    except Exception as e:
+        logging.error(f"Error regenerating grid: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/damage-reports/download-coordinates")
+async def download_damage_report_coordinates(request: Request):
+    """Download do ficheiro de coordenadas"""
+    require_auth(request)
+    
+    try:
+        if os.path.exists('damage_report_coordinates.json'):
+            return FileResponse(
+                'damage_report_coordinates.json',
+                media_type='application/json',
+                filename='damage_report_coordinates.json'
+            )
+        else:
+            raise HTTPException(status_code=404, detail="Coordinates file not found")
+    except Exception as e:
+        logging.error(f"Error downloading coordinates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/admin/customization/branding", response_class=HTMLResponse)
 async def admin_customization_branding(request: Request):
     """Página de configuração de branding"""
@@ -12738,20 +13036,40 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         
         fields = {}
         
-        # Número do contrato (primeira linha)
-        contract_match = re.search(r'^(\d+)', text)
+        # Número do contrato (formato: XXXXX-XX, segunda linha após o número principal)
+        contract_match = re.search(r'(\d{5}-\d{2})', text)
         if contract_match:
             fields['contractNumber'] = contract_match.group(1)
         
-        # Nome completo (após NIF)
-        name_match = re.search(r'\d{5}-\d{2}\n([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+)', text)
+        # Nome completo - várias tentativas
+        # Tentativa 1: após contrato, antes de nacionalidade
+        name_match = re.search(r'\d{5}-\d{2}\s*\n\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+?)(?:\n|PORTUGAL|SPAIN|FRANCE|GERMANY|ITALY|BRASIL|BRAZIL|UNITED KINGDOM)', text)
         if name_match:
             fields['clientName'] = name_match.group(1).strip()
+        else:
+            # Tentativa 2: linha após contrato (mais flexível)
+            name_match2 = re.search(r'\d{5}-\d{2}\s*\n\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{2,50}?)\s*\n', text)
+            if name_match2:
+                name = name_match2.group(1).strip()
+                # Remover possíveis números ou códigos
+                if not re.search(r'\d{4,}', name):
+                    fields['clientName'] = name
         
-        # Telefone (9 dígitos)
+        # Telefone - várias tentativas
+        # Tentativa 1: 9 dígitos antes do email
         phone_match = re.search(r'(\d{9})\s+[A-Z0-9._%+-]+@', text)
         if phone_match:
             fields['clientPhone'] = phone_match.group(1)
+        else:
+            # Tentativa 2: 9 dígitos em qualquer lugar (mas não NIF)
+            phone_match2 = re.findall(r'(?<!\d)(\d{9})(?!\d)', text)
+            # Pegar o primeiro que não seja NIF (geralmente NIF tem padrão diferente)
+            for phone in phone_match2:
+                if not phone.startswith(('1', '2', '3', '5', '6', '8')):  # NIF geralmente começa com estes
+                    fields['clientPhone'] = phone
+                    break
+            if not fields.get('clientPhone') and phone_match2:
+                fields['clientPhone'] = phone_match2[0]
         
         # Email
         email_match = re.search(r'([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})', text, re.IGNORECASE)
@@ -12763,34 +13081,103 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         if plate_match:
             fields['vehiclePlate'] = plate_match.group(1).replace(' ', '')
         
-        # Modelo do veículo (antes da matrícula)
-        model_match = re.search(r'([A-Z][A-Z0-9\s]+(?:SW|AUT\.|DIESEL|HDI)?)\s+[A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2}', text)
-        if model_match:
-            fields['vehicleModel'] = model_match.group(1).strip()
-            # Extrair marca do modelo
-            brand_match = re.match(r'^([A-Z]+)', fields['vehicleModel'])
-            if brand_match:
-                fields['vehicleBrand'] = brand_match.group(1)
+        # Modelo e Marca do veículo (antes da matrícula)
+        # Padrão: ...EMAIL.COMMODELO MATRÍCULA
+        # Exemplo: FABIOCORDEIRO1997@HOTMAIL.COMPEUGEOT 308 SW AUT. B H - 4 9 - O S
         
-        # Endereço (linha 1: morada permanente)
-        address_match = re.search(r'(URBANIZAÇÃO[^\n]+|RUA[^\n]+|AVENIDA[^\n]+|TRAVESSA[^\n]+)', text, re.IGNORECASE)
+        # Lista de marcas conhecidas
+        known_brands = ['PEUGEOT', 'RENAULT', 'CITROEN', 'VOLKSWAGEN', 'VW', 'FORD', 'OPEL', 
+                       'SEAT', 'FIAT', 'TOYOTA', 'NISSAN', 'HYUNDAI', 'KIA', 'BMW', 'MERCEDES',
+                       'AUDI', 'SKODA', 'MAZDA', 'HONDA', 'SUZUKI', 'DACIA', 'VOLVO']
+        
+        # Procurar por: EMAIL seguido de MARCA MODELO seguido de MATRÍCULA
+        vehicle_match = re.search(r'@[A-Z0-9.-]+\.COM\s*([A-Z][A-Z0-9\s.]+?)\s+[A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2}', text)
+        if vehicle_match:
+            vehicle_full = vehicle_match.group(1).strip()
+            
+            # Tentar separar marca e modelo
+            brand_found = None
+            for brand in known_brands:
+                if vehicle_full.startswith(brand):
+                    brand_found = brand
+                    model = vehicle_full[len(brand):].strip()
+                    fields['vehicleBrand'] = brand_found
+                    fields['vehicleModel'] = model
+                    break
+            
+            # Se não encontrou marca, colocar tudo no modelo
+            if not brand_found:
+                fields['vehicleBrand'] = ''
+                fields['vehicleModel'] = vehicle_full
+        else:
+            # Fallback: procurar modelo antes da matrícula (sem email)
+            vehicle_match2 = re.search(r'([A-Z][A-Z0-9\s.]+?)\s+[A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2}', text)
+            if vehicle_match2:
+                vehicle_full = vehicle_match2.group(1).strip()
+                
+                # Tentar separar marca e modelo
+                brand_found = None
+                for brand in known_brands:
+                    if vehicle_full.startswith(brand):
+                        brand_found = brand
+                        model = vehicle_full[len(brand):].strip()
+                        fields['vehicleBrand'] = brand_found
+                        fields['vehicleModel'] = model
+                        break
+                
+                if not brand_found:
+                    fields['vehicleBrand'] = ''
+                    fields['vehicleModel'] = vehicle_full
+        
+        # Endereço - várias tentativas
+        # Tentativa 1: com palavras-chave
+        address_match = re.search(r'(URBANIZAÇÃO[^\n]+|RUA[^\n]+|AVENIDA[^\n]+|TRAVESSA[^\n]+|LARGO[^\n]+|PRAÇA[^\n]+)', text, re.IGNORECASE)
         if address_match:
             fields['address'] = address_match.group(1).strip()
+        else:
+            # Tentativa 2: linha antes do código postal
+            address_match2 = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ\s,.\d]{10,80}?)\s*\n\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+\s+\d{4}-\d{3}', text)
+            if address_match2:
+                addr = address_match2.group(1).strip()
+                # Verificar se não é nome ou email
+                if '@' not in addr and not re.match(r'^[A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+$', addr):
+                    fields['address'] = addr
         
-        # Cidade e Código Postal (linha 2)
-        city_postal_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+)\s+(\d{4}-\d{3})', text)
-        if city_postal_match:
-            fields['city'] = city_postal_match.group(1).strip()
-            fields['postalCode'] = city_postal_match.group(2)
+        # Código Postal - procurar primeiro
+        postal_match = re.search(r'(\d{4}-\d{3})', text)
+        if postal_match:
+            fields['postalCode'] = postal_match.group(1)
             
             # Calcular país pelo código postal
-            postal_code = city_postal_match.group(2)
+            postal_code = postal_match.group(1)
             if postal_code.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9')):
-                fields['country'] = 'Portugal'
+                fields['country'] = 'PORTUGAL'
             elif postal_code.startswith('0'):
-                fields['country'] = 'Espanha'
+                fields['country'] = 'ESPANHA'
             else:
-                fields['country'] = 'Portugal'  # Default
+                fields['country'] = 'PORTUGAL'  # Default
+            
+            # Cidade - procurar antes do código postal
+            city_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{2,30}?)\s+' + re.escape(postal_code), text)
+            if city_match:
+                city = city_match.group(1).strip()
+                # Verificar se não é parte do endereço
+                if len(city.split()) <= 3:  # Cidades geralmente têm 1-3 palavras
+                    fields['city'] = city
+        else:
+            # Fallback: procurar cidade e código postal juntos
+            city_postal_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+)\s+(\d{4}-\d{3})', text)
+            if city_postal_match:
+                fields['city'] = city_postal_match.group(1).strip()
+                fields['postalCode'] = city_postal_match.group(2)
+                
+                postal_code = city_postal_match.group(2)
+                if postal_code.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9')):
+                    fields['country'] = 'PORTUGAL'
+                elif postal_code.startswith('0'):
+                    fields['country'] = 'ESPANHA'
+                else:
+                    fields['country'] = 'PORTUGAL'
         
         # Datas (formato: DD - MM - YYYY)
         date_pattern = r'(\d{2}\s*-\s*\d{2}\s*-\s*\d{4})'
@@ -12816,14 +13203,73 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             fields['pickupTime'] = times[0].replace(' ', '')
             fields['returnTime'] = times[1].replace(' ', '')
         
-        # Locais
-        fields['pickupLocation'] = 'AUTO PRUDENTE'
-        fields['returnLocation'] = 'AUTO PRUDENTE'
+        # Locais de entrega e devolução
+        # Procurar por padrões específicos no contrato:
+        # "Local de Entrega / Delivery Place" seguido do local
+        # "Local de Recolha / Return Place" seguido do local
+        
+        # Método 1: Procurar por texto explícito
+        pickup_location = ''
+        return_location = ''
+        
+        # Procurar "Local de Entrega" ou "Delivery Place"
+        pickup_match = re.search(r'Local de Entrega[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        if not pickup_match:
+            pickup_match = re.search(r'Delivery Place[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        
+        if pickup_match:
+            pickup_location = pickup_match.group(1).strip()
+        
+        # Procurar "Local de Recolha" ou "Return Place"
+        return_match = re.search(r'Local de Recolha[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        if not return_match:
+            return_match = re.search(r'Return Place[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        
+        if return_match:
+            return_location = return_match.group(1).strip()
+        
+        # Se não encontrou pelos headers, usar método alternativo
+        # Procurar locais antes das datas de rental
+        if not pickup_location or not return_location:
+            lines = text.split('\n')
+            locations_found = []
+            
+            for i, line in enumerate(lines):
+                # Se a linha contém uma data no formato DD - MM - YYYY
+                if re.match(r'\d{2}\s*-\s*\d{2}\s*-\s*\d{4}', line.strip()):
+                    # A linha anterior pode ser o local
+                    if i > 0:
+                        prev_line = lines[i-1].strip()
+                        # Remover números e caracteres especiais do início
+                        prev_line = re.sub(r'^[\d\s:]+', '', prev_line)
+                        
+                        # Se tem texto significativo (mais de 5 caracteres) e está em maiúsculas
+                        if len(prev_line) > 5 and prev_line.isupper():
+                            locations_found.append(prev_line)
+            
+            if len(locations_found) >= 2:
+                if not pickup_location:
+                    pickup_location = locations_found[0]
+                if not return_location:
+                    return_location = locations_found[1]
+            elif len(locations_found) == 1:
+                if not pickup_location:
+                    pickup_location = locations_found[0]
+                if not return_location:
+                    return_location = locations_found[0]
+        
+        fields['pickupLocation'] = pickup_location
+        fields['returnLocation'] = return_location
         
         # Quilometragem (se existir no RA)
         mileage_match = re.search(r'(\d{1,3}(?:\s?\d{3})*)\s*KM', text, re.IGNORECASE)
         if mileage_match:
             fields['mileage'] = mileage_match.group(1).replace(' ', '')
+        
+        # Log para debug
+        logging.info(f"=== CAMPOS EXTRAÍDOS ===")
+        for key, value in fields.items():
+            logging.info(f"{key}: {value}")
         
         return {"ok": True, "fields": fields}
         
@@ -12856,13 +13302,17 @@ async def create_damage_report(request: Request):
                         client_address TEXT,
                         client_city TEXT,
                         client_postal_code TEXT,
+                        client_country TEXT,
                         vehicle_plate TEXT,
                         vehicle_model TEXT,
                         vehicle_brand TEXT,
                         pickup_date DATETIME,
+                        pickup_time TEXT,
                         pickup_location TEXT,
                         return_date DATETIME,
+                        return_time TEXT,
                         return_location TEXT,
+                        issued_by TEXT,
                         inspection_type TEXT,
                         inspector_name TEXT,
                         mileage INTEGER,
@@ -12871,6 +13321,7 @@ async def create_damage_report(request: Request):
                         observations TEXT,
                         damage_diagram_data TEXT,
                         repair_items TEXT,
+                        damage_images TEXT,
                         total_amount REAL,
                         status TEXT DEFAULT 'draft',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -12889,13 +13340,16 @@ async def create_damage_report(request: Request):
                     INSERT INTO damage_reports (
                         dr_number, ra_number, contract_number, date,
                         client_name, client_email, client_phone,
-                        client_address, client_city, client_postal_code,
+                        client_address, client_city, client_postal_code, client_country,
                         vehicle_plate, vehicle_model, vehicle_brand,
-                        pickup_date, pickup_location, return_date, return_location,
+                        pickup_date, pickup_time, pickup_location,
+                        return_date, return_time, return_location,
+                        issued_by,
                         inspection_type, inspector_name, mileage, fuel_level,
                         damage_description, observations, damage_diagram_data,
+                        repair_items, damage_images,
                         created_by
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     dr_number,
                     data.get('ra_number'),
@@ -12907,13 +13361,17 @@ async def create_damage_report(request: Request):
                     data.get('address'),
                     data.get('city'),
                     data.get('postalCode'),
+                    data.get('country'),
                     data.get('vehiclePlate'),
                     data.get('vehicleModel'),
                     data.get('vehicleBrand'),
                     data.get('pickupDate'),
+                    data.get('pickupTime'),
                     data.get('pickupLocation'),
                     data.get('returnDate'),
+                    data.get('returnTime'),
                     data.get('returnLocation'),
+                    data.get('issuedBy'),
                     data.get('inspectionType'),
                     data.get('inspectorName'),
                     data.get('mileage'),
@@ -12921,6 +13379,8 @@ async def create_damage_report(request: Request):
                     data.get('damageDescription'),
                     data.get('observations'),
                     data.get('damageDiagramData'),
+                    data.get('repairItems'),
+                    data.get('damageImages'),
                     request.session.get('username', 'unknown')
                 ))
                 
@@ -12999,17 +13459,400 @@ async def get_damage_report(request: Request, dr_number: str):
         logging.error(f"Error getting damage report: {e}")
         return {"ok": False, "error": str(e)}
 
-@app.get("/api/damage-reports/{dr_number}/pdf")
-async def download_damage_report_pdf(request: Request, dr_number: str):
-    """Download do Damage Report em PDF"""
+def _ensure_damage_report_tables():
+    """Garantir que todas as tabelas do Damage Report existem"""
+    with _db_lock:
+        conn = _db_connect()
+        try:
+            # Tabela de coordenadas
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS damage_report_coordinates (
+                    field_id TEXT PRIMARY KEY,
+                    x REAL NOT NULL,
+                    y REAL NOT NULL,
+                    width REAL NOT NULL,
+                    height REAL NOT NULL,
+                    page INTEGER DEFAULT 1,
+                    field_type TEXT,
+                    template_version INTEGER DEFAULT 1,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela de templates PDF
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS damage_report_templates (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    version INTEGER NOT NULL,
+                    filename TEXT NOT NULL,
+                    file_data BLOB NOT NULL,
+                    num_pages INTEGER,
+                    uploaded_by TEXT,
+                    uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    is_active INTEGER DEFAULT 0,
+                    notes TEXT
+                )
+            """)
+            
+            # Tabela de histórico de mapeamentos
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS damage_report_mapping_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    template_version INTEGER NOT NULL,
+                    field_id TEXT NOT NULL,
+                    x REAL NOT NULL,
+                    y REAL NOT NULL,
+                    width REAL NOT NULL,
+                    height REAL NOT NULL,
+                    page INTEGER DEFAULT 1,
+                    field_type TEXT,
+                    mapped_by TEXT,
+                    mapped_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            conn.commit()
+            logging.info("✅ Tabelas do Damage Report verificadas/criadas")
+        except Exception as e:
+            logging.error(f"Error creating damage report tables: {e}")
+        finally:
+            conn.close()
+
+@app.post("/api/damage-reports/save-coordinates")
+async def save_damage_report_coordinates(request: Request):
+    """Guardar coordenadas dos campos do PDF"""
+    require_auth(request)
+    
+    try:
+        import json
+        from datetime import datetime
+        
+        # Garantir tabelas existem
+        _ensure_damage_report_tables()
+        
+        # Receber coordenadas
+        coordinates = await request.json()
+        
+        # Obter usuário atual
+        username = request.session.get('username', 'system')
+        
+        # Obter versão ativa do template
+        template_version = 1
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT version FROM damage_report_templates 
+                    WHERE is_active = 1 
+                    ORDER BY version DESC LIMIT 1
+                """)
+                row = cursor.fetchone()
+                if row:
+                    template_version = row[0]
+            finally:
+                conn.close()
+        
+        # Guardar em PostgreSQL/SQLite
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Limpar coordenadas antigas
+                conn.execute("DELETE FROM damage_report_coordinates")
+                
+                # Inserir novas coordenadas
+                for field_id, coord in coordinates.items():
+                    field_type = _get_field_type(field_id)
+                    
+                    # Inserir em coordenadas atuais
+                    conn.execute("""
+                        INSERT INTO damage_report_coordinates 
+                        (field_id, x, y, width, height, page, field_type, template_version, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        field_id,
+                        coord['x'],
+                        coord['y'],
+                        coord['width'],
+                        coord['height'],
+                        coord.get('page', 1),
+                        field_type,
+                        template_version,
+                        datetime.now().isoformat()
+                    ))
+                    
+                    # Inserir em histórico
+                    conn.execute("""
+                        INSERT INTO damage_report_mapping_history 
+                        (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        template_version,
+                        field_id,
+                        coord['x'],
+                        coord['y'],
+                        coord['width'],
+                        coord['height'],
+                        coord.get('page', 1),
+                        field_type,
+                        username,
+                        datetime.now().isoformat()
+                    ))
+                
+                conn.commit()
+                logging.info(f"✅ {len(coordinates)} coordenadas guardadas na BD (versão {template_version})")
+            finally:
+                conn.close()
+        
+        # Guardar também em ficheiro JSON (backup)
+        with open('damage_report_coordinates.json', 'w') as f:
+            json.dump(coordinates, f, indent=2)
+        
+        return {"ok": True, "count": len(coordinates), "version": template_version}
+    except Exception as e:
+        logging.error(f"Error saving coordinates: {e}")
+        return {"ok": False, "error": str(e)}
+
+def _get_field_type(field_id):
+    """Determinar tipo do campo pelo ID"""
+    if 'description' in field_id:
+        return 'textarea'
+    elif 'diagram' in field_id:
+        return 'image'
+    elif 'repair' in field_id or 'table' in field_id:
+        return 'table'
+    elif 'images' in field_id:
+        return 'images'
+    else:
+        return 'text'
+
+@app.post("/api/damage-reports/preview-pdf")
+async def preview_damage_report_pdf(request: Request):
+    """Preview do Damage Report em PDF - Gera PDF do zero idêntico ao template"""
     require_auth(request)
     
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.pdfgen import canvas
-        from reportlab.lib.units import cm
+        from reportlab.lib.units import cm, mm
+        from reportlab.lib import colors
+        from reportlab.platypus import Table, TableStyle
         from io import BytesIO
         
+        # Receber dados do formulário
+        body = await request.json()
+        
+        # Criar PDF
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        
+        # Configurar fonte
+        p.setFont("Helvetica", 8)
+        
+        # ============ HEADER AZUL ============
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.rect(0, height - 2.5*cm, width, 2.5*cm, fill=1, stroke=0)
+        
+        # Logo/Título
+        p.setFillColor(colors.white)
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(1.5*cm, height - 1.8*cm, "RELATÓRIO DE DANOS / DAMAGE REPORT")
+        
+        # DR Nº e Data (topo direita)
+        p.setFont("Helvetica", 9)
+        p.drawString(15*cm, height - 1.2*cm, f"DR: {body.get('contractNumber', '')}")
+        p.drawString(15*cm, height - 1.8*cm, f"Data: {body.get('date', '')}")
+        
+        # ============ DADOS DO CLIENTE ============
+        y = height - 4*cm
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(1.5*cm, y, "Dados do Cliente / Client Details")
+        
+        # Linha separadora
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.setLineWidth(1)
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Campos
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        
+        # Nome
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Nome Completo / Full Name:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(6*cm, y, str(body.get('clientName', '')))
+        
+        # Email e Telefone
+        y -= 0.6*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Email:")
+        p.setFillColor(colors.black)
+        p.drawString(3.5*cm, y, str(body.get('clientEmail', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(11*cm, y, "Telefone / Phone:")
+        p.setFillColor(colors.black)
+        p.drawString(14*cm, y, str(body.get('clientPhone', '')))
+        
+        # Morada
+        y -= 0.6*cm
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Morada / Address:")
+        p.setFillColor(colors.black)
+        p.drawString(4.5*cm, y, str(body.get('clientAddress', '')))
+        
+        # Código Postal, Cidade, País
+        y -= 0.6*cm
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "C. Postal:")
+        p.setFillColor(colors.black)
+        p.drawString(3.5*cm, y, str(body.get('clientPostalCode', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Cidade / City:")
+        p.setFillColor(colors.black)
+        p.drawString(8.5*cm, y, str(body.get('clientCity', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(13*cm, y, "País / Country:")
+        p.setFillColor(colors.black)
+        p.drawString(15.5*cm, y, str(body.get('clientCountry', '')))
+        
+        # ============ DADOS DO VEÍCULO ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Dados do Veículo / Vehicle Details")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Matrícula / Plate:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(4*cm, y, str(body.get('vehiclePlate', '')))
+        
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(8*cm, y, "Marca / Brand:")
+        p.setFillColor(colors.black)
+        p.drawString(10.5*cm, y, str(body.get('vehicleBrand', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(14*cm, y, "Modelo / Model:")
+        p.setFillColor(colors.black)
+        p.drawString(16.5*cm, y, str(body.get('vehicleModel', '')))
+        
+        # ============ LEVANTAMENTO E DEVOLUÇÃO ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Levantamento e Devolução / Pickup & Return")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Levantamento
+        y -= 0.8*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.drawString(1.5*cm, y, "LEVANTAMENTO / PICKUP")
+        
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Data:")
+        p.setFillColor(colors.black)
+        p.drawString(3*cm, y, str(body.get('pickupDate', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Hora:")
+        p.setFillColor(colors.black)
+        p.drawString(7.5*cm, y, str(body.get('pickupTime', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(10*cm, y, "Local:")
+        p.setFillColor(colors.black)
+        p.drawString(11.5*cm, y, str(body.get('pickupLocation', '')))
+        
+        # Devolução
+        y -= 0.7*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.drawString(1.5*cm, y, "DEVOLUÇÃO / RETURN")
+        
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Data:")
+        p.setFillColor(colors.black)
+        p.drawString(3*cm, y, str(body.get('returnDate', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Hora:")
+        p.setFillColor(colors.black)
+        p.drawString(7.5*cm, y, str(body.get('returnTime', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(10*cm, y, "Local:")
+        p.setFillColor(colors.black)
+        p.drawString(11.5*cm, y, str(body.get('returnLocation', '')))
+        
+        # ============ FEITO POR ============
+        if body.get('issuedBy'):
+            y -= 0.8*cm
+            p.setFont("Helvetica", 8)
+            p.setFillColor(colors.grey)
+            p.drawString(1.5*cm, y, "Feito por / Issued by:")
+            p.setFillColor(colors.black)
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(5*cm, y, str(body.get('issuedBy', '')))
+        
+        # ============ FOOTER ============
+        p.setFillColor(colors.grey)
+        p.setFont("Helvetica", 7)
+        p.drawCentredString(width/2, 1.5*cm, "AUTO PRUDENTE - Rent a Car | www.autoprudente.com")
+        p.drawCentredString(width/2, 1*cm, "Apoio ao Cliente: 00351 289 542 160")
+        
+        # Finalizar
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "inline; filename=preview.pdf"}
+        )
+        
+    except Exception as e:
+        logging.error(f"Error generating preview PDF: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/damage-reports/{dr_number}/pdf")
+async def download_damage_report_pdf(request: Request, dr_number: str):
+    """Download do Damage Report em PDF - Gera PDF do zero idêntico ao template"""
+    require_auth(request)
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import cm, mm
+        from reportlab.lib import colors
+        from reportlab.platypus import Table, TableStyle
+        from io import BytesIO
+        import json
+        
+        # Buscar dados da base de dados
         with _db_lock:
             conn = _db_connect()
             try:
@@ -13021,92 +13864,343 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
                 
                 columns = [desc[0] for desc in cursor.description]
                 report = dict(zip(columns, row))
-                
-                # Criar PDF
-                buffer = BytesIO()
-                p = canvas.Canvas(buffer, pagesize=A4)
-                width, height = A4
-                
-                # Header
-                p.setFont("Helvetica-Bold", 20)
-                p.drawString(2*cm, height - 2*cm, f"DAMAGE REPORT - DR {dr_number}")
-                
-                # Dados
-                y = height - 4*cm
-                p.setFont("Helvetica-Bold", 12)
-                p.drawString(2*cm, y, "DADOS DO CONTRATO")
-                y -= 0.8*cm
-                
-                p.setFont("Helvetica", 10)
-                p.drawString(2*cm, y, f"Contrato: {report.get('contract_number', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Data: {report.get('date', 'N/A')}")
-                y -= 1.2*cm
-                
-                p.setFont("Helvetica-Bold", 12)
-                p.drawString(2*cm, y, "DADOS DO CLIENTE")
-                y -= 0.8*cm
-                
-                p.setFont("Helvetica", 10)
-                p.drawString(2*cm, y, f"Nome: {report.get('client_name', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Email: {report.get('client_email', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Telefone: {report.get('client_phone', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Morada: {report.get('client_address', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Cidade: {report.get('client_city', 'N/A')} - {report.get('client_postal_code', 'N/A')}")
-                y -= 1.2*cm
-                
-                p.setFont("Helvetica-Bold", 12)
-                p.drawString(2*cm, y, "DADOS DO VEÍCULO")
-                y -= 0.8*cm
-                
-                p.setFont("Helvetica", 10)
-                p.drawString(2*cm, y, f"Matrícula: {report.get('vehicle_plate', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Modelo: {report.get('vehicle_model', 'N/A')}")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Quilometragem: {report.get('mileage', 'N/A')} km")
-                y -= 0.6*cm
-                p.drawString(2*cm, y, f"Combustível: {report.get('fuel_level', 'N/A')}")
-                y -= 1.2*cm
-                
-                p.setFont("Helvetica-Bold", 12)
-                p.drawString(2*cm, y, "DESCRIÇÃO DE DANOS")
-                y -= 0.8*cm
-                
-                p.setFont("Helvetica", 10)
-                damage_desc = report.get('damage_description', 'N/A')
-                if damage_desc and len(damage_desc) > 80:
-                    lines = [damage_desc[i:i+80] for i in range(0, len(damage_desc), 80)]
-                    for line in lines[:5]:
-                        p.drawString(2*cm, y, line)
-                        y -= 0.6*cm
-                else:
-                    p.drawString(2*cm, y, damage_desc)
-                    y -= 0.6*cm
-                
-                # Footer
-                p.setFont("Helvetica", 8)
-                p.drawString(2*cm, 2*cm, f"AUTO PRUDENTE - Gerado em {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}")
-                
-                p.showPage()
-                p.save()
-                
-                buffer.seek(0)
-                
-                return Response(
-                    content=buffer.getvalue(),
-                    media_type="application/pdf",
-                    headers={"Content-Disposition": f"attachment; filename=DR_{dr_number}.pdf"}
-                )
-                
             finally:
                 conn.close()
+        
+        # Criar PDF do zero
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        
+        # Configurar fonte
+        p.setFont("Helvetica", 8)
+        
+        # ============ HEADER AZUL ============
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.rect(0, height - 2.5*cm, width, 2.5*cm, fill=1, stroke=0)
+        
+        # Logo/Título
+        p.setFillColor(colors.white)
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(1.5*cm, height - 1.8*cm, "RELATÓRIO DE DANOS / DAMAGE REPORT")
+        
+        # DR Nº e Data (topo direita)
+        p.setFont("Helvetica", 9)
+        p.drawString(15*cm, height - 1.2*cm, f"DR: {report.get('contract_number', '')}")
+        p.drawString(15*cm, height - 1.8*cm, f"Data: {report.get('date', '')}")
+        
+        # ============ DADOS DO CLIENTE ============
+        y = height - 4*cm
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(1.5*cm, y, "Dados do Cliente / Client Details")
+        
+        # Linha separadora
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.setLineWidth(1)
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Campos
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        
+        # Nome
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Nome Completo / Full Name:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(6*cm, y, str(report.get('client_name', '')))
+        
+        # Email e Telefone
+        y -= 0.6*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Email:")
+        p.setFillColor(colors.black)
+        p.drawString(3.5*cm, y, str(report.get('client_email', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(11*cm, y, "Telefone / Phone:")
+        p.setFillColor(colors.black)
+        p.drawString(14*cm, y, str(report.get('client_phone', '')))
+        
+        # Morada
+        y -= 0.6*cm
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Morada / Address:")
+        p.setFillColor(colors.black)
+        p.drawString(4.5*cm, y, str(report.get('client_address', '')))
+        
+        # Código Postal, Cidade, País
+        y -= 0.6*cm
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "C. Postal:")
+        p.setFillColor(colors.black)
+        p.drawString(3.5*cm, y, str(report.get('client_postal_code', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Cidade / City:")
+        p.setFillColor(colors.black)
+        p.drawString(8.5*cm, y, str(report.get('client_city', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(13*cm, y, "País / Country:")
+        p.setFillColor(colors.black)
+        p.drawString(15.5*cm, y, str(report.get('client_country', '')))
+        
+        # ============ DADOS DO VEÍCULO ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Dados do Veículo / Vehicle Details")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Matrícula / Plate:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(4*cm, y, str(report.get('vehicle_plate', '')))
+        
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(8*cm, y, "Marca / Brand:")
+        p.setFillColor(colors.black)
+        p.drawString(10.5*cm, y, str(report.get('vehicle_brand', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(14*cm, y, "Modelo / Model:")
+        p.setFillColor(colors.black)
+        p.drawString(16.5*cm, y, str(report.get('vehicle_model', '')))
+        
+        # ============ LEVANTAMENTO E DEVOLUÇÃO ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Levantamento e Devolução / Pickup & Return")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Levantamento
+        y -= 0.8*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.drawString(1.5*cm, y, "LEVANTAMENTO / PICKUP")
+        
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Data:")
+        p.setFillColor(colors.black)
+        p.drawString(3*cm, y, str(report.get('pickup_date', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Hora:")
+        p.setFillColor(colors.black)
+        p.drawString(7.5*cm, y, str(report.get('pickup_time', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(10*cm, y, "Local:")
+        p.setFillColor(colors.black)
+        p.drawString(11.5*cm, y, str(report.get('pickup_location', '')))
+        
+        # Devolução
+        y -= 0.7*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.drawString(1.5*cm, y, "DEVOLUÇÃO / RETURN")
+        
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Data:")
+        p.setFillColor(colors.black)
+        p.drawString(3*cm, y, str(report.get('return_date', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Hora:")
+        p.setFillColor(colors.black)
+        p.drawString(7.5*cm, y, str(report.get('return_time', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(10*cm, y, "Local:")
+        p.setFillColor(colors.black)
+        p.drawString(11.5*cm, y, str(report.get('return_location', '')))
+        
+        # ============ FEITO POR ============
+        if report.get('issued_by'):
+            y -= 0.8*cm
+            p.setFont("Helvetica", 8)
+            p.setFillColor(colors.grey)
+            p.drawString(1.5*cm, y, "Feito por / Issued by:")
+            p.setFillColor(colors.black)
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(5*cm, y, str(report.get('issued_by', '')))
+        
+        # ============ DANOS NA VIATURA ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Danos na Viatura / Vehicle Damage")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Descrição dos danos
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        damage_desc = report.get('damage_description', '')
+        if damage_desc:
+            # Quebrar texto em linhas se for muito longo
+            max_width = 17*cm
+            words = damage_desc.split()
+            lines = []
+            current_line = []
+            for word in words:
+                test_line = ' '.join(current_line + [word])
+                if p.stringWidth(test_line, "Helvetica", 8) < max_width:
+                    current_line.append(word)
+                else:
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                    current_line = [word]
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            for line in lines[:5]:  # Máximo 5 linhas
+                p.drawString(1.5*cm, y, line)
+                y -= 0.4*cm
+        
+        # ============ TABELA DE REPARAÇÃO ============
+        y -= 0.8*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Detalhes da Reparação / Repair Details")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Tabela de itens de reparação
+        y -= 0.8*cm
+        repair_items_raw = report.get('repair_items') or '[]'
+        repair_items = json.loads(repair_items_raw) if repair_items_raw else []
+        
+        if repair_items:
+            # Cabeçalho da tabela
+            table_data = [['Descrição', 'Qtd', 'Horas', 'Preço (€)', 'Total (€)']]
+            
+            for item in repair_items:
+                desc = item.get('description', '')[:30]  # Limitar descrição
+                qty = str(item.get('quantity', ''))
+                hours = str(item.get('hours', ''))
+                price = f"{float(item.get('price', 0)):.2f}"
+                total = f"{float(item.get('total', 0)):.2f}"
+                table_data.append([desc, qty, hours, price, total])
+            
+            # Calcular total geral
+            total_geral = sum(float(item.get('total', 0)) for item in repair_items)
+            table_data.append(['', '', '', 'TOTAL:', f"{total_geral:.2f}€"])
+            
+            # Criar tabela
+            table = Table(table_data, colWidths=[8*cm, 1.5*cm, 1.5*cm, 2*cm, 2*cm])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#009cb6')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('GRID', (0, 0), (-1, -2), 0.5, colors.grey),
+                ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#009cb6')),
+                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ]))
+            
+            # Desenhar tabela
+            table.wrapOn(p, width, height)
+            table.drawOn(p, 1.5*cm, y - len(table_data)*0.6*cm)
+            y -= (len(table_data)*0.6*cm + 1*cm)
+        
+        # ============ IMAGENS ============
+        damage_images_raw = report.get('damage_images') or '[]'
+        damage_images = json.loads(damage_images_raw) if damage_images_raw else []
+        
+        if damage_images and y > 8*cm:  # Se houver espaço na página
+            y -= 0.5*cm
+            p.setFont("Helvetica-Bold", 10)
+            p.setFillColor(colors.black)
+            p.drawString(1.5*cm, y, "Imagens do Dano / Damage Images")
+            
+            p.setStrokeColor(colors.HexColor('#009cb6'))
+            p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+            
+            y -= 0.8*cm
+            
+            # Desenhar imagens em grid (3 por linha)
+            from reportlab.lib.utils import ImageReader
+            import base64
+            
+            x_start = 1.5*cm
+            x = x_start
+            img_width = 5*cm
+            img_height = 4*cm
+            margin = 0.5*cm
+            
+            for idx, img_data in enumerate(damage_images[:9]):  # Máximo 9 imagens
+                try:
+                    # Decodificar base64
+                    img_base64 = img_data.split(',')[1] if ',' in img_data else img_data
+                    img_bytes = base64.b64decode(img_base64)
+                    img_buffer = BytesIO(img_bytes)
+                    img = ImageReader(img_buffer)
+                    
+                    # Desenhar imagem
+                    p.drawImage(img, x, y - img_height, width=img_width, height=img_height, preserveAspectRatio=True)
+                    
+                    # Próxima posição
+                    x += img_width + margin
+                    
+                    # Nova linha a cada 3 imagens
+                    if (idx + 1) % 3 == 0:
+                        x = x_start
+                        y -= img_height + margin
+                        
+                        # Nova página se necessário
+                        if y < 3*cm:
+                            p.showPage()
+                            y = height - 3*cm
+                            x = x_start
+                except Exception as e:
+                    logging.error(f"Error adding image {idx}: {e}")
+                    continue
+        
+        # ============ FOOTER ============
+        p.setFillColor(colors.grey)
+        p.setFont("Helvetica", 7)
+        p.drawCentredString(width/2, 1.5*cm, "AUTO PRUDENTE - Rent a Car | www.autoprudente.com")
+        p.drawCentredString(width/2, 1*cm, "Apoio ao Cliente: 00351 289 542 160")
+        
+        # Finalizar
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=DR_{dr_number}.pdf"}
+        )
     except Exception as e:
         logging.error(f"Error generating PDF: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================
@@ -13554,9 +14648,20 @@ async def export_automated_prices_excel(request: Request):
         for col_idx in range(7, 19):
             ws.column_dimensions[chr(64 + col_idx)].width = 12
         
-        # Save to BytesIO
+        # CRITICAL: Save workbook properly to ensure Excel format
         excel_file = io.BytesIO()
         wb.save(excel_file)
+        excel_file.seek(0)
+        
+        # Verify it's actually an Excel file
+        excel_bytes = excel_file.getvalue()
+        if len(excel_bytes) < 100:
+            raise Exception("Generated Excel file is too small - likely corrupted")
+        
+        # Check Excel signature (PK zip header)
+        if not excel_bytes.startswith(b'PK'):
+            raise Exception("Generated file is not a valid Excel file (missing PK signature)")
+        
         excel_file.seek(0)
         
         # Generate filename
@@ -13597,6 +14702,141 @@ async def export_automated_prices_excel(request: Request):
 # ============================================================
 # API ENDPOINTS - LOCALSTORAGE MIGRATION
 # ============================================================
+
+@app.post("/api/save-search-history")
+async def save_search_history(request: Request):
+    """Save automated prices search to history (PostgreSQL)"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        location = data.get('location', 'Unknown')
+        date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
+        prices = data.get('prices', {})
+        price_count = data.get('priceCount', 0)
+        username = request.session.get("username", "admin")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Ensure table exists
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS search_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        location TEXT NOT NULL,
+                        search_date TEXT NOT NULL,
+                        prices_data TEXT NOT NULL,
+                        price_count INTEGER DEFAULT 0,
+                        searched_by TEXT,
+                        searched_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Insert search
+                conn.execute("""
+                    INSERT INTO search_history (location, search_date, prices_data, price_count, searched_by)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (location, date, json.dumps(prices), price_count, username))
+                
+                conn.commit()
+                
+                return _no_store_json({"ok": True, "message": "Search saved to history"})
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        import traceback
+        log_to_db("ERROR", f"Failed to save search history: {str(e)}", "main", "save_search_history")
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/get-search-history")
+async def get_search_history(request: Request):
+    """Get search history from PostgreSQL"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT id, location, search_date, prices_data, price_count, searched_by, searched_at
+                    FROM search_history
+                    ORDER BY searched_at DESC
+                    LIMIT 50
+                """)
+                
+                rows = cursor.fetchall()
+                history = []
+                
+                for row in rows:
+                    history.append({
+                        'id': row[0],
+                        'location': row[1],
+                        'date': row[2],
+                        'prices': json.loads(row[3]) if row[3] else {},
+                        'priceCount': row[4],
+                        'searchedBy': row[5],
+                        'searchedAt': row[6]
+                    })
+                
+                return _no_store_json({"ok": True, "history": history})
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.post("/api/save-vans-pricing")
+async def save_vans_pricing(request: Request):
+    """Save Commercial Vans pricing to PostgreSQL"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        username = request.session.get("username", "admin")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Ensure table exists
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS vans_pricing (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        c3_1day REAL,
+                        c3_2days REAL,
+                        c3_3days REAL,
+                        c4_1day REAL,
+                        c4_2days REAL,
+                        c4_3days REAL,
+                        c5_1day REAL,
+                        c5_2days REAL,
+                        c5_3days REAL,
+                        updated_by TEXT,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Insert new pricing
+                conn.execute("""
+                    INSERT INTO vans_pricing (
+                        c3_1day, c3_2days, c3_3days,
+                        c4_1day, c4_2days, c4_3days,
+                        c5_1day, c5_2days, c5_3days,
+                        updated_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    data.get('c3_1day'), data.get('c3_2days'), data.get('c3_3days'),
+                    data.get('c4_1day'), data.get('c4_2days'), data.get('c4_3days'),
+                    data.get('c5_1day'), data.get('c5_2days'), data.get('c5_3days'),
+                    username
+                ))
+                
+                conn.commit()
+                return _no_store_json({"ok": True, "message": "Vans pricing saved"})
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
 @app.get("/api/vans-pricing")
 async def get_vans_pricing(request: Request):
@@ -14049,6 +15289,68 @@ async def load_all_settings(request: Request):
                 conn.close()
     except Exception as e:
         logging.error(f"❌ Error loading settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/settings/automated-reports/save")
+async def save_automated_reports_settings(request: Request):
+    """Save automated reports settings to PostgreSQL"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        logging.info(f"💾 Saving automated reports settings to database")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Save as JSON
+                settings_json = json.dumps(data)
+                
+                conn.execute(
+                    """
+                    INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                    VALUES ('automatedReportsSettings', ?, 'json', CURRENT_TIMESTAMP)
+                    ON CONFLICT (setting_key) DO UPDATE SET
+                        setting_value = EXCLUDED.setting_value,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (settings_json,)
+                )
+                
+                conn.commit()
+                logging.info(f"✅ Saved automated reports settings to database")
+                return JSONResponse({"ok": True, "message": "Settings saved successfully"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving automated reports settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/settings/automated-reports/load")
+async def load_automated_reports_settings(request: Request):
+    """Load automated reports settings from PostgreSQL"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
+                )
+                row = cursor.fetchone()
+                
+                if row and row[0]:
+                    settings = json.loads(row[0])
+                    logging.info(f"📥 Loaded automated reports settings from database")
+                    return JSONResponse({"ok": True, "settings": settings})
+                else:
+                    logging.info(f"📭 No automated reports settings found in database")
+                    return JSONResponse({"ok": True, "settings": None})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error loading automated reports settings: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 # ============================================================

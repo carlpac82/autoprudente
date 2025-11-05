@@ -317,7 +317,7 @@
             document.getElementById('displayReportTime').textContent = this.value;
         });
 
-        function saveAutomatedReportsSettings() {
+        async function saveAutomatedReportsSettings() {
             // Get report organization
             let reportOrganization = 'by_day';
             if (document.getElementById('orgByGroup').checked) reportOrganization = 'by_group';
@@ -347,15 +347,29 @@
                 enableAlertEmails: document.getElementById('enableAlertEmails').checked
             };
 
-            // Save to localStorage
-            localStorage.setItem('automatedReportsSettings', JSON.stringify(settings));
-
-            // Trigger sync to database
-            if (typeof syncSettingsToDatabase === 'function') {
-                syncSettingsToDatabase();
+            // Save to PostgreSQL
+            try {
+                const response = await fetch('/api/settings/automated-reports/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(settings)
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    // Also save to localStorage as backup
+                    localStorage.setItem('automatedReportsSettings', JSON.stringify(settings));
+                    showNotification('✅ Configurações guardadas no PostgreSQL!', 'success');
+                } else {
+                    showNotification('❌ Erro ao guardar: ' + (result.error || 'Desconhecido'), 'error');
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                // Fallback to localStorage only
+                localStorage.setItem('automatedReportsSettings', JSON.stringify(settings));
+                showNotification('⚠️ Guardado apenas localmente', 'warning');
             }
-
-            showNotification('Configurações de relatórios guardadas!', 'success');
         }
 
         async function testDailyReport() {
@@ -442,28 +456,48 @@
             }
         }
 
-        function loadAutomatedReportsSettings() {
+        async function loadAutomatedReportsSettings() {
+            // Try to load from PostgreSQL first
+            try {
+                const response = await fetch('/api/settings/automated-reports/load');
+                const result = await response.json();
+                
+                if (result.ok && result.settings) {
+                    const settings = result.settings;
+                    console.log('✅ Loaded settings from PostgreSQL');
+                    applySettings(settings);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error loading from PostgreSQL:', error);
+            }
+            
+            // Fallback to localStorage
             const saved = localStorage.getItem('automatedReportsSettings');
             if (saved) {
                 try {
                     const settings = JSON.parse(saved);
-
-                    document.getElementById('enableDailyReport').checked = settings.enableDailyReport || false;
-                    document.getElementById('reportTime').value = settings.reportTime || '09:00';
-                    document.getElementById('searchDays').value = settings.searchDays || '1,2,3,4,5,6,7';
-                    document.getElementById('locationFaro').checked = settings.locationFaro !== false;
-                    document.getElementById('locationAlbufeira').checked = settings.locationAlbufeira !== false;
-                    document.getElementById('compareWith').value = settings.compareWith || 'last_search';
-                    document.getElementById('enableAlertEmails').checked = settings.enableAlertEmails || false;
-
-                    // Trigger display updates
-                    document.getElementById('dailyReportSettings').style.display = settings.enableDailyReport ? 'block' : 'none';
-                    document.getElementById('alertEmailSettings').style.display = settings.enableAlertEmails ? 'block' : 'none';
-                    document.getElementById('displayReportTime').textContent = settings.reportTime || '09:00';
+                    console.log('📦 Loaded settings from localStorage (fallback)');
+                    applySettings(settings);
                 } catch (e) {
-                    console.error('Error loading automated reports settings:', e);
+                    console.error('Error parsing localStorage settings:', e);
                 }
             }
+        }
+        
+        function applySettings(settings) {
+            document.getElementById('enableDailyReport').checked = settings.enableDailyReport || false;
+            document.getElementById('reportTime').value = settings.reportTime || '09:00';
+            document.getElementById('searchDays').value = settings.searchDays || '1,2,3,4,5,6,7';
+            document.getElementById('locationFaro').checked = settings.locationFaro !== false;
+            document.getElementById('locationAlbufeira').checked = settings.locationAlbufeira !== false;
+            document.getElementById('compareWith').value = settings.compareWith || 'last_search';
+            document.getElementById('enableAlertEmails').checked = settings.enableAlertEmails || false;
+
+            // Trigger display updates
+            document.getElementById('dailyReportSettings').style.display = settings.enableDailyReport ? 'block' : 'none';
+            document.getElementById('alertEmailSettings').style.display = settings.enableAlertEmails ? 'block' : 'none';
+            document.getElementById('displayReportTime').textContent = settings.reportTime || '09:00';
         }
 
         // Load settings on page load
