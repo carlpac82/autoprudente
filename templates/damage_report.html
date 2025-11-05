@@ -1964,19 +1964,23 @@
                                             </p>
                                         </div>
                                         <div style="display: flex; gap: 8px;">
-                                            <button onclick="window.open('/api/damage-reports/${encodeURIComponent(report.dr_number)}/pdf-original?preview=true', '_blank')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Visualizar PDF">
-                                                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                </svg>
-                                                <span style="font-size: 13px;">Ver</span>
-                                            </button>
-                                            <button onclick="window.open('/api/damage-reports/${encodeURIComponent(report.dr_number)}/pdf-original', '_blank')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Download PDF">
-                                                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                                </svg>
-                                                <span style="font-size: 13px;">Download</span>
-                                            </button>
+                                            ${report.has_pdf ? `
+                                                <button onclick="testPDFPreview('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Visualizar PDF">
+                                                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                    </svg>
+                                                    <span style="font-size: 13px;">Ver</span>
+                                                </button>
+                                                <button onclick="testPDFDownload('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Download PDF">
+                                                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                    </svg>
+                                                    <span style="font-size: 13px;">Download</span>
+                                                </button>
+                                            ` : `
+                                                <span style="color: #ef4444; font-size: 13px; padding: 8px;">Sem PDF</span>
+                                            `}
                                         </div>
                                     </div>
                                 </div>
@@ -2051,7 +2055,61 @@
             }
         }
 
-        // Download PDF original do DR
+        // Testar preview com logs
+        async function testPDFPreview(drNumber) {
+            console.log('=== TESTE PREVIEW ===');
+            console.log('DR Number:', drNumber);
+            
+            const url = `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf-original?preview=true`;
+            console.log('URL:', url);
+            
+            try {
+                const response = await fetch(url);
+                console.log('Status:', response.status);
+                console.log('Content-Type:', response.headers.get('content-type'));
+                
+                if (response.ok) {
+                    // Abrir em nova janela
+                    window.open(url, '_blank');
+                } else {
+                    const errorText = await response.text();
+                    console.error('Erro:', errorText);
+                    alert('Erro ao abrir PDF: ' + errorText);
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                alert('Erro: ' + error.message);
+            }
+        }
+        
+        // Testar download com logs
+        async function testPDFDownload(drNumber) {
+            console.log('=== TESTE DOWNLOAD ===');
+            console.log('DR Number:', drNumber);
+            
+            const url = `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf-original`;
+            console.log('URL:', url);
+            
+            try {
+                const response = await fetch(url);
+                console.log('Status:', response.status);
+                console.log('Content-Type:', response.headers.get('content-type'));
+                
+                if (response.ok) {
+                    // Abrir em nova janela para download
+                    window.open(url, '_blank');
+                } else {
+                    const errorText = await response.text();
+                    console.error('Erro:', errorText);
+                    alert('Erro ao fazer download: ' + errorText);
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                alert('Erro: ' + error.message);
+            }
+        }
+        
+        // Download PDF original do DR (função antiga)
         async function downloadDRPDF(drNumber) {
             window.open(`/api/damage-reports/${drNumber}/pdf-original`, '_blank');
         }
