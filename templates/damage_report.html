@@ -2611,6 +2611,11 @@
             // Adicionar imagens
             data.damageImages = JSON.stringify(damageImages);
             
+            // Se estamos editando, enviar o DR number existente
+            if (currentDRNumber) {
+                data.existingDRNumber = currentDRNumber;
+            }
+            
             try {
                 const response = await fetch('/api/damage-reports/create', {
                     method: 'POST',

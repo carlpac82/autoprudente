@@ -13447,64 +13447,127 @@ async def create_damage_report(request: Request):
                     pass  # Coluna já existe
                 
                 import datetime
-                year = datetime.datetime.now().year
-                # Contar DRs do ano atual (formato "DR XX/YYYY")
-                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
-                count = cursor.fetchone()[0] + 1
-                # Formato correto: DR XX/YYYY
-                dr_number = f"DR {count:02d}/{year}"
                 
-                conn.execute("""
-                    INSERT INTO damage_reports (
-                        dr_number, ra_number, contract_number, date,
-                        client_name, client_email, client_phone,
-                        client_address, client_city, client_postal_code, client_country,
-                        vehicle_plate, vehicle_model, vehicle_brand,
-                        pickup_date, pickup_time, pickup_location,
-                        return_date, return_time, return_location,
-                        issued_by,
-                        inspection_type, inspector_name, mileage, fuel_level,
-                        damage_description, observations, damage_diagram_data,
-                        repair_items, damage_images,
-                        created_by
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    dr_number,
-                    data.get('ra_number'),
-                    data.get('contractNumber'),
-                    data.get('date'),
-                    data.get('clientName'),
-                    data.get('clientEmail'),
-                    data.get('clientPhone'),
-                    data.get('address'),
-                    data.get('city'),
-                    data.get('postalCode'),
-                    data.get('country'),
-                    data.get('vehiclePlate'),
-                    data.get('vehicleModel'),
-                    data.get('vehicleBrand'),
-                    data.get('pickupDate'),
-                    data.get('pickupTime'),
-                    data.get('pickupLocation'),
-                    data.get('returnDate'),
-                    data.get('returnTime'),
-                    data.get('returnLocation'),
-                    data.get('issuedBy'),
-                    data.get('inspectionType'),
-                    data.get('inspectorName'),
-                    data.get('mileage'),
-                    data.get('fuelLevel'),
-                    data.get('damageDescription'),
-                    data.get('observations'),
-                    data.get('damageDiagramData'),
-                    data.get('repairItems'),
-                    data.get('damageImages'),
-                    request.session.get('username', 'unknown')
-                ))
+                # Verificar se é UPDATE (dr_number fornecido) ou CREATE (novo)
+                existing_dr_number = data.get('existingDRNumber')
                 
-                conn.commit()
-                
-                return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
+                if existing_dr_number:
+                    # UPDATE - Atualizar DR existente
+                    logging.info(f"🔄 Atualizando DR {existing_dr_number}")
+                    
+                    conn.execute("""
+                        UPDATE damage_reports SET
+                            ra_number = ?, contract_number = ?, date = ?,
+                            client_name = ?, client_email = ?, client_phone = ?,
+                            client_address = ?, client_city = ?, client_postal_code = ?, client_country = ?,
+                            vehicle_plate = ?, vehicle_model = ?, vehicle_brand = ?,
+                            pickup_date = ?, pickup_time = ?, pickup_location = ?,
+                            return_date = ?, return_time = ?, return_location = ?,
+                            issued_by = ?,
+                            inspection_type = ?, inspector_name = ?, mileage = ?, fuel_level = ?,
+                            damage_description = ?, observations = ?, damage_diagram_data = ?,
+                            repair_items = ?, damage_images = ?,
+                            updated_at = ?
+                        WHERE dr_number = ?
+                    """, (
+                        data.get('ra_number'),
+                        data.get('contractNumber'),
+                        data.get('date'),
+                        data.get('clientName'),
+                        data.get('clientEmail'),
+                        data.get('clientPhone'),
+                        data.get('address'),
+                        data.get('city'),
+                        data.get('postalCode'),
+                        data.get('country'),
+                        data.get('vehiclePlate'),
+                        data.get('vehicleModel'),
+                        data.get('vehicleBrand'),
+                        data.get('pickupDate'),
+                        data.get('pickupTime'),
+                        data.get('pickupLocation'),
+                        data.get('returnDate'),
+                        data.get('returnTime'),
+                        data.get('returnLocation'),
+                        data.get('issuedBy'),
+                        data.get('inspectionType'),
+                        data.get('inspectorName'),
+                        data.get('mileage'),
+                        data.get('fuelLevel'),
+                        data.get('damageDescription'),
+                        data.get('observations'),
+                        data.get('damageDiagramData'),
+                        data.get('repairItems'),
+                        data.get('damageImages'),
+                        datetime.datetime.now().isoformat(),
+                        existing_dr_number
+                    ))
+                    
+                    conn.commit()
+                    
+                    return {"ok": True, "dr_number": existing_dr_number, "message": "Damage Report updated successfully"}
+                else:
+                    # CREATE - Criar novo DR
+                    year = datetime.datetime.now().year
+                    # Contar DRs do ano atual (formato "DR XX/YYYY")
+                    cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
+                    count = cursor.fetchone()[0] + 1
+                    # Formato correto: DR XX/YYYY
+                    dr_number = f"DR {count:02d}/{year}"
+                    
+                    logging.info(f"✨ Criando novo DR {dr_number}")
+                    
+                    conn.execute("""
+                        INSERT INTO damage_reports (
+                            dr_number, ra_number, contract_number, date,
+                            client_name, client_email, client_phone,
+                            client_address, client_city, client_postal_code, client_country,
+                            vehicle_plate, vehicle_model, vehicle_brand,
+                            pickup_date, pickup_time, pickup_location,
+                            return_date, return_time, return_location,
+                            issued_by,
+                            inspection_type, inspector_name, mileage, fuel_level,
+                            damage_description, observations, damage_diagram_data,
+                            repair_items, damage_images,
+                            created_by
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        dr_number,
+                        data.get('ra_number'),
+                        data.get('contractNumber'),
+                        data.get('date'),
+                        data.get('clientName'),
+                        data.get('clientEmail'),
+                        data.get('clientPhone'),
+                        data.get('address'),
+                        data.get('city'),
+                        data.get('postalCode'),
+                        data.get('country'),
+                        data.get('vehiclePlate'),
+                        data.get('vehicleModel'),
+                        data.get('vehicleBrand'),
+                        data.get('pickupDate'),
+                        data.get('pickupTime'),
+                        data.get('pickupLocation'),
+                        data.get('returnDate'),
+                        data.get('returnTime'),
+                        data.get('returnLocation'),
+                        data.get('issuedBy'),
+                        data.get('inspectionType'),
+                        data.get('inspectorName'),
+                        data.get('mileage'),
+                        data.get('fuelLevel'),
+                        data.get('damageDescription'),
+                        data.get('observations'),
+                        data.get('damageDiagramData'),
+                        data.get('repairItems'),
+                        data.get('damageImages'),
+                        request.session.get('username', 'unknown')
+                    ))
+                    
+                    conn.commit()
+                    
+                    return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
             finally:
                 conn.close()
     except Exception as e:
