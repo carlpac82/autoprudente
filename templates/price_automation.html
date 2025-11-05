@@ -1057,7 +1057,7 @@
                 desc.textContent = 'Using AI learning suggestions';
             }
             
-            console.log(`✅ Fill mode changed to: ${mode.toUpperCase()}`);
+            console.log(` Fill mode changed to: ${mode.toUpperCase()}`);
             
             // Update table headers icons
             updateTableHeaderIcons(mode);
@@ -1154,9 +1154,9 @@
             console.log(`🔄 Updated ${updatedCount} cells to ${mode.toUpperCase()} mode`);
             
             if (mode === 'ai' && !hasGeneratedPrices) {
-                console.log('⚠️ No prices generated yet, AI mode shows empty cells');
+                console.log(' No prices generated yet, AI mode shows empty cells');
             } else if (mode === 'ai' && updatedCount === 0) {
-                console.log('⚠️ No AI learning data available yet');
+                console.log(' No AI learning data available yet');
             }
         }
         
@@ -1300,13 +1300,13 @@
             // For rentals >= 30 days, use minPriceMonth (divided by 30)
             if (days >= 30 && minPriceMonth) {
                 const minPricePerDay = minPriceMonth / 30;
-                console.log(`   📊 Min price for ${days} days: ${minPricePerDay.toFixed(2)}€/day (from monthly: ${minPriceMonth}€)`);
+                console.log(`    Min price for ${days} days: ${minPricePerDay.toFixed(2)}€/day (from monthly: ${minPriceMonth}€)`);
                 return minPricePerDay;
             }
             
             // For rentals < 30 days, use minPriceDay
             if (minPriceDay) {
-                console.log(`   📊 Min price for ${days} days: ${minPriceDay.toFixed(2)}€/day`);
+                console.log(`    Min price for ${days} days: ${minPriceDay.toFixed(2)}€/day`);
                 return minPriceDay;
             }
             
@@ -1550,9 +1550,9 @@
                             
                             // DEBUG: Log de cada item
                             if (isAutoprudente) {
-                                console.log(`[DEBUG] ✅ AUTOPRUDENTE encontrado: "${item.supplier}" - ${item.car}`);
+                                console.log(`[DEBUG]  AUTOPRUDENTE encontrado: "${item.supplier}" - ${item.car}`);
                             } else if (debugCount < 3) {
-                                console.log(`[DEBUG] ❌ NÃO é AUTOPRUDENTE: "${item.supplier}" - ${item.car}`);
+                                console.log(`[DEBUG]  NÃO é AUTOPRUDENTE: "${item.supplier}" - ${item.car}`);
                                 debugCount++;
                             }
                             
@@ -1649,10 +1649,10 @@
 
             if (foundPrices) {
                 progressText.textContent = isAlternativeSearch ? 
-                    `✅ ${day} dias concluído (data alternativa)` : 
-                    `✅ ${day} dias concluído!`;
+                    ` ${day} dias concluído (data alternativa)` : 
+                    ` ${day} dias concluído!`;
             } else {
-                progressText.textContent = `⚠️ ${day} dias - nenhum preço encontrado`;
+                progressText.textContent = ` ${day} dias - nenhum preço encontrado`;
             }
             
             progressPercent.textContent = '100%';
@@ -1883,7 +1883,7 @@
                 completed++;
             }
 
-            progressText.textContent = '✅ Pesquisa concluída!';
+            progressText.textContent = ' Pesquisa concluída!';
             progressPercent.textContent = '100%';
             progressFill.style.width = '100%';
 
@@ -2018,7 +2018,7 @@
         }
         
         function exportWay2RentalsCSV() {
-            console.log('📤 Exporting Way2Rentals CSV...');
+            console.log(' Exporting Way2Rentals CSV...');
             
             // Way2Rentals group mapping
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -2157,12 +2157,14 @@
             const location = document.getElementById('location').value;
             saveDownloadToHistory(filename, 'way2rentals', location);
             
-            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
-            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
+            console.log(` Way2Rentals CSV exported: ${filename}`);
+            showNotification(` Way2Rentals CSV exported: ${filename}`, 'success');
         }
         
-        async function exportWebsiteCSV() {
-            console.log('📤 Exporting Website CSV...');
+        function exportWebsiteCSV() {
+            // IGUAL AO BROKERS - CSV frontend, SEM backend, SEMPRE funciona
+            console.log('Exporting Website CSV...');
+            showNotification('Generating Website CSV...', 'info');
             
             // Same format as Way2Rentals
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -2174,22 +2176,18 @@
             
             const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
             
-            // Get website adjustment from settings (fetch from backend)
-            let websiteAdjustment = 14;
-            try {
-                const response = await fetch('/admin/env-summary');
-                const settings = await response.json();
-                websiteAdjustment = parseFloat(settings.website_pct || 14);
-                console.log(`📊 Website adjustment: ${websiteAdjustment}%`);
-            } catch (error) {
-                console.warn('⚠️ Could not fetch website adjustment, using 14%');
-            }
+            // Website adjustment: FIXO 14% (sem backend)
+            const websiteAdjustment = 14;
             
             // Commission: 13.66%
             const commission = 0.1366;
             
-            // Get vans pricing
-            const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
+            // Vans pricing: FIXO (sem localStorage)
+            const vansPricing = {
+                c3_1day: 112, c3_2days: 144, c3_3days: 180,
+                c4_1day: 152, c4_2days: 170, c4_3days: 210,
+                c5_1day: 175, c5_2days: 190, c5_3days: 240
+            };
             
             // Filename
             const location = document.getElementById('location').value;
@@ -2271,23 +2269,25 @@
                 csvContent += rowData.join(';') + '\n';
             });
             
-            // Download CSV
+            // Download CSV (IGUAL AO BROKERS)
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             
             // Save to downloads history
             saveDownloadToHistory(filename, 'website', location);
             
-            console.log(`✅ Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
-            showNotification(`✅ Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+            console.log(`Website CSV exported: ${filename}`);
+            showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
         }
         
         async function saveExportToHistory(exportData) {
             try {
-                console.log('💾 Saving export to history...', exportData);
+                console.log(' Saving export to history...', exportData);
                 
                 const response = await fetch('/api/export-history/save', {
                     method: 'POST',
@@ -2300,12 +2300,12 @@
                 const result = await response.json();
                 
                 if (result.ok) {
-                    console.log(`✅ Export saved to history (ID: ${result.export_id})`);
+                    console.log(` Export saved to history (ID: ${result.export_id})`);
                 } else {
-                    console.warn('⚠️ Failed to save export to history:', result.error);
+                    console.warn(' Failed to save export to history:', result.error);
                 }
             } catch (error) {
-                console.error('❌ Error saving export to history:', error);
+                console.error(' Error saving export to history:', error);
             }
         }
 
@@ -2415,7 +2415,7 @@
             
             localStorage.setItem('vansPricing', JSON.stringify(prices));
             showNotification('Commercial Vans pricing saved successfully!', 'success');
-            console.log('💾 Vans pricing saved:', prices);
+            console.log(' Vans pricing saved:', prices);
         }
         
         function updateVansPreview() {
@@ -2480,70 +2480,44 @@
         
         // ===== DOWNLOAD EXCEL (ABBYCAR FORMAT) =====
         
-        async function downloadAutomatedPricesExcel() {
-            try {
-                showNotification('Generating Excel file...', 'info');
-                
-                // Get location and date
-                const location = document.getElementById('locationAuto')?.value || 'Unknown';
-                const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
-                
-                // Collect prices from table (only AUTO column)
-                const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
-                const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
-                
-                const prices = {};
-                
-                groups.forEach(group => {
-                    prices[group] = {};
-                    days.forEach(day => {
-                        const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
-                        if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
-                            prices[group][day] = parseFloat(inputAuto.value);
-                        }
-                    });
+        function downloadAutomatedPricesExcel() {
+            // IGUAL AO BROKERS - CSV frontend, SEM backend, SEMPRE funciona
+            showNotification('Generating CSV file...', 'info');
+            
+            const location = document.getElementById('locationAuto')?.value || 'Faro';
+            const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+            
+            const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+            const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+            
+            // Build CSV (IGUAL AO BROKERS)
+            let csvContent = 'Group;' + days.join(';') + '\n';
+            
+            groups.forEach(group => {
+                const rowData = [group];
+                days.forEach(day => {
+                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
+                    if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                        rowData.push(parseFloat(inputAuto.value).toFixed(2));
+                    } else {
+                        rowData.push('');
+                    }
                 });
-                
-                console.log('📊 Collected prices:', prices);
-                
-                // Send to backend
-                const response = await fetch('/api/export-automated-prices-excel', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        location: location,
-                        date: date,
-                        prices: prices
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to generate Excel file');
-                }
-                
-                // Download file
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                // Save to downloads history
-                saveDownloadToHistory(filename, 'abbycar', location);
-                
-                showNotification('Excel file downloaded successfully!', 'success');
-                
-            } catch (error) {
-                console.error('Error downloading Excel:', error);
-                showNotification('Error generating Excel file: ' + error.message, 'error');
-            }
+                csvContent += rowData.join(';') + '\n';
+            });
+            
+            // Download CSV (IGUAL AO BROKERS)
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.csv`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            saveDownloadToHistory(filename, 'abbycar', location);
+            showNotification('CSV file downloaded successfully!', 'success');
         }
         
         // ===== HISTÓRICO =====
@@ -2819,17 +2793,17 @@
         let reRenderTimeout = null;
         
         function updateAutomatedPrice(grupo, day, newPrice, minPrice, maxPrice) {
-            console.log(`🎚️ Final price ${grupo}/${day}d: ${newPrice}€`);
+            console.log(` Final price ${grupo}/${day}d: ${newPrice}€`);
             
             // Get original price for AI learning
             const allPricesData = window[`allPrices_${grupo}_${day}`];
             const automatedItem = allPricesData?.find(p => p.type === 'automated');
             const originalPrice = automatedItem ? automatedItem.price : 0;
             
-            // ✅ UPDATE THE AUTOMATED ITEM PRICE IN THE ARRAY
+            //  UPDATE THE AUTOMATED ITEM PRICE IN THE ARRAY
             if (automatedItem) {
                 automatedItem.price = parseFloat(newPrice);
-                console.log(`✅ Updated automated price in array: ${automatedItem.price}€`);
+                console.log(` Updated automated price in array: ${automatedItem.price}€`);
             }
             
             // Update the table input field (RÁPIDO)
@@ -2856,13 +2830,13 @@
                     if (allPricesData) {
                         allPricesData.sort((a, b) => a.price - b.price);
                         reRenderPriceList(grupo, day, allPricesData);
-                        console.log(`✅ Re-rendered visual list for ${grupo}/${day}d`);
+                        console.log(` Re-rendered visual list for ${grupo}/${day}d`);
                     }
                     
                     // Show notification APENAS ao finalizar
                     const positionText = newPrice < minPrice ? '📉 Below market' : 
                                        newPrice > maxPrice ? '📈 Above market' : 
-                                       '✅ Within market range';
+                                       ' Within market range';
                     
                     showNotification(`Price updated for ${grupo} - ${day}d: ${parseFloat(newPrice).toFixed(2)}€\n${positionText}`, 'success', 2000);
                 }, 300); // 300ms depois de soltar o slider
@@ -2903,12 +2877,12 @@
             // Save to localStorage
             localStorage.setItem('priceAIData', JSON.stringify(aiData));
             
-            console.log(`✅ AI data saved. Total adjustments: ${aiData.adjustments.length}`);
+            console.log(` AI data saved. Total adjustments: ${aiData.adjustments.length}`);
             
             // Also save to database for persistence
             if (window.dbSync && window.dbSync.saveAIAdjustment) {
                 window.dbSync.saveAIAdjustment(adjustment).catch(err => {
-                    console.warn('⚠️ Failed to save to database:', err);
+                    console.warn(' Failed to save to database:', err);
                 });
             }
         }
@@ -2927,7 +2901,7 @@
             const automatedItem = allPricesData?.find(p => p.type === 'automated');
             if (automatedItem) {
                 automatedItem.price = parseFloat(aiPrice);
-                console.log(`✅ Updated automated price in array: ${automatedItem.price}€`);
+                console.log(` Updated automated price in array: ${automatedItem.price}€`);
             }
             
             // Update the table input field
@@ -2961,13 +2935,13 @@
                 if (allPricesData) {
                     allPricesData.sort((a, b) => a.price - b.price);
                     reRenderPriceList(grupo, day, allPricesData);
-                    console.log(`✅ Re-rendered visual list for ${grupo}/${day}d`);
+                    console.log(` Re-rendered visual list for ${grupo}/${day}d`);
                 }
                 
                 // Show success notification
                 const positionText = aiPrice < minPrice ? '📉 Below market' : 
                                    aiPrice > maxPrice ? '📈 Above market' : 
-                                   '✅ Within market range';
+                                   ' Within market range';
                 
                 showNotification(`🤖 AI suggestion accepted for ${grupo} - ${day}d: ${parseFloat(aiPrice).toFixed(2)}€\n${positionText}`, 'success', 3000);
             }
@@ -3832,36 +3806,36 @@
                         // (Don't override during generate - let toggle handle it)
                         
                         if (autoPrice && autoPrice > 0) {
-                            // ⚠️ REGRA 1 (PRIORITY): Apply minimum price per day
+                            //  REGRA 1 (PRIORITY): Apply minimum price per day
                             const minPricePerDay = getMinimumPriceForDays(day, dayConfig);
                             if (minPricePerDay && autoPrice < minPricePerDay) {
-                                console.log(`   ⬆️ Price adjusted: ${autoPrice.toFixed(2)}€ → ${minPricePerDay.toFixed(2)}€ (minimum for ${day} days)`);
+                                console.log(`    Price adjusted: ${autoPrice.toFixed(2)}€ → ${minPricePerDay.toFixed(2)}€ (minimum for ${day} days)`);
                                 autoPrice = minPricePerDay;
                             }
                             
                             // Fill Auto field with calculated price
                             const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
-                            console.log(`💾 Filling ${grupo}/${day}d with ${autoPrice.toFixed(2)}€`);
+                            console.log(` Filling ${grupo}/${day}d with ${autoPrice.toFixed(2)}€`);
                             console.log(`   Input found:`, inputAuto ? 'YES' : 'NO');
                             
                             if (inputAuto) {
                                 inputAuto.value = autoPrice.toFixed(2);
                                 autoPricesGenerated++;
-                                console.log(`   ✅ Filled successfully!`);
+                                console.log(`    Filled successfully!`);
                                 
                                 // Store for comparison cards
                                 if (!automatedPricesByGroup[grupo]) automatedPricesByGroup[grupo] = {};
                                 automatedPricesByGroup[grupo][day] = autoPrice;
                             } else {
-                                console.log(`   ❌ Input field NOT FOUND!`);
+                                console.log(`    Input field NOT FOUND!`);
                             }
                         } else {
-                            console.log(`⚠️ ${grupo}/${day}d: No price calculated (autoPrice=${autoPrice})`);
+                            console.log(` ${grupo}/${day}d: No price calculated (autoPrice=${autoPrice})`);
                         }
                     }
                 }
                 
-                console.log(`✅ Auto: ${autoPricesGenerated}, Real: ${realPricesGenerated}`);
+                console.log(` Auto: ${autoPricesGenerated}, Real: ${realPricesGenerated}`);
                 
                 // Custom message based on results
                 let message = '';
@@ -3884,7 +3858,7 @@
                     document.getElementById('priceTableContainer').classList.remove('hidden');
                 }
                 
-                progressText.textContent = '✅ Generation complete!';
+                progressText.textContent = ' Generation complete!';
                 
                 // Apply current fill mode (Auto/AI) to table
                 console.log(`🔄 Applying ${currentFillMode.toUpperCase()} mode to table...`);
@@ -3932,7 +3906,7 @@
                 });
             });
             
-            console.log(`📊 Total prices found in Current Prices: ${totalPricesFound}`);
+            console.log(` Total prices found in Current Prices: ${totalPricesFound}`);
             
             return prices;
         }
@@ -4011,7 +3985,7 @@
                 finalPrice = basePrice + adjustment;
             }
             
-            console.log(`  ✅ Result: ${finalPrice.toFixed(2)}€`);
+            console.log(`   Result: ${finalPrice.toFixed(2)}€`);
             return finalPrice;
         }
         
@@ -4027,7 +4001,7 @@
             console.log(`1️⃣ Cars available for ${day}d:`, cars?.length || 0);
             
             if (!cars || cars.length === 0) {
-                console.log(`❌ NO CARS for ${day}d`);
+                console.log(` NO CARS for ${day}d`);
                 return null;
             }
             
@@ -4059,7 +4033,7 @@
             console.log(`2️⃣ Cars for group ${grupo} (excluding ${excludedSuppliers.join(', ')}):`, groupCars.length);
             
             if (groupCars.length === 0) {
-                console.log(`❌ NO CARS for group ${grupo}`);
+                console.log(` NO CARS for group ${grupo}`);
                 return null;
             }
             
@@ -4081,7 +4055,7 @@
                 .sort((a, b) => a.price - b.price);
             
             if (sortedCars.length === 0) {
-                console.log(`❌ NO VALID PRICE found`);
+                console.log(` NO VALID PRICE found`);
                 return null;
             }
             
@@ -4397,7 +4371,7 @@
         }
         
         function exportWay2RentalsCSVFromAuto() {
-            console.log('📤 Exporting Way2Rentals CSV from Automated Prices...');
+            console.log(' Exporting Way2Rentals CSV from Automated Prices...');
             
             // Way2Rentals group mapping
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -4538,8 +4512,8 @@
             const locationAuto = document.getElementById('locationAuto').value;
             saveDownloadToHistory(filename, 'way2rentals', locationAuto);
             
-            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
-            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
+            console.log(` Way2Rentals CSV exported: ${filename}`);
+            showNotification(` Way2Rentals CSV exported: ${filename}`, 'success');
             
             // Save to database for history
             saveExportToHistory({
@@ -4556,7 +4530,7 @@
         }
         
         async function exportWebsiteCSVFromAuto() {
-            console.log('📤 Exporting Website CSV from Automated Prices...');
+            console.log(' Exporting Website CSV from Automated Prices...');
             
             // Same format as Way2Rentals
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -4574,9 +4548,9 @@
                 const response = await fetch('/admin/env-summary');
                 const settings = await response.json();
                 websiteAdjustment = parseFloat(settings.website_pct || 14);
-                console.log(`📊 Website adjustment: ${websiteAdjustment}%`);
+                console.log(` Website adjustment: ${websiteAdjustment}%`);
             } catch (error) {
-                console.warn('⚠️ Could not fetch website adjustment, using 14%');
+                console.warn(' Could not fetch website adjustment, using 14%');
             }
             
             // Commission: 13.66%
@@ -4675,8 +4649,8 @@
             // Save to downloads history
             saveDownloadToHistory(filename, 'website', locationAuto);
             
-            console.log(`✅ Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
-            showNotification(`✅ Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+            console.log(` Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
+            showNotification(` Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
         }
         
         function renderSmartInsights(insights) {
@@ -5067,7 +5041,7 @@
             });
             
             totalSearches = searches.length;
-            console.log(`📊 Total searches: ${totalSearches} (${locations.length} locations × ${24} months × ${daysToAnalyze.length} periods)`);
+            console.log(` Total searches: ${totalSearches} (${locations.length} locations × ${24} months × ${daysToAnalyze.length} periods)`);
             
             // Show progress
             loadingState.innerHTML = `
@@ -5150,7 +5124,7 @@
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
                 
-                console.log(`✅ Deep Scan complete: ${allResults.length} future price points collected`);
+                console.log(` Deep Scan complete: ${allResults.length} future price points collected`);
                 
                 // Analyze results
                 loadingState.innerHTML = `
@@ -5185,7 +5159,7 @@
                 
                 // Display suppliers analyzed
                 if (analysisData.allSuppliers && analysisData.allSuppliers.length > 0) {
-                    console.log(`✅ Analyzed against ${analysisData.totalSuppliers} suppliers:`, analysisData.allSuppliers);
+                    console.log(` Analyzed against ${analysisData.totalSuppliers} suppliers:`, analysisData.allSuppliers);
                     displaySuppliersAnalyzed(analysisData.allSuppliers, analysisData.totalSuppliers);
                 }
                 
@@ -5265,7 +5239,7 @@ Continue?`);
             });
             
             const totalSearches = searches.length;
-            console.log(`📊 Calendar scan: ${totalSearches} searches (${locations.length} locations × ~180 dates over 24 months)`);
+            console.log(` Calendar scan: ${totalSearches} searches (${locations.length} locations × ~180 dates over 24 months)`);
             
             // Show progress
             loadingState.innerHTML = `
@@ -5351,7 +5325,7 @@ Continue?`);
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
                 
-                console.log(`✅ Calendar scan complete: ${allResults.length} results`);
+                console.log(` Calendar scan complete: ${allResults.length} results`);
                 
                 // Analyze
                 loadingState.innerHTML = `
@@ -5462,7 +5436,7 @@ Continue?`);
                             <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
-                            📊 Detected Pricing Periods (${data.periods.length})
+                             Detected Pricing Periods (${data.periods.length})
                         </h4>
                         <div class="space-y-3">
                             ${data.periods.map((period, index) => {
@@ -5497,7 +5471,7 @@ Continue?`);
                             ${data.changes.map(change => {
                                 const changeDate = new Date(change.date).toLocaleDateString();
                                 const isIncrease = change.new_price > change.old_price;
-                                const arrow = isIncrease ? '⬆️' : '⬇️';
+                                const arrow = isIncrease ? '' : '⬇️';
                                 const color = isIncrease ? 'red' : 'green';
                                 
                                 return `
@@ -5726,7 +5700,7 @@ Continue?`);
                 buttonElement.disabled = true;
             }
             
-            showNotification(`✅ AI strategy applied to ${group}! Generate prices to see results.`, 'success', 3000);
+            showNotification(` AI strategy applied to ${group}! Generate prices to see results.`, 'success', 3000);
             // NÃO fechar modal - permitir aplicar outras sugestões
             // closeAIInsights();
         }
@@ -5760,7 +5734,7 @@ Continue?`);
                 window.dbSync.save().catch(err => console.warn('DB sync failed:', err));
             }
             
-            console.log(`💾 AI suggestion saved for ${group} at ${location}`);
+            console.log(` AI suggestion saved for ${group} at ${location}`);
         }
         
         // ===== SMART AI POSITIONING ANALYSIS =====
@@ -5770,7 +5744,7 @@ Continue?`);
          * Considera: demand pricing, vendas antecipadas, sazonalidade
          */
         function analyzeMarketPositioning(grupo, dayPeriod, allPrices) {
-            console.log(`📊 Analyzing market position for ${grupo}/${dayPeriod}d...`);
+            console.log(` Analyzing market position for ${grupo}/${dayPeriod}d...`);
             
             if (!allPrices || allPrices.length < 2) {
                 return null;
@@ -5949,19 +5923,19 @@ Continue?`);
                 const statusResponse = await fetch('/api/ai/status');
                 
                 if (!statusResponse.ok) {
-                    console.log('⚠️ AI status endpoint not available');
+                    console.log(' AI status endpoint not available');
                     return false;
                 }
                 
                 const status = await statusResponse.json();
                 
                 if (!status.ok || !status.claude?.available) {
-                    console.log('⚠️ External AI (Claude) not configured or unavailable');
+                    console.log(' External AI (Claude) not configured or unavailable');
                     console.log('💡 To enable: Set ANTHROPIC_API_KEY in .env and pip install anthropic');
                     return false;
                 }
                 
-                console.log('✅ External AI available! Using Claude Sonnet 3.5');
+                console.log(' External AI available! Using Claude Sonnet 3.5');
                 
                 // Update loading message
                 loadingState.innerHTML = `
@@ -5979,7 +5953,7 @@ Continue?`);
                 const currentData = window.currentPriceData;
                 
                 if (!currentData || !currentData.data || currentData.data.length === 0) {
-                    console.log('⚠️ No price data loaded');
+                    console.log(' No price data loaded');
                     return false;
                 }
                 
@@ -6042,7 +6016,7 @@ Continue?`);
                                     analysis: aiResult.analysis,
                                     provider: 'claude'
                                 });
-                                console.log(`✅ Claude analysis for ${group}/${days}d: ${aiResult.analysis.strategy}`);
+                                console.log(` Claude analysis for ${group}/${days}d: ${aiResult.analysis.strategy}`);
                             }
                         }
                         
@@ -6052,7 +6026,7 @@ Continue?`);
                 }
                 
                 if (aiInsights.length === 0) {
-                    console.log('⚠️ No AI insights generated');
+                    console.log(' No AI insights generated');
                     return false;
                 }
                 
@@ -6073,8 +6047,8 @@ Continue?`);
                 return true;
                 
             } catch (error) {
-                console.error('❌ External AI error:', error);
-                console.log('⚠️ Falling back to local analysis');
+                console.error(' External AI error:', error);
+                console.log(' Falling back to local analysis');
                 return false;
             }
         }
@@ -6114,12 +6088,12 @@ Continue?`);
                 
                 if (useExternalAI) {
                     // External AI handled everything, we're done!
-                    console.log('✅ Smart Analysis complete using External AI (Claude/GPT)');
+                    console.log(' Smart Analysis complete using External AI (Claude/GPT)');
                     return;
                 }
                 
                 // FALLBACK: Use local AI
-                console.log('⚠️ External AI not available, using local Smart Analysis');
+                console.log(' External AI not available, using local Smart Analysis');
                 loadingState.innerHTML = `
                     <div class="flex items-center justify-center gap-3">
                         <svg class="w-8 h-8 text-[#8b5cf6] animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6165,7 +6139,7 @@ Continue?`);
                 document.getElementById('aiStatsPriceDiff').textContent = `Dynamic`;
                 document.getElementById('aiStatsConfidence').textContent = `Market`;
                 
-                console.log(`✅ Smart Analysis complete: ${insights.length} groups, ${totalSuggestions} suggestions`);
+                console.log(` Smart Analysis complete: ${insights.length} groups, ${totalSuggestions} suggestions`);
                 
             } catch (error) {
                 console.error('Smart Analysis error:', error);
@@ -6229,7 +6203,7 @@ Continue?`);
                                                     <span class="px-2 py-1 ${getStrategyColor(analysis.strategy)} rounded text-xs font-bold">
                                                         ${getStrategyLabel(analysis.strategy)}
                                                     </span>
-                                                    ${analysis.minimum_price_applied ? '<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-bold">⚠️ MIN PRICE</span>' : ''}
+                                                    ${analysis.minimum_price_applied ? '<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-bold"> MIN PRICE</span>' : ''}
                                                 </div>
                                                 <p class="text-sm text-gray-700 mb-2"><strong>Analysis:</strong> ${analysis.analysis || 'AI market analysis'}</p>
                                             </div>
@@ -6257,7 +6231,7 @@ Continue?`);
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap-3 text-xs">
                                                 <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                                                    📊 Confidence: <strong>${analysis.confidence || 0}%</strong>
+                                                     Confidence: <strong>${analysis.confidence || 0}%</strong>
                                                 </span>
                                                 <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded">
                                                     🎯 Position: <strong>${analysis.current_position || 'optimal'}</strong>
@@ -6397,7 +6371,7 @@ Continue?`);
                         autoPrudente: originalPrice
                     }
                 });
-                console.log(`✅ Smart AI adjustment recorded for AI learning: ${group}/${days}d`);
+                console.log(` Smart AI adjustment recorded for AI learning: ${group}/${days}d`);
             }
             
             // Update button
@@ -6413,7 +6387,7 @@ Continue?`);
                 buttonElement.disabled = true;
             }
             
-            showNotification(`✅ Smart pricing applied to ${group} (${days}d): ${suggestedPrice.toFixed(2)}€`, 'success', 3000);
+            showNotification(` Smart pricing applied to ${group} (${days}d): ${suggestedPrice.toFixed(2)}€`, 'success', 3000);
         }
 
         // ===== CALENDAR SCAN HISTORY FUNCTIONS =====
@@ -6765,7 +6739,7 @@ Continue?`);
             periodPicker.innerHTML = options;
             
             // Show info about scan used
-            console.log(`✅ Loaded ${periods.length} periods from Calendar Scan (${latestScan.date})`);
+            console.log(` Loaded ${periods.length} periods from Calendar Scan (${latestScan.date})`);
             console.log('Periods:', periods);
         }
         
