@@ -13518,28 +13518,66 @@ async def list_damage_reports(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("""
-                    SELECT 
-                        id, dr_number, ra_number, contract_number, date,
-                        client_name, vehicle_plate, vehicle_model,
-                        status, created_at, created_by, pdf_filename, is_protected
-                    FROM damage_reports
-                    ORDER BY 
-                        CASE 
-                            WHEN dr_number LIKE '%/%' THEN 
-                                CAST(SUBSTR(dr_number, INSTR(dr_number, '/') + 1) AS INTEGER)
-                            ELSE 9999
-                        END DESC,
-                        CASE 
-                            WHEN dr_number LIKE 'DR %' THEN 
-                                CAST(SUBSTR(dr_number, 4, INSTR(dr_number, '/') - 4) AS INTEGER)
-                            ELSE 0
-                        END DESC
-                """)
+                # Primeiro verificar se a coluna is_protected existe
+                # Tentar detectar se é PostgreSQL ou SQLite
+                try:
+                    # PostgreSQL
+                    cursor = conn.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'damage_reports'
+                    """)
+                    columns = [row[0] for row in cursor.fetchall()]
+                except:
+                    # SQLite
+                    cursor = conn.execute("PRAGMA table_info(damage_reports)")
+                    columns = [row[1] for row in cursor.fetchall()]
+                
+                has_is_protected = 'is_protected' in columns
+                
+                # Construir query baseado nas colunas disponíveis
+                if has_is_protected:
+                    cursor = conn.execute("""
+                        SELECT 
+                            id, dr_number, ra_number, contract_number, date,
+                            client_name, vehicle_plate, vehicle_model,
+                            status, created_at, created_by, pdf_filename, is_protected
+                        FROM damage_reports
+                        ORDER BY 
+                            CASE 
+                                WHEN dr_number LIKE '%/%' THEN 
+                                    CAST(SUBSTR(dr_number, INSTR(dr_number, '/') + 1) AS INTEGER)
+                                ELSE 9999
+                            END DESC,
+                            CASE 
+                                WHEN dr_number LIKE 'DR %' THEN 
+                                    CAST(SUBSTR(dr_number, 4, INSTR(dr_number, '/') - 4) AS INTEGER)
+                                ELSE 0
+                            END DESC
+                    """)
+                else:
+                    cursor = conn.execute("""
+                        SELECT 
+                            id, dr_number, ra_number, contract_number, date,
+                            client_name, vehicle_plate, vehicle_model,
+                            status, created_at, created_by, pdf_filename
+                        FROM damage_reports
+                        ORDER BY 
+                            CASE 
+                                WHEN dr_number LIKE '%/%' THEN 
+                                    CAST(SUBSTR(dr_number, INSTR(dr_number, '/') + 1) AS INTEGER)
+                                ELSE 9999
+                            END DESC,
+                            CASE 
+                                WHEN dr_number LIKE 'DR %' THEN 
+                                    CAST(SUBSTR(dr_number, 4, INSTR(dr_number, '/') - 4) AS INTEGER)
+                                ELSE 0
+                            END DESC
+                    """)
                 
                 reports = []
                 for row in cursor.fetchall():
-                    reports.append({
+                    report = {
                         'id': row[0],
                         'dr_number': row[1],
                         'ra_number': row[2],
@@ -13553,8 +13591,14 @@ async def list_damage_reports(request: Request):
                         'created_by': row[10],
                         'has_pdf': row[11] is not None,
                         'pdf_filename': row[11],
-                        'is_protected': row[12] == 1 if row[12] is not None else False
-                    })
+                        'is_protected': False  # Default
+                    }
+                    
+                    # Se a coluna exists, usar o valor
+                    if has_is_protected and len(row) > 12:
+                        report['is_protected'] = row[12] == 1 if row[12] is not None else False
+                    
+                    reports.append(report)
                 
                 return {"ok": True, "reports": reports}
             finally:
