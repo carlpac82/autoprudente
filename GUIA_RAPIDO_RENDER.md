@@ -2,15 +2,42 @@
 
 ## 🎯 O QUE FAZER AGORA:
 
-### ✅ **OPÇÃO 1: Usar Script do Repositório (RECOMENDADO)**
+### ⚠️ **PRIMEIRO: Fix da Tabela pricing_strategies**
+
+Se viste erro: `column "priority" does not exist`
 
 1. **Abrir Render Shell:**
    - https://dashboard.render.com
    - Selecionar serviço
    - Clicar "Shell"
 
-2. **Executar:**
+2. **Executar FIX:**
    ```bash
+   python fix_pricing_strategies_table.py
+   ```
+
+3. **Depois, criar todas as tabelas:**
+   ```bash
+   python migrate_all_tables_postgres.py
+   ```
+
+4. **Pronto!** ✅
+
+---
+
+### ✅ **OPÇÃO 1: Usar Scripts do Repositório (RECOMENDADO)**
+
+1. **Abrir Render Shell:**
+   - https://dashboard.render.com
+   - Selecionar serviço
+   - Clicar "Shell"
+
+2. **Executar (em ordem):**
+   ```bash
+   # 1. Fix da tabela pricing_strategies
+   python fix_pricing_strategies_table.py
+   
+   # 2. Criar todas as tabelas
    python migrate_all_tables_postgres.py
    ```
 
