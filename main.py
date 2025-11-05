@@ -2058,7 +2058,7 @@ def init_db():
                   original_price REAL,
                   new_price REAL NOT NULL,
                   timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                  user TEXT DEFAULT 'admin'
+                  "user" TEXT DEFAULT 'admin'
                 )
                 """
             )
@@ -2204,7 +2204,7 @@ def init_db():
                   max_price REAL,
                   avg_price REAL,
                   search_timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                  user TEXT DEFAULT 'admin',
+                  "user" TEXT DEFAULT 'admin',
                   search_params TEXT
                 )
                 """
