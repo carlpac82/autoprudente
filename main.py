@@ -15379,15 +15379,34 @@ async def temp_upload_photo(vehicle_name: str, file: UploadFile = File(...)):
         with _db_lock:
             conn = _db_connect()
             try:
-                conn.execute("""
-                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
-                    VALUES (?, ?, ?, NULL)
-                """, (vehicle_key, photo_data, content_type))
-                
-                conn.execute("""
-                    INSERT OR REPLACE INTO vehicle_images (vehicle_key, image_data, content_type, source_url)
-                    VALUES (?, ?, ?, NULL)
-                """, (vehicle_key, photo_data, content_type))
+                # PostgreSQL compatible upsert
+                if _USE_NEW_DB and USE_POSTGRES:
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                        VALUES (%s, %s, %s, NULL)
+                        ON CONFLICT (vehicle_name) 
+                        DO UPDATE SET photo_data = EXCLUDED.photo_data, content_type = EXCLUDED.content_type
+                    """, (vehicle_key, photo_data, content_type))
+                    
+                    cursor.execute("""
+                        INSERT INTO vehicle_images (vehicle_key, image_data, content_type)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (vehicle_key)
+                        DO UPDATE SET image_data = EXCLUDED.image_data, content_type = EXCLUDED.content_type
+                    """, (vehicle_key, photo_data, content_type))
+                else:
+                    # SQLite
+                    conn.execute("""
+                        INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                        VALUES (?, ?, ?, NULL)
+                    """, (vehicle_key, photo_data, content_type))
+                    
+                    conn.execute("""
+                        INSERT OR REPLACE INTO vehicle_images (vehicle_key, image_data, content_type)
+                        VALUES (?, ?, ?)
+                    """, (vehicle_key, photo_data, content_type))
                 
                 conn.commit()
             finally:
