@@ -13636,96 +13636,51 @@ async def list_damage_reports(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # TEMPORÁRIO: Marcar DRs 01-39/2025 e 01-03/2024 como protegidos
-                protected_drs = []
-                for i in range(1, 40):
-                    protected_drs.append(f"DR {i:02d}/2025")
-                for i in range(1, 4):
-                    protected_drs.append(f"DR {i:02d}/2024")
+                # Verificar se é PostgreSQL ou SQLite
+                is_postgres = hasattr(conn, 'cursor')
                 
-                if hasattr(conn, 'cursor'):
+                # Verificar se a coluna is_protected existe
+                if is_postgres:
                     with conn.cursor() as cur:
-                        for dr_num in protected_drs:
-                            cur.execute("""
-                                UPDATE damage_reports 
-                                SET is_protected = 1 
-                                WHERE dr_number = %s
-                            """, (dr_num,))
-                    conn.commit()
-                    logging.info(f"✅ {len(protected_drs)} DRs marcados como protegidos")
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'damage_reports'
+                        """)
+                        columns = [row[0] for row in cur.fetchall()]
                 else:
-                    for dr_num in protected_drs:
-                        conn.execute("""
-                            UPDATE damage_reports 
-                            SET is_protected = 1 
-                            WHERE dr_number = ?
-                        """, (dr_num,))
-                    conn.commit()
-                    logging.info(f"✅ {len(protected_drs)} DRs marcados como protegidos")
-                
-            except Exception as e:
-                logging.error(f"Error protecting DRs: {e}")
-            
-            try:
-                # Primeiro verificar se a coluna is_protected existe
-                # Tentar detectar se é PostgreSQL ou SQLite
-                try:
-                    # PostgreSQL
-                    cursor = conn.execute("""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'damage_reports'
-                    """)
-                    columns = [row[0] for row in cursor.fetchall()]
-                except:
-                    # SQLite
                     cursor = conn.execute("PRAGMA table_info(damage_reports)")
                     columns = [row[1] for row in cursor.fetchall()]
                 
                 has_is_protected = 'is_protected' in columns
                 
-                # Construir query baseado nas colunas disponíveis
-                if has_is_protected:
-                    cursor = conn.execute("""
-                        SELECT 
-                            id, dr_number, ra_number, contract_number, date,
-                            client_name, vehicle_plate, vehicle_model,
-                            status, created_at, created_by, pdf_filename, is_protected
-                        FROM damage_reports
-                        ORDER BY 
-                            CASE 
-                                WHEN dr_number LIKE '%/%' THEN 
-                                    CAST(SUBSTR(dr_number, INSTR(dr_number, '/') + 1) AS INTEGER)
-                                ELSE 9999
-                            END DESC,
-                            CASE 
-                                WHEN dr_number LIKE 'DR %' THEN 
-                                    CAST(SUBSTR(dr_number, 4, INSTR(dr_number, '/') - 4) AS INTEGER)
-                                ELSE 0
-                            END DESC
-                    """)
+                # Construir query baseado no tipo de DB
+                if is_postgres:
+                    # PostgreSQL - usar POSITION e SUBSTRING
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT 
+                                id, dr_number, ra_number, contract_number, date,
+                                client_name, vehicle_plate, vehicle_model,
+                                status, created_at, created_by, pdf_filename
+                            FROM damage_reports
+                            ORDER BY id DESC
+                        """)
+                        rows = cur.fetchall()
                 else:
+                    # SQLite
                     cursor = conn.execute("""
                         SELECT 
                             id, dr_number, ra_number, contract_number, date,
                             client_name, vehicle_plate, vehicle_model,
                             status, created_at, created_by, pdf_filename
                         FROM damage_reports
-                        ORDER BY 
-                            CASE 
-                                WHEN dr_number LIKE '%/%' THEN 
-                                    CAST(SUBSTR(dr_number, INSTR(dr_number, '/') + 1) AS INTEGER)
-                                ELSE 9999
-                            END DESC,
-                            CASE 
-                                WHEN dr_number LIKE 'DR %' THEN 
-                                    CAST(SUBSTR(dr_number, 4, INSTR(dr_number, '/') - 4) AS INTEGER)
-                                ELSE 0
-                            END DESC
+                        ORDER BY id DESC
                     """)
+                    rows = cursor.fetchall()
                 
                 reports = []
-                for row in cursor.fetchall():
+                for row in rows:
                     dr_number = row[1]
                     
                     # FORÇAR proteção para DRs 01-39/2025 e 01-03/2024
