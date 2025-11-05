@@ -1888,17 +1888,34 @@
                 const historyList = document.getElementById('historyList');
                 
                 if (data.ok && data.reports && data.reports.length > 0) {
-                    historyList.innerHTML = data.reports.map(report => `
+                    historyList.innerHTML = data.reports.map(report => {
+                        const createdDate = report.created_at ? new Date(report.created_at).toLocaleString('pt-PT', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : 'N/A';
+                        
+                        const pdfBadge = report.has_pdf ? '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">📄 PDF</span>' : '';
+                        
+                        return `
                         <div style="background: #f9fafb; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #009cb6; transition: all 0.2s;" 
                              onmouseover="this.style.background='#f0f9fb'" 
                              onmouseout="this.style.background='#f9fafb'">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="flex: 1;">
-                                    <h4 style="margin: 0 0 5px 0; color: #009cb6; font-size: 15px; font-weight: bold;">
-                                        DR ${report.dr_number}
-                                    </h4>
-                                    <p style="margin: 0; color: #6b7280; font-size: 13px;">
-                                        ${report.client_name || 'N/A'} • ${report.vehicle_plate || 'N/A'} • ${report.date || 'N/A'}
+                                    <div style="display: flex; align-items: center;">
+                                        <h4 style="margin: 0; color: #009cb6; font-size: 15px; font-weight: bold;">
+                                            ${report.dr_number}
+                                        </h4>
+                                        ${pdfBadge}
+                                    </div>
+                                    <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 13px;">
+                                        ${report.client_name || 'N/A'} • ${report.vehicle_plate || 'N/A'}
+                                    </p>
+                                    <p style="margin: 3px 0 0 0; color: #9ca3af; font-size: 12px;">
+                                        📅 Criado: ${createdDate}
                                     </p>
                                 </div>
                                 <div style="display: flex; gap: 6px;">
@@ -1921,7 +1938,8 @@
                                 </div>
                             </div>
                         </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     historyList.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #6b7280;">
