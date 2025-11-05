@@ -341,7 +341,7 @@
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                     </button>
-                    <button onclick="downloadExcel('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download to Brokers">
+                    <button onclick="downloadExcel('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Way2Rentals">
                         <svg class="w-6 h-6 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
@@ -543,7 +543,7 @@
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                     </button>
-                    <button onclick="downloadExcelAuto('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download to Brokers">
+                    <button onclick="downloadExcelAuto('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Way2Rentals">
                         <svg class="w-6 h-6 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
@@ -1934,13 +1934,13 @@
             });
         }
 
-        async function downloadExcel(broker) {
+        function downloadExcel(broker) {
             // Copiar C de D antes de descarregar
             copyGroupCFromD();
             
-            // Special handling for Abbycar - try backend, fallback to CSV
+            // Special handling for Abbycar - use backend endpoint
             if (broker === 'abbycar') {
-                await downloadAutomatedPricesExcel();
+                downloadAutomatedPricesExcel();
                 return;
             }
             
@@ -2157,14 +2157,12 @@
             const location = document.getElementById('location').value;
             saveDownloadToHistory(filename, 'way2rentals', location);
             
-            console.log(`Way2Rentals CSV exported: ${filename}`);
-            showNotification(`Way2Rentals CSV exported: ${filename}`, 'success');
+            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
+            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
         }
         
-        function exportWebsiteCSV() {
-            // FRONTEND ONLY - Like BROKERS (no async/await)
-            console.log('Exporting Website CSV...');
-            showNotification('Generating Website CSV...', 'info');
+        async function exportWebsiteCSV() {
+            console.log('📤 Exporting Website CSV...');
             
             // Same format as Way2Rentals
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -2176,38 +2174,42 @@
             
             const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
             
-            // Website adjustment: FIXED 14% (no backend call)
-            const websiteAdjustment = 14;
+            // Get website adjustment from settings (fetch from backend)
+            let websiteAdjustment = 14;
+            try {
+                const response = await fetch('/admin/env-summary');
+                const settings = await response.json();
+                websiteAdjustment = parseFloat(settings.website_pct || 14);
+                console.log(`📊 Website adjustment: ${websiteAdjustment}%`);
+            } catch (error) {
+                console.warn('⚠️ Could not fetch website adjustment, using 14%');
+            }
             
             // Commission: 13.66%
             const commission = 0.1366;
             
-            // Vans pricing: FIXED values (no backend call)
-            const vansPricing = {
-                c3_1day: 112, c3_2days: 144, c3_3days: 180,
-                c4_1day: 152, c4_2days: 170, c4_3days: 210,
-                c5_1day: 175, c5_2days: 190, c5_3days: 240
-            };
-                
-                // Filename
-                const location = document.getElementById('location').value;
-                const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
-                const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
-                const timestamp = new Date().toISOString().slice(0, 10);
-                const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
-                
-                // Get prices from table (allow empty - will use parametrizations)
-                const pricesData = {};
-                grupos.forEach(grupo => {
-                    pricesData[grupo] = {};
-                    dias.forEach(day => {
-                        const cellId = `price_${grupo}_${day}`;
-                        const cell = document.getElementById(cellId);
-                        if (cell && cell.value) {
-                            pricesData[grupo][day] = parseFloat(cell.value);
-                        }
-                    });
+            // Get vans pricing
+            const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
+            
+            // Filename
+            const location = document.getElementById('location').value;
+            const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
+            const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
+            
+            // Get prices from table
+            const pricesData = {};
+            grupos.forEach(grupo => {
+                pricesData[grupo] = {};
+                dias.forEach(day => {
+                    const cellId = `price_${grupo}_${day}`;
+                    const cell = document.getElementById(cellId);
+                    if (cell && cell.value) {
+                        pricesData[grupo][day] = parseFloat(cell.value);
+                    }
                 });
+            });
             
             // Build CSV content
             let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
@@ -2274,15 +2276,13 @@
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
-            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
             
             // Save to downloads history
             saveDownloadToHistory(filename, 'website', location);
             
-            console.log(`Website CSV exported: ${filename}`);
-            showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+            console.log(`✅ Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
+            showNotification(`✅ Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
         }
         
         async function saveExportToHistory(exportData) {
@@ -2383,42 +2383,24 @@
 
         // ===== COMMERCIAL VANS =====
         
-        async function loadVansPricing() {
-            try {
-                const response = await fetch('/api/vans-pricing');
-                const result = await response.json();
-                
-                if (result.ok && result.pricing) {
-                    const prices = result.pricing;
-                    document.getElementById('c3_1day').value = prices.c3_1day || 112;
-                    document.getElementById('c3_2days').value = prices.c3_2days || 144;
-                    document.getElementById('c3_3days').value = prices.c3_3days || 180;
-                    document.getElementById('c4_1day').value = prices.c4_1day || 152;
-                    document.getElementById('c4_2days').value = prices.c4_2days || 170;
-                    document.getElementById('c4_3days').value = prices.c4_3days || 210;
-                    document.getElementById('c5_1day').value = prices.c5_1day || 175;
-                    document.getElementById('c5_2days').value = prices.c5_2days || 190;
-                    document.getElementById('c5_3days').value = prices.c5_3days || 240;
-                    console.log('✅ Vans pricing loaded from PostgreSQL');
-                } else {
-                    // Use defaults
-                    document.getElementById('c3_1day').value = 112;
-                    document.getElementById('c3_2days').value = 144;
-                    document.getElementById('c3_3days').value = 180;
-                    document.getElementById('c4_1day').value = 152;
-                    document.getElementById('c4_2days').value = 170;
-                    document.getElementById('c4_3days').value = 210;
-                    document.getElementById('c5_1day').value = 175;
-                    document.getElementById('c5_2days').value = 190;
-                    document.getElementById('c5_3days').value = 240;
-                    console.log('Using default vans pricing');
-                }
-            } catch (error) {
-                console.error('Error loading vans pricing:', error);
+        function loadVansPricing() {
+            // Load from localStorage (will be moved to database later)
+            const saved = localStorage.getItem('vansPricing');
+            if (saved) {
+                const prices = JSON.parse(saved);
+                document.getElementById('c3_1day').value = prices.c3_1day || 112;
+                document.getElementById('c3_2days').value = prices.c3_2days || 144;
+                document.getElementById('c3_3days').value = prices.c3_3days || 180;
+                document.getElementById('c4_1day').value = prices.c4_1day || 152;
+                document.getElementById('c4_2days').value = prices.c4_2days || 170;
+                document.getElementById('c4_3days').value = prices.c4_3days || 210;
+                document.getElementById('c5_1day').value = prices.c5_1day || 175;
+                document.getElementById('c5_2days').value = prices.c5_2days || 190;
+                document.getElementById('c5_3days').value = prices.c5_3days || 240;
             }
         }
         
-        async function saveVansPricing() {
+        function saveVansPricing() {
             const prices = {
                 c3_1day: parseFloat(document.getElementById('c3_1day').value),
                 c3_2days: parseFloat(document.getElementById('c3_2days').value),
@@ -2431,24 +2413,9 @@
                 c5_3days: parseFloat(document.getElementById('c5_3days').value)
             };
             
-            try {
-                const response = await fetch('/api/save-vans-pricing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(prices)
-                });
-                
-                const result = await response.json();
-                if (result.ok) {
-                    showNotification('Commercial Vans pricing saved successfully!', 'success');
-                    console.log('💾 Vans pricing saved to PostgreSQL:', prices);
-                } else {
-                    showNotification('Error saving vans pricing: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error saving vans pricing:', error);
-                showNotification('Error saving vans pricing', 'error');
-            }
+            localStorage.setItem('vansPricing', JSON.stringify(prices));
+            showNotification('Commercial Vans pricing saved successfully!', 'success');
+            console.log('💾 Vans pricing saved:', prices);
         }
         
         function updateVansPreview() {
@@ -2497,34 +2464,13 @@
             });
         }
         
-        async function getVansPricing() {
-            // Get current vans pricing from server (used by export functions)
-            try {
-                const response = await fetch('/api/vans-pricing');
-                const result = await response.json();
-                
-                if (result.ok && result.pricing) {
-                    console.log('✅ Vans pricing loaded from PostgreSQL');
-                    return result.pricing;
-                }
-            } catch (error) {
-                console.warn('⚠️ Error fetching vans pricing from server, using defaults:', error);
+        function getVansPricing() {
+            // Get current vans pricing (used by export functions)
+            const saved = localStorage.getItem('vansPricing');
+            if (saved) {
+                return JSON.parse(saved);
             }
-            
-            // Fallback: try localStorage (compatibility)
-            try {
-                const saved = localStorage.getItem('vansPricing');
-                if (saved) {
-                    const pricing = JSON.parse(saved);
-                    console.log('✅ Vans pricing loaded from localStorage (fallback)');
-                    return pricing;
-                }
-            } catch (error) {
-                console.warn('⚠️ Error loading from localStorage:', error);
-            }
-            
-            // Default values if everything fails
-            console.log('Using default vans pricing');
+            // Default values
             return {
                 c3_1day: 112, c3_2days: 144, c3_3days: 180,
                 c4_1day: 152, c4_2days: 170, c4_3days: 210,
@@ -2535,94 +2481,69 @@
         // ===== DOWNLOAD EXCEL (ABBYCAR FORMAT) =====
         
         async function downloadAutomatedPricesExcel() {
-            // Try backend first (proper Excel format), fallback to CSV if fails
-            console.log('Generating Abbycar Excel...');
-            showNotification('Generating Excel file...', 'info');
-            
-            const location = document.getElementById('locationAuto')?.value || 'Faro';
-            const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
-            
-            // Collect prices
-            const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
-            const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
-            const prices = {};
-            
-            groups.forEach(group => {
-                prices[group] = {};
-                days.forEach(day => {
-                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
-                    if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
-                        prices[group][day] = parseFloat(inputAuto.value);
-                    }
-                });
-            });
-            
-            // Try backend with 15 second timeout (Excel generation takes time)
             try {
-                console.log('[ABBYCAR] Trying backend Excel generation...');
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                showNotification('Generating Excel file...', 'info');
                 
+                // Get location and date
+                const location = document.getElementById('locationAuto')?.value || 'Unknown';
+                const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+                
+                // Collect prices from table (only AUTO column)
+                const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+                const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+                
+                const prices = {};
+                
+                groups.forEach(group => {
+                    prices[group] = {};
+                    days.forEach(day => {
+                        const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
+                        if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                            prices[group][day] = parseFloat(inputAuto.value);
+                        }
+                    });
+                });
+                
+                console.log('📊 Collected prices:', prices);
+                
+                // Send to backend
                 const response = await fetch('/api/export-automated-prices-excel', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ location, date, prices }),
-                    signal: controller.signal
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: location,
+                        date: date,
+                        prices: prices
+                    })
                 });
                 
-                clearTimeout(timeoutId);
-                console.log('[ABBYCAR] Backend response status:', response.status);
-                
-                if (response.ok) {
-                    console.log('[ABBYCAR] Creating blob from response...');
-                    const blob = await response.blob();
-                    console.log('[ABBYCAR] Blob size:', blob.size, 'type:', blob.type);
-                    
-                    if (blob.size > 100) {
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                        saveDownloadToHistory(a.download, 'abbycar', location);
-                        console.log('[ABBYCAR] Excel downloaded successfully!');
-                        showNotification('Excel file downloaded successfully!', 'success');
-                        return;
-                    } else {
-                        console.warn('[ABBYCAR] Blob too small:', blob.size);
-                    }
-                } else {
-                    console.warn('[ABBYCAR] Response not OK:', response.status);
+                if (!response.ok) {
+                    throw new Error('Failed to generate Excel file');
                 }
+                
+                // Download file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Save to downloads history
+                saveDownloadToHistory(filename, 'abbycar', location);
+                
+                showNotification('Excel file downloaded successfully!', 'success');
+                
             } catch (error) {
-                console.warn('[ABBYCAR] Backend failed, using CSV fallback:', error.message);
+                console.error('Error downloading Excel:', error);
+                showNotification('Error generating Excel file: ' + error.message, 'error');
             }
-            
-            // Fallback: Generate CSV
-            console.log('Using CSV fallback...');
-            let csvContent = 'Group;' + days.join(';') + '\n';
-            groups.forEach(group => {
-                const rowData = [group];
-                days.forEach(day => {
-                    const val = prices[group][day];
-                    rowData.push(val ? val.toFixed(2) : '');
-                });
-                csvContent += rowData.join(';') + '\n';
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.csv`;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            saveDownloadToHistory(filename, 'abbycar', location);
-            showNotification('CSV file downloaded (Excel generation failed)', 'success');
         }
         
         // ===== HISTÓRICO =====
@@ -2691,11 +2612,9 @@
             if (tab === 'current') {
                 historyTabCurrent.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentCurrent.classList.remove('hidden');
-                loadCurrentPricesHistory();
             } else if (tab === 'automated') {
                 historyTabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentAutomated.classList.remove('hidden');
-                loadAutomatedSearchHistory();
             } else if (tab === 'downloads') {
                 historyTabDownloads.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentDownloads.classList.remove('hidden');
@@ -4465,13 +4384,13 @@
             showRemoveColumnDialog(); // Reuse same function
         }
         
-        async function downloadExcelAuto(format) {
+        function downloadExcelAuto(format) {
             if (format === 'way2rentals') {
                 exportWay2RentalsCSVFromAuto();
             } else if (format === 'website') {
-                await exportWebsiteCSVFromAuto();
+                exportWebsiteCSVFromAuto();
             } else if (format === 'abbycar') {
-                await downloadAutomatedPricesExcel();
+                downloadAutomatedPricesExcel();
             } else {
                 console.error('Unknown format:', format);
             }
@@ -4514,14 +4433,14 @@
                          document.getElementById('pickupDate')?.value;
             
             let monthName = 'NOV';
-            let filename = `WR-${startDay}-${endDay}-NOV.csv`;
+            let filename = `BROKERS-${startDay}-${endDay}-NOV.csv`;
             
             if (date) {
                 const [year, month, day] = date.split('-');
                 const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN',
                                     'JUL','AGO','SET','OUT','NOV','DEZ'];
                 monthName = monthNames[parseInt(month) - 1];
-                filename = `WR-${startDay}-${endDay}-${monthName}.csv`;
+                filename = `BROKERS-${startDay}-${endDay}-${monthName}.csv`;
             }
             
             // Build CSV content
@@ -4619,8 +4538,8 @@
             const locationAuto = document.getElementById('locationAuto').value;
             saveDownloadToHistory(filename, 'way2rentals', locationAuto);
             
-            console.log(`Way2Rentals CSV exported: ${filename}`);
-            showNotification(`Way2Rentals CSV exported: ${filename}`, 'success');
+            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
+            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
             
             // Save to database for history
             saveExportToHistory({
@@ -4638,10 +4557,6 @@
         
         async function exportWebsiteCSVFromAuto() {
             console.log('📤 Exporting Website CSV from Automated Prices...');
-            
-            // Get vans pricing from server first
-            const vansPricing = await getVansPricing();
-            console.log('✅ Vans pricing loaded:', vansPricing);
             
             // Same format as Way2Rentals
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -4666,6 +4581,9 @@
             
             // Commission: 13.66%
             const commission = 0.1366;
+            
+            // Get vans pricing
+            const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
             
             // Filename
             const locationAuto = document.getElementById('locationAuto').value;
@@ -4955,52 +4873,75 @@
             document.getElementById('historyTableContainer').classList.add('hidden');
         }
 
-        async function saveToHistory() {
+        function saveToHistory() {
             const now = new Date();
-            const location = document.getElementById('locationAuto')?.value || 'Unknown';
-            const date = document.getElementById('dateAuto')?.value || now.toISOString().split('T')[0];
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             
             const prices = {};
             let priceCount = 0;
             
             grupos.forEach(grupo => {
                 dias.forEach(day => {
-                    const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                    const inputNet = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="net"]`);
+                    const inputReal = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
                     
-                    if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                    if (inputNet && inputReal && (inputNet.value || inputReal.value)) {
                         prices[`${grupo}_${day}`] = {
-                            auto: inputAuto.value
+                            net: inputNet.value || '',
+                            real: inputReal.value || ''
                         };
                         priceCount++;
                     }
                 });
             });
             
-            // Guardar no servidor (PostgreSQL)
-            try {
-                const response = await fetch('/api/save-search-history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        location: location,
-                        date: date,
-                        prices: prices,
-                        priceCount: priceCount
-                    })
+            // Copiar automaticamente preços de grupos dependentes (C = D)
+            Object.keys(gruposCopia).forEach(grupoDestino => {
+                const grupoOrigem = gruposCopia[grupoDestino];
+                dias.forEach(day => {
+                    const keyOrigem = `${grupoOrigem}_${day}`;
+                    const keyDestino = `${grupoDestino}_${day}`;
+                    if (prices[keyOrigem]) {
+                        prices[keyDestino] = {
+                            net: prices[keyOrigem].net,
+                            real: prices[keyOrigem].real
+                        };
+                    }
                 });
-                
-                const result = await response.json();
-                if (result.ok) {
-                    console.log(`✅ Histórico guardado no servidor: ${location} - ${date} com ${priceCount} preços`);
-                } else {
-                    console.error('❌ Erro ao guardar histórico:', result.error);
+            });
+            
+            const newEntry = {
+                date: now.toISOString(),
+                grupos: grupos,
+                dias: [...dias],
+                prices: prices,
+                priceCount: priceCount
+            };
+            
+            // Carregar histórico existente do mês
+            const existingData = localStorage.getItem(`priceHistory_${monthKey}`);
+            let historyArray = [];
+            
+            if (existingData) {
+                try {
+                    const parsed = JSON.parse(existingData);
+                    // Se for array, usar; se for objeto antigo, converter
+                    historyArray = Array.isArray(parsed) ? parsed : [parsed];
+                } catch (e) {
+                    historyArray = [];
                 }
-            } catch (error) {
-                console.error('❌ Erro ao guardar histórico:', error);
             }
             
+            // Adicionar nova entrada no início
+            historyArray.unshift(newEntry);
+            
+            // Manter apenas as últimas 3
+            if (historyArray.length > 3) {
+                historyArray = historyArray.slice(0, 3);
+            }
+            
+            localStorage.setItem(`priceHistory_${monthKey}`, JSON.stringify(historyArray));
+            console.log(`Histórico guardado automaticamente: ${monthKey} com ${priceCount} preços (${historyArray.length} versões)`);
             return priceCount;
         }
 
@@ -6608,193 +6549,6 @@ Continue?`);
             
             loadCalendarScansHistory();
             showNotification('Calendar scan deleted', 'success');
-        }
-        
-        // ===== CURRENT PRICES HISTORY =====
-        
-        async function loadCurrentPricesHistory() {
-            const container = document.getElementById('historyMonthsCurrent');
-            container.innerHTML = '<div class="col-span-full text-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#009cb6] mx-auto"></div><p class="mt-2 text-gray-600">Loading...</p></div>';
-            
-            try {
-                const response = await fetch('/api/prices/history/list?type=current_prices&limit=100');
-                const data = await response.json();
-                
-                if (!data.ok || !data.history || data.history.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-12 text-gray-500">
-                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <p class="text-lg font-medium">No saved prices yet</p>
-                            <p class="text-sm mt-2">Save current prices to see history here</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                // Group by year and month
-                const groupedByMonth = {};
-                data.history.forEach(entry => {
-                    const key = `${entry.year}-${String(entry.month).padStart(2, '0')}`;
-                    const monthName = new Date(entry.year, entry.month - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-                    if (!groupedByMonth[key]) {
-                        groupedByMonth[key] = {
-                            monthName,
-                            entries: []
-                        };
-                    }
-                    groupedByMonth[key].entries.push(entry);
-                });
-                
-                // Render cards
-                container.innerHTML = Object.entries(groupedByMonth)
-                    .sort((a, b) => b[0].localeCompare(a[0])) // Sort by date desc
-                    .map(([key, data]) => `
-                        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="loadPriceHistoryDetails(${data.entries[0].id}, 'current')">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <h4 class="font-semibold text-gray-900">${data.monthName}</h4>
-                                    <p class="text-xs text-gray-500">${data.entries[0].location}</p>
-                                </div>
-                                <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                            
-                            <div class="space-y-1 text-xs text-gray-600">
-                                <div class="flex items-center justify-between">
-                                    <span>Saved:</span>
-                                    <span class="font-medium">${new Date(data.entries[0].saved_at).toLocaleDateString('pt-PT')}</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span>By:</span>
-                                    <span class="font-medium">${data.entries[0].saved_by}</span>
-                                </div>
-                                ${data.entries.length > 1 ? `
-                                <div class="mt-2 pt-2 border-t border-gray-200">
-                                    <span class="text-blue-600 font-medium">${data.entries.length} versions</span>
-                                </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `).join('');
-                
-            } catch (error) {
-                console.error('Error loading current prices history:', error);
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-12 text-red-500">
-                        <svg class="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-lg font-medium">Error loading history</p>
-                        <p class="text-sm mt-2">${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-        
-        async function loadPriceHistoryDetails(historyId, type) {
-            try {
-                const response = await fetch(`/api/prices/history/load/${historyId}`);
-                const data = await response.json();
-                
-                if (data.ok) {
-                    console.log(`Loaded ${type} prices history:`, data.data);
-                    showNotification(`Loaded ${type} prices from ${data.data.saved_at}`, 'success');
-                    // TODO: Display prices in table
-                }
-            } catch (error) {
-                console.error('Error loading price history details:', error);
-                showNotification('Error loading price history', 'error');
-            }
-        }
-        
-        // ===== AUTOMATED SEARCH HISTORY =====
-        
-        async function loadAutomatedSearchHistory() {
-            const container = document.getElementById('historyMonthsAutomated');
-            container.innerHTML = '<div class="col-span-full text-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#009cb6] mx-auto"></div><p class="mt-2 text-gray-600">Loading...</p></div>';
-            
-            try {
-                const response = await fetch('/api/search-history/list?limit=100');
-                const data = await response.json();
-                
-                if (!data.ok || !data.history || data.history.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-12 text-gray-500">
-                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                            </svg>
-                            <p class="text-lg font-medium">No automated searches yet</p>
-                            <p class="text-sm mt-2">Run an automated search to see history here</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                // Group by date
-                const groupedByDate = {};
-                data.history.forEach(search => {
-                    const date = new Date(search.search_timestamp).toLocaleDateString('pt-PT');
-                    if (!groupedByDate[date]) {
-                        groupedByDate[date] = [];
-                    }
-                    groupedByDate[date].push(search);
-                });
-                
-                // Render cards
-                container.innerHTML = Object.entries(groupedByDate).map(([date, searches]) => `
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <h4 class="font-semibold text-gray-900">${date}</h4>
-                                <p class="text-xs text-gray-500">${searches.length} search${searches.length > 1 ? 'es' : ''}</p>
-                            </div>
-                            <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            ${searches.map(search => `
-                                <div class="bg-gray-50 p-2 rounded text-xs">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="font-medium text-gray-900">${search.location}</span>
-                                        <span class="text-gray-600">${search.days} days</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-gray-600">
-                                        <div>
-                                            <span class="text-green-600">Min:</span> ${search.min_price ? search.min_price.toFixed(2) + '€' : 'N/A'}
-                                        </div>
-                                        <div>
-                                            <span class="text-blue-600">Avg:</span> ${search.avg_price ? search.avg_price.toFixed(2) + '€' : 'N/A'}
-                                        </div>
-                                        <div>
-                                            <span class="text-red-600">Max:</span> ${search.max_price ? search.max_price.toFixed(2) + '€' : 'N/A'}
-                                        </div>
-                                    </div>
-                                    <div class="mt-1 text-gray-500">
-                                        ${search.results_count} results | ${new Date(search.search_timestamp).toLocaleTimeString('pt-PT', {hour: '2-digit', minute: '2-digit'})}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `).join('');
-                
-            } catch (error) {
-                console.error('Error loading automated search history:', error);
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-12 text-red-500">
-                        <svg class="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-lg font-medium">Error loading history</p>
-                        <p class="text-sm mt-2">${error.message}</p>
-                    </div>
-                `;
-            }
         }
         
         // ===== DOWNLOADS HISTORY =====

@@ -15,7 +15,7 @@ WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [40643]
+INFO:     Started server process [42606]
 INFO:     Waiting for application startup.
 ========================================
 🚀 APP STARTUP - Rental Price Tracker
