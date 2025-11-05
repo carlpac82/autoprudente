@@ -13426,6 +13426,19 @@ async def create_damage_report(request: Request):
                     )
                 """)
                 
+                # Adicionar colunas pdf_data e pdf_filename se não existirem (para tabelas antigas)
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BLOB")
+                    logging.info("✅ Coluna pdf_data adicionada")
+                except Exception:
+                    pass  # Coluna já existe
+                
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                    logging.info("✅ Coluna pdf_filename adicionada")
+                except Exception:
+                    pass  # Coluna já existe
+                
                 import datetime
                 year = datetime.datetime.now().year
                 cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%:{year}",))
