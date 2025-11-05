@@ -103,9 +103,16 @@
     <!-- Main Content -->
     <main class="mx-auto max-w-7xl px-4 py-6">
         <!-- Page Title -->
-        <div class="mb-6">
-            <h2 class="text-2xl font-semibold text-gray-800">Relatório de Danos</h2>
-            <p class="text-sm text-gray-500 mt-1">Configurações e mapeamento de campos do PDF</p>
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-800">Relatório de Danos</h2>
+                <p class="text-sm text-gray-500 mt-1">Configurações e mapeamento de campos do PDF</p>
+            </div>
+            <button onclick="openFullscreen()" class="action-icon" title="Abrir em ecrã completo">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                </svg>
+            </button>
         </div>
 
         <!-- Mapper Section -->
@@ -553,6 +560,17 @@
 
         async function downloadCoordinates() {
             window.location.href = '/api/damage-reports/download-coordinates';
+        }
+
+        function openFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
         }
 
         function editField(fieldId) {
