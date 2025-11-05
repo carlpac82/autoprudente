@@ -13802,11 +13802,11 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                         pdf_data = await file.read()
                         
                         # Detectar número do DR do nome do ficheiro
-                        # Padrões: DR 01/2025, DR_01_2025, DR-01-2025, DR 01:2025, etc.
+                        # Padrões: DR 01/2025, DR_01_2025, DR-01-2025, DR 01:2025, DR 01/24, etc.
                         patterns = [
-                            r'DR[\s_-]*(\d+)[\s_:/-]*(\d{4})',  # DR 01/2025, DR_01_2025, DR-01-2025, DR 01:2025
-                            r'(\d+)[\s_:/-]+(\d{4})',            # 01/2025, 01_2025, 01:2025
-                            r'DR[\s_-]*(\d+)',                   # DR 01, DR_01
+                            r'DR[\s_-]*(\d+)[\s_:/-]*(\d{2,4})',  # DR 01/2025, DR 01/24, DR_01_2025, DR-01-2025, DR 01:2025
+                            r'(\d+)[\s_:/-]+(\d{2,4})',            # 01/2025, 01/24, 01_2025, 01:2025
+                            r'DR[\s_-]*(\d+)',                     # DR 01, DR_01
                         ]
                         
                         dr_number = None
@@ -13815,6 +13815,14 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                             if match:
                                 if len(match.groups()) == 2:
                                     num, year = match.groups()
+                                    # Converter ano curto (24) para ano completo (2024)
+                                    if len(year) == 2:
+                                        year_int = int(year)
+                                        # Anos 00-50 = 2000-2050, anos 51-99 = 1951-1999
+                                        if year_int <= 50:
+                                            year = f"20{year}"
+                                        else:
+                                            year = f"19{year}"
                                     dr_number = f"DR {int(num):02d}/{year}"
                                 else:
                                     num = match.group(1)
