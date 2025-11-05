@@ -10289,15 +10289,30 @@ async def get_damage_report_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("""
-                    SELECT field_id, x, y, width, height, page, field_type, template_version
-                    FROM damage_report_coordinates
-                    ORDER BY field_id
-                """)
+                rows = []
+                
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM damage_report_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM damage_report_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
                 
                 coordinates = {}
                 template_version = 1
-                for row in cursor.fetchall():
+                for row in rows:
                     field_id = row[0]
                     coordinates[field_id] = {
                         'x': row[1],
@@ -10308,6 +10323,7 @@ async def get_damage_report_coordinates(request: Request):
                     }
                     template_version = row[7] if row[7] else 1
                 
+                logging.info(f"📊 GET Coordinates: {len(coordinates)} fields")
                 return {"ok": True, "coordinates": coordinates, "version": template_version}
             finally:
                 conn.close()
@@ -10420,20 +10436,76 @@ async def regenerate_damage_report_grid(request: Request):
 
 @app.get("/api/damage-reports/download-coordinates")
 async def download_damage_report_coordinates(request: Request):
-    """Download do ficheiro de coordenadas"""
+    """Download do ficheiro de coordenadas (busca da base de dados)"""
     require_auth(request)
     
     try:
-        if os.path.exists('damage_report_coordinates.json'):
-            return FileResponse(
-                'damage_report_coordinates.json',
-                media_type='application/json',
-                filename='damage_report_coordinates.json'
-            )
-        else:
-            raise HTTPException(status_code=404, detail="Coordinates file not found")
+        import json
+        import tempfile
+        
+        # Buscar coordenadas da base de dados
+        coordinates = {}
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM damage_report_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM damage_report_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                
+                # Converter para dicionário
+                for row in rows:
+                    field_id = row[0]
+                    coordinates[field_id] = {
+                        'x': row[1],
+                        'y': row[2],
+                        'width': row[3],
+                        'height': row[4],
+                        'page': row[5],
+                        'type': row[6],
+                        'version': row[7]
+                    }
+            finally:
+                conn.close()
+        
+        if not coordinates:
+            raise HTTPException(status_code=404, detail="No coordinates found")
+        
+        # Criar ficheiro temporário
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(coordinates, f, indent=2)
+            temp_path = f.name
+        
+        logging.info(f"📥 Downloading {len(coordinates)} coordinates")
+        
+        # Retornar ficheiro e apagar após envio
+        return FileResponse(
+            temp_path,
+            media_type='application/json',
+            filename='damage_report_coordinates.json',
+            background=None  # File will be deleted after response
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error downloading coordinates: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/admin/customization/branding", response_class=HTMLResponse)
