@@ -12678,6 +12678,438 @@ async def import_config(request: Request):
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
 # ============================================================
+# DAMAGE REPORTS
+# ============================================================
+
+@app.post("/api/damage-reports/upload-template")
+async def upload_damage_report_template(request: Request, file: UploadFile = File(...)):
+    """Upload do template de Damage Report (PDF/Word)"""
+    require_auth(request)
+    
+    try:
+        contents = await file.read()
+        filename = file.filename
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS damage_report_templates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        filename TEXT NOT NULL,
+                        file_data BLOB NOT NULL,
+                        content_type TEXT,
+                        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        uploaded_by TEXT
+                    )
+                """)
+                
+                conn.execute("""
+                    INSERT INTO damage_report_templates (filename, file_data, content_type, uploaded_by)
+                    VALUES (?, ?, ?, ?)
+                """, (filename, contents, file.content_type, request.session.get('username', 'unknown')))
+                
+                conn.commit()
+                
+                return {"ok": True, "message": "Template uploaded successfully", "filename": filename}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error uploading template: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/damage-reports/extract-from-ra")
+async def extract_from_rental_agreement(request: Request, file: UploadFile = File(...)):
+    """Extrai campos do Rental Agreement PDF"""
+    require_auth(request)
+    
+    try:
+        import PyPDF2
+        import re
+        from io import BytesIO
+        
+        contents = await file.read()
+        pdf_file = BytesIO(contents)
+        reader = PyPDF2.PdfReader(pdf_file)
+        
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        
+        fields = {}
+        
+        # Número do contrato (primeira linha)
+        contract_match = re.search(r'^(\d+)', text)
+        if contract_match:
+            fields['contractNumber'] = contract_match.group(1)
+        
+        # Nome completo (após NIF)
+        name_match = re.search(r'\d{5}-\d{2}\n([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+)', text)
+        if name_match:
+            fields['clientName'] = name_match.group(1).strip()
+        
+        # Telefone (9 dígitos)
+        phone_match = re.search(r'(\d{9})\s+[A-Z0-9._%+-]+@', text)
+        if phone_match:
+            fields['clientPhone'] = phone_match.group(1)
+        
+        # Email
+        email_match = re.search(r'([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})', text, re.IGNORECASE)
+        if email_match:
+            fields['clientEmail'] = email_match.group(1).lower()
+        
+        # Matrícula
+        plate_match = re.search(r'([A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2})', text)
+        if plate_match:
+            fields['vehiclePlate'] = plate_match.group(1).replace(' ', '')
+        
+        # Modelo do veículo (antes da matrícula)
+        model_match = re.search(r'([A-Z][A-Z0-9\s]+(?:SW|AUT\.|DIESEL|HDI)?)\s+[A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2}', text)
+        if model_match:
+            fields['vehicleModel'] = model_match.group(1).strip()
+            # Extrair marca do modelo
+            brand_match = re.match(r'^([A-Z]+)', fields['vehicleModel'])
+            if brand_match:
+                fields['vehicleBrand'] = brand_match.group(1)
+        
+        # Endereço (linha 1: morada permanente)
+        address_match = re.search(r'(URBANIZAÇÃO[^\n]+|RUA[^\n]+|AVENIDA[^\n]+|TRAVESSA[^\n]+)', text, re.IGNORECASE)
+        if address_match:
+            fields['address'] = address_match.group(1).strip()
+        
+        # Cidade e Código Postal (linha 2)
+        city_postal_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+)\s+(\d{4}-\d{3})', text)
+        if city_postal_match:
+            fields['city'] = city_postal_match.group(1).strip()
+            fields['postalCode'] = city_postal_match.group(2)
+            
+            # Calcular país pelo código postal
+            postal_code = city_postal_match.group(2)
+            if postal_code.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9')):
+                fields['country'] = 'Portugal'
+            elif postal_code.startswith('0'):
+                fields['country'] = 'Espanha'
+            else:
+                fields['country'] = 'Portugal'  # Default
+        
+        # Datas (formato: DD - MM - YYYY)
+        date_pattern = r'(\d{2}\s*-\s*\d{2}\s*-\s*\d{4})'
+        dates = re.findall(date_pattern, text)
+        
+        # Filtrar datas de documentos (muito antigas ou muito futuras)
+        from datetime import datetime
+        current_year = datetime.now().year
+        rental_dates = []
+        for date_str in dates:
+            year = int(date_str.split('-')[-1].strip())
+            if current_year - 1 <= year <= current_year + 1:
+                rental_dates.append(date_str.replace(' ', ''))
+        
+        if len(rental_dates) >= 2:
+            fields['pickupDate'] = rental_dates[0]
+            fields['returnDate'] = rental_dates[1]
+        
+        # Horas (formato: HH : MM)
+        time_pattern = r'(\d{2}\s*:\s*\d{2})'
+        times = re.findall(time_pattern, text)
+        if len(times) >= 2:
+            fields['pickupTime'] = times[0].replace(' ', '')
+            fields['returnTime'] = times[1].replace(' ', '')
+        
+        # Locais
+        fields['pickupLocation'] = 'AUTO PRUDENTE'
+        fields['returnLocation'] = 'AUTO PRUDENTE'
+        
+        # Quilometragem (se existir no RA)
+        mileage_match = re.search(r'(\d{1,3}(?:\s?\d{3})*)\s*KM', text, re.IGNORECASE)
+        if mileage_match:
+            fields['mileage'] = mileage_match.group(1).replace(' ', '')
+        
+        return {"ok": True, "fields": fields}
+        
+    except Exception as e:
+        logging.error(f"Error extracting RA fields: {e}")
+        import traceback
+        return {"ok": False, "error": str(e), "traceback": traceback.format_exc()}
+
+@app.post("/api/damage-reports/create")
+async def create_damage_report(request: Request):
+    """Cria um novo Damage Report"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS damage_reports (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        dr_number TEXT UNIQUE,
+                        ra_number TEXT,
+                        contract_number TEXT,
+                        date DATE,
+                        client_name TEXT,
+                        client_email TEXT,
+                        client_phone TEXT,
+                        client_address TEXT,
+                        client_city TEXT,
+                        client_postal_code TEXT,
+                        vehicle_plate TEXT,
+                        vehicle_model TEXT,
+                        vehicle_brand TEXT,
+                        pickup_date DATETIME,
+                        pickup_location TEXT,
+                        return_date DATETIME,
+                        return_location TEXT,
+                        inspection_type TEXT,
+                        inspector_name TEXT,
+                        mileage INTEGER,
+                        fuel_level TEXT,
+                        damage_description TEXT,
+                        observations TEXT,
+                        damage_diagram_data TEXT,
+                        repair_items TEXT,
+                        total_amount REAL,
+                        status TEXT DEFAULT 'draft',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_by TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                import datetime
+                year = datetime.datetime.now().year
+                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%:{year}",))
+                count = cursor.fetchone()[0] + 1
+                dr_number = f"{count}:{year}"
+                
+                conn.execute("""
+                    INSERT INTO damage_reports (
+                        dr_number, ra_number, contract_number, date,
+                        client_name, client_email, client_phone,
+                        client_address, client_city, client_postal_code,
+                        vehicle_plate, vehicle_model, vehicle_brand,
+                        pickup_date, pickup_location, return_date, return_location,
+                        inspection_type, inspector_name, mileage, fuel_level,
+                        damage_description, observations, damage_diagram_data,
+                        created_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    dr_number,
+                    data.get('ra_number'),
+                    data.get('contractNumber'),
+                    data.get('date'),
+                    data.get('clientName'),
+                    data.get('clientEmail'),
+                    data.get('clientPhone'),
+                    data.get('address'),
+                    data.get('city'),
+                    data.get('postalCode'),
+                    data.get('vehiclePlate'),
+                    data.get('vehicleModel'),
+                    data.get('vehicleBrand'),
+                    data.get('pickupDate'),
+                    data.get('pickupLocation'),
+                    data.get('returnDate'),
+                    data.get('returnLocation'),
+                    data.get('inspectionType'),
+                    data.get('inspectorName'),
+                    data.get('mileage'),
+                    data.get('fuelLevel'),
+                    data.get('damageDescription'),
+                    data.get('observations'),
+                    data.get('damageDiagramData'),
+                    request.session.get('username', 'unknown')
+                ))
+                
+                conn.commit()
+                
+                return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error creating damage report: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/damage-reports/list")
+async def list_damage_reports(request: Request):
+    """Lista todos os Damage Reports"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT 
+                        id, dr_number, ra_number, contract_number, date,
+                        client_name, vehicle_plate, vehicle_model,
+                        status, created_at, created_by
+                    FROM damage_reports
+                    ORDER BY created_at DESC
+                """)
+                
+                reports = []
+                for row in cursor.fetchall():
+                    reports.append({
+                        'id': row[0],
+                        'dr_number': row[1],
+                        'ra_number': row[2],
+                        'contract_number': row[3],
+                        'date': row[4],
+                        'client_name': row[5],
+                        'vehicle_plate': row[6],
+                        'vehicle_model': row[7],
+                        'status': row[8],
+                        'created_at': row[9],
+                        'created_by': row[10]
+                    })
+                
+                return {"ok": True, "reports": reports}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error listing damage reports: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/damage-reports/{dr_number}")
+async def get_damage_report(request: Request, dr_number: str):
+    """Obtém um Damage Report específico"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                row = cursor.fetchone()
+                
+                if not row:
+                    return {"ok": False, "error": "Damage Report not found"}
+                
+                columns = [desc[0] for desc in cursor.description]
+                report = dict(zip(columns, row))
+                
+                return {"ok": True, "report": report}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting damage report: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/damage-reports/{dr_number}/pdf")
+async def download_damage_report_pdf(request: Request, dr_number: str):
+    """Download do Damage Report em PDF"""
+    require_auth(request)
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import cm
+        from io import BytesIO
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                row = cursor.fetchone()
+                
+                if not row:
+                    raise HTTPException(status_code=404, detail="Damage Report not found")
+                
+                columns = [desc[0] for desc in cursor.description]
+                report = dict(zip(columns, row))
+                
+                # Criar PDF
+                buffer = BytesIO()
+                p = canvas.Canvas(buffer, pagesize=A4)
+                width, height = A4
+                
+                # Header
+                p.setFont("Helvetica-Bold", 20)
+                p.drawString(2*cm, height - 2*cm, f"DAMAGE REPORT - DR {dr_number}")
+                
+                # Dados
+                y = height - 4*cm
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(2*cm, y, "DADOS DO CONTRATO")
+                y -= 0.8*cm
+                
+                p.setFont("Helvetica", 10)
+                p.drawString(2*cm, y, f"Contrato: {report.get('contract_number', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Data: {report.get('date', 'N/A')}")
+                y -= 1.2*cm
+                
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(2*cm, y, "DADOS DO CLIENTE")
+                y -= 0.8*cm
+                
+                p.setFont("Helvetica", 10)
+                p.drawString(2*cm, y, f"Nome: {report.get('client_name', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Email: {report.get('client_email', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Telefone: {report.get('client_phone', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Morada: {report.get('client_address', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Cidade: {report.get('client_city', 'N/A')} - {report.get('client_postal_code', 'N/A')}")
+                y -= 1.2*cm
+                
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(2*cm, y, "DADOS DO VEÍCULO")
+                y -= 0.8*cm
+                
+                p.setFont("Helvetica", 10)
+                p.drawString(2*cm, y, f"Matrícula: {report.get('vehicle_plate', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Modelo: {report.get('vehicle_model', 'N/A')}")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Quilometragem: {report.get('mileage', 'N/A')} km")
+                y -= 0.6*cm
+                p.drawString(2*cm, y, f"Combustível: {report.get('fuel_level', 'N/A')}")
+                y -= 1.2*cm
+                
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(2*cm, y, "DESCRIÇÃO DE DANOS")
+                y -= 0.8*cm
+                
+                p.setFont("Helvetica", 10)
+                damage_desc = report.get('damage_description', 'N/A')
+                if damage_desc and len(damage_desc) > 80:
+                    lines = [damage_desc[i:i+80] for i in range(0, len(damage_desc), 80)]
+                    for line in lines[:5]:
+                        p.drawString(2*cm, y, line)
+                        y -= 0.6*cm
+                else:
+                    p.drawString(2*cm, y, damage_desc)
+                    y -= 0.6*cm
+                
+                # Footer
+                p.setFont("Helvetica", 8)
+                p.drawString(2*cm, 2*cm, f"AUTO PRUDENTE - Gerado em {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}")
+                
+                p.showPage()
+                p.save()
+                
+                buffer.seek(0)
+                
+                return Response(
+                    content=buffer.getvalue(),
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename=DR_{dr_number}.pdf"}
+                )
+                
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================
 # EXPORT HISTORY - Way2Rentals, Abbycar, etc.
 # ============================================================
 
