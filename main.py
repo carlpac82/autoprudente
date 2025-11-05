@@ -1136,6 +1136,10 @@ class PostgreSQLConnectionWrapper:
             raise
         return self._cursor
     
+    def cursor(self):
+        """Retorna um cursor da conexão PostgreSQL"""
+        return self._conn.cursor()
+    
     def commit(self):
         return self._conn.commit()
     
