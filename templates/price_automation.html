@@ -2162,9 +2162,10 @@
         }
         
         function exportWebsiteCSV() {
-            // IGUAL AO BROKERS - CSV frontend, SEM backend, SEMPRE funciona
-            console.log('Exporting Website CSV...');
-            showNotification('Generating Website CSV...', 'info');
+            try {
+                // IGUAL AO BROKERS - CSV frontend, SEM backend, SEMPRE funciona
+                console.log('[WEBSITE] Starting export...');
+                showNotification('Generating Website CSV...', 'info');
             
             // Same format as Way2Rentals
             const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -2278,11 +2279,15 @@
             link.click();
             document.body.removeChild(link);
             
-            // Save to downloads history
-            saveDownloadToHistory(filename, 'website', location);
-            
-            console.log(`Website CSV exported: ${filename}`);
-            showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+                // Save to downloads history
+                saveDownloadToHistory(filename, 'website', location);
+                
+                console.log('[WEBSITE] CSV exported:', filename);
+                showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+            } catch (error) {
+                console.error('[WEBSITE] Export failed:', error);
+                showNotification('Error exporting Website CSV: ' + error.message, 'error');
+            }
         }
         
         async function saveExportToHistory(exportData) {
