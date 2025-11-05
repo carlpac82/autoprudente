@@ -10289,6 +10289,43 @@ async def load_automated_prices_history(request: Request):
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/prices/current/save")
+async def save_current_prices(request: Request):
+    """Guardar Preços Atuais (Current Prices) no histórico"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        location = data.get("location", "")
+        year = data.get("year")
+        month = data.get("month")
+        prices_data = data.get("prices", {})  # {grupo: {dias: price}}
+        username = request.session.get('username', 'admin')
+        
+        if not location or not year or not month or not prices_data:
+            return JSONResponse({"ok": False, "error": "Missing required fields"}, status_code=400)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Guardar na tabela price_history
+                prices_json = json.dumps(prices_data)
+                conn.execute(
+                    """
+                    INSERT INTO price_history (history_type, year, month, location, prices_data, saved_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    ('current_prices', year, month, location, prices_json, username)
+                )
+                conn.commit()
+                logging.info(f"✅ Current prices saved: {location} {year}-{month:02d} by {username}")
+                return JSONResponse({"ok": True, "message": "Current prices saved successfully"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving current prices: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # ============================================================
 # API ENDPOINTS - AI LEARNING DATA & USER SETTINGS
 # ============================================================
