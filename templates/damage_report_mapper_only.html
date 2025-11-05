@@ -194,6 +194,7 @@
         let fieldCoordinates = {};
         let canvas, ctx, scale, currentPage = 1, pdfDoc, pdfImageData;
         let isDrawing = false, startX, startY;
+        let isDragging = false, draggedField = null, dragOffsetX = 0, dragOffsetY = 0;
 
         async function loadPDFMapper() {
             canvas = document.getElementById('pdfCanvas');
@@ -228,26 +229,69 @@
 
         function onCanvasClick(e) {
             const rect = canvas.getBoundingClientRect();
-            startX = (e.clientX - rect.left) * (canvas.width / rect.width);
-            startY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Verificar se clicou numa caixa existente (para arrastar)
+            for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                if (coords.page === currentPage) {
+                    const boxX = coords.x * scale;
+                    const boxY = coords.y * scale;
+                    const boxW = coords.width * scale;
+                    const boxH = coords.height * scale;
+                    
+                    if (mouseX >= boxX && mouseX <= boxX + boxW && 
+                        mouseY >= boxY && mouseY <= boxY + boxH) {
+                        // Clicou numa caixa - modo arrastar
+                        isDragging = true;
+                        draggedField = fieldId;
+                        dragOffsetX = mouseX - boxX;
+                        dragOffsetY = mouseY - boxY;
+                        canvas.style.cursor = 'move';
+                        return;
+                    }
+                }
+            }
+            
+            // Não clicou em nenhuma caixa - modo desenhar nova
+            startX = mouseX;
+            startY = mouseY;
             isDrawing = true;
         }
 
         function onCanvasMouseMove(e) {
-            if (!isDrawing) return;
             const rect = canvas.getBoundingClientRect();
-            const currentX = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const currentY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
             
-            ctx.putImageData(pdfImageData, 0, 0);
-            redrawMappedBoxes();
-            
-            ctx.strokeStyle = '#009cb6';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+            if (isDragging && draggedField) {
+                // Arrastar caixa existente
+                const coords = fieldCoordinates[draggedField];
+                coords.x = (mouseX - dragOffsetX) / scale;
+                coords.y = (mouseY - dragOffsetY) / scale;
+                
+                ctx.putImageData(pdfImageData, 0, 0);
+                redrawMappedBoxes();
+            } else if (isDrawing) {
+                // Desenhar nova caixa
+                ctx.putImageData(pdfImageData, 0, 0);
+                redrawMappedBoxes();
+                
+                ctx.strokeStyle = '#009cb6';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(startX, startY, mouseX - startX, mouseY - startY);
+            }
         }
 
         function onCanvasMouseUp(e) {
+            if (isDragging) {
+                // Terminar arrastar
+                isDragging = false;
+                draggedField = null;
+                canvas.style.cursor = 'crosshair';
+                return;
+            }
+            
             if (!isDrawing) return;
             isDrawing = false;
             
