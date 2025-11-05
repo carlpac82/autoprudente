@@ -8794,27 +8794,14 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
 
 
 def extract_price_number(price_str: str) -> Optional[float]:
+    """
+    Extract price number from string, handling European format (1.234,56) and US format (1,234.56)
+    """
     if not price_str:
         return None
-    s = price_str.replace("\xa0", " ")
-    digits = []
-    dot_seen = False
-    comma_seen = False
-    for ch in s:
-        if ch.isdigit():
-            digits.append(ch)
-        elif ch == "." and not dot_seen:
-            digits.append(".")
-            dot_seen = True
-        elif ch == "," and not comma_seen:
-            # assume comma as decimal if dot not used
-            if not dot_seen:
-                digits.append(".")
-                comma_seen = True
-    try:
-        return float("".join(digits)) if digits else None
-    except Exception:
-        return None
+    
+    # Use _parse_amount which already handles thousands separators correctly
+    return _parse_amount(price_str)
 
 
 @app.post("/api/track-carjet")
