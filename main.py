@@ -15371,6 +15371,34 @@ async def list_notification_history(request: Request, limit: int = 50):
         logging.error(f"List notification history error: {e}")
         return _no_store_json({"ok": False, "error": str(e)}, 500)
 
+@app.get("/api/debug/photos")
+async def debug_photos():
+    """Debug endpoint to check photos in database"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Count photos
+                count_images = conn.execute("SELECT COUNT(*) FROM vehicle_images WHERE image_data IS NOT NULL").fetchone()[0]
+                count_photos = conn.execute("SELECT COUNT(*) FROM vehicle_photos WHERE photo_data IS NOT NULL").fetchone()[0]
+                
+                # Get sample photos
+                sample_images = conn.execute("SELECT vehicle_key, LENGTH(image_data) as size FROM vehicle_images ORDER BY vehicle_key LIMIT 20").fetchall()
+                sample_photos = conn.execute("SELECT vehicle_name, LENGTH(photo_data) as size FROM vehicle_photos ORDER BY vehicle_name LIMIT 20").fetchall()
+                
+                return {
+                    "ok": True,
+                    "vehicle_images_count": count_images,
+                    "vehicle_photos_count": count_photos,
+                    "sample_images": [{"key": r[0], "size": r[1]} for r in sample_images],
+                    "sample_photos": [{"name": r[0], "size": r[1]} for r in sample_photos]
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        import traceback
+        return {"ok": False, "error": str(e), "traceback": traceback.format_exc()}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
