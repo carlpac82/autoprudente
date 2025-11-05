@@ -12336,21 +12336,22 @@ async def get_vehicle_photo(vehicle_name: str):
                         base_model = base_model.replace(suffix, '')
                     base_model = base_model.strip()
                     
+                    # Build search pattern (escape % for PostgreSQL by doubling it in the pattern string)
+                    search_pattern = base_model + '%'
+                    
                     if is_sw:
                         # Se for SW, buscar APENAS outras variações SW
                         # Ex: "renault megane sw auto" busca "renault megane sw"
-                        # Use || for concatenation to avoid % in params
                         row = con.execute(
-                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? || '%' AND (vehicle_key LIKE '%sw%' OR vehicle_key LIKE '%station wagon%' OR vehicle_key LIKE '%estate%') LIMIT 1",
-                            (base_model,)
+                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND (vehicle_key LIKE ? OR vehicle_key LIKE ? OR vehicle_key LIKE ?) LIMIT 1",
+                            (search_pattern, '%sw%', '%station wagon%', '%estate%')
                         ).fetchone()
                     else:
                         # Se NÃO for SW, buscar variações NÃO-SW
                         # Ex: "renault megane auto" busca "renault megane" mas NÃO "renault megane sw"
-                        # Use || for concatenation to avoid % in params
                         row = con.execute(
-                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? || '%' AND vehicle_key NOT LIKE '%sw%' AND vehicle_key NOT LIKE '%station wagon%' AND vehicle_key NOT LIKE '%estate%' LIMIT 1",
-                            (base_model,)
+                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND vehicle_key NOT LIKE ? AND vehicle_key NOT LIKE ? AND vehicle_key NOT LIKE ? LIMIT 1",
+                            (search_pattern, '%sw%', '%station wagon%', '%estate%')
                         ).fetchone()
                 
                 if row:
