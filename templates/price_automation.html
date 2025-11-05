@@ -2612,6 +2612,7 @@
             if (tab === 'current') {
                 historyTabCurrent.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentCurrent.classList.remove('hidden');
+                loadCurrentPricesHistory();
             } else if (tab === 'automated') {
                 historyTabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentAutomated.classList.remove('hidden');
@@ -6550,6 +6551,106 @@ Continue?`);
             
             loadCalendarScansHistory();
             showNotification('Calendar scan deleted', 'success');
+        }
+        
+        // ===== CURRENT PRICES HISTORY =====
+        
+        async function loadCurrentPricesHistory() {
+            const container = document.getElementById('historyMonthsCurrent');
+            container.innerHTML = '<div class="col-span-full text-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#009cb6] mx-auto"></div><p class="mt-2 text-gray-600">Loading...</p></div>';
+            
+            try {
+                const response = await fetch('/api/prices/history/list?type=current_prices&limit=100');
+                const data = await response.json();
+                
+                if (!data.ok || !data.history || data.history.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-lg font-medium">No saved prices yet</p>
+                            <p class="text-sm mt-2">Save current prices to see history here</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Group by year and month
+                const groupedByMonth = {};
+                data.history.forEach(entry => {
+                    const key = `${entry.year}-${String(entry.month).padStart(2, '0')}`;
+                    const monthName = new Date(entry.year, entry.month - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+                    if (!groupedByMonth[key]) {
+                        groupedByMonth[key] = {
+                            monthName,
+                            entries: []
+                        };
+                    }
+                    groupedByMonth[key].entries.push(entry);
+                });
+                
+                // Render cards
+                container.innerHTML = Object.entries(groupedByMonth)
+                    .sort((a, b) => b[0].localeCompare(a[0])) // Sort by date desc
+                    .map(([key, data]) => `
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="loadPriceHistoryDetails(${data.entries[0].id}, 'current')">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">${data.monthName}</h4>
+                                    <p class="text-xs text-gray-500">${data.entries[0].location}</p>
+                                </div>
+                                <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            
+                            <div class="space-y-1 text-xs text-gray-600">
+                                <div class="flex items-center justify-between">
+                                    <span>Saved:</span>
+                                    <span class="font-medium">${new Date(data.entries[0].saved_at).toLocaleDateString('pt-PT')}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>By:</span>
+                                    <span class="font-medium">${data.entries[0].saved_by}</span>
+                                </div>
+                                ${data.entries.length > 1 ? `
+                                <div class="mt-2 pt-2 border-t border-gray-200">
+                                    <span class="text-blue-600 font-medium">${data.entries.length} versions</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                
+            } catch (error) {
+                console.error('Error loading current prices history:', error);
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-500">
+                        <svg class="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-lg font-medium">Error loading history</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadPriceHistoryDetails(historyId, type) {
+            try {
+                const response = await fetch(`/api/prices/history/load/${historyId}`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    console.log(`Loaded ${type} prices history:`, data.data);
+                    showNotification(`Loaded ${type} prices from ${data.data.saved_at}`, 'success');
+                    // TODO: Display prices in table
+                }
+            } catch (error) {
+                console.error('Error loading price history details:', error);
+                showNotification('Error loading price history', 'error');
+            }
         }
         
         // ===== AUTOMATED SEARCH HISTORY =====
