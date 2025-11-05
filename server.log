@@ -15,7 +15,7 @@ WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [42606]
+INFO:     Started server process [44695]
 INFO:     Waiting for application startup.
 ========================================
 🚀 APP STARTUP - Rental Price Tracker
@@ -28,3 +28,9 @@ INFO:     Waiting for application startup.
 ========================================
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53916 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53917 - "GET /price-automation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53916 - "GET /api/user-settings/load?user_key=default HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53917 - "GET /api/ai/learning/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53916 - "GET /api/price-automation/rules/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53917 - "GET /api/price-automation/settings/load HTTP/1.1" 200 OK

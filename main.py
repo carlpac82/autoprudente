@@ -14664,12 +14664,15 @@ async def export_automated_prices_excel(request: Request):
             ws.column_dimensions[chr(64 + col_idx)].width = 12
         
         # CRITICAL: Save workbook properly to ensure Excel format
+        print("[BACKEND] Saving workbook to BytesIO...")
         excel_file = io.BytesIO()
         wb.save(excel_file)
         excel_file.seek(0)
         
         # Verify it's actually an Excel file
         excel_bytes = excel_file.getvalue()
+        print(f"[BACKEND] Excel file size: {len(excel_bytes)} bytes")
+        
         if len(excel_bytes) < 100:
             raise Exception("Generated Excel file is too small - likely corrupted")
         
@@ -14681,6 +14684,7 @@ async def export_automated_prices_excel(request: Request):
         
         # Generate filename
         filename = f"AutomatedPrices_{location.replace(' ', '_')}_{date}.xlsx"
+        print(f"[BACKEND] Excel file ready: {filename} ({len(excel_bytes)} bytes)")
         
         # SALVAR NA BASE DE DADOS (persistente)
         try:
