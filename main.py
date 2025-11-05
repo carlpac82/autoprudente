@@ -604,8 +604,14 @@ async def startup_event():
         print(f"📊 Initializing database tables...", flush=True)
         _ensure_users_table()
         print(f"   ✅ users table created/exists", flush=True)
+        
+        # Initialize ALL other tables (price_snapshots, ai_learning_data, etc.)
+        init_db()
+        print(f"   ✅ All tables created/verified (19 tables total)", flush=True)
     except Exception as e:
         print(f"⚠️  Database initialization error: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
     
     # Fix PostgreSQL schema AFTER tables exist
     if _USE_NEW_DB and USE_POSTGRES:
@@ -1878,8 +1884,9 @@ LOCATION_CODES = {
 }
 
 def init_db():
+    """Initialize all database tables (works with both SQLite and PostgreSQL)"""
     with _db_lock:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _db_connect()  # Use _db_connect() instead of direct sqlite3.connect()
         try:
             conn.execute(
                 """
