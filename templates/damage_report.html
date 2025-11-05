@@ -2278,18 +2278,18 @@
         
         // Ver PDF de DR protegido
         function viewProtectedPDF(drNumber, hasPdf) {
-            // Usar query parameter em vez de path parameter para evitar problemas com /
+            // Usar endpoint separado com query parameter
             const endpoint = hasPdf 
-                ? `/api/damage-reports/pdf-original?dr_number=${encodeURIComponent(drNumber)}&preview=true`
+                ? `/api/damage-reports-pdf?dr_number=${encodeURIComponent(drNumber)}&preview=true`
                 : `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf?preview=true`;
             window.open(endpoint, '_blank');
         }
         
         // Download PDF de DR protegido
         function downloadProtectedPDF(drNumber, hasPdf) {
-            // Usar query parameter para evitar problemas com /
+            // Usar endpoint separado com query parameter
             const endpoint = hasPdf 
-                ? `/api/damage-reports/pdf-original?dr_number=${encodeURIComponent(drNumber)}`
+                ? `/api/damage-reports-pdf?dr_number=${encodeURIComponent(drNumber)}`
                 : `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf`;
             window.open(endpoint, '_blank');
         }

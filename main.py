@@ -15142,7 +15142,7 @@ async def preview_damage_report_pdf(request: Request):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/damage-reports/pdf-original")
+@app.get("/api/damage-reports-pdf")
 async def download_original_pdf_query(request: Request, dr_number: str, preview: bool = False):
     """Download ou preview do PDF original (via query parameter)"""
     require_auth(request)
