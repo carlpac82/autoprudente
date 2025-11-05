@@ -8998,6 +8998,29 @@ async def track_carjet(request: Request):
                             items = parse_prices(html, final_url)
                             items = normalize_and_sort(items, supplier_priority)
                             save_snapshots(name, start_dt, d, items, currency)
+                            
+                            # Save to search history
+                            try:
+                                prices = [float(item.get('price_num', 0)) for item in items if item.get('price_num')]
+                                min_price = min(prices) if prices else None
+                                max_price = max(prices) if prices else None
+                                avg_price = sum(prices) / len(prices) if prices else None
+                                
+                                save_search_to_history(
+                                    location=name,
+                                    start_date=start_dt.strftime("%Y-%m-%d"),
+                                    end_date=end_dt.strftime("%Y-%m-%d"),
+                                    days=d,
+                                    results_count=len(items),
+                                    min_price=min_price,
+                                    max_price=max_price,
+                                    avg_price=avg_price,
+                                    user=request.session.get('username', 'admin'),
+                                    search_params=f"lang={lang}, currency={currency}, time={rotated_pickup_time}"
+                                )
+                            except Exception as hist_err:
+                                logging.warning(f"Failed to save search history: {hist_err}")
+                            
                             loc_block["durations"].append({
                                 "days": d,
                                 "count": len(items),
