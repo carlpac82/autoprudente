@@ -14551,14 +14551,25 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = ?", (dr_number,))
-                row = cursor.fetchone()
+                # Usar cursor() para PostgreSQL
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                        row = cur.fetchone()
+                else:
+                    # SQLite
+                    cursor = conn.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    row = cursor.fetchone()
                 
                 if not row or not row[0]:
                     raise HTTPException(status_code=404, detail="PDF not found")
                 
                 pdf_data = row[0]
                 pdf_filename = row[1] or f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+                
+                # Converter bytes se necessário (PostgreSQL retorna memoryview)
+                if isinstance(pdf_data, memoryview):
+                    pdf_data = bytes(pdf_data)
                 
                 # Se preview=true, mostrar inline, senão download
                 disposition = "inline" if preview else "attachment"
@@ -14576,6 +14587,8 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
         raise
     except Exception as e:
         logging.error(f"Error downloading original PDF: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/damage-reports/{dr_number}/pdf")
