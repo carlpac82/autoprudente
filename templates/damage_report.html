@@ -489,12 +489,6 @@
                     </svg>
                     Preview em Tempo Real
                 </button>
-                <button class="tab-btn" onclick="switchTab('mapper')" id="mapperTab">
-                    <svg class="icon-mono" style="width: 18px; height: 18px;" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                    </svg>
-                    Mapear Campos
-                </button>
                 <button class="tab-btn" onclick="switchTab('history')" id="historyTab">
                     <svg class="icon-mono" style="width: 18px; height: 18px;" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -808,111 +802,6 @@
                     <p style="text-align: center; color: #9ca3af; padding: 60px 20px; font-size: 15px;">
                         📋 Preencha o formulário e clique em "Atualizar Preview" para ver o PDF original preenchido
                     </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab Content: Mapear Campos -->
-        <div id="mapperContent" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <svg class="icon-mono" style="width: 28px; height: 28px; color: #009cb6;" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                    </svg>
-                    <h2>Mapear Campos do PDF</h2>
-                </div>
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
-                    <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 16px;">📋 Instruções:</h3>
-                    <ol style="margin: 0 0 10px 0; padding-left: 20px; color: #78350f;">
-                        <li>Vê o campo atual destacado à direita</li>
-                        <li><strong>Arrasta</strong> uma caixa sobre a área do campo no PDF</li>
-                        <li>Para <strong>tabelas</strong>, arrasta a área completa (todas as linhas)</li>
-                        <li>As coordenadas são guardadas automaticamente</li>
-                        <li>No fim, clica "Guardar Coordenadas"</li>
-                    </ol>
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #fbbf24;">
-                        <strong style="color: #92400e; font-size: 13px;">🎨 Cores dos Campos:</strong>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; font-size: 12px;">
-                            <div><span style="color: #009cb6;">●</span> Texto simples</div>
-                            <div><span style="color: #8b5cf6;">●</span> Área de texto</div>
-                            <div><span style="color: #f59e0b;">●</span> Tabela</div>
-                            <div><span style="color: #10b981;">●</span> Diagrama</div>
-                            <div><span style="color: #ec4899;">●</span> Galeria imagens</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-                    <!-- PDF Viewer -->
-                    <div>
-                        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h3 style="margin: 0 0 5px 0; color: #1f2937;">📄 PDF com Grid de Coordenadas</h3>
-                                    <p style="margin: 0; color: #6b7280; font-size: 14px;">Arrasta para criar caixas</p>
-                                </div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <button type="button" class="btn" style="background: #6b7280; color: white; padding: 8px 12px;" onclick="previousPage()" id="prevPageBtn">
-                                        ← Anterior
-                                    </button>
-                                    <span id="pageInfo" style="font-weight: 600; color: #1f2937;">Página 1 / 2</span>
-                                    <button type="button" class="btn" style="background: #6b7280; color: white; padding: 8px 12px;" onclick="nextPage()" id="nextPageBtn">
-                                        Seguinte →
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="border: 2px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: white;">
-                            <canvas id="pdfCanvas" style="width: 100%; cursor: crosshair;"></canvas>
-                        </div>
-                        <div style="margin-top: 10px; text-align: center; color: #6b7280; font-size: 12px;">
-                            <span id="canvasInfo">Carregando PDF...</span>
-                        </div>
-                    </div>
-
-                    <!-- Campos e Coordenadas -->
-                    <div>
-                        <div style="background: #f0f9fb; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #009cb6;">
-                            <h3 style="margin: 0 0 10px 0; color: #009cb6;">📍 Selecionar Campo</h3>
-                            <select id="fieldSelector" class="form-input" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 10px;" onchange="selectFieldManually()">
-                                <option value="">-- Escolhe um campo --</option>
-                            </select>
-                            <div id="currentFieldName" style="font-size: 16px; font-weight: bold; color: #1f2937; padding: 10px; background: white; border-radius: 6px; text-align: center; margin-top: 10px;">
-                                Escolhe um campo acima
-                            </div>
-                            <div style="margin-top: 10px; text-align: center;">
-                                <span id="fieldProgress" style="color: #6b7280; font-size: 14px;">0 / 30 campos</span>
-                            </div>
-                        </div>
-
-                        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; max-height: 400px; overflow-y: auto;">
-                            <h4 style="margin: 0 0 15px 0; color: #1f2937;">✅ Campos Mapeados</h4>
-                            <div id="mappedFieldsList" style="font-size: 13px;">
-                                <!-- Lista será preenchida dinamicamente -->
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 15px; display: flex; gap: 10px; flex-direction: column;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                                <button type="button" class="btn" style="background: #3b82f6; color: white; font-size: 12px; padding: 8px;" onclick="copyLastBox()">
-                                    📋 Copiar Caixa
-                                </button>
-                                <button type="button" class="btn" style="background: #8b5cf6; color: white; font-size: 12px; padding: 8px;" onclick="pasteBox()" id="pasteBtn" disabled>
-                                    📌 Colar
-                                </button>
-                            </div>
-                            <button type="button" class="btn" style="background: #fbbf24; color: #78350f;" onclick="skipCurrentField()">
-                                ⏭️ Pular Campo
-                            </button>
-                            <button type="button" class="btn" style="background: #6b7280; color: white;" onclick="previousField()">
-                                ⬅️ Campo Anterior
-                            </button>
-                            <button type="button" class="btn btn-primary" onclick="saveFieldCoordinates()">
-                                💾 Guardar Coordenadas
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
