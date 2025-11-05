@@ -15059,15 +15059,48 @@ async def preview_damage_report_pdf(request: Request):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/damage-reports/test/{dr_number:path}")
-async def test_dr_number(dr_number: str):
-    """TESTE: Verificar como dr_number é recebido"""
-    return {
-        "received": dr_number,
-        "length": len(dr_number),
-        "repr": repr(dr_number),
-        "has_space": " " in dr_number
-    }
+@app.get("/api/damage-reports/pdf-original")
+async def download_original_pdf_query(request: Request, dr_number: str, preview: bool = False):
+    """Download ou preview do PDF original (via query parameter)"""
+    require_auth(request)
+    
+    try:
+        logging.info(f"🔍 [QUERY] Procurando PDF para DR: [{dr_number}]")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                        row = cur.fetchone()
+                else:
+                    cursor = conn.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    row = cursor.fetchone()
+                
+                if not row or not row[0]:
+                    logging.error(f"❌ DR {dr_number} não encontrado ou sem PDF")
+                    raise HTTPException(status_code=404, detail=f"PDF not found for DR {dr_number}")
+                
+                pdf_data = row[0]
+                if isinstance(pdf_data, memoryview):
+                    pdf_data = bytes(pdf_data)
+                
+                pdf_filename = row[1] or f"DR_{dr_number.replace('/', '_')}.pdf"
+                disposition = "inline" if preview else "attachment"
+                
+                return Response(
+                    content=pdf_data,
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f'{disposition}; filename="{pdf_filename}"'}
+                )
+            finally:
+                conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error downloading PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/damage-reports/{dr_number:path}/pdf-original")
 async def download_original_pdf(request: Request, dr_number: str, preview: bool = False):
