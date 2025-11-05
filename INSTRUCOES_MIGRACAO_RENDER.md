@@ -31,11 +31,43 @@ Aguardar deploy completar no Render.
 
 ### 3️⃣ **Executar Script de Migração:**
 
+**IMPORTANTE:** O script já está no repositório (foi feito commit), então já está no servidor!
+
 No Render Shell, executar:
 
 ```bash
 python migrate_all_tables_postgres.py
 ```
+
+**OU** se preferires, podes copiar e colar o script diretamente no shell:
+
+```bash
+cat > migrate_tables.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import psycopg2
+from urllib.parse import urlparse
+
+database_url = os.getenv('DATABASE_URL')
+result = urlparse(database_url)
+conn = psycopg2.connect(
+    database=result.path[1:],
+    user=result.username,
+    password=result.password,
+    host=result.hostname,
+    port=result.port
+)
+cursor = conn.cursor()
+
+# Criar todas as tabelas...
+# (ver migrate_all_tables_postgres.py para código completo)
+
+EOF
+
+python migrate_tables.py
+```
+
+**RECOMENDADO:** Usar o script que já está no repositório (primeira opção)
 
 ---
 
