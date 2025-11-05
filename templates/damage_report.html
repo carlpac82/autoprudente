@@ -271,6 +271,66 @@
             font-weight: bold;
             font-size: 13px;
         }
+        
+        .damage-detail-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+        
+        .damage-detail-row:hover {
+            border-color: #009cb6;
+            background: #f0f9fb;
+        }
+        
+        .damage-detail-number {
+            width: 40px;
+            height: 40px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+        }
+        
+        .damage-detail-input {
+            flex: 1;
+        }
+        
+        .damage-detail-input input {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .damage-detail-input input:focus {
+            outline: none;
+            border-color: #009cb6;
+            box-shadow: 0 0 0 3px rgba(0, 156, 182, 0.1);
+        }
+        
+        .damage-detail-delete {
+            flex-shrink: 0;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -283,12 +343,37 @@
                 </svg>
                 Damage Report
             </h1>
-            <button class="btn btn-secondary" onclick="window.location.href='/'">
-                <svg class="icon-mono" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                Voltar
-            </button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="document.getElementById('raUploadInput').click()" title="Upload Rental Agreement">
+                    <svg class="icon-mono" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    Upload RA
+                </button>
+                <input type="file" id="raUploadInput" accept=".pdf" style="display: none;" onchange="handleRAUpload(event)">
+                
+                <button class="btn btn-primary" onclick="previewDR()" id="previewBtn" style="display: none;" title="Visualizar Damage Report">
+                    <svg class="icon-mono" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Visualizar
+                </button>
+                
+                <button class="btn btn-success" onclick="downloadPDF()" id="downloadBtnHeader" style="display: none;" title="Download PDF">
+                    <svg class="icon-mono" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Download
+                </button>
+                
+                <button class="btn btn-secondary" onclick="window.location.href='/'">
+                    <svg class="icon-mono" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Voltar
+                </button>
+            </div>
         </div>
 
         <!-- Histórico de Damage Reports -->
@@ -481,23 +566,43 @@
                 </div>
             </div>
 
-            <!-- Descrição -->
+            <!-- Danos na Viatura -->
+            <div class="card">
+                <div class="card-header">
+                    <svg class="icon-mono" style="color: #ef4444;" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <h2>Danos na Viatura / Vehicle Damage</h2>
+                </div>
+                
+                <div id="damageDetailsContainer" style="display: none;">
+                    <p style="color: #6b7280; margin-bottom: 15px; font-size: 14px;">
+                        💡 Cada número do croqui corresponde a uma linha abaixo. Descreva o dano em detalhe.
+                    </p>
+                    <div id="damageDetailsList"></div>
+                </div>
+                
+                <div id="noDamagesMessage" style="text-align: center; padding: 30px; color: #6b7280;">
+                    <svg style="width: 48px; height: 48px; margin: 0 auto 15px; color: #d1d5db;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p style="margin: 0; font-size: 16px;">Nenhum dano marcado no croqui</p>
+                    <p style="margin: 10px 0 0 0; font-size: 14px;">Clique no croqui acima para adicionar pins de danos</p>
+                </div>
+            </div>
+
+            <!-- Observações -->
             <div class="card">
                 <div class="card-header">
                     <svg class="icon-mono" style="color: #009cb6;" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
-                    <h2>Descrição de Danos</h2>
+                    <h2>Observações Adicionais</h2>
                 </div>
                 
                 <div class="form-group">
-                    <label>Descrição Detalhada</label>
-                    <textarea id="damageDescription" name="damageDescription" placeholder="Descreva todos os danos encontrados no veículo..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Observações Adicionais</label>
-                    <textarea id="observations" name="observations" placeholder="Outras observações relevantes..."></textarea>
+                    <label>Observações</label>
+                    <textarea id="observations" name="observations" placeholder="Outras observações relevantes sobre o veículo..."></textarea>
                 </div>
             </div>
 
@@ -605,8 +710,10 @@
                     if (r.damage_description) document.getElementById('damageDescription').value = r.damage_description;
                     if (r.observations) document.getElementById('observations').value = r.observations;
                     
-                    // Mostrar botão de download
+                    // Mostrar botões
                     document.getElementById('downloadBtn').style.display = 'inline-flex';
+                    document.getElementById('downloadBtnHeader').style.display = 'inline-flex';
+                    document.getElementById('previewBtn').style.display = 'inline-flex';
                     
                     // Scroll para o formulário
                     document.getElementById('damageReportForm').scrollIntoView({ behavior: 'smooth' });
@@ -626,6 +733,161 @@
             if (currentDRNumber) {
                 downloadDRPDF(currentDRNumber);
             }
+        }
+
+        // Upload RA
+        async function handleRAUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Mostrar loading
+            const uploadBtn = event.target.previousElementSibling;
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<span style="display: flex; align-items: center; gap: 8px;"><svg class="icon-mono" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Extraindo...</span>';
+            uploadBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/damage-reports/extract-from-ra', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok && data.fields) {
+                    const fields = data.fields;
+                    if (fields.contractNumber) document.getElementById('contractNumber').value = fields.contractNumber;
+                    if (fields.clientName) document.getElementById('clientName').value = fields.clientName;
+                    if (fields.clientEmail) document.getElementById('clientEmail').value = fields.clientEmail;
+                    if (fields.clientPhone) document.getElementById('clientPhone').value = fields.clientPhone;
+                    if (fields.vehiclePlate) document.getElementById('vehiclePlate').value = fields.vehiclePlate;
+                    if (fields.vehicleModel) document.getElementById('vehicleModel').value = fields.vehicleModel;
+                    if (fields.vehicleBrand) document.getElementById('vehicleBrand').value = fields.vehicleBrand;
+                    if (fields.address) document.getElementById('address').value = fields.address;
+                    if (fields.city) document.getElementById('city').value = fields.city;
+                    if (fields.postalCode) document.getElementById('postalCode').value = fields.postalCode;
+                    if (fields.country) document.getElementById('country').value = fields.country;
+                    if (fields.mileage) document.getElementById('mileage').value = fields.mileage;
+                    if (fields.pickupDate) {
+                        const parts = fields.pickupDate.split('-');
+                        document.getElementById('pickupDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                    if (fields.returnDate) {
+                        const parts = fields.returnDate.split('-');
+                        document.getElementById('returnDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                    if (fields.pickupTime) document.getElementById('pickupTime').value = fields.pickupTime;
+                    if (fields.returnTime) document.getElementById('returnTime').value = fields.returnTime;
+                    if (fields.pickupLocation) document.getElementById('pickupLocation').value = fields.pickupLocation;
+                    if (fields.returnLocation) document.getElementById('returnLocation').value = fields.returnLocation;
+                    
+                    alert('✅ Dados extraídos com sucesso do Rental Agreement!');
+                    
+                    // Scroll para o formulário
+                    document.getElementById('damageReportForm').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('❌ Erro ao extrair dados: ' + (data.error || 'Desconhecido'));
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao fazer upload');
+            } finally {
+                uploadBtn.innerHTML = originalText;
+                uploadBtn.disabled = false;
+                event.target.value = '';
+            }
+        }
+
+        // Preview do DR
+        function previewDR() {
+            if (!currentDRNumber) {
+                alert('⚠️ Guarde o Damage Report primeiro para poder visualizá-lo');
+                return;
+            }
+            
+            // Criar modal de preview
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;';
+            
+            const content = document.createElement('div');
+            content.style.cssText = 'background: white; border-radius: 12px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 30px; position: relative;';
+            
+            // Botão fechar
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.style.cssText = 'position: absolute; top: 15px; right: 15px; background: #ef4444; color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 20px; font-weight: bold;';
+            closeBtn.onclick = () => modal.remove();
+            
+            // Conteúdo do preview
+            const formData = new FormData(document.getElementById('damageReportForm'));
+            const data = Object.fromEntries(formData);
+            
+            content.innerHTML = `
+                <h2 style="color: #009cb6; margin: 0 0 20px 0; padding-right: 40px;">📄 Preview - DR ${currentDRNumber}</h2>
+                
+                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">📋 Dados do Contrato</h3>
+                    <p><strong>Contrato:</strong> ${data.contractNumber || 'N/A'}</p>
+                    <p><strong>Data:</strong> ${data.date || 'N/A'}</p>
+                </div>
+                
+                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">👤 Dados do Cliente</h3>
+                    <p><strong>Nome:</strong> ${data.clientName || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${data.clientEmail || 'N/A'}</p>
+                    <p><strong>Telefone:</strong> ${data.clientPhone || 'N/A'}</p>
+                    <p><strong>Morada:</strong> ${data.address || 'N/A'}</p>
+                    <p><strong>Cidade:</strong> ${data.city || 'N/A'} - ${data.postalCode || 'N/A'}</p>
+                    <p><strong>País:</strong> ${data.country || 'N/A'}</p>
+                </div>
+                
+                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">🚗 Dados do Veículo</h3>
+                    <p><strong>Matrícula:</strong> ${data.vehiclePlate || 'N/A'}</p>
+                    <p><strong>Modelo:</strong> ${data.vehicleModel || 'N/A'}</p>
+                    <p><strong>Marca:</strong> ${data.vehicleBrand || 'N/A'}</p>
+                    <p><strong>Quilometragem:</strong> ${data.mileage || 'N/A'} km</p>
+                    <p><strong>Combustível:</strong> ${data.fuelLevel || 'N/A'}</p>
+                </div>
+                
+                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">📅 Levantamento e Devolução</h3>
+                    <p><strong>Levantamento:</strong> ${data.pickupDate || 'N/A'} às ${data.pickupTime || 'N/A'}</p>
+                    <p><strong>Local:</strong> ${data.pickupLocation || 'N/A'}</p>
+                    <p><strong>Devolução:</strong> ${data.returnDate || 'N/A'} às ${data.returnTime || 'N/A'}</p>
+                    <p><strong>Local:</strong> ${data.returnLocation || 'N/A'}</p>
+                </div>
+                
+                ${damages.length > 0 ? `
+                <div style="border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #ef4444; margin: 0 0 15px 0; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">⚠️ Danos Registados</h3>
+                    ${damages.sort((a, b) => a.number - b.number).map(d => `
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <div style="width: 30px; height: 30px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">${d.number}</div>
+                            <p style="margin: 0;">${d.description || 'Sem descrição'}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                ` : '<p style="text-align: center; color: #6b7280; padding: 20px;">Nenhum dano registado</p>'}
+                
+                ${data.observations ? `
+                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px;">
+                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">📝 Observações</h3>
+                    <p>${data.observations}</p>
+                </div>
+                ` : ''}
+            `;
+            
+            content.insertBefore(closeBtn, content.firstChild);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
         }
 
         // Adicionar pin de dano
@@ -680,6 +942,7 @@
             
             if (damages.length === 0) {
                 list.style.display = 'none';
+                updateDamageDetails();
                 return;
             }
             
@@ -695,6 +958,58 @@
                     </button>
                 </div>
             `).join('');
+            
+            updateDamageDetails();
+        }
+        
+        // Atualizar campos de descrição de danos
+        function updateDamageDetails() {
+            const container = document.getElementById('damageDetailsContainer');
+            const detailsList = document.getElementById('damageDetailsList');
+            const noMessage = document.getElementById('noDamagesMessage');
+            
+            if (damages.length === 0) {
+                container.style.display = 'none';
+                noMessage.style.display = 'block';
+                return;
+            }
+            
+            container.style.display = 'block';
+            noMessage.style.display = 'none';
+            
+            // Ordenar por número
+            const sortedDamages = [...damages].sort((a, b) => a.number - b.number);
+            
+            detailsList.innerHTML = sortedDamages.map(d => `
+                <div class="damage-detail-row" id="detail-${d.id}">
+                    <div class="damage-detail-number">${d.number}</div>
+                    <div class="damage-detail-input">
+                        <input 
+                            type="text" 
+                            id="damage-desc-${d.number}" 
+                            name="damage-desc-${d.number}"
+                            placeholder="Ex: Risco no para-choques dianteiro, lado esquerdo"
+                            value="${d.description || ''}"
+                            onchange="updateDamageDescription(${d.number}, this.value)"
+                        >
+                    </div>
+                    <div class="damage-detail-delete">
+                        <button type="button" class="btn btn-secondary" style="padding: 10px 12px;" onclick="removeDamagePin('${d.id}')" title="Remover dano">
+                            <svg class="icon-mono" style="width: 20px; height: 20px;" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Atualizar descrição de um dano
+        function updateDamageDescription(damageNumber, description) {
+            const damage = damages.find(d => d.number === damageNumber);
+            if (damage) {
+                damage.description = description;
+            }
         }
 
         // Limpar formulário
@@ -715,7 +1030,17 @@
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
+            
+            // Adicionar dados dos danos
             data.damageDiagramData = JSON.stringify(damages);
+            
+            // Criar descrição completa dos danos
+            const damageDescriptions = damages
+                .sort((a, b) => a.number - b.number)
+                .map(d => `${d.number}. ${d.description || 'Sem descrição'}`)
+                .join('\n');
+            
+            data.damageDescription = damageDescriptions;
             
             try {
                 const response = await fetch('/api/damage-reports/create', {
@@ -730,8 +1055,10 @@
                     currentDRNumber = result.dr_number;
                     alert(`✅ Damage Report ${result.dr_number} criado com sucesso!`);
                     
-                    // Mostrar botão de download
+                    // Mostrar botões no header e no formulário
                     document.getElementById('downloadBtn').style.display = 'inline-flex';
+                    document.getElementById('downloadBtnHeader').style.display = 'inline-flex';
+                    document.getElementById('previewBtn').style.display = 'inline-flex';
                     
                     // Recarregar histórico
                     loadHistory();
