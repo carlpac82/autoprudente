@@ -2519,15 +2519,26 @@
                 if (response.ok) {
                     const blob = await response.blob();
                     if (blob.size > 1000) {
+                        // Extract filename from Content-Disposition header
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = `ABBYCAR-${location.toUpperCase()}-01-31-NOV.xlsx`;
+                        
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                            if (filenameMatch) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+                        
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
+                        a.download = filename;
                         document.body.appendChild(a);
                         a.click();
                         window.URL.revokeObjectURL(url);
                         document.body.removeChild(a);
-                        saveDownloadToHistory(a.download, 'abbycar', location);
+                        saveDownloadToHistory(filename, 'abbycar', location);
                         showNotification('Excel file downloaded successfully!', 'success');
                         return;
                     }
@@ -2548,10 +2559,15 @@
                 csvContent += rowData.join(';') + '\n';
             });
             
+            // Generate filename: ABBYCAR-LOCATION-01-31-MONTH.csv
+            const dateObj = new Date(date);
+            const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+            const monthName = monthNames[dateObj.getMonth()];
+            const filename = `ABBYCAR-${location.toUpperCase()}-01-31-${monthName}.csv`;
+            
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.csv`;
             link.download = filename;
             document.body.appendChild(link);
             link.click();
