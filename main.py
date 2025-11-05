@@ -13944,104 +13944,9 @@ def _get_next_dr_number():
             conn.close()
 
 def _ensure_damage_report_tables():
-    """Garantir que todas as tabelas do Damage Report existem"""
-    with _db_lock:
-        conn = _db_connect()
-        try:
-            # Tabela de coordenadas
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS damage_report_coordinates (
-                    field_id TEXT PRIMARY KEY,
-                    x REAL NOT NULL,
-                    y REAL NOT NULL,
-                    width REAL NOT NULL,
-                    height REAL NOT NULL,
-                    page INTEGER DEFAULT 1,
-                    field_type TEXT,
-                    template_version INTEGER DEFAULT 1,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Tabela de templates PDF
-            # Detectar PostgreSQL vs SQLite
-            is_postgres = hasattr(conn, 'cursor')
-            
-            if is_postgres:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS damage_report_templates (
-                            id SERIAL PRIMARY KEY,
-                            version INTEGER NOT NULL,
-                            filename TEXT NOT NULL,
-                            file_data BYTEA NOT NULL,
-                            num_pages INTEGER,
-                            uploaded_by TEXT,
-                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            is_active INTEGER DEFAULT 0,
-                            notes TEXT
-                        )
-                    """)
-            else:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS damage_report_templates (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        version INTEGER NOT NULL,
-                        filename TEXT NOT NULL,
-                        file_data BLOB NOT NULL,
-                        num_pages INTEGER,
-                        uploaded_by TEXT,
-                        uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                        is_active INTEGER DEFAULT 0,
-                        notes TEXT
-                    )
-                """)
-            
-            # Tabela de histórico de mapeamentos
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS damage_report_mapping_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    template_version INTEGER NOT NULL,
-                    field_id TEXT NOT NULL,
-                    x REAL NOT NULL,
-                    y REAL NOT NULL,
-                    width REAL NOT NULL,
-                    height REAL NOT NULL,
-                    page INTEGER DEFAULT 1,
-                    field_type TEXT,
-                    mapped_by TEXT,
-                    mapped_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Tabela de configuração de numeração
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS damage_report_numbering (
-                    id INTEGER PRIMARY KEY DEFAULT 1,
-                    current_year INTEGER NOT NULL,
-                    current_number INTEGER NOT NULL,
-                    prefix TEXT DEFAULT 'DR',
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_by TEXT
-                )
-            """)
-            
-            # Inserir configuração inicial se não existir
-            cursor = conn.execute("SELECT COUNT(*) FROM damage_report_numbering")
-            if cursor.fetchone()[0] == 0:
-                from datetime import datetime
-                current_year = datetime.now().year
-                conn.execute("""
-                    INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                    VALUES (1, ?, 40, 'DR')
-                """, (current_year,))
-            
-            conn.commit()
-            logging.info("✅ Tabelas do Damage Report verificadas/criadas")
-        except Exception as e:
-            logging.error(f"Error creating damage report tables: {e}")
-        finally:
-            conn.close()
+    """DEPRECATED - usar _ensure_damage_reports_tables() no startup"""
+    # Esta função não faz nada - as tabelas são criadas no startup
+    pass
 
 @app.post("/api/damage-reports/upload-pdfs-bulk")
 async def upload_damage_reports_pdfs_bulk(request: Request):
@@ -14248,8 +14153,6 @@ async def import_damage_reports_bulk(request: Request):
         
         if not reports:
             return {"ok": False, "error": "Nenhum relatório fornecido"}
-        
-        _ensure_damage_report_tables()
         
         imported = 0
         errors = []
@@ -14831,9 +14734,6 @@ async def save_damage_report_coordinates(request: Request):
     try:
         import json
         from datetime import datetime
-        
-        # Garantir tabelas existem
-        _ensure_damage_report_tables()
         
         # Receber coordenadas
         data = await request.json()
