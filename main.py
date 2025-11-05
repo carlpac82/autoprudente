@@ -15380,7 +15380,8 @@ async def temp_upload_photo(vehicle_name: str, file: UploadFile = File(...)):
             conn = _db_connect()
             try:
                 # PostgreSQL compatible upsert
-                if _USE_NEW_DB and USE_POSTGRES:
+                use_postgres = _USE_NEW_DB and globals().get('USE_POSTGRES', False)
+                if use_postgres:
                     # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
