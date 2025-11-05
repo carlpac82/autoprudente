@@ -3,6 +3,9 @@
 ## AUTOPRUDENTE
 **Guia Completo de Utilização do Sistema**
 
+![Sistema AUTOPRUDENTE](screenshots/01_homepage.png)
+*Interface principal do sistema*
+
 ---
 
 ## 📋 ÍNDICE
@@ -42,6 +45,9 @@ Após login, verás o **Dashboard** com:
 
 ## 🔍 PESQUISA DE PREÇOS
 
+![Formulário de Pesquisa](screenshots/02_search_form.png)
+*Formulário de pesquisa - Passo a passo*
+
 ### **Pesquisa Rápida**
 
 #### **Passo 1: Selecionar Localização**
@@ -65,6 +71,9 @@ Após login, verás o **Dashboard** com:
 1. Clicar no botão **"Pesquisar"** (azul)
 2. Aguardar 20-30 segundos
 3. Resultados aparecem automaticamente
+
+![Resultados](screenshots/03_price_results.png)
+*Resultados de pesquisa com comparação de preços*
 
 ### **Interpretar Resultados**
 
@@ -91,6 +100,9 @@ D     | Audi A3           | Sixt       | 456€
 ---
 
 ## 🤖 AUTOMAÇÃO DE PREÇOS
+
+![Automação](screenshots/04_price_automation.png)
+*Interface de automação de preços*
 
 ### **1. Aceder à Automação**
 
@@ -164,6 +176,9 @@ Resultado: 190€
 2. Confirmar
 3. Todos os grupos usam mesma estratégia
 
+![Tabela Automatizada](screenshots/05_automated_prices_table.png)
+*Tabela de preços automatizados com cálculos*
+
 ### **4. Visualizar Preços Automatizados**
 
 Após configurar:
@@ -232,6 +247,9 @@ Se aparecerem veículos em **"Others - Not Parameterized"**:
 
 ## 📈 HISTÓRICO
 
+![Histórico](screenshots/06_history_tab.png)
+*Tabs de histórico com múltiplas opções*
+
 ### **1. Histórico de Preços**
 
 #### **Ver Histórico:**
@@ -249,6 +267,9 @@ Se aparecerem veículos em **"Others - Not Parameterized"**:
 1. Selecionar 2 datas
 2. Clicar **"Comparar"**
 3. Ver diferenças
+
+![Histórico de Pesquisas](screenshots/07_automated_search_history.png)
+*Histórico de pesquisas automatizadas*
 
 ### **2. Histórico de Pesquisas**
 

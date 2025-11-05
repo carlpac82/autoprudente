@@ -3,6 +3,9 @@
 ## AUTOPRUDENTE
 **Sistema de Gestão de Preços de Aluguer de Viaturas**
 
+![Homepage](screenshots/01_homepage.png)
+*Dashboard principal do sistema*
+
 ---
 
 ## 📋 ÍNDICE
@@ -35,6 +38,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 
 ## 🔍 PESQUISA DE PREÇOS
 
+![Formulário de Pesquisa](screenshots/02_search_form.png)
+*Formulário de pesquisa com múltiplas opções*
+
 ### **1. Pesquisa Manual**
 
 **Funcionalidade:**
@@ -42,6 +48,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 - Suporte para múltiplas localizações (Faro, Albufeira)
 - Períodos personalizáveis (1-90 dias)
 - Visualização em tempo real
+
+![Resultados de Preços](screenshots/03_price_results.png)
+*Resultados de pesquisa com comparação de preços*
 
 **Características:**
 - 🌍 **Multi-idioma**: Suporte para 7 idiomas (PT, EN, FR, ES, DE, IT, NL)
@@ -67,6 +76,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 
 ## 🤖 AUTOMAÇÃO DE PREÇOS
 
+![Automação de Preços](screenshots/04_price_automation.png)
+*Interface de automação de preços*
+
 ### **1. Estratégias de Pricing**
 
 #### **Follow Lowest (Seguir Mais Baixo)**
@@ -88,6 +100,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 - Preço fixo por período
 - Útil para promoções
 
+![Tabela de Preços Automatizados](screenshots/05_automated_prices_table.png)
+*Tabela com preços automatizados por grupo*
+
 ### **2. Configuração Avançada**
 
 **Por Grupo:**
@@ -108,6 +123,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 ---
 
 ## 📊 GESTÃO DE GRUPOS
+
+![Gestão de Grupos](screenshots/09_groups_management.png)
+*Interface de gestão de grupos de veículos*
 
 ### **1. Grupos de Veículos**
 
@@ -141,6 +159,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 
 ## 📈 HISTÓRICO E ANÁLISE
 
+![Histórico](screenshots/06_history_tab.png)
+*Tabs de histórico: Preços Atuais, Automatizados, Downloads, Scans*
+
 ### **1. Histórico de Preços**
 
 **Funcionalidade:**
@@ -154,6 +175,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 - 🔍 **Filtros avançados**: Por localização, grupo, período
 - 📊 **Gráficos**: Visualização de evolução
 - 💾 **Versionamento**: Múltiplas versões guardadas
+
+![Histórico de Pesquisas](screenshots/07_automated_search_history.png)
+*Histórico de pesquisas automatizadas com estatísticas*
 
 ### **2. Histórico de Pesquisas**
 
@@ -180,6 +204,9 @@ O **Rental Price Tracker** é um sistema completo de gestão e automação de pr
 ---
 
 ## 🧠 INTELIGÊNCIA ARTIFICIAL
+
+![AI Insights](screenshots/08_ai_insights.png)
+*Análise inteligente de preços com AI*
 
 ### **1. AI Learning**
 
