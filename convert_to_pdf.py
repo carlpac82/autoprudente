@@ -63,19 +63,12 @@ HTML_TEMPLATE = """
             opacity: 0.9;
         }}
         
-        /* Logo placeholder */
+        /* Logo */
         .logo {{
-            width: 150px;
-            height: 60px;
-            background: white;
-            border-radius: 8px;
+            width: 200px;
+            height: auto;
             margin: 0 auto 15px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #1e3a8a;
-            font-size: 18pt;
+            display: block;
         }}
         
         h1 {{
@@ -201,7 +194,7 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <div class="header">
-        <div class="logo">AUTOPRUDENTE</div>
+        <img src="logo_autoprudente.png" alt="AUTOPRUDENTE" class="logo">
         <h1>{title}</h1>
         <div class="subtitle">{subtitle}</div>
     </div>
@@ -225,6 +218,15 @@ def convert_markdown_to_pdf(md_file, title, subtitle):
     try:
         import markdown2
         from weasyprint import HTML, CSS
+        import base64
+        import os
+        
+        # Converter logo para base64
+        logo_base64 = ""
+        logo_path = "logo_autoprudente.png"
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as img_file:
+                logo_base64 = base64.b64encode(img_file.read()).decode('utf-8')
         
         # Ler ficheiro Markdown
         with open(md_file, 'r', encoding='utf-8') as f:
@@ -243,7 +245,13 @@ def convert_markdown_to_pdf(md_file, title, subtitle):
         )
         
         # Criar HTML completo com template
-        full_html = HTML_TEMPLATE.format(
+        # Substituir src da imagem por base64
+        template_with_logo = HTML_TEMPLATE.replace(
+            'src="logo_autoprudente.png"',
+            f'src="data:image/png;base64,{logo_base64}"' if logo_base64 else 'src=""'
+        )
+        
+        full_html = template_with_logo.format(
             title=title,
             subtitle=subtitle,
             content=html_content
