@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapeador de Campos PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f9fafb;
+            padding: 20px;
+        }
+        .mapper-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            max-width: 100%;
+        }
+        .pdf-viewer {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .controls {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        canvas {
+            width: 100%;
+            cursor: crosshair;
+            border: 1px solid #d1d5db;
+        }
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #009cb6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #008299;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        .field-selector {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .current-field {
+            background: #f0f9fb;
+            border: 2px solid #009cb6;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .current-field h3 {
+            color: #009cb6;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .mapped-list {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .mapped-item {
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .page-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mapper-container">
+        <!-- PDF Viewer -->
+        <div class="pdf-viewer">
+            <div class="page-controls">
+                <button class="btn btn-secondary" onclick="previousPage()">← Anterior</button>
+                <span id="pageInfo">Página 1 / 2</span>
+                <button class="btn btn-secondary" onclick="nextPage()">Seguinte →</button>
+            </div>
+            <canvas id="pdfCanvas"></canvas>
+            <div style="text-align: center; margin-top: 10px; color: #6b7280; font-size: 12px;">
+                <span id="canvasInfo">Carregando PDF...</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="current-field">
+                <h3>Campo Atual</h3>
+                <div id="currentFieldName" style="font-size: 18px; font-weight: bold; color: #1f2937;">
+                    Escolhe um campo
+                </div>
+                <div style="margin-top: 10px;">
+                    <span id="fieldProgress">0 / 30 campos</span>
+                </div>
+            </div>
+
+            <select id="fieldSelector" class="field-selector" onchange="selectFieldManually()">
+                <option value="">-- Escolhe um campo --</option>
+            </select>
+
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin-bottom: 10px; color: #1f2937;">Campos Mapeados</h4>
+                <div id="mappedFieldsList" class="mapped-list"></div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" onclick="saveFieldCoordinates()">💾 Guardar Coordenadas</button>
+                <button class="btn btn-secondary" onclick="skipCurrentField()">⏭️ Pular Campo</button>
+                <button class="btn btn-secondary" onclick="previousField()">⬅️ Campo Anterior</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const FIELDS_TO_MAP = [
+            { id: 'dr_number', name: 'DR Nº (topo direita)', type: 'text' },
+            { id: 'contract_number', name: 'Nº Contrato', type: 'text' },
+            { id: 'contract_date', name: 'Data Contrato', type: 'text' },
+            { id: 'customer_name', name: 'Nome Cliente', type: 'text' },
+            { id: 'customer_email', name: 'Email Cliente', type: 'text' },
+            { id: 'customer_phone', name: 'Telefone Cliente', type: 'text' },
+            { id: 'customer_address', name: 'Morada Cliente', type: 'text' },
+            { id: 'customer_city', name: 'Cidade Cliente', type: 'text' },
+            { id: 'customer_postal', name: 'Código Postal Cliente', type: 'text' },
+            { id: 'vehicle_plate', name: 'Matrícula Veículo', type: 'text' },
+            { id: 'vehicle_brand', name: 'Marca Veículo', type: 'text' },
+            { id: 'vehicle_model', name: 'Modelo Veículo', type: 'text' },
+            { id: 'vehicle_color', name: 'Cor Veículo', type: 'text' },
+            { id: 'vehicle_km', name: 'KM Veículo', type: 'text' },
+            { id: 'pickup_date', name: 'Data Recolha', type: 'text' },
+            { id: 'return_date', name: 'Data Devolução', type: 'text' },
+            { id: 'pickup_location', name: 'Local Recolha', type: 'text' },
+            { id: 'return_location', name: 'Local Devolução', type: 'text' },
+            { id: 'fuel_level_pickup', name: 'Nível Combustível (Recolha)', type: 'text' },
+            { id: 'fuel_level_return', name: 'Nível Combustível (Devolução)', type: 'text' },
+            { id: 'damage_description', name: 'Descrição Danos', type: 'textarea' },
+            { id: 'damage_table', name: 'Tabela de Danos', type: 'table' },
+            { id: 'repair_items_table', name: 'Tabela Itens Reparação', type: 'table' },
+            { id: 'total_repair_cost', name: 'Custo Total Reparação', type: 'text' },
+            { id: 'vehicle_diagram', name: 'Diagrama do Veículo', type: 'diagram' },
+            { id: 'damage_photos', name: 'Galeria de Fotos', type: 'gallery' },
+            { id: 'inspector_name', name: 'Nome Inspetor', type: 'text' },
+            { id: 'inspector_signature', name: 'Assinatura Inspetor', type: 'text' },
+            { id: 'customer_signature', name: 'Assinatura Cliente', type: 'text' },
+            { id: 'inspection_date', name: 'Data Inspeção', type: 'text' }
+        ];
+
+        let currentFieldIndex = 0;
+        let fieldCoordinates = {};
+        let canvas, ctx, scale, currentPage = 1, pdfDoc, pdfImageData;
+        let isDrawing = false, startX, startY;
+
+        async function loadPDFMapper() {
+            canvas = document.getElementById('pdfCanvas');
+            ctx = canvas.getContext('2d');
+            
+            const response = await fetch('/static/damage_report_with_grid.pdf');
+            const arrayBuffer = await response.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            await renderPage(currentPage);
+            
+            canvas.onmousedown = onCanvasClick;
+            canvas.onmousemove = onCanvasMouseMove;
+            canvas.onmouseup = onCanvasMouseUp;
+            
+            populateFieldSelector();
+            await loadExistingCoordinates();
+        }
+
+        async function renderPage(pageNum) {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2 });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            scale = viewport.scale;
+            
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            pdfImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            redrawMappedBoxes();
+            document.getElementById('canvasInfo').textContent = `Arrasta para criar caixas • Escala: ${scale}`;
+        }
+
+        function onCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            startX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            startY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            isDrawing = true;
+        }
+
+        function onCanvasMouseMove(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const currentX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const currentY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            ctx.putImageData(pdfImageData, 0, 0);
+            redrawMappedBoxes();
+            
+            ctx.strokeStyle = '#009cb6';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+        }
+
+        function onCanvasMouseUp(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            const rect = canvas.getBoundingClientRect();
+            const endX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const endY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            const field = FIELDS_TO_MAP[currentFieldIndex];
+            if (!field) return;
+            
+            fieldCoordinates[field.id] = {
+                page: currentPage,
+                x: Math.min(startX, endX) / scale,
+                y: Math.min(startY, endY) / scale,
+                width: Math.abs(endX - startX) / scale,
+                height: Math.abs(endY - startY) / scale
+            };
+            
+            updateMappedList();
+            currentFieldIndex++;
+            updateCurrentField();
+            redrawMappedBoxes();
+        }
+
+        function redrawMappedBoxes() {
+            for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                if (coords.page === currentPage) {
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(
+                        coords.x * scale,
+                        coords.y * scale,
+                        coords.width * scale,
+                        coords.height * scale
+                    );
+                }
+            }
+        }
+
+        function populateFieldSelector() {
+            const selector = document.getElementById('fieldSelector');
+            FIELDS_TO_MAP.forEach((field, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = field.name;
+                selector.appendChild(option);
+            });
+        }
+
+        function selectFieldManually() {
+            const selector = document.getElementById('fieldSelector');
+            currentFieldIndex = parseInt(selector.value) || 0;
+            updateCurrentField();
+        }
+
+        function updateCurrentField() {
+            const field = FIELDS_TO_MAP[currentFieldIndex];
+            if (field) {
+                document.getElementById('currentFieldName').textContent = field.name;
+                document.getElementById('fieldSelector').value = currentFieldIndex;
+            }
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const mapped = Object.keys(fieldCoordinates).length;
+            document.getElementById('fieldProgress').textContent = `${mapped} / ${FIELDS_TO_MAP.length} campos`;
+        }
+
+        function updateMappedList() {
+            const list = document.getElementById('mappedFieldsList');
+            list.innerHTML = '';
+            Object.keys(fieldCoordinates).forEach(fieldId => {
+                const field = FIELDS_TO_MAP.find(f => f.id === fieldId);
+                if (field) {
+                    const item = document.createElement('div');
+                    item.className = 'mapped-item';
+                    item.innerHTML = `<span>✓ ${field.name}</span>`;
+                    list.appendChild(item);
+                }
+            });
+        }
+
+        async function saveFieldCoordinates() {
+            try {
+                const response = await fetch('/api/damage-reports/save-coordinates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ coordinates: fieldCoordinates })
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    alert('Coordenadas guardadas com sucesso!');
+                    window.parent.postMessage({ type: 'coordinatesSaved' }, '*');
+                } else {
+                    alert('Erro ao guardar: ' + result.error);
+                }
+            } catch (error) {
+                alert('Erro ao guardar coordenadas');
+            }
+        }
+
+        function skipCurrentField() {
+            currentFieldIndex++;
+            updateCurrentField();
+        }
+
+        function previousField() {
+            if (currentFieldIndex > 0) {
+                currentFieldIndex--;
+                updateCurrentField();
+            }
+        }
+
+        async function loadExistingCoordinates() {
+            try {
+                const response = await fetch('/api/damage-reports/get-coordinates');
+                const data = await response.json();
+                if (data.ok && data.coordinates) {
+                    fieldCoordinates = data.coordinates;
+                    updateMappedList();
+                    updateProgress();
+                    redrawMappedBoxes();
+                }
+            } catch (error) {
+                console.error('Error loading coordinates:', error);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < pdfDoc.numPages) {
+                currentPage++;
+                renderPage(currentPage);
+                document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage(currentPage);
+                document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPDFMapper();
+            updateCurrentField();
+        });
+    </script>
+</body>
+</html>

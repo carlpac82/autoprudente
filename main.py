@@ -2916,6 +2916,18 @@ async def damage_report_page(request: Request):
         "current_user": current_user
     })
 
+@app.get("/damage-report-mapper", response_class=HTMLResponse)
+async def damage_report_mapper_page(request: Request):
+    """Página dedicada para mapeamento de campos PDF"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("damage_report_mapper_only.html", {
+        "request": request
+    })
+
 # --- Admin: environment summary and adjustment preview ---
 @app.get("/admin/env-summary")
 async def admin_env_summary(request: Request):
