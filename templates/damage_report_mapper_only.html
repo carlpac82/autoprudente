@@ -141,6 +141,12 @@
 
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button class="btn btn-primary" onclick="saveFieldCoordinates()">💾 Guardar Coordenadas</button>
+                <button class="btn btn-secondary" onclick="toggleEditMode()" id="editModeBtn" style="background: #8b5cf6;">
+                    ✏️ Modo Editar: OFF
+                </button>
+                <button class="btn btn-secondary" onclick="deleteSelectedBox()" id="deleteBtn" style="background: #ef4444; color: white;" disabled>
+                    🗑️ Eliminar Caixa
+                </button>
                 <button class="btn btn-secondary" onclick="skipCurrentField()">⏭️ Pular Campo</button>
                 <button class="btn btn-secondary" onclick="previousField()">⬅️ Campo Anterior</button>
             </div>
@@ -195,6 +201,8 @@
         let canvas, ctx, scale, currentPage = 1, pdfDoc, pdfImageData;
         let isDrawing = false, startX, startY;
         let isDragging = false, draggedField = null, dragOffsetX = 0, dragOffsetY = 0;
+        let isEditMode = false, selectedField = null;
+        let isResizing = false, resizeHandle = null, resizeStartX = 0, resizeStartY = 0;
 
         async function loadPDFMapper() {
             canvas = document.getElementById('pdfCanvas');
@@ -232,7 +240,22 @@
             const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
             
-            // Verificar se clicou numa caixa existente (para arrastar)
+            // Se em modo edição, verificar clique em handles primeiro
+            if (isEditMode && selectedField) {
+                const coords = fieldCoordinates[selectedField];
+                if (coords && coords.page === currentPage) {
+                    const handle = getHandleAtPosition(mouseX, mouseY, coords);
+                    if (handle) {
+                        isResizing = true;
+                        resizeHandle = handle;
+                        resizeStartX = mouseX;
+                        resizeStartY = mouseY;
+                        return;
+                    }
+                }
+            }
+            
+            // Verificar se clicou numa caixa existente
             for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
                 if (coords.page === currentPage) {
                     const boxX = coords.x * scale;
@@ -242,21 +265,37 @@
                     
                     if (mouseX >= boxX && mouseX <= boxX + boxW && 
                         mouseY >= boxY && mouseY <= boxY + boxH) {
-                        // Clicou numa caixa - modo arrastar
-                        isDragging = true;
-                        draggedField = fieldId;
-                        dragOffsetX = mouseX - boxX;
-                        dragOffsetY = mouseY - boxY;
-                        canvas.style.cursor = 'move';
+                        
+                        if (isEditMode) {
+                            // Modo edição - selecionar caixa
+                            selectedField = fieldId;
+                            document.getElementById('deleteBtn').disabled = false;
+                            redrawCanvas();
+                        } else {
+                            // Modo normal - arrastar caixa
+                            isDragging = true;
+                            draggedField = fieldId;
+                            dragOffsetX = mouseX - boxX;
+                            dragOffsetY = mouseY - boxY;
+                            canvas.style.cursor = 'move';
+                        }
                         return;
                     }
                 }
             }
             
-            // Não clicou em nenhuma caixa - modo desenhar nova
-            startX = mouseX;
-            startY = mouseY;
-            isDrawing = true;
+            // Não clicou em nenhuma caixa
+            if (isEditMode) {
+                // Desselecionar
+                selectedField = null;
+                document.getElementById('deleteBtn').disabled = true;
+                redrawCanvas();
+            } else {
+                // Modo desenhar nova caixa
+                startX = mouseX;
+                startY = mouseY;
+                isDrawing = true;
+            }
         }
 
         function onCanvasMouseMove(e) {
@@ -264,7 +303,37 @@
             const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
             
-            if (isDragging && draggedField) {
+            if (isResizing && selectedField) {
+                // Redimensionar caixa
+                const coords = fieldCoordinates[selectedField];
+                const deltaX = mouseX - resizeStartX;
+                const deltaY = mouseY - resizeStartY;
+                
+                const x = coords.x * scale;
+                const y = coords.y * scale;
+                const w = coords.width * scale;
+                const h = coords.height * scale;
+                
+                // Aplicar redimensionamento baseado no handle
+                if (resizeHandle.includes('l')) { // left
+                    coords.x = (x + deltaX) / scale;
+                    coords.width = (w - deltaX) / scale;
+                }
+                if (resizeHandle.includes('r')) { // right
+                    coords.width = (w + deltaX) / scale;
+                }
+                if (resizeHandle.includes('t')) { // top
+                    coords.y = (y + deltaY) / scale;
+                    coords.height = (h - deltaY) / scale;
+                }
+                if (resizeHandle.includes('b')) { // bottom
+                    coords.height = (h + deltaY) / scale;
+                }
+                
+                resizeStartX = mouseX;
+                resizeStartY = mouseY;
+                redrawCanvas();
+            } else if (isDragging && draggedField) {
                 // Arrastar caixa existente
                 const coords = fieldCoordinates[draggedField];
                 coords.x = (mouseX - dragOffsetX) / scale;
@@ -284,6 +353,13 @@
         }
 
         function onCanvasMouseUp(e) {
+            if (isResizing) {
+                // Terminar redimensionamento
+                isResizing = false;
+                resizeHandle = null;
+                return;
+            }
+            
             if (isDragging) {
                 // Terminar arrastar
                 isDragging = false;
@@ -319,14 +395,40 @@
         function redrawMappedBoxes() {
             for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
                 if (coords.page === currentPage) {
-                    ctx.strokeStyle = '#10b981';
-                    ctx.lineWidth = 2;
+                    const isSelected = selectedField === fieldId;
+                    
+                    // Desenhar caixa
+                    ctx.strokeStyle = isSelected ? '#f59e0b' : '#10b981';
+                    ctx.lineWidth = isSelected ? 3 : 2;
                     ctx.strokeRect(
                         coords.x * scale,
                         coords.y * scale,
                         coords.width * scale,
                         coords.height * scale
                     );
+                    
+                    // Se selecionada e em modo edição, desenhar handles
+                    if (isSelected && isEditMode) {
+                        const handleSize = 8;
+                        const x = coords.x * scale;
+                        const y = coords.y * scale;
+                        const w = coords.width * scale;
+                        const h = coords.height * scale;
+                        
+                        ctx.fillStyle = '#f59e0b';
+                        
+                        // 4 cantos
+                        ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize); // top-left
+                        ctx.fillRect(x + w - handleSize/2, y - handleSize/2, handleSize, handleSize); // top-right
+                        ctx.fillRect(x - handleSize/2, y + h - handleSize/2, handleSize, handleSize); // bottom-left
+                        ctx.fillRect(x + w - handleSize/2, y + h - handleSize/2, handleSize, handleSize); // bottom-right
+                        
+                        // 4 lados
+                        ctx.fillRect(x + w/2 - handleSize/2, y - handleSize/2, handleSize, handleSize); // top
+                        ctx.fillRect(x + w/2 - handleSize/2, y + h - handleSize/2, handleSize, handleSize); // bottom
+                        ctx.fillRect(x - handleSize/2, y + h/2 - handleSize/2, handleSize, handleSize); // left
+                        ctx.fillRect(x + w - handleSize/2, y + h/2 - handleSize/2, handleSize, handleSize); // right
+                    }
                 }
             }
         }
@@ -435,6 +537,63 @@
                 renderPage(currentPage);
                 document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
             }
+        }
+
+        function getHandleAtPosition(mouseX, mouseY, coords) {
+            const handleSize = 8;
+            const x = coords.x * scale;
+            const y = coords.y * scale;
+            const w = coords.width * scale;
+            const h = coords.height * scale;
+            
+            const handles = {
+                'tl': {x: x, y: y},
+                'tr': {x: x + w, y: y},
+                'bl': {x: x, y: y + h},
+                'br': {x: x + w, y: y + h},
+                't': {x: x + w/2, y: y},
+                'b': {x: x + w/2, y: y + h},
+                'l': {x: x, y: y + h/2},
+                'r': {x: x + w, y: y + h/2}
+            };
+            
+            for (const [name, pos] of Object.entries(handles)) {
+                if (Math.abs(mouseX - pos.x) <= handleSize && Math.abs(mouseY - pos.y) <= handleSize) {
+                    return name;
+                }
+            }
+            return null;
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editModeBtn');
+            btn.textContent = isEditMode ? '✏️ Modo Editar: ON' : '✏️ Modo Editar: OFF';
+            btn.style.background = isEditMode ? '#10b981' : '#8b5cf6';
+            
+            if (!isEditMode) {
+                selectedField = null;
+                document.getElementById('deleteBtn').disabled = true;
+            }
+            redrawCanvas();
+        }
+
+        function deleteSelectedBox() {
+            if (selectedField && fieldCoordinates[selectedField]) {
+                if (confirm(`Eliminar campo "${FIELDS_TO_MAP.find(f => f.id === selectedField)?.name}"?`)) {
+                    delete fieldCoordinates[selectedField];
+                    selectedField = null;
+                    document.getElementById('deleteBtn').disabled = true;
+                    updateMappedList();
+                    updateProgress();
+                    redrawCanvas();
+                }
+            }
+        }
+
+        function redrawCanvas() {
+            ctx.putImageData(pdfImageData, 0, 0);
+            redrawMappedBoxes();
         }
 
         // Initialize
