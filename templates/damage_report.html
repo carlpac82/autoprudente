@@ -1969,13 +1969,13 @@
                                         <div style="display: flex; gap: 8px; align-items: center;">
                                             ${(report.is_protected === 1 || report.is_protected === true) ? `
                                                 <!-- DR Protegido (upload) - Apenas Ver/Download (ícones) -->
-                                                <button onclick="window.open('${report.has_pdf ? '/api/damage-reports/' + encodeURIComponent(report.dr_number) + '/pdf-original?preview=true' : '/api/damage-reports/' + encodeURIComponent(report.dr_number) + '/pdf?preview=true'}', '_blank')" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Ver PDF">
+                                                <button onclick="viewProtectedPDF('${report.dr_number}', ${report.has_pdf})" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Ver PDF">
                                                     <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                                     </svg>
                                                 </button>
-                                                <button onclick="window.open('${report.has_pdf ? '/api/damage-reports/' + encodeURIComponent(report.dr_number) + '/pdf-original' : '/api/damage-reports/' + encodeURIComponent(report.dr_number) + '/pdf'}', '_blank')" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Download PDF">
+                                                <button onclick="downloadProtectedPDF('${report.dr_number}', ${report.has_pdf})" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Download PDF">
                                                     <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                     </svg>
@@ -2274,6 +2274,22 @@
                 console.error('Erro ao eliminar:', error);
                 showNotification('Erro ao eliminar DR: ' + error.message, 'error');
             }
+        }
+        
+        // Ver PDF de DR protegido
+        function viewProtectedPDF(drNumber, hasPdf) {
+            const endpoint = hasPdf 
+                ? `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf-original?preview=true`
+                : `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf?preview=true`;
+            window.open(endpoint, '_blank');
+        }
+        
+        // Download PDF de DR protegido
+        function downloadProtectedPDF(drNumber, hasPdf) {
+            const endpoint = hasPdf 
+                ? `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf-original`
+                : `/api/damage-reports/${encodeURIComponent(drNumber)}/pdf`;
+            window.open(endpoint, '_blank');
         }
         
         // Download PDF original do DR (função antiga)
