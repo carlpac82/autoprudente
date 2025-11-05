@@ -1938,6 +1938,9 @@
                         
                         // Lista simples de relatórios do ano
                         reportsByYear[year].forEach(report => {
+                            // DEBUG
+                            console.log(`DR ${report.dr_number}: is_protected =`, report.is_protected, typeof report.is_protected);
+                            
                             const protectedIcon = report.is_protected ? `
                                 <svg style="width: 16px; height: 16px; color: #f59e0b; margin-left: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Protegido">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
@@ -1964,7 +1967,7 @@
                                             </p>
                                         </div>
                                         <div style="display: flex; gap: 8px; align-items: center;">
-                                            ${report.is_protected ? `
+                                            ${(report.is_protected === 1 || report.is_protected === true) ? `
                                                 <!-- DR Protegido (upload) - Apenas Ver/Download -->
                                                 <button onclick="window.open('/api/damage-reports/${encodeURIComponent(report.dr_number)}/pdf-original?preview=true', '_blank')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Ver PDF">
                                                     <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
