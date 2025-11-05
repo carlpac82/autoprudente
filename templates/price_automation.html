@@ -1070,7 +1070,9 @@
             const robotIcon = `<svg class="w-3 h-3 inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 110-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/></svg>`;
             const aiIcon = `<svg class="w-3 h-3 inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
             
-            const headers = document.querySelectorAll('#pricesTableAuto').previousElementSibling.querySelectorAll('th');
+            const table = document.querySelector('#pricesTableAuto');
+            if (!table || !table.previousElementSibling) return;
+            const headers = table.previousElementSibling.querySelectorAll('th');
             headers.forEach(th => {
                 if (th.classList.contains('text-[#f4ad0f]') && (th.title === 'Auto (AI)' || th.title === 'AI')) {
                     if (mode === 'auto') {
@@ -2190,25 +2192,29 @@
                 c5_1day: 175, c5_2days: 190, c5_3days: 240
             };
             
-            // Filename
-            const location = document.getElementById('location').value;
-            const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
-            const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
+            // Get location and date from Price Automation form
+            const location = document.getElementById('locationAuto')?.value || 'Faro';
+            const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
             const timestamp = new Date().toISOString().slice(0, 10);
-            const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
+            const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_1-31.csv`;
             
-            // Get prices from table
+            // Get prices from Price Automation table (pricesTableAuto)
             const pricesData = {};
-            grupos.forEach(grupo => {
+            const automationGroups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+            const automationDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+            
+            automationGroups.forEach(grupo => {
                 pricesData[grupo] = {};
-                dias.forEach(day => {
-                    const cellId = `price_${grupo}_${day}`;
-                    const cell = document.getElementById(cellId);
-                    if (cell && cell.value) {
-                        pricesData[grupo][day] = parseFloat(cell.value);
+                automationDays.forEach(day => {
+                    // Get from Price Automation table
+                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                    if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                        pricesData[grupo][day] = parseFloat(inputAuto.value);
                     }
                 });
             });
+            
+            console.log('[WEBSITE] Prices data collected:', Object.keys(pricesData).length, 'groups');
             
             // Build CSV content
             let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
@@ -2230,15 +2236,18 @@
                     if (grupo === 'C3') {
                         if (days === 1) price = vansPricing.c3_1day || 112;
                         else if (days === 2) price = vansPricing.c3_2days || 144;
-                        else if (days === 3) price = vansPricing.c3_3days || 168;
+                        else if (days === 3) price = vansPricing.c3_3days || 180;
+                        else price = (vansPricing.c3_3days || 180) / 3; // Dias 4+: preço de 3 dias / 3
                     } else if (grupo === 'C4') {
-                        if (days === 1) price = vansPricing.c4_1day || 140;
-                        else if (days === 2) price = vansPricing.c4_2days || 180;
+                        if (days === 1) price = vansPricing.c4_1day || 152;
+                        else if (days === 2) price = vansPricing.c4_2days || 170;
                         else if (days === 3) price = vansPricing.c4_3days || 210;
+                        else price = (vansPricing.c4_3days || 210) / 3; // Dias 4+: preço de 3 dias / 3
                     } else if (grupo === 'C5') {
-                        if (days === 1) price = vansPricing.c5_1day || 168;
-                        else if (days === 2) price = vansPricing.c5_2days || 216;
-                        else if (days === 3) price = vansPricing.c5_3days || 252;
+                        if (days === 1) price = vansPricing.c5_1day || 175;
+                        else if (days === 2) price = vansPricing.c5_2days || 190;
+                        else if (days === 3) price = vansPricing.c5_3days || 240;
+                        else price = (vansPricing.c5_3days || 240) / 3; // Dias 4+: preço de 3 dias / 3
                     } else {
                         // Regular groups: get from table
                         if (pricesData[grupo] && pricesData[grupo][days]) {
@@ -2247,17 +2256,15 @@
                     }
                     
                     if (price !== null) {
-                        // Apply commission
-                        const netPrice = price / (1 + commission);
-                        
-                        // Apply website adjustment ONLY if NOT C3, C4, C5
+                        // Website: (preço net / dias) + 14% EXCETO C3, C4, C5
                         let finalPrice;
                         if (['C3', 'C4', 'C5'].includes(grupo)) {
-                            // C3, C4, C5: NO adjustment, just commission
-                            finalPrice = netPrice;
+                            // C3, C4, C5: preços fixos (sem divisão, sem ajuste)
+                            finalPrice = price;
                         } else {
-                            // Other groups: apply adjustment
-                            finalPrice = netPrice * (1 + websiteAdjustment / 100);
+                            // Outros grupos: dividir por dias e adicionar 14%
+                            const dailyPrice = price / days;
+                            finalPrice = dailyPrice * (1 + websiteAdjustment / 100);
                         }
                         
                         // Round to 2 decimals
@@ -2279,15 +2286,21 @@
             link.click();
             document.body.removeChild(link);
             
-                // Save to downloads history
-                saveDownloadToHistory(filename, 'website', location);
-                
-                console.log('[WEBSITE] CSV exported:', filename);
-                showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
-            } catch (error) {
-                console.error('[WEBSITE] Export failed:', error);
-                showNotification('Error exporting Website CSV: ' + error.message, 'error');
+            // Save to downloads history (if function exists)
+            try {
+                if (typeof saveDownloadToHistory === 'function') {
+                    saveDownloadToHistory(filename, 'website', location);
+                }
+            } catch (historyError) {
+                console.warn('[WEBSITE] Could not save to history:', historyError);
             }
+            
+            console.log('[WEBSITE] CSV exported:', filename);
+            showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+        } catch (error) {
+            console.error('[WEBSITE] Export failed:', error);
+            showNotification('Error exporting Website CSV: ' + error.message, 'error');
+        }
         }
         
         async function saveExportToHistory(exportData) {
@@ -2507,12 +2520,12 @@
                 });
             });
             
-            // Try backend Excel (20 second timeout)
+            // Try backend Excel (60 second timeout - Excel generation can be slow)
             try {
                 console.log('[ABBYCAR] Sending request to backend...', { location, date, priceCount: Object.keys(prices).length });
                 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 20000);
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
                 
                 const response = await fetch('/api/export-automated-prices-excel', {
                     method: 'POST',
@@ -2524,66 +2537,42 @@
                 clearTimeout(timeoutId);
                 console.log('[ABBYCAR] Response status:', response.status, response.statusText);
                 
-                if (response.ok) {
-                    const blob = await response.blob();
-                    console.log('[ABBYCAR] Blob received:', blob.size, 'bytes, type:', blob.type);
-                    
-                    if (blob.size > 1000) {
-                        // Extract filename from Content-Disposition header
-                        const contentDisposition = response.headers.get('Content-Disposition');
-                        let filename = `ABBYCAR-${location.toUpperCase()}-01-31-NOV.xlsx`;
-                        
-                        if (contentDisposition) {
-                            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                            if (filenameMatch) {
-                                filename = filenameMatch[1];
-                            }
-                        }
-                        
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                        saveDownloadToHistory(filename, 'abbycar', location);
-                        showNotification('Excel file downloaded successfully!', 'success');
-                        return;
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                console.log('[ABBYCAR] Blob received:', blob.size, 'bytes, type:', blob.type);
+                
+                if (blob.size < 1000) {
+                    throw new Error('Excel file too small - likely corrupted');
+                }
+                
+                // Extract filename from Content-Disposition header
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `ABBYCAR-${location.toUpperCase()}-01-31-NOV.xlsx`;
+                
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
                     }
                 }
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                saveDownloadToHistory(filename, 'abbycar', location);
+                showNotification('Excel file downloaded successfully!', 'success');
             } catch (error) {
-                console.error('[ABBYCAR] Backend Excel failed:', error.message, error);
+                console.error('[ABBYCAR] Excel download failed:', error.message, error);
+                showNotification('Failed to download Excel file: ' + error.message, 'error');
             }
-            
-            // Fallback: CSV
-            showNotification('Generating CSV fallback...', 'info');
-            let csvContent = 'Group;' + days.join(';') + '\n';
-            groups.forEach(group => {
-                const rowData = [group];
-                days.forEach(day => {
-                    const val = prices[group][day];
-                    rowData.push(val ? val.toFixed(2) : '');
-                });
-                csvContent += rowData.join(';') + '\n';
-            });
-            
-            // Generate filename: ABBYCAR-LOCATION-01-31-MONTH.csv
-            const dateObj = new Date(date);
-            const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-            const monthName = monthNames[dateObj.getMonth()];
-            const filename = `ABBYCAR-${location.toUpperCase()}-01-31-${monthName}.csv`;
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            saveDownloadToHistory(filename, 'abbycar', location);
-            showNotification('CSV downloaded (Excel unavailable)', 'warning');
         }
         
         // ===== HISTÓRICO =====
@@ -4596,54 +4585,52 @@
         }
         
         async function exportWebsiteCSVFromAuto() {
-            console.log(' Exporting Website CSV from Automated Prices...');
-            
-            // Same format as Way2Rentals
-            const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
-                                       'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
-                                       'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
-            
-            const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
-                                   'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
-            
-            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
-            
-            // Get website adjustment from settings
-            let websiteAdjustment = 14;
             try {
-                const response = await fetch('/admin/env-summary');
-                const settings = await response.json();
-                websiteAdjustment = parseFloat(settings.website_pct || 14);
-                console.log(` Website adjustment: ${websiteAdjustment}%`);
-            } catch (error) {
-                console.warn(' Could not fetch website adjustment, using 14%');
-            }
-            
-            // Commission: 13.66%
-            const commission = 0.1366;
-            
-            // Get vans pricing
-            const vansPricing = JSON.parse(localStorage.getItem('vansPricing') || '{}');
-            
-            // Filename
-            const locationAuto = document.getElementById('locationAuto').value;
-            const startDay = parseInt(document.getElementById('wr_start_day').value) || 1;
-            const endDay = parseInt(document.getElementById('wr_end_day').value) || 31;
-            const timestamp = new Date().toISOString().slice(0, 10);
-            const filename = `Website_${locationAuto.replace(/\s+/g, '_')}_${timestamp}_${startDay}-${endDay}.csv`;
-            
-            // Get automated prices from table
-            const pricesData = {};
-            gruposAuto.forEach(grupo => {
-                pricesData[grupo] = {};
-                diasAuto.forEach(day => {
-                    const cellId = `priceAuto_${grupo}_${day}`;
-                    const cell = document.getElementById(cellId);
-                    if (cell && cell.value) {
-                        pricesData[grupo][day] = parseFloat(cell.value);
-                    }
+                console.log('[WEBSITE] Starting export from Automated Prices...');
+                showNotification('Generating Website CSV...', 'info');
+                
+                // Same format as Way2Rentals
+                const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
+                                           'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
+                                           'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
+                
+                const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
+                                       'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
+                
+                const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+                
+                // Website adjustment: FIXO 14%
+                const websiteAdjustment = 14;
+                
+                // Vans pricing: FIXO
+                const vansPricing = {
+                    c3_1day: 112, c3_2days: 144, c3_3days: 180,
+                    c4_1day: 152, c4_2days: 170, c4_3days: 210,
+                    c5_1day: 175, c5_2days: 190, c5_3days: 240
+                };
+                
+                // Get location and date from Price Automation form
+                const location = document.getElementById('locationAuto')?.value || 'Faro';
+                const timestamp = new Date().toISOString().slice(0, 10);
+                const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_1-31.csv`;
+                
+                // Get prices from Price Automation table (pricesTableAuto)
+                const pricesData = {};
+                const automationGroups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+                const automationDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+                
+                automationGroups.forEach(grupo => {
+                    pricesData[grupo] = {};
+                    automationDays.forEach(day => {
+                        // Get from Price Automation table
+                        const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                        if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                            pricesData[grupo][day] = parseFloat(inputAuto.value);
+                        }
+                    });
                 });
-            });
+                
+                console.log('[WEBSITE] Prices data collected:', Object.keys(pricesData).length, 'groups');
             
             // Build CSV content
             let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
@@ -4666,14 +4653,17 @@
                         if (days === 1) price = vansPricing.c3_1day || 112;
                         else if (days === 2) price = vansPricing.c3_2days || 144;
                         else if (days === 3) price = vansPricing.c3_3days || 168;
+                        else price = (vansPricing.c3_3days || 168) / 3; // Dias 4+: preço de 3 dias / 3
                     } else if (grupo === 'C4') {
                         if (days === 1) price = vansPricing.c4_1day || 140;
                         else if (days === 2) price = vansPricing.c4_2days || 180;
                         else if (days === 3) price = vansPricing.c4_3days || 210;
+                        else price = (vansPricing.c4_3days || 210) / 3; // Dias 4+: preço de 3 dias / 3
                     } else if (grupo === 'C5') {
                         if (days === 1) price = vansPricing.c5_1day || 168;
                         else if (days === 2) price = vansPricing.c5_2days || 216;
                         else if (days === 3) price = vansPricing.c5_3days || 252;
+                        else price = (vansPricing.c5_3days || 252) / 3; // Dias 4+: preço de 3 dias / 3
                     } else {
                         // Regular groups: get from automated table
                         if (pricesData[grupo] && pricesData[grupo][days]) {
@@ -4682,17 +4672,15 @@
                     }
                     
                     if (price !== null) {
-                        // Apply commission
-                        const netPrice = price / (1 + commission);
-                        
-                        // Apply website adjustment ONLY if NOT C3, C4, C5
+                        // Website: (preço net / dias) + 14% EXCETO C3, C4, C5
                         let finalPrice;
                         if (['C3', 'C4', 'C5'].includes(grupo)) {
-                            // C3, C4, C5: NO adjustment, just commission
-                            finalPrice = netPrice;
+                            // C3, C4, C5: preços fixos (sem divisão, sem ajuste)
+                            finalPrice = price;
                         } else {
-                            // Other groups: apply adjustment
-                            finalPrice = netPrice * (1 + websiteAdjustment / 100);
+                            // Outros grupos: dividir por dias e adicionar 14%
+                            const dailyPrice = price / days;
+                            finalPrice = dailyPrice * (1 + websiteAdjustment / 100);
                         }
                         
                         // Round to 2 decimals
@@ -4710,13 +4698,25 @@
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             
-            // Save to downloads history
-            saveDownloadToHistory(filename, 'website', locationAuto);
+            // Save to downloads history (if function exists)
+            try {
+                if (typeof saveDownloadToHistory === 'function') {
+                    saveDownloadToHistory(filename, 'website', location);
+                }
+            } catch (historyError) {
+                console.warn('[WEBSITE] Could not save to history:', historyError);
+            }
             
-            console.log(` Website CSV exported: ${filename} (adjustment: ${websiteAdjustment}%)`);
-            showNotification(` Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+            console.log(`[WEBSITE] CSV exported: ${filename}`);
+            showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
+        } catch (error) {
+            console.error('[WEBSITE] Export failed:', error);
+            showNotification('Error exporting Website CSV: ' + error.message, 'error');
+        }
         }
         
         function renderSmartInsights(insights) {
@@ -6888,7 +6888,9 @@ Continue?`);
             const robotIcon = `<svg class="w-3 h-3 inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 110-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/></svg>`;
             const userIcon = `<svg class="w-3 h-3 inline-block" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>`;
             
-            const headers = document.querySelectorAll('#pricesTableAuto').previousElementSibling.querySelectorAll('th');
+            const table = document.querySelector('#pricesTableAuto');
+            if (!table || !table.previousElementSibling) return;
+            const headers = table.previousElementSibling.querySelectorAll('th');
             headers.forEach(th => {
                 if (th.textContent.trim() === 'Auto' && th.classList.contains('text-[#f4ad0f]')) {
                     th.innerHTML = robotIcon;

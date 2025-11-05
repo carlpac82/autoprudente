@@ -1,21 +1,10 @@
+INFO:     Will watch for changes in these directories: ['/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay']
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     Started reloader process [68525] using WatchFiles
 WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
 /Users/filipepacheco/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
   warnings.warn(
-/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:595: DeprecationWarning: 
-        on_event is deprecated, use lifespan event handlers instead.
-
-        Read more about it in the
-        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
-        
-  @app.on_event("startup")
-/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/main.py:11192: DeprecationWarning: 
-        on_event is deprecated, use lifespan event handlers instead.
-
-        Read more about it in the
-        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
-        
-  @app.on_event("startup")
-INFO:     Started server process [58361]
+INFO:     Started server process [68593]
 INFO:     Waiting for application startup.
 ========================================
 🚀 APP STARTUP - Rental Price Tracker
@@ -27,5 +16,71 @@ INFO:     Waiting for application startup.
 ✅ Default users ready (admin/admin)
 ========================================
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:56710 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61405 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61405 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61405 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61442 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61443 - "GET /price-automation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61442 - "GET /api/user-settings/load?user_key=default HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61443 - "GET /api/ai/learning/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61442 - "GET /api/price-automation/rules/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61443 - "GET /api/price-automation/settings/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61443 - "GET /price-automation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61442 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61443 - "GET /api/user-settings/load?user_key=default HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61442 - "GET /api/ai/learning/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61443 - "GET /api/price-automation/rules/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61442 - "GET /api/price-automation/settings/load HTTP/1.1" 200 OK
+[BACKEND] ========== EXPORT AUTOMATED PRICES EXCEL REQUEST RECEIVED ==========
+[BACKEND] Authentication passed
+[BACKEND] Reading request data...
+[BACKEND] Data received: 195 chars
+[BACKEND] Location: Albufeira, Date: 2025-11-05, Prices groups: 14
+[BACKEND] Loading Abbycar template...
+[BACKEND] Trying Abbycar.csv...
+[BACKEND] CSV template loaded and converted: 28 rows, 18 cols
+[BACKEND] Station code: ABF
+[BACKEND] Processing 27 SIPP codes...
+[BACKEND] Filling 27 rows with prices...
+[BACKEND] Filled 27 rows with prices
+[BACKEND] Saving workbook to BytesIO...
+[BACKEND] Excel file size: 6660 bytes
+[BACKEND] Excel file ready: ABBYCAR-ALBUFEIRA-01-31-NOV.xlsx (6660 bytes)
+[BACKEND] Skipping database save (testing)...
+[BACKEND] Sending response to frontend...
+INFO:     127.0.0.1:61443 - "POST /api/export-automated-prices-excel HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61483 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61483 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61483 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61524 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61524 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61524 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [68593]
+WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
+/Users/filipepacheco/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [68769]
+INFO:     Waiting for application startup.
+========================================
+🚀 APP STARTUP - Rental Price Tracker
+========================================
+📊 Initializing database tables...
+   ✅ users table created/exists
+   ✅ All tables created/verified (19 tables total)
+👥 Creating default users...
+✅ Default users ready (admin/admin)
+========================================
+INFO:     Application startup complete.
+INFO:     127.0.0.1:61585 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61585 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61585 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61626 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61626 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61626 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61678 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61678 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61678 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK

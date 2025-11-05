@@ -14395,12 +14395,14 @@ async def export_automated_prices_excel(request: Request):
         from datetime import datetime
         import io
         
-        print("[BACKEND] Reading request data...")
+        print("[BACKEND] Reading request data...", flush=True)
+        sys.stdout.flush()
         data = await request.json()
+        print(f"[BACKEND] Data received: {len(str(data))} chars", flush=True)
         location = data.get('location', 'Unknown')
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
-        prices = data.get('prices', {})  # { 'B1': { '1': 25.00, '2': 24.50, ... }, 'B2': {...}, ... }
-        print(f"[BACKEND] Location: {location}, Date: {date}, Prices groups: {len(prices)}")
+        prices = data.get('prices', {})
+        print(f"[BACKEND] Location: {location}, Date: {date}, Prices groups: {len(prices)}", flush=True)
         
         # Car group mapping (SIPP codes to groups)
         car_group_mapping = {
@@ -14433,56 +14435,40 @@ async def export_automated_prices_excel(request: Request):
             'LVMR': 'N'    # Large Manual (same group)
         }
         
-        # Create workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "IMPORT"
+        # Load template
+        print("[BACKEND] Loading Abbycar template...", flush=True)
+        from openpyxl import load_workbook, Workbook
+        import csv
         
-        # Styles
-        header_fill = PatternFill(start_color="009cb6", end_color="009cb6", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF", size=12)
-        header_alignment = Alignment(horizontal="center", vertical="center")
-        
-        cell_alignment = Alignment(horizontal="center", vertical="center")
-        border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
+        # Try to load CSV first (priority), fallback to XLSX
+        try:
+            print("[BACKEND] Trying Abbycar.csv...", flush=True)
+            # Create new workbook from CSV
+            wb = Workbook()
+            ws = wb.active
+            
+            with open('Abbycar.csv', 'r', encoding='utf-8') as csvfile:
+                csv_reader = csv.reader(csvfile, delimiter=';')
+                for row_idx, row in enumerate(csv_reader, start=1):
+                    for col_idx, value in enumerate(row, start=1):
+                        ws.cell(row_idx, col_idx).value = value
+            
+            print(f"[BACKEND] CSV template loaded and converted: {ws.max_row} rows, {ws.max_column} cols", flush=True)
+        except FileNotFoundError:
+            print("[BACKEND] Abbycar.csv not found, trying Abbycar.xlsx...", flush=True)
+            try:
+                wb = load_workbook('Abbycar.xlsx')
+                ws = wb.active
+                print(f"[BACKEND] XLSX template loaded: {ws.max_row} rows, {ws.max_column} cols", flush=True)
+            except FileNotFoundError:
+                print("[BACKEND] ERROR: Neither Abbycar.csv nor Abbycar.xlsx found!", flush=True)
+                raise Exception("Abbycar template not found. Please ensure Abbycar.csv or Abbycar.xlsx is in the root directory.")
         
         # Determine station code based on location
         station_code = "FAO" if "faro" in location.lower() else "ABF" if "albufeira" in location.lower() else "UNK"
+        print(f"[BACKEND] Station code: {station_code}", flush=True)
         
-        # Header row - EXACT format from original Abbycar.xlsx
-        headers = [
-            "Stations",
-            "Start Date",
-            "End Date",
-            "Group",
-            "Model Example (optional)",
-            "CURRENCY",
-            "1 day fixed",
-            "2 days fixed",
-            "3 days fixed",
-            "4 days fixed",
-            "5 days fixed",
-            "6 days fixed",
-            "7 days fixed",
-            "8-10 daily",
-            "11-12 daily",
-            "13-14 daily",
-            "15-21 daily",
-            "22-28 daily"
-        ]
-        
-        for col_idx, header in enumerate(headers, start=1):
-            cell = ws.cell(1, col_idx)
-            cell.value = header
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = header_alignment
-            cell.border = border
+        # Template already has headers and formatting - just update data rows
         
         # Map internal group codes to primary SIPP code for display
         group_to_sipp = {
@@ -14539,6 +14525,7 @@ async def export_automated_prices_excel(request: Request):
             'CFMR', 'DFMR', 'MTMR', 'CFMV', 'IWMR', 'DFMV', 'IWMV', 'CFAR', 'CGAR', 'CFAV',
             'SVMR', 'SVMD', 'SVAD', 'SVMV', 'SVAR', 'LVMD', 'LVMR'
         ]
+        print(f"[BACKEND] Processing {len(sipp_codes_order)} SIPP codes...", flush=True)
         
         # Price calculation logic based on periods
         def calculate_price_for_day(group_prices, day):
@@ -14596,55 +14583,19 @@ async def export_automated_prices_excel(request: Request):
         low_deposit_groups = list(set([car_group_mapping[sipp] for sipp in low_deposit_sipp_codes if sipp in car_group_mapping]))
         # Result: ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'J1', 'J2', 'L1', 'M1', 'M2', 'N']
         
-        # Fill data rows - EXACT format from original
+        # Fill data rows - template already has formatting, just update values
+        print(f"[BACKEND] Filling {len(sipp_codes_order)} rows with prices...", flush=True)
         row_num = 2
         for sipp_code in sipp_codes_order:
             # Get internal group from SIPP code
             internal_group = car_group_mapping.get(sipp_code, sipp_code)
-            model_example = sipp_to_model.get(sipp_code, '')
             group_prices = prices.get(internal_group, {})
             
-            # Check if this is a Low Deposit group for highlighting (by SIPP code)
+            # Check if this is a Low Deposit group
             is_low_deposit_group = sipp_code in low_deposit_sipp_codes
-            # Usar azul teal claro apenas para Low Deposit groups
-            low_deposit_fill = PatternFill(start_color="E0F7FA", end_color="E0F7FA", fill_type="solid") if is_low_deposit_group else None
             
-            # Column 1: Stations
+            # Column 1: Stations (template already has formatting)
             ws.cell(row_num, 1).value = station_code
-            ws.cell(row_num, 1).alignment = cell_alignment
-            if is_low_deposit_group:
-                ws.cell(row_num, 1).fill = low_deposit_fill
-            
-            # Column 2: Start Date (EMPTY - only filled when downloading by period)
-            ws.cell(row_num, 2).value = ''
-            ws.cell(row_num, 2).alignment = cell_alignment
-            if is_low_deposit_group:
-                ws.cell(row_num, 2).fill = low_deposit_fill
-            
-            # Column 3: End Date (EMPTY - only filled when downloading by period)
-            ws.cell(row_num, 3).value = ''
-            ws.cell(row_num, 3).alignment = cell_alignment
-            if is_low_deposit_group:
-                ws.cell(row_num, 3).fill = low_deposit_fill
-            
-            # Column 4: Group (SIPP Code)
-            ws.cell(row_num, 4).value = sipp_code
-            ws.cell(row_num, 4).alignment = cell_alignment
-            ws.cell(row_num, 4).font = Font(bold=True, color="009cb6")
-            if is_low_deposit_group:
-                ws.cell(row_num, 4).fill = low_deposit_fill
-            
-            # Column 5: Model Example (optional)
-            ws.cell(row_num, 5).value = model_example
-            ws.cell(row_num, 5).alignment = Alignment(horizontal="left", vertical="center")
-            if is_low_deposit_group:
-                ws.cell(row_num, 5).fill = low_deposit_fill
-            
-            # Column 6: CURRENCY
-            ws.cell(row_num, 6).value = "EUR"
-            ws.cell(row_num, 6).alignment = cell_alignment
-            if is_low_deposit_group:
-                ws.cell(row_num, 6).fill = low_deposit_fill
             
             # Columns 7-18: Prices (1 day fixed through 22-28 daily)
             # Map frontend days to Excel columns
@@ -14681,36 +14632,23 @@ async def export_automated_prices_excel(request: Request):
                     
                     adjusted_price = float(price) * (1 + total_adjustment / 100)
                     ws.cell(row_num, col_idx).value = adjusted_price
-                    ws.cell(row_num, col_idx).number_format = '0.00'
                 else:
                     # Leave empty if: no price OR (Low Deposit group AND disabled)
                     ws.cell(row_num, col_idx).value = ''
-                
-                ws.cell(row_num, col_idx).alignment = cell_alignment
-                if is_low_deposit_group:
-                    ws.cell(row_num, col_idx).fill = low_deposit_fill
             
             row_num += 1
         
-        # Adjust column widths
-        ws.column_dimensions['A'].width = 10   # Stations
-        ws.column_dimensions['B'].width = 12   # Start Date
-        ws.column_dimensions['C'].width = 12   # End Date
-        ws.column_dimensions['D'].width = 10   # Group
-        ws.column_dimensions['E'].width = 25   # Model Example
-        ws.column_dimensions['F'].width = 10   # CURRENCY
-        for col_idx in range(7, 19):
-            ws.column_dimensions[chr(64 + col_idx)].width = 12
+        print(f"[BACKEND] Filled {row_num - 2} rows with prices", flush=True)
         
-        # CRITICAL: Save workbook properly to ensure Excel format
-        print("[BACKEND] Saving workbook to BytesIO...")
+        # Save workbook to BytesIO
+        print("[BACKEND] Saving workbook to BytesIO...", flush=True)
         excel_file = io.BytesIO()
         wb.save(excel_file)
         excel_file.seek(0)
         
         # Verify it's actually an Excel file
         excel_bytes = excel_file.getvalue()
-        print(f"[BACKEND] Excel file size: {len(excel_bytes)} bytes")
+        print(f"[BACKEND] Excel file size: {len(excel_bytes)} bytes", flush=True)
         
         if len(excel_bytes) < 100:
             raise Exception("Generated Excel file is too small - likely corrupted")
@@ -14733,26 +14671,43 @@ async def export_automated_prices_excel(request: Request):
         
         # Filename format: ABBYCAR-LOCATION-01-31-MONTH
         filename = f"ABBYCAR-{location_name}-01-31-{month_name}.xlsx"
-        print(f"[BACKEND] Excel file ready: {filename} ({len(excel_bytes)} bytes)")
+        print(f"[BACKEND] Excel file ready: {filename} ({len(excel_bytes)} bytes)", flush=True)
         
-        # SALVAR NA BASE DE DADOS (persistente)
+        # SALVAR NA BASE DE DADOS (persistente) - com proteção
+        print("[BACKEND] Attempting to save to database...", flush=True)
         try:
-            excel_bytes = excel_file.getvalue()
-            username = request.session.get("username", "admin")
-            save_file_to_db(
-                filename=filename,
-                filepath=f"/exports/{filename}",
-                file_data=excel_bytes,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                uploaded_by=username
-            )
-            log_to_db("INFO", f"Excel export saved to DB: {filename}", "main", "export_automated_prices_excel")
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Database save timeout")
+            
+            # Set 2 second timeout
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(2)
+            
+            try:
+                excel_bytes = excel_file.getvalue()
+                username = request.session.get("username", "admin")
+                save_file_to_db(
+                    filename=filename,
+                    filepath=f"/exports/{filename}",
+                    file_data=excel_bytes,
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    uploaded_by=username
+                )
+                signal.alarm(0)  # Cancel alarm
+                log_to_db("INFO", f"Excel export saved to DB: {filename}", "main", "export_automated_prices_excel")
+                print("[BACKEND] Saved to database successfully", flush=True)
+            except TimeoutError:
+                signal.alarm(0)  # Cancel alarm
+                print("[BACKEND] Database save timeout - continuing anyway", flush=True)
         except Exception as e:
-            log_to_db("ERROR", f"Failed to save Excel to DB: {str(e)}", "main", "export_automated_prices_excel")
+            print(f"[BACKEND] Database save failed: {str(e)} - continuing anyway", flush=True)
         
         # Reset para retornar
         excel_file.seek(0)
         
+        print("[BACKEND] Sending response to frontend...", flush=True)
         from starlette.responses import Response
         return Response(
             content=excel_file.getvalue(),
