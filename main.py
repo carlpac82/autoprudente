@@ -12972,48 +12972,90 @@ async def get_vehicle_photo(vehicle_name: str):
         with _db_lock:
             con = _db_connect()
             try:
-                # Tentar buscar foto exata em vehicle_images primeiro
-                row = con.execute(
-                    "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key = ?",
-                    (vehicle_key,)
-                ).fetchone()
+                row = None
                 
-                # Se não encontrar, tentar em vehicle_photos
-                if not row:
+                # PostgreSQL or SQLite
+                if hasattr(con, 'cursor'):
+                    # PostgreSQL - usar cursor
+                    cursor = con.cursor()
+                    
+                    # Tentar buscar foto exata em vehicle_images primeiro
+                    cursor.execute(
+                        "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key = %s",
+                        (vehicle_key,)
+                    )
+                    row = cursor.fetchone()
+                    
+                    # Se não encontrar, tentar em vehicle_photos
+                    if not row:
+                        cursor.execute(
+                            "SELECT photo_data, content_type FROM vehicle_photos WHERE vehicle_name = %s",
+                            (vehicle_key,)
+                        )
+                        row = cursor.fetchone()
+                    
+                    # Se não encontrar, tentar buscar variações do mesmo modelo
+                    if not row:
+                        # Detectar se é Station Wagon (SW) - são modelos diferentes!
+                        is_sw = ' sw' in vehicle_key or 'station wagon' in vehicle_key or 'estate' in vehicle_key
+                        
+                        # Extrair modelo base (ex: "citroen c1" de "citroen c1 auto")
+                        base_model = vehicle_key
+                        for suffix in [' auto', ' automatic', ' hybrid', ' electric', ' diesel', ' 4x4', ', hybrid', ', electric', ', diesel', ', automatic']:
+                            base_model = base_model.replace(suffix, '')
+                        base_model = base_model.strip()
+                        
+                        search_pattern = base_model + '%'
+                        
+                        if is_sw:
+                            cursor.execute(
+                                "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE %s AND (vehicle_key LIKE %s OR vehicle_key LIKE %s OR vehicle_key LIKE %s) LIMIT 1",
+                                (search_pattern, '%sw%', '%station wagon%', '%estate%')
+                            )
+                            row = cursor.fetchone()
+                        else:
+                            cursor.execute(
+                                "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE %s AND vehicle_key NOT LIKE %s AND vehicle_key NOT LIKE %s AND vehicle_key NOT LIKE %s LIMIT 1",
+                                (search_pattern, '%sw%', '%station wagon%', '%estate%')
+                            )
+                            row = cursor.fetchone()
+                    
+                    cursor.close()
+                else:
+                    # SQLite - usar execute direto
+                    # Tentar buscar foto exata em vehicle_images primeiro
                     row = con.execute(
-                        "SELECT photo_data, content_type FROM vehicle_photos WHERE vehicle_name = ?",
+                        "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key = ?",
                         (vehicle_key,)
                     ).fetchone()
-                
-                # Se não encontrar, tentar buscar variações do mesmo modelo
-                if not row:
-                    # Detectar se é Station Wagon (SW) - são modelos diferentes!
-                    is_sw = ' sw' in vehicle_key or 'station wagon' in vehicle_key or 'estate' in vehicle_key
                     
-                    # Extrair modelo base (ex: "citroen c1" de "citroen c1 auto")
-                    # Remove sufixos comuns: auto, automatic, hybrid, electric, diesel, etc
-                    base_model = vehicle_key
-                    for suffix in [' auto', ' automatic', ' hybrid', ' electric', ' diesel', ' 4x4', ', hybrid', ', electric', ', diesel', ', automatic']:
-                        base_model = base_model.replace(suffix, '')
-                    base_model = base_model.strip()
-                    
-                    # Build search pattern (escape % for PostgreSQL by doubling it in the pattern string)
-                    search_pattern = base_model + '%'
-                    
-                    if is_sw:
-                        # Se for SW, buscar APENAS outras variações SW
-                        # Ex: "renault megane sw auto" busca "renault megane sw"
+                    # Se não encontrar, tentar em vehicle_photos
+                    if not row:
                         row = con.execute(
-                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND (vehicle_key LIKE ? OR vehicle_key LIKE ? OR vehicle_key LIKE ?) LIMIT 1",
-                            (search_pattern, '%sw%', '%station wagon%', '%estate%')
+                            "SELECT photo_data, content_type FROM vehicle_photos WHERE vehicle_name = ?",
+                            (vehicle_key,)
                         ).fetchone()
-                    else:
-                        # Se NÃO for SW, buscar variações NÃO-SW
-                        # Ex: "renault megane auto" busca "renault megane" mas NÃO "renault megane sw"
-                        row = con.execute(
-                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND vehicle_key NOT LIKE ? AND vehicle_key NOT LIKE ? AND vehicle_key NOT LIKE ? LIMIT 1",
-                            (search_pattern, '%sw%', '%station wagon%', '%estate%')
-                        ).fetchone()
+                    
+                    # Se não encontrar, tentar buscar variações do mesmo modelo
+                    if not row:
+                        is_sw = ' sw' in vehicle_key or 'station wagon' in vehicle_key or 'estate' in vehicle_key
+                        base_model = vehicle_key
+                        for suffix in [' auto', ' automatic', ' hybrid', ' electric', ' diesel', ' 4x4', ', hybrid', ', electric', ', diesel', ', automatic']:
+                            base_model = base_model.replace(suffix, '')
+                        base_model = base_model.strip()
+                        
+                        search_pattern = base_model + '%'
+                        
+                        if is_sw:
+                            row = con.execute(
+                                "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND (vehicle_key LIKE ? OR vehicle_key LIKE ? OR vehicle_key LIKE ?) LIMIT 1",
+                                (search_pattern, '%sw%', '%station wagon%', '%estate%')
+                            ).fetchone()
+                        else:
+                            row = con.execute(
+                                "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND vehicle_key NOT LIKE ? AND vehicle_key NOT LIKE ? AND vehicle_key NOT LIKE ? LIMIT 1",
+                                (search_pattern, '%sw%', '%station wagon%', '%estate%')
+                            ).fetchone()
                 
                 if row:
                     image_data = row[0]
