@@ -30,23 +30,24 @@ HTML_TEMPLATE = """
         
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            line-height: 1.8;
+            color: #2d3748;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background: linear-gradient(to bottom, #ffffff 0%, #f7fafc 100%);
         }}
         
-        /* Header azul AUTOPRUDENTE */
+        /* Header AUTOPRUDENTE - Cores do website */
         .header {{
             position: running(header);
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, #009cb6 0%, #00b8d4 100%);
             color: white;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
-            border-radius: 0 0 10px 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 6px 12px rgba(0, 156, 182, 0.3);
+            margin-bottom: 40px;
         }}
         
         .header h1 {{
@@ -72,39 +73,47 @@ HTML_TEMPLATE = """
         }}
         
         h1 {{
-            color: #1e3a8a;
-            border-bottom: 3px solid #3b82f6;
-            padding-bottom: 10px;
-            margin-top: 30px;
+            color: #009cb6;
+            border-bottom: 4px solid #009cb6;
+            padding-bottom: 12px;
+            margin-top: 35px;
+            font-weight: 700;
         }}
         
         h2 {{
-            color: #3b82f6;
-            margin-top: 25px;
-            border-left: 4px solid #3b82f6;
-            padding-left: 15px;
+            color: #009cb6;
+            margin-top: 28px;
+            border-left: 5px solid #00b8d4;
+            padding-left: 18px;
+            font-weight: 600;
+            background: linear-gradient(90deg, rgba(0, 156, 182, 0.05) 0%, transparent 100%);
+            padding: 10px 10px 10px 18px;
+            border-radius: 0 8px 8px 0;
         }}
         
         h3 {{
-            color: #1e3a8a;
-            margin-top: 20px;
+            color: #00758a;
+            margin-top: 22px;
+            font-weight: 600;
         }}
         
         code {{
-            background: #f3f4f6;
-            padding: 2px 6px;
-            border-radius: 3px;
+            background: #e6f7fa;
+            padding: 3px 8px;
+            border-radius: 4px;
             font-family: 'Courier New', monospace;
-            color: #dc2626;
+            color: #00758a;
+            border: 1px solid #b3e5f0;
         }}
         
         pre {{
-            background: #1f2937;
-            color: #f3f4f6;
-            padding: 15px;
-            border-radius: 8px;
+            background: #00758a;
+            color: #ffffff;
+            padding: 18px;
+            border-radius: 10px;
             overflow-x: auto;
-            border-left: 4px solid #3b82f6;
+            border-left: 5px solid #00b8d4;
+            box-shadow: 0 4px 8px rgba(0, 117, 138, 0.2);
         }}
         
         pre code {{
@@ -121,10 +130,14 @@ HTML_TEMPLATE = """
         }}
         
         th {{
-            background: #1e3a8a;
+            background: linear-gradient(135deg, #009cb6 0%, #00b8d4 100%);
             color: white;
-            padding: 12px;
+            padding: 14px;
             text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.5px;
         }}
         
         td {{
@@ -137,33 +150,87 @@ HTML_TEMPLATE = """
         }}
         
         blockquote {{
-            border-left: 4px solid #3b82f6;
-            padding-left: 20px;
+            border-left: 5px solid #009cb6;
+            padding-left: 22px;
             margin-left: 0;
             color: #4b5563;
             font-style: italic;
+            background: rgba(0, 156, 182, 0.05);
+            padding: 15px 15px 15px 22px;
+            border-radius: 0 8px 8px 0;
         }}
         
         ul, ol {{
-            padding-left: 30px;
+            padding-left: 35px;
+            margin: 15px 0;
         }}
         
         li {{
-            margin: 8px 0;
+            margin: 10px 0;
+            line-height: 1.8;
+        }}
+        
+        ul li::marker {{
+            color: #009cb6;
+            font-weight: bold;
+        }}
+        
+        ol li::marker {{
+            color: #009cb6;
+            font-weight: bold;
         }}
         
         .emoji {{
-            font-size: 1.2em;
+            font-size: 1.3em;
+            vertical-align: middle;
+        }}
+        
+        /* Boxes informativos */
+        .info-box {{
+            background: linear-gradient(135deg, rgba(0, 156, 182, 0.1) 0%, rgba(0, 184, 212, 0.05) 100%);
+            border-left: 5px solid #009cb6;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 0 2px 8px rgba(0, 156, 182, 0.1);
+        }}
+        
+        .warning-box {{
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+            border-left: 5px solid #f59e0b;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }}
+        
+        .success-box {{
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border-left: 5px solid #10b981;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
         }}
         
         /* Footer */
         .footer {{
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 2px solid #e5e7eb;
+            margin-top: 60px;
+            padding: 25px;
+            background: linear-gradient(135deg, #009cb6 0%, #00b8d4 100%);
+            color: white;
             text-align: center;
-            color: #6b7280;
             font-size: 10pt;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 156, 182, 0.2);
+        }}
+        
+        .footer strong {{
+            font-size: 12pt;
+            letter-spacing: 1px;
+        }}
+        
+        .footer p {{
+            margin: 8px 0;
+            opacity: 0.95;
         }}
         
         /* Badges */
@@ -182,7 +249,7 @@ HTML_TEMPLATE = """
         }}
         
         .badge-info {{
-            background: #3b82f6;
+            background: #009cb6;
             color: white;
         }}
         
