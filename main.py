@@ -10729,20 +10729,25 @@ async def get_vehicles_with_originals(request: Request):
         print(f"[VEHICLES API] VEHICLES importado: {len(VEHICLES)} veículos", file=sys.stderr, flush=True)
         
         # Buscar nomes originais do histórico
-        with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
-            try:
-                # Pegar exemplos recentes de cada carro
-                query = """
-                    SELECT DISTINCT car 
-                    FROM price_snapshots 
-                    WHERE ts >= datetime('now', '-7 days')
-                    ORDER BY car
-                """
-                rows = conn.execute(query).fetchall()
-                print(f"[VEHICLES API] Encontrados {len(rows)} carros no histórico", file=sys.stderr, flush=True)
-            finally:
-                conn.close()
+        rows = []
+        try:
+            with _db_lock:
+                conn = _db_connect()  # Use hybrid connection
+                try:
+                    # Pegar exemplos recentes de cada carro
+                    query = """
+                        SELECT DISTINCT car 
+                        FROM price_snapshots 
+                        WHERE ts >= datetime('now', '-7 days')
+                        ORDER BY car
+                    """
+                    rows = conn.execute(query).fetchall()
+                    print(f"[VEHICLES API] Encontrados {len(rows)} carros no histórico", file=sys.stderr, flush=True)
+                finally:
+                    conn.close()
+        except Exception as e:
+            print(f"[VEHICLES API] Aviso: Não foi possível buscar histórico: {e}", file=sys.stderr, flush=True)
+            print(f"[VEHICLES API] Continuando com lista de veículos sem dados de scraping...", file=sys.stderr, flush=True)
         
         # Criar mapeamento de originais
         originals_map = {}
