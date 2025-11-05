@@ -11428,10 +11428,22 @@ async def upload_vehicle_photo(vehicle_name: str, request: Request, file: Upload
             conn = _db_connect()
             try:
                 # Salvar em vehicle_photos
-                conn.execute("""
-                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
-                    VALUES (?, ?, ?, NULL)
-                """, (vehicle_key, photo_data, content_type))
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                            VALUES (%s, %s, %s, NULL)
+                            ON CONFLICT (vehicle_name) DO UPDATE SET
+                                photo_data = EXCLUDED.photo_data,
+                                content_type = EXCLUDED.content_type
+                        """, (vehicle_key, photo_data, content_type))
+                else:
+                    # SQLite
+                    conn.execute("""
+                        INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                        VALUES (?, ?, ?, NULL)
+                    """, (vehicle_key, photo_data, content_type))
                 
                 # Salvar também em vehicle_images para compatibilidade
                 conn.execute("""
@@ -11483,10 +11495,23 @@ async def download_vehicle_photo_from_url(vehicle_name: str, request: Request):
             conn = _db_connect()
             try:
                 # Salvar em vehicle_photos
-                conn.execute("""
-                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
-                    VALUES (?, ?, ?, ?)
-                """, (vehicle_key, photo_data, content_type, photo_url))
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                            VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (vehicle_name) DO UPDATE SET
+                                photo_data = EXCLUDED.photo_data,
+                                content_type = EXCLUDED.content_type,
+                                photo_url = EXCLUDED.photo_url
+                        """, (vehicle_key, photo_data, content_type, photo_url))
+                else:
+                    # SQLite
+                    conn.execute("""
+                        INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                        VALUES (?, ?, ?, ?)
+                    """, (vehicle_key, photo_data, content_type, photo_url))
                 
                 # Salvar também em vehicle_images para compatibilidade
                 conn.execute("""
@@ -11934,11 +11959,26 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                         content_type = photo_info.get("content_type", "image/jpeg")
                         photo_url = photo_info.get("url")
                         
-                        conn.execute("""
-                            INSERT OR REPLACE INTO vehicle_photos 
-                            (vehicle_name, photo_data, content_type, photo_url, updated_at)
-                            VALUES (?, ?, ?, ?, datetime('now'))
-                        """, (vehicle_name, photo_data, content_type, photo_url))
+                        if hasattr(conn, 'cursor'):
+                            # PostgreSQL
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    INSERT INTO vehicle_photos 
+                                    (vehicle_name, photo_data, content_type, photo_url, updated_at)
+                                    VALUES (%s, %s, %s, %s, NOW())
+                                    ON CONFLICT (vehicle_name) DO UPDATE SET
+                                        photo_data = EXCLUDED.photo_data,
+                                        content_type = EXCLUDED.content_type,
+                                        photo_url = EXCLUDED.photo_url,
+                                        updated_at = NOW()
+                                """, (vehicle_name, photo_data, content_type, photo_url))
+                        else:
+                            # SQLite
+                            conn.execute("""
+                                INSERT OR REPLACE INTO vehicle_photos 
+                                (vehicle_name, photo_data, content_type, photo_url, updated_at)
+                                VALUES (?, ?, ?, ?, datetime('now'))
+                            """, (vehicle_name, photo_data, content_type, photo_url))
                         imported_photos += 1
                     conn.commit()
                 finally:
@@ -12197,10 +12237,23 @@ async def download_all_photos_from_carjet(request: Request):
                                 photo_data = photo_response.content
                                 
                                 # Salvar na tabela vehicle_photos
-                                conn.execute("""
-                                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at)
-                                    VALUES (?, ?, ?, ?)
-                                """, (car_clean, photo_data, photo_url, datetime.now().isoformat()))
+                                if hasattr(conn, 'cursor'):
+                                    # PostgreSQL
+                                    with conn.cursor() as cur:
+                                        cur.execute("""
+                                            INSERT INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at)
+                                            VALUES (%s, %s, %s, %s)
+                                            ON CONFLICT (vehicle_name) DO UPDATE SET
+                                                photo_data = EXCLUDED.photo_data,
+                                                photo_url = EXCLUDED.photo_url,
+                                                updated_at = EXCLUDED.updated_at
+                                        """, (car_clean, photo_data, photo_url, datetime.now().isoformat()))
+                                else:
+                                    # SQLite
+                                    conn.execute("""
+                                        INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at)
+                                        VALUES (?, ?, ?, ?)
+                                    """, (car_clean, photo_data, photo_url, datetime.now().isoformat()))
                                 
                                 # Salvar na tabela vehicle_images também
                                 conn.execute("""
@@ -12823,10 +12876,23 @@ async def download_vehicle_images(request: Request):
                         with _db_lock:
                             con = _db_connect()
                             try:
-                                con.execute("""
-                                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
-                                    VALUES (?, ?, ?, ?)
-                                """, (vehicle_key, image_data, content_type, image_url))
+                                if hasattr(con, 'cursor'):
+                                    # PostgreSQL
+                                    with con.cursor() as cur:
+                                        cur.execute("""
+                                            INSERT INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                                            VALUES (%s, %s, %s, %s)
+                                            ON CONFLICT (vehicle_name) DO UPDATE SET
+                                                photo_data = EXCLUDED.photo_data,
+                                                content_type = EXCLUDED.content_type,
+                                                photo_url = EXCLUDED.photo_url
+                                        """, (vehicle_key, image_data, content_type, image_url))
+                                else:
+                                    # SQLite
+                                    con.execute("""
+                                        INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                                        VALUES (?, ?, ?, ?)
+                                    """, (vehicle_key, image_data, content_type, image_url))
                                 con.commit()
                                 downloaded += 1
                             finally:
