@@ -2557,10 +2557,11 @@
                 });
             });
             
-            // Try backend with 5 second timeout
+            // Try backend with 15 second timeout (Excel generation takes time)
             try {
+                console.log('[ABBYCAR] Trying backend Excel generation...');
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
                 
                 const response = await fetch('/api/export-automated-prices-excel', {
                     method: 'POST',
@@ -2570,9 +2571,13 @@
                 });
                 
                 clearTimeout(timeoutId);
+                console.log('[ABBYCAR] Backend response status:', response.status);
                 
                 if (response.ok) {
+                    console.log('[ABBYCAR] Creating blob from response...');
                     const blob = await response.blob();
+                    console.log('[ABBYCAR] Blob size:', blob.size, 'type:', blob.type);
+                    
                     if (blob.size > 100) {
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
@@ -2583,12 +2588,17 @@
                         window.URL.revokeObjectURL(url);
                         document.body.removeChild(a);
                         saveDownloadToHistory(a.download, 'abbycar', location);
+                        console.log('[ABBYCAR] Excel downloaded successfully!');
                         showNotification('Excel file downloaded successfully!', 'success');
                         return;
+                    } else {
+                        console.warn('[ABBYCAR] Blob too small:', blob.size);
                     }
+                } else {
+                    console.warn('[ABBYCAR] Response not OK:', response.status);
                 }
             } catch (error) {
-                console.warn('Backend failed, using CSV fallback:', error.message);
+                console.warn('[ABBYCAR] Backend failed, using CSV fallback:', error.message);
             }
             
             // Fallback: Generate CSV
