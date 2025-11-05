@@ -13737,11 +13737,11 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                         pdf_data = await file.read()
                         
                         # Detectar número do DR do nome do ficheiro
-                        # Padrões: DR 01/2025, DR_01_2025, DR-01-2025, DR01-2025, etc.
+                        # Padrões: DR 01/2025, DR_01_2025, DR-01-2025, DR 01:2025, etc.
                         patterns = [
-                            r'DR[\s_-]*(\d+)[\s_/-]*(\d{4})',  # DR 01/2025, DR_01_2025, DR-01-2025
-                            r'(\d+)[\s_/-]+(\d{4})',            # 01/2025, 01_2025
-                            r'DR[\s_-]*(\d+)',                  # DR 01, DR_01
+                            r'DR[\s_-]*(\d+)[\s_:/-]*(\d{4})',  # DR 01/2025, DR_01_2025, DR-01-2025, DR 01:2025
+                            r'(\d+)[\s_:/-]+(\d{4})',            # 01/2025, 01_2025, 01:2025
+                            r'DR[\s_-]*(\d+)',                   # DR 01, DR_01
                         ]
                         
                         dr_number = None
@@ -13764,7 +13764,7 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                         # Verificar se DR existe
                         cursor = conn.execute("SELECT id FROM damage_reports WHERE dr_number = ?", (dr_number,))
                         if not cursor.fetchone():
-                            results["errors"].append(f"{filename}: DR {dr_number} não encontrado na base de dados")
+                            results["errors"].append(f"{filename}: {dr_number} não encontrado na base de dados")
                             continue
                         
                         # Atualizar com PDF
