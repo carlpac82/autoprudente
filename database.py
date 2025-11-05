@@ -229,7 +229,16 @@ class PostgreSQLConnectionWrapper:
         self._cursor = self._conn.cursor()
         try:
             if params:
-                self._cursor.execute(query, params)
+                # Escape % in string parameters for psycopg2 (% -> %%)
+                # This prevents confusion between LIKE patterns (e.g., '%sw%') and placeholders (%s)
+                escaped_params = []
+                for param in params:
+                    if isinstance(param, str) and '%' in param:
+                        # Double the % to escape it for psycopg2
+                        escaped_params.append(param.replace('%', '%%'))
+                    else:
+                        escaped_params.append(param)
+                self._cursor.execute(query, tuple(escaped_params))
             else:
                 self._cursor.execute(query)
         except Exception as e:
