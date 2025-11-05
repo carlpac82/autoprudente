@@ -2480,9 +2480,9 @@
         
         // ===== DOWNLOAD EXCEL (ABBYCAR FORMAT) =====
         
-        function downloadAutomatedPricesExcel() {
-            // IGUAL AO BROKERS - CSV frontend, SEM backend, SEMPRE funciona
-            showNotification('Generating CSV file...', 'info');
+        async function downloadAutomatedPricesExcel() {
+            // Tenta backend Excel (formato correto Abbycar), fallback para CSV
+            showNotification('Generating Excel file...', 'info');
             
             const location = document.getElementById('locationAuto')?.value || 'Faro';
             const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
@@ -2490,23 +2490,64 @@
             const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
             const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
             
-            // Build CSV (IGUAL AO BROKERS)
-            let csvContent = 'Group;' + days.join(';') + '\n';
-            
+            // Collect prices
+            const prices = {};
             groups.forEach(group => {
-                const rowData = [group];
+                prices[group] = {};
                 days.forEach(day => {
                     const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
                     if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
-                        rowData.push(parseFloat(inputAuto.value).toFixed(2));
-                    } else {
-                        rowData.push('');
+                        prices[group][day] = parseFloat(inputAuto.value);
                     }
+                });
+            });
+            
+            // Try backend Excel (20 second timeout)
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 20000);
+                
+                const response = await fetch('/api/export-automated-prices-excel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ location, date, prices }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    if (blob.size > 1000) {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        saveDownloadToHistory(a.download, 'abbycar', location);
+                        showNotification('Excel file downloaded successfully!', 'success');
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn('Backend Excel failed:', error.message);
+            }
+            
+            // Fallback: CSV
+            showNotification('Generating CSV fallback...', 'info');
+            let csvContent = 'Group;' + days.join(';') + '\n';
+            groups.forEach(group => {
+                const rowData = [group];
+                days.forEach(day => {
+                    const val = prices[group][day];
+                    rowData.push(val ? val.toFixed(2) : '');
                 });
                 csvContent += rowData.join(';') + '\n';
             });
             
-            // Download CSV (IGUAL AO BROKERS)
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -2515,9 +2556,8 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
             saveDownloadToHistory(filename, 'abbycar', location);
-            showNotification('CSV file downloaded successfully!', 'success');
+            showNotification('CSV downloaded (Excel unavailable)', 'warning');
         }
         
         // ===== HISTÓRICO =====
