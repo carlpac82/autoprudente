@@ -14384,8 +14384,11 @@ async def download_export_history(request: Request, export_id: int):
 @app.post("/api/export-automated-prices-excel")
 async def export_automated_prices_excel(request: Request):
     """Export automated prices to Excel (Abbycar format)"""
-    print("[BACKEND] ========== EXPORT AUTOMATED PRICES EXCEL REQUEST RECEIVED ==========")
+    import sys
+    print("[BACKEND] ========== EXPORT AUTOMATED PRICES EXCEL REQUEST RECEIVED ==========", flush=True)
+    sys.stdout.flush()
     require_auth(request)
+    print("[BACKEND] Authentication passed", flush=True)
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
