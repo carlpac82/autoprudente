@@ -1130,10 +1130,10 @@ class PostgreSQLConnectionWrapper:
         # This is a simple conversion - complex cases should use explicit PostgreSQL syntax
         if 'INSERT OR REPLACE' in query.upper():
             import logging
-            logging.warning(f"⚠️ INSERT OR REPLACE detected - using INSERT ... ON CONFLICT DO NOTHING")
-            # Simple replacement - will work for tables with primary keys
-            query = query.replace('INSERT OR REPLACE', 'INSERT')
-            query = query.replace('insert or replace', 'insert')
+            import re
+            logging.warning(f"⚠️ INSERT OR REPLACE detected")
+            # Replace INSERT OR REPLACE with INSERT
+            query = re.sub(r'INSERT\s+OR\s+REPLACE', 'INSERT', query, flags=re.IGNORECASE)
             # Add ON CONFLICT DO NOTHING at the end if not already there
             if 'ON CONFLICT' not in query.upper():
                 query = query.rstrip().rstrip(';') + ' ON CONFLICT DO NOTHING'
@@ -11413,6 +11413,19 @@ def _ensure_vehicle_images_table():
                         downloaded_at TEXT DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
+                
+                # Migration: Add source_url if not exists (PostgreSQL)
+                if hasattr(con, 'cursor'):
+                    try:
+                        with con.cursor() as cur:
+                            cur.execute("""
+                                ALTER TABLE vehicle_images 
+                                ADD COLUMN IF NOT EXISTS source_url TEXT
+                            """)
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"⚠️ Could not add vehicle_images.source_url: {e}")
+                
                 con.commit()
             finally:
                 con.close()
