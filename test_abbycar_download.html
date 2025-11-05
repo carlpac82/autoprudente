@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Abbycar Download</title>
+</head>
+<body>
+    <h1>Test Abbycar Excel Download</h1>
+    <button onclick="testDownload()">Test Download (Empty Prices)</button>
+    <button onclick="testDownloadWithPrices()">Test Download (With Prices)</button>
+    <div id="logs" style="margin-top: 20px; font-family: monospace; white-space: pre;"></div>
+    
+    <script>
+        function log(msg) {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.textContent += msg + '\n';
+            console.log(msg);
+        }
+        
+        async function testDownload() {
+            log('[TEST] Starting test with EMPTY prices...');
+            
+            const prices = {
+                B1: {}, B2: {}, D: {}, E1: {}, E2: {}, F: {}, G: {},
+                J1: {}, J2: {}, L1: {}, L2: {}, M1: {}, M2: {}, N: {}
+            };
+            
+            try {
+                log('[TEST] Sending request to backend...');
+                const response = await fetch('/api/export-automated-prices-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: 'Faro',
+                        date: '2025-11-05',
+                        prices: prices
+                    })
+                });
+                
+                log('[TEST] Response status: ' + response.status);
+                log('[TEST] Response headers: ' + JSON.stringify([...response.headers.entries()]));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log('[ERROR] Backend error: ' + errorText);
+                    return;
+                }
+                
+                log('[TEST] Creating blob...');
+                const blob = await response.blob();
+                log('[TEST] Blob size: ' + blob.size + ' bytes, type: ' + blob.type);
+                
+                if (blob.size < 100) {
+                    log('[ERROR] Excel file is too small - likely corrupted');
+                    return;
+                }
+                
+                log('[TEST] Creating download link...');
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'TEST_AutomatedPrices_Empty.xlsx';
+                document.body.appendChild(a);
+                log('[TEST] Triggering download...');
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                log('[SUCCESS] Download triggered successfully!');
+                
+            } catch (error) {
+                log('[ERROR] Error: ' + error.message);
+                log('[ERROR] Stack: ' + error.stack);
+            }
+        }
+        
+        async function testDownloadWithPrices() {
+            log('[TEST] Starting test with SAMPLE prices...');
+            
+            const prices = {
+                B1: {1: 25.50, 2: 24.00, 3: 23.00},
+                B2: {1: 27.50, 2: 26.00, 3: 25.00},
+                D: {1: 30.00, 2: 28.50, 3: 27.00},
+                E1: {}, E2: {}, F: {}, G: {},
+                J1: {}, J2: {}, L1: {}, L2: {}, M1: {}, M2: {}, N: {}
+            };
+            
+            try {
+                log('[TEST] Sending request to backend...');
+                const response = await fetch('/api/export-automated-prices-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: 'Faro',
+                        date: '2025-11-05',
+                        prices: prices
+                    })
+                });
+                
+                log('[TEST] Response status: ' + response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log('[ERROR] Backend error: ' + errorText);
+                    return;
+                }
+                
+                const blob = await response.blob();
+                log('[TEST] Blob size: ' + blob.size + ' bytes');
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'TEST_AutomatedPrices_WithPrices.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                log('[SUCCESS] Download triggered successfully!');
+                
+            } catch (error) {
+                log('[ERROR] Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
