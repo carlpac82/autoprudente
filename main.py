@@ -13455,21 +13455,7 @@ async def create_damage_report(request: Request):
                     # UPDATE - Atualizar DR existente
                     logging.info(f"🔄 Atualizando DR {existing_dr_number}")
                     
-                    conn.execute("""
-                        UPDATE damage_reports SET
-                            ra_number = ?, contract_number = ?, date = ?,
-                            client_name = ?, client_email = ?, client_phone = ?,
-                            client_address = ?, client_city = ?, client_postal_code = ?, client_country = ?,
-                            vehicle_plate = ?, vehicle_model = ?, vehicle_brand = ?,
-                            pickup_date = ?, pickup_time = ?, pickup_location = ?,
-                            return_date = ?, return_time = ?, return_location = ?,
-                            issued_by = ?,
-                            inspection_type = ?, inspector_name = ?, mileage = ?, fuel_level = ?,
-                            damage_description = ?, observations = ?, damage_diagram_data = ?,
-                            repair_items = ?, damage_images = ?,
-                            updated_at = ?
-                        WHERE dr_number = ?
-                    """, (
+                    update_values = (
                         data.get('ra_number'),
                         data.get('contractNumber'),
                         data.get('date'),
@@ -13501,37 +13487,68 @@ async def create_damage_report(request: Request):
                         data.get('damageImages'),
                         datetime.datetime.now().isoformat(),
                         existing_dr_number
-                    ))
+                    )
                     
-                    conn.commit()
+                    if hasattr(conn, 'cursor'):
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                UPDATE damage_reports SET
+                                    ra_number = %s, contract_number = %s, date = %s,
+                                    client_name = %s, client_email = %s, client_phone = %s,
+                                    client_address = %s, client_city = %s, client_postal_code = %s, client_country = %s,
+                                    vehicle_plate = %s, vehicle_model = %s, vehicle_brand = %s,
+                                    pickup_date = %s, pickup_time = %s, pickup_location = %s,
+                                    return_date = %s, return_time = %s, return_location = %s,
+                                    issued_by = %s,
+                                    inspection_type = %s, inspector_name = %s, mileage = %s, fuel_level = %s,
+                                    damage_description = %s, observations = %s, damage_diagram_data = %s,
+                                    repair_items = %s, damage_images = %s,
+                                    updated_at = %s
+                                WHERE dr_number = %s
+                            """, update_values)
+                        conn.commit()
+                    else:
+                        # SQLite
+                        conn.execute("""
+                            UPDATE damage_reports SET
+                                ra_number = ?, contract_number = ?, date = ?,
+                                client_name = ?, client_email = ?, client_phone = ?,
+                                client_address = ?, client_city = ?, client_postal_code = ?, client_country = ?,
+                                vehicle_plate = ?, vehicle_model = ?, vehicle_brand = ?,
+                                pickup_date = ?, pickup_time = ?, pickup_location = ?,
+                                return_date = ?, return_time = ?, return_location = ?,
+                                issued_by = ?,
+                                inspection_type = ?, inspector_name = ?, mileage = ?, fuel_level = ?,
+                                damage_description = ?, observations = ?, damage_diagram_data = ?,
+                                repair_items = ?, damage_images = ?,
+                                updated_at = ?
+                            WHERE dr_number = ?
+                        """, update_values)
+                        conn.commit()
                     
                     return {"ok": True, "dr_number": existing_dr_number, "message": "Damage Report updated successfully"}
                 else:
                     # CREATE - Criar novo DR
                     year = datetime.datetime.now().year
+                    
                     # Contar DRs do ano atual (formato "DR XX/YYYY")
-                    cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
-                    count = cursor.fetchone()[0] + 1
+                    if hasattr(conn, 'cursor'):
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE %s", (f"%/{year}",))
+                            count = cur.fetchone()[0] + 1
+                    else:
+                        # SQLite
+                        cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
+                        count = cursor.fetchone()[0] + 1
+                    
                     # Formato correto: DR XX/YYYY
                     dr_number = f"DR {count:02d}/{year}"
                     
                     logging.info(f"✨ Criando novo DR {dr_number}")
                     
-                    conn.execute("""
-                        INSERT INTO damage_reports (
-                            dr_number, ra_number, contract_number, date,
-                            client_name, client_email, client_phone,
-                            client_address, client_city, client_postal_code, client_country,
-                            vehicle_plate, vehicle_model, vehicle_brand,
-                            pickup_date, pickup_time, pickup_location,
-                            return_date, return_time, return_location,
-                            issued_by,
-                            inspection_type, inspector_name, mileage, fuel_level,
-                            damage_description, observations, damage_diagram_data,
-                            repair_items, damage_images,
-                            created_by
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
+                    insert_values = (
                         dr_number,
                         data.get('ra_number'),
                         data.get('contractNumber'),
@@ -13563,9 +13580,45 @@ async def create_damage_report(request: Request):
                         data.get('repairItems'),
                         data.get('damageImages'),
                         request.session.get('username', 'unknown')
-                    ))
+                    )
                     
-                    conn.commit()
+                    if hasattr(conn, 'cursor'):
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO damage_reports (
+                                    dr_number, ra_number, contract_number, date,
+                                    client_name, client_email, client_phone,
+                                    client_address, client_city, client_postal_code, client_country,
+                                    vehicle_plate, vehicle_model, vehicle_brand,
+                                    pickup_date, pickup_time, pickup_location,
+                                    return_date, return_time, return_location,
+                                    issued_by,
+                                    inspection_type, inspector_name, mileage, fuel_level,
+                                    damage_description, observations, damage_diagram_data,
+                                    repair_items, damage_images,
+                                    created_by
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, insert_values)
+                        conn.commit()
+                    else:
+                        # SQLite
+                        conn.execute("""
+                            INSERT INTO damage_reports (
+                                dr_number, ra_number, contract_number, date,
+                                client_name, client_email, client_phone,
+                                client_address, client_city, client_postal_code, client_country,
+                                vehicle_plate, vehicle_model, vehicle_brand,
+                                pickup_date, pickup_time, pickup_location,
+                                return_date, return_time, return_location,
+                                issued_by,
+                                inspection_type, inspector_name, mileage, fuel_level,
+                                damage_description, observations, damage_diagram_data,
+                                repair_items, damage_images,
+                                created_by
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, insert_values)
+                        conn.commit()
                     
                     return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
             finally:
