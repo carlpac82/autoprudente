@@ -2049,17 +2049,17 @@
                 endDay = endDayInput.value.padStart(2, '0');
             }
             
-            // Get current date for filename: WR-STARTDAY-ENDDAY-MONTH.csv
+            // Get current date for filename: BROKERS-STARTDAY-ENDDAY-MONTH.csv
             const date = document.getElementById('pickupDate').value;
             let monthName = 'NOV';
-            let filename = `WR-${startDay}-${endDay}-NOV.csv`;
+            let filename = `BROKERS-${startDay}-${endDay}-NOV.csv`;
             
             if (date) {
                 const [year, month, day] = date.split('-');
                 const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN',
                                     'JUL','AGO','SET','OUT','NOV','DEZ'];
                 monthName = monthNames[parseInt(month) - 1];
-                filename = `WR-${startDay}-${endDay}-${monthName}.csv`;
+                filename = `BROKERS-${startDay}-${endDay}-${monthName}.csv`;
             }
             
             // Build CSV content
@@ -2157,8 +2157,8 @@
             const location = document.getElementById('location').value;
             saveDownloadToHistory(filename, 'way2rentals', location);
             
-            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
-            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
+            console.log(`Way2Rentals CSV exported: ${filename}`);
+            showNotification(`Way2Rentals CSV exported: ${filename}`, 'success');
         }
         
         async function exportWebsiteCSV() {
@@ -2542,17 +2542,20 @@
         
         async function downloadAutomatedPricesExcel() {
             try {
+                console.log('[DEBUG] Starting Abbycar Excel download...');
                 showNotification('Generating Excel file...', 'info');
                 
                 // Get location and date
                 const location = document.getElementById('locationAuto')?.value || 'Unknown';
                 const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+                console.log('[DEBUG] Location:', location, 'Date:', date);
                 
-                // Collect prices from table (only AUTO column)
+                // Collect prices from table (only AUTO column) - ALLOW EMPTY
                 const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
                 const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
                 
                 const prices = {};
+                let totalPrices = 0;
                 
                 groups.forEach(group => {
                     prices[group] = {};
@@ -2560,11 +2563,16 @@
                         const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${day}"][data-type="auto"]`);
                         if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
                             prices[group][day] = parseFloat(inputAuto.value);
+                            totalPrices++;
                         }
                     });
                 });
                 
-                // Send to backend
+                console.log('[DEBUG] Collected', totalPrices, 'prices from table');
+                console.log('[DEBUG] Prices object:', prices);
+                
+                // Send to backend (even if empty)
+                console.log('[DEBUG] Sending request to backend...');
                 const response = await fetch('/api/export-automated-prices-excel', {
                     method: 'POST',
                     headers: {
@@ -2577,28 +2585,37 @@
                     })
                 });
                 
+                console.log('[DEBUG] Response status:', response.status);
+                console.log('[DEBUG] Response headers:', response.headers);
+                
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Backend error:', errorText);
+                    console.error('[ERROR] Backend error:', errorText);
                     throw new Error(`Server error: ${response.status}`);
                 }
                 
                 // Download file
+                console.log('[DEBUG] Creating blob...');
                 const blob = await response.blob();
+                console.log('[DEBUG] Blob size:', blob.size, 'bytes, type:', blob.type);
                 
                 if (blob.size < 100) {
                     throw new Error('Excel file is too small - likely corrupted');
                 }
                 
+                console.log('[DEBUG] Creating download link...');
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 const filename = `AutomatedPrices_${location.replace(' ', '_')}_${date}.xlsx`;
                 a.download = filename;
                 document.body.appendChild(a);
+                console.log('[DEBUG] Triggering download...');
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+                
+                console.log('[DEBUG] Download triggered successfully');
                 
                 // Save to downloads history
                 saveDownloadToHistory(filename, 'abbycar', location);
@@ -2606,7 +2623,8 @@
                 showNotification('Excel file downloaded successfully!', 'success');
                 
             } catch (error) {
-                console.error('Error downloading Excel:', error);
+                console.error('[ERROR] Error downloading Excel:', error);
+                console.error('[ERROR] Stack:', error.stack);
                 showNotification('Error: ' + error.message, 'error');
             }
         }
@@ -4605,8 +4623,8 @@
             const locationAuto = document.getElementById('locationAuto').value;
             saveDownloadToHistory(filename, 'way2rentals', locationAuto);
             
-            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
-            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
+            console.log(`Way2Rentals CSV exported: ${filename}`);
+            showNotification(`Way2Rentals CSV exported: ${filename}`, 'success');
             
             // Save to database for history
             saveExportToHistory({
