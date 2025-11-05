@@ -10326,6 +10326,101 @@ async def save_current_prices(request: Request):
         logging.error(f"❌ Error saving current prices: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/prices/history/list")
+async def list_price_history(request: Request):
+    """Listar histórico de preços (Current e Automated)"""
+    require_auth(request)
+    
+    try:
+        location = request.query_params.get("location")
+        history_type = request.query_params.get("type")  # 'current_prices' ou 'automated_prices'
+        limit = int(request.query_params.get("limit", 50))
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                query = """
+                    SELECT id, history_type, year, month, location, saved_at, saved_by
+                    FROM price_history
+                    WHERE 1=1
+                """
+                params = []
+                
+                if location:
+                    query += " AND location = ?"
+                    params.append(location)
+                
+                if history_type:
+                    query += " AND history_type = ?"
+                    params.append(history_type)
+                
+                query += " ORDER BY saved_at DESC LIMIT ?"
+                params.append(limit)
+                
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+                
+                history = []
+                for row in rows:
+                    history.append({
+                        "id": row[0],
+                        "type": row[1],
+                        "year": row[2],
+                        "month": row[3],
+                        "location": row[4],
+                        "saved_at": row[5],
+                        "saved_by": row[6]
+                    })
+                
+                return JSONResponse({"ok": True, "history": history})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error listing price history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/prices/history/load/{history_id}")
+async def load_price_history(request: Request, history_id: int):
+    """Carregar preços de um histórico específico"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT history_type, year, month, location, prices_data, saved_at, saved_by
+                    FROM price_history
+                    WHERE id = ?
+                    """,
+                    (history_id,)
+                )
+                row = cursor.fetchone()
+                
+                if not row:
+                    return JSONResponse({"ok": False, "error": "History not found"}, status_code=404)
+                
+                prices_data = json.loads(row[4])
+                
+                return JSONResponse({
+                    "ok": True,
+                    "data": {
+                        "type": row[0],
+                        "year": row[1],
+                        "month": row[2],
+                        "location": row[3],
+                        "prices": prices_data,
+                        "saved_at": row[5],
+                        "saved_by": row[6]
+                    }
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error loading price history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # ============================================================
 # API ENDPOINTS - AI LEARNING DATA & USER SETTINGS
 # ============================================================
