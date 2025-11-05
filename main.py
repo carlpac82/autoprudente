@@ -13786,7 +13786,19 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                 
                 conn.commit()
                 
-                logging.info(f"✅ {results['uploaded']} PDFs anexados em massa")
+                # Verificar que foram guardados
+                for detail in results['details']:
+                    cursor = conn.execute(
+                        "SELECT pdf_filename FROM damage_reports WHERE dr_number = ?", 
+                        (detail['dr_number'],)
+                    )
+                    saved = cursor.fetchone()
+                    if saved and saved[0]:
+                        logging.info(f"✅ CONFIRMADO: PDF {detail['filename']} guardado no PostgreSQL para {detail['dr_number']}")
+                    else:
+                        logging.error(f"❌ ERRO: PDF {detail['filename']} NÃO foi guardado para {detail['dr_number']}")
+                
+                logging.info(f"✅ {results['uploaded']} PDFs anexados em massa e guardados no PostgreSQL")
                 
                 return {
                     "ok": True,
@@ -13933,13 +13945,19 @@ async def import_damage_reports_bulk(request: Request):
                 
                 conn.commit()
                 
-                logging.info(f"✅ {imported} Damage Reports importados")
+                # Verificar que foram guardados no PostgreSQL
+                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports")
+                total_in_db = cursor.fetchone()[0]
+                
+                logging.info(f"✅ {imported} Damage Reports importados e guardados no PostgreSQL")
+                logging.info(f"📊 Total de DRs na base de dados PostgreSQL: {total_in_db}")
                 
                 return {
                     "ok": True,
                     "imported": imported,
                     "total": len(reports),
-                    "errors": errors
+                    "errors": errors,
+                    "total_in_database": total_in_db
                 }
             finally:
                 conn.close()

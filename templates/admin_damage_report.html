@@ -884,8 +884,14 @@
                 
                 if (result.ok) {
                     let html = `<div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 6px;">`;
-                    html += `<p style="color: #065f46; font-weight: 600; margin-bottom: 8px;">✅ Importação Concluída!</p>`;
-                    html += `<p style="color: #047857; font-size: 14px;">Importados: ${result.imported} / ${result.total}</p>`;
+                    html += `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">`;
+                    html += `<svg style="width: 20px; height: 20px; color: #10b981;" fill="none" stroke="currentColor" viewBox="0 0 24 24">`;
+                    html += `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>`;
+                    html += `</svg>`;
+                    html += `<p style="color: #065f46; font-weight: 600; margin: 0;">Importação Concluída</p>`;
+                    html += `</div>`;
+                    html += `<p style="color: #047857; font-size: 14px; margin: 0 0 4px 0;">Importados: ${result.imported} / ${result.total}</p>`;
+                    html += `<p style="color: #047857; font-size: 13px; margin: 0; font-weight: 600;">Total na base de dados PostgreSQL: ${result.total_in_database || 'N/A'}</p>`;
                     
                     if (result.errors && result.errors.length > 0) {
                         html += `<details style="margin-top: 10px;"><summary style="cursor: pointer; color: #dc2626;">⚠️ ${result.errors.length} erros</summary>`;
