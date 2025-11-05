@@ -13636,8 +13636,11 @@ async def list_damage_reports(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                logging.info("📋 Listando Damage Reports...")
+                
                 # Verificar se é PostgreSQL ou SQLite
                 is_postgres = hasattr(conn, 'cursor')
+                logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 # Verificar se a coluna is_protected existe
                 if is_postgres:
@@ -13678,6 +13681,8 @@ async def list_damage_reports(request: Request):
                         ORDER BY id DESC
                     """)
                     rows = cursor.fetchall()
+                
+                logging.info(f"✅ Encontrados {len(rows)} DRs na base de dados")
                 
                 reports = []
                 for row in rows:
