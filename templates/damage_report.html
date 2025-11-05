@@ -771,11 +771,11 @@
                     </svg>
                     Download PDF
                 </button>
-                <button type="submit" class="btn btn-success">
+                <button type="submit" class="btn btn-success" id="submitButton">
                     <svg class="icon-mono" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                     </svg>
-                    Guardar Damage Report
+                    <span id="submitButtonText">Guardar Damage Report</span>
                 </button>
             </div>
         </form>
@@ -2192,6 +2192,10 @@
                     // Guardar DR number atual para update
                     currentDRNumber = drNumber;
                     
+                    // Mudar texto do botão para "Atualizar DR"
+                    document.getElementById('submitButtonText').textContent = 'Atualizar DR';
+                    document.getElementById('submitButton').style.background = '#f59e0b';
+                    
                     // Mudar para tab Criar
                     document.querySelector('[onclick="showTab(\'create\')"]').click();
                     
@@ -2574,6 +2578,10 @@
                 document.getElementById('downloadBtn').style.display = 'none';
                 document.getElementById('downloadBtnHeader').style.display = 'none';
                 document.getElementById('previewBtn').style.display = 'none';
+                
+                // Resetar botão para modo criar
+                document.getElementById('submitButtonText').textContent = 'Guardar Damage Report';
+                document.getElementById('submitButton').style.background = '';
             }
         }
 
@@ -2614,12 +2622,19 @@
                 
                 if (result.ok) {
                     currentDRNumber = result.dr_number;
-                    showNotification(`Damage Report ${result.dr_number} criado com sucesso!`, 'success');
+                    
+                    // Verificar se foi criação ou atualização
+                    const isUpdate = document.getElementById('submitButtonText').textContent === 'Atualizar DR';
+                    showNotification(`Damage Report ${result.dr_number} ${isUpdate ? 'atualizado' : 'criado'} com sucesso!`, 'success');
                     
                     // Mostrar botões no header e no formulário
                     document.getElementById('downloadBtn').style.display = 'inline-flex';
                     document.getElementById('downloadBtnHeader').style.display = 'inline-flex';
                     document.getElementById('previewBtn').style.display = 'inline-flex';
+                    
+                    // Resetar botão para modo criar
+                    document.getElementById('submitButtonText').textContent = 'Guardar Damage Report';
+                    document.getElementById('submitButton').style.background = '';
                     
                     // Recarregar histórico
                     loadHistory();
