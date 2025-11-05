@@ -1817,14 +1817,26 @@ def _parse_amount(s: str) -> Optional[float]:
         num = m.group(1).replace("\u00a0", "").replace(" ", "")
         has_comma = "," in num
         has_dot = "." in num
+        
+        # Formato europeu: 1.234,56 (ponto = milhares, vírgula = decimais)
         if has_comma and has_dot:
             num = num.replace(".", "").replace(",", ".")
+        # Só vírgula: 1234,56 → 1234.56
         elif has_comma and not has_dot:
             num = num.replace(",", ".")
-        else:
+        # Só ponto: pode ser milhares (1.234) ou decimais (12.34)
+        # Se tem mais de 1 ponto OU ponto está a 3 dígitos do fim → é separador de milhares
+        elif has_dot and not has_comma:
             parts = num.split(".")
+            # Múltiplos pontos → separador de milhares (1.234.567)
             if len(parts) > 2:
                 num = "".join(parts)
+            # Um ponto a 3 dígitos do fim → separador de milhares (1.234)
+            elif len(parts) == 2 and len(parts[1]) == 3:
+                num = "".join(parts)
+            # Caso contrário, é decimal (12.34)
+            # num já está correto
+        
         v = float(num)
         return v
     except Exception:
