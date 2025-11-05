@@ -42,10 +42,10 @@ notificationStyles.textContent = `
         height: 20px;
     }
     
-    .app-notification-icon.success { color: #10b981; }
-    .app-notification-icon.warning { color: #f59e0b; }
+    .app-notification-icon.success { color: #009cb6; }
+    .app-notification-icon.warning { color: #f6b511; }
     .app-notification-icon.error { color: #ef4444; }
-    .app-notification-icon.info { color: #3b82f6; }
+    .app-notification-icon.info { color: #009cb6; }
     
     .app-notification-close {
         flex-shrink: 0;

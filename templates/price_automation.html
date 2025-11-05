@@ -2165,7 +2165,7 @@
             console.log('📤 Starting Website CSV export...');
             
             try {
-                showNotification('📊 Generating Website CSV...', 'info');
+                showNotification('Generating Website CSV...', 'info');
                 
                 // Same format as Way2Rentals
                 const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
@@ -2544,7 +2544,7 @@
         async function downloadAutomatedPricesExcel() {
             try {
                 console.log('📊 Starting Excel download...');
-                showNotification('📊 Generating Excel file...', 'info');
+                showNotification('Generating Excel file...', 'info');
                 
                 // Get location and date
                 const location = document.getElementById('locationAuto')?.value || 'Unknown';
@@ -2617,11 +2617,11 @@
                 // Save to downloads history
                 saveDownloadToHistory(filename, 'abbycar', location);
                 
-                showNotification('✅ Excel file downloaded successfully!', 'success');
+                showNotification('Excel file downloaded successfully!', 'success');
                 
             } catch (error) {
                 console.error('❌ Error downloading Excel:', error);
-                showNotification('❌ Error: ' + error.message, 'error');
+                showNotification('Error: ' + error.message, 'error');
             }
         }
         
