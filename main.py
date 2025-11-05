@@ -14542,6 +14542,42 @@ async def preview_damage_report_pdf(request: Request):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/damage-reports/{dr_number}/pdf-original")
+async def download_original_pdf(request: Request, dr_number: str, preview: bool = False):
+    """Download ou preview do PDF original que foi feito upload"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                row = cursor.fetchone()
+                
+                if not row or not row[0]:
+                    raise HTTPException(status_code=404, detail="PDF not found")
+                
+                pdf_data = row[0]
+                pdf_filename = row[1] or f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+                
+                # Se preview=true, mostrar inline, senão download
+                disposition = "inline" if preview else "attachment"
+                
+                return Response(
+                    content=pdf_data,
+                    media_type="application/pdf",
+                    headers={
+                        "Content-Disposition": f'{disposition}; filename="{pdf_filename}"'
+                    }
+                )
+            finally:
+                conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error downloading original PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/damage-reports/{dr_number}/pdf")
 async def download_damage_report_pdf(request: Request, dr_number: str):
     """Download do Damage Report em PDF - Gera PDF do zero idêntico ao template"""

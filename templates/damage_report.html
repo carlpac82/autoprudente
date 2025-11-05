@@ -1891,7 +1891,8 @@
                     // Agrupar por ano
                     const reportsByYear = {};
                     data.reports.forEach(report => {
-                        const match = report.dr_number.match(/\/(\d{4})/);
+                        // Detectar ano com / ou :
+                        const match = report.dr_number.match(/[\/:](\d{4})/);
                         const year = match ? match[1] : 'Outros';
                         if (!reportsByYear[year]) {
                             reportsByYear[year] = [];
@@ -1913,7 +1914,12 @@
                         html += `
                             <div style="background: linear-gradient(135deg, #009cb6 0%, #007a8c 100%); color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; margin-top: ${year !== years[0] ? '25px' : '0'}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📅 ${year}</h3>
+                                    <h3 style="margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        ${year}
+                                    </h3>
                                     <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">
                                         ${reportsByYear[year].length} relatório${reportsByYear[year].length > 1 ? 's' : ''}
                                     </span>
@@ -2044,9 +2050,9 @@
             }
         }
 
-        // Download PDF do DR
+        // Download PDF original do DR
         async function downloadDRPDF(drNumber) {
-            window.open(`/api/damage-reports/${drNumber}/pdf`, '_blank');
+            window.open(`/api/damage-reports/${drNumber}/pdf-original`, '_blank');
         }
 
         function downloadPDF() {
@@ -2127,84 +2133,8 @@
                 return;
             }
             
-            // Criar modal de preview
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;';
-            
-            const content = document.createElement('div');
-            content.style.cssText = 'background: white; border-radius: 12px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 30px; position: relative;';
-            
-            // Botão fechar
-            const closeBtn = document.createElement('button');
-            closeBtn.innerHTML = '✕';
-            closeBtn.style.cssText = 'position: absolute; top: 15px; right: 15px; background: #ef4444; color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 20px; font-weight: bold;';
-            closeBtn.onclick = () => modal.remove();
-            
-            // Conteúdo do preview
-            const formData = new FormData(document.getElementById('damageReportForm'));
-            const data = Object.fromEntries(formData);
-            
-            content.innerHTML = `
-                <h2 style="color: #009cb6; margin: 0 0 20px 0; padding-right: 40px;">📄 Preview - DR ${currentDRNumber}</h2>
-                
-                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">📋 Dados do Contrato</h3>
-                    <p><strong>Contrato:</strong> ${data.contractNumber || 'N/A'}</p>
-                    <p><strong>Data:</strong> ${data.date || 'N/A'}</p>
-                </div>
-                
-                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">👤 Dados do Cliente</h3>
-                    <p><strong>Nome:</strong> ${data.clientName || 'N/A'}</p>
-                    <p><strong>Email:</strong> ${data.clientEmail || 'N/A'}</p>
-                    <p><strong>Telefone:</strong> ${data.clientPhone || 'N/A'}</p>
-                    <p><strong>Morada:</strong> ${data.address || 'N/A'}</p>
-                    <p><strong>Cidade:</strong> ${data.city || 'N/A'} - ${data.postalCode || 'N/A'}</p>
-                    <p><strong>País:</strong> ${data.country || 'N/A'}</p>
-                </div>
-                
-                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">🚗 Dados do Veículo</h3>
-                    <p><strong>Matrícula:</strong> ${data.vehiclePlate || 'N/A'}</p>
-                    <p><strong>Modelo:</strong> ${data.vehicleModel || 'N/A'}</p>
-                    <p><strong>Marca:</strong> ${data.vehicleBrand || 'N/A'}</p>
-                </div>
-                
-                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">📅 Levantamento e Devolução</h3>
-                    <p><strong>Levantamento:</strong> ${data.pickupDate || 'N/A'} às ${data.pickupTime || 'N/A'}</p>
-                    <p><strong>Local:</strong> ${data.pickupLocation || 'N/A'}</p>
-                    <p><strong>Devolução:</strong> ${data.returnDate || 'N/A'} às ${data.returnTime || 'N/A'}</p>
-                    <p><strong>Local:</strong> ${data.returnLocation || 'N/A'}</p>
-                </div>
-                
-                ${damages.length > 0 ? `
-                <div style="border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #ef4444; margin: 0 0 15px 0; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">⚠️ Danos Registados</h3>
-                    ${damages.sort((a, b) => a.number - b.number).map(d => `
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                            <div style="width: 30px; height: 30px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">${d.number}</div>
-                            <p style="margin: 0;">${d.description || 'Sem descrição'}</p>
-                        </div>
-                    `).join('')}
-                </div>
-                ` : '<p style="text-align: center; color: #6b7280; padding: 20px;">Nenhum dano registado</p>'}
-                
-                ${data.observations ? `
-                <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px;">
-                    <h3 style="color: #374151; margin: 0 0 15px 0; border-bottom: 2px solid #009cb6; padding-bottom: 10px;">📝 Observações</h3>
-                    <p>${data.observations}</p>
-                </div>
-                ` : ''}
-            `;
-            
-            content.insertBefore(closeBtn, content.firstChild);
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-            
-            modal.onclick = (e) => {
-                if (e.target === modal) modal.remove();
-            };
+            // Abrir PDF original em nova janela
+            window.open(`/api/damage-reports/${currentDRNumber}/pdf-original?preview=true`, '_blank');
         }
 
         // Adicionar pin de dano
