@@ -15,7 +15,7 @@ WARNING:root:⚠️  Sentry SDK not installed - monitoring disabled
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [35216]
+INFO:     Started server process [36667]
 INFO:     Waiting for application startup.
 ========================================
 🚀 APP STARTUP - Rental Price Tracker
@@ -28,3 +28,25 @@ INFO:     Waiting for application startup.
 ========================================
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52641 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52641 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET /price-automation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET /static/notifications.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52664 - "GET /static/js/db-sync.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET /api/user-settings/load?user_key=default HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52664 - "GET /api/ai/learning/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET /api/price-automation/rules/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52664 - "GET /api/price-automation/settings/load HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52661 - "GET /api/vans-pricing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52664 - "GET /admin/env-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52697 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52697 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52697 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52731 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52731 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52731 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52776 - "POST /api/user-settings/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52776 - "POST /api/price-automation/rules/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52776 - "POST /api/price-automation/settings/save HTTP/1.1" 200 OK

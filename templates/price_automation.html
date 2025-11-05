@@ -1934,13 +1934,13 @@
             });
         }
 
-        async function downloadExcel(broker) {
+        function downloadExcel(broker) {
             // Copiar C de D antes de descarregar
             copyGroupCFromD();
             
-            // Special handling for Abbycar - use backend endpoint
+            // Special handling for Abbycar - frontend CSV
             if (broker === 'abbycar') {
-                await downloadAutomatedPricesExcel();
+                downloadAutomatedPricesExcel();
                 return;
             }
             
@@ -1952,7 +1952,7 @@
             
             // Special handling for Website CSV export
             if (broker === 'website') {
-                await exportWebsiteCSV();
+                exportWebsiteCSV();
                 return;
             }
             
@@ -2161,35 +2161,33 @@
             showNotification(`Way2Rentals CSV exported: ${filename}`, 'success');
         }
         
-        async function exportWebsiteCSV() {
-            try {
-                showNotification('Generating Website CSV...', 'info');
-                
-                // Same format as Way2Rentals
-                const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
-                                           'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
-                                           'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
-                
-                const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
-                                       'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
-                
-                const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
-                
-                // Get website adjustment from settings (fetch from backend)
-                let websiteAdjustment = 14;
-                try {
-                    const response = await fetch('/admin/env-summary');
-                    const settings = await response.json();
-                    websiteAdjustment = parseFloat(settings.website_pct || 14);
-                } catch (error) {
-                    console.warn('Could not fetch website adjustment, using 14%');
-                }
-                
-                // Commission: 13.66%
-                const commission = 0.1366;
-                
-                // Get vans pricing from server (with fallback)
-                const vansPricing = await getVansPricing();
+        function exportWebsiteCSV() {
+            // FRONTEND ONLY - Like BROKERS (no async/await)
+            console.log('Exporting Website CSV...');
+            showNotification('Generating Website CSV...', 'info');
+            
+            // Same format as Way2Rentals
+            const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
+                                       'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
+                                       'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
+            
+            const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
+                                   'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
+            
+            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+            
+            // Website adjustment: FIXED 14% (no backend call)
+            const websiteAdjustment = 14;
+            
+            // Commission: 13.66%
+            const commission = 0.1366;
+            
+            // Vans pricing: FIXED values (no backend call)
+            const vansPricing = {
+                c3_1day: 112, c3_2days: 144, c3_3days: 180,
+                c4_1day: 152, c4_2days: 170, c4_3days: 210,
+                c5_1day: 175, c5_2days: 190, c5_3days: 240
+            };
                 
                 // Filename
                 const location = document.getElementById('location').value;
@@ -2283,12 +2281,8 @@
             // Save to downloads history
             saveDownloadToHistory(filename, 'website', location);
             
+            console.log(`Website CSV exported: ${filename}`);
             showNotification(`Website CSV exported with ${websiteAdjustment}% adjustment!`, 'success');
-            
-            } catch (error) {
-                console.error('Error exporting Website CSV:', error);
-                showNotification(`Error exporting: ${error.message}`, 'error');
-            }
         }
         
         async function saveExportToHistory(exportData) {
