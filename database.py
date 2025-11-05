@@ -229,8 +229,6 @@ class PostgreSQLConnectionWrapper:
         self._cursor = self._conn.cursor()
         try:
             if params:
-                # psycopg2 handles % escaping automatically in parameters
-                # We just pass them as-is
                 self._cursor.execute(query, params)
             else:
                 self._cursor.execute(query)
