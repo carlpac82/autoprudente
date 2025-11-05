@@ -1981,17 +1981,28 @@
                                                 </button>
                                             ` : `
                                                 <!-- DR Manual - Editar e Eliminar -->
-                                                <button onclick="editDR('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Editar DR">
-                                                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                    </svg>
-                                                    <span style="font-size: 13px;">Editar</span>
-                                                </button>
-                                                <button onclick="deleteDR('${report.dr_number}')" style="background: transparent; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'" title="Eliminar DR">
-                                                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                    </svg>
-                                                </button>
+                                                ${report.dr_number.includes(':') ? `
+                                                    <!-- DR com formato inválido - Apenas eliminar -->
+                                                    <span style="color: #f59e0b; font-size: 12px; padding: 8px;">⚠️ Formato inválido</span>
+                                                    <button onclick="deleteDR('${report.dr_number}')" style="background: transparent; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'" title="Eliminar DR">
+                                                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                ` : `
+                                                    <!-- DR válido - Editar e Eliminar -->
+                                                    <button onclick="editDR('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Editar DR">
+                                                        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                        </svg>
+                                                        <span style="font-size: 13px;">Editar</span>
+                                                    </button>
+                                                    <button onclick="deleteDR('${report.dr_number}')" style="background: transparent; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'" title="Eliminar DR">
+                                                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                `}
                                             `}
                                         </div>
                                     </div>
@@ -2125,6 +2136,12 @@
         async function editDR(drNumber) {
             try {
                 const response = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}`);
+                
+                if (!response.ok) {
+                    showNotification(`Erro ao carregar DR: ${response.status} ${response.statusText}`, 'error');
+                    return;
+                }
+                
                 const result = await response.json();
                 
                 if (result.ok && result.report) {
@@ -2223,21 +2240,28 @@
                     method: 'DELETE'
                 });
                 
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        showNotification('Este DR está protegido e não pode ser eliminado', 'error');
+                    } else if (response.status === 404) {
+                        showNotification(`DR ${drNumber} não encontrado`, 'error');
+                    } else {
+                        showNotification(`Erro ao eliminar DR: ${response.status}`, 'error');
+                    }
+                    return;
+                }
+                
                 const result = await response.json();
                 
                 if (result.ok) {
                     showNotification(`DR ${drNumber} eliminado com sucesso`, 'success');
                     loadHistory();
                 } else {
-                    if (response.status === 403) {
-                        showNotification('Este DR está protegido e não pode ser eliminado', 'error');
-                    } else {
-                        showNotification('Erro ao eliminar DR', 'error');
-                    }
+                    showNotification('Erro ao eliminar DR: ' + (result.error || 'Desconhecido'), 'error');
                 }
             } catch (error) {
                 console.error('Erro ao eliminar:', error);
-                showNotification('Erro ao eliminar DR', 'error');
+                showNotification('Erro ao eliminar DR: ' + error.message, 'error');
             }
         }
         
