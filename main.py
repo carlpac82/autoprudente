@@ -13642,17 +13642,20 @@ async def list_damage_reports(request: Request):
                         cur.execute("""
                             UPDATE damage_reports 
                             SET is_protected = 1 
-                            WHERE pdf_data IS NOT NULL AND pdf_filename IS NOT NULL
+                            WHERE pdf_filename IS NOT NULL AND pdf_filename != ''
                         """)
+                        count = cur.rowcount
                     conn.commit()
+                    logging.info(f"✅ {count} DRs com PDF marcados como protegidos")
                 else:
-                    conn.execute("""
+                    cursor = conn.execute("""
                         UPDATE damage_reports 
                         SET is_protected = 1 
-                        WHERE pdf_data IS NOT NULL AND pdf_filename IS NOT NULL
+                        WHERE pdf_filename IS NOT NULL AND pdf_filename != ''
                     """)
+                    count = cursor.rowcount
                     conn.commit()
-                logging.info("✅ DRs com PDF marcados como protegidos")
+                    logging.info(f"✅ {count} DRs com PDF marcados como protegidos")
                 
             except Exception as e:
                 logging.error(f"Error protecting DRs: {e}")
