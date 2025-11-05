@@ -13761,18 +13761,49 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                             results["errors"].append(f"{filename}: Não foi possível detectar número do DR")
                             continue
                         
-                        # Verificar se DR existe
+                        # Verificar se DR existe, se não criar automaticamente
                         cursor = conn.execute("SELECT id FROM damage_reports WHERE dr_number = ?", (dr_number,))
-                        if not cursor.fetchone():
-                            results["errors"].append(f"{filename}: {dr_number} não encontrado na base de dados")
-                            continue
+                        existing = cursor.fetchone()
                         
-                        # Atualizar com PDF
-                        conn.execute("""
-                            UPDATE damage_reports 
-                            SET pdf_data = ?, pdf_filename = ?, updated_at = ?
-                            WHERE dr_number = ?
-                        """, (pdf_data, filename, datetime.now().isoformat(), dr_number))
+                        if not existing:
+                            # Criar DR automaticamente a partir do PDF
+                            logging.info(f"📝 Criando DR {dr_number} automaticamente a partir do PDF")
+                            conn.execute("""
+                                INSERT INTO damage_reports (
+                                    dr_number, ra_number, contract_number, date,
+                                    client_name, client_email, client_phone, client_address,
+                                    client_city, client_postal_code, vehicle_plate, vehicle_model,
+                                    damages, status, pdf_data, pdf_filename, 
+                                    created_at, created_by, updated_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                dr_number,
+                                None,  # ra_number
+                                None,  # contract_number
+                                datetime.now().strftime('%Y-%m-%d'),  # date
+                                'A preencher',  # client_name
+                                None,  # client_email
+                                None,  # client_phone
+                                None,  # client_address
+                                None,  # client_city
+                                None,  # client_postal_code
+                                'A preencher',  # vehicle_plate
+                                None,  # vehicle_model
+                                '[]',  # damages (JSON vazio)
+                                'draft',  # status
+                                pdf_data,  # pdf_data
+                                filename,  # pdf_filename
+                                datetime.now().isoformat(),  # created_at
+                                request.session.get('username', 'admin'),  # created_by
+                                datetime.now().isoformat()  # updated_at
+                            ))
+                        else:
+                            # Atualizar DR existente com PDF
+                            conn.execute("""
+                                UPDATE damage_reports 
+                                SET pdf_data = ?, pdf_filename = ?, updated_at = ?
+                                WHERE dr_number = ?
+                            """, (pdf_data, filename, datetime.now().isoformat(), dr_number))
                         
                         results["uploaded"] += 1
                         results["details"].append({

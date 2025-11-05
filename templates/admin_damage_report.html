@@ -169,8 +169,8 @@
             
             <div style="background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0284c7;">
                 <p class="text-sm text-gray-700 mb-2"><strong>Upload em Massa de PDFs</strong></p>
-                <p class="text-xs text-gray-600 mb-2">Seleciona todos os PDFs de uma vez. O número do DR será detectado automaticamente do nome do ficheiro.</p>
-                <p class="text-xs text-gray-500"><strong>Importante:</strong> Os DRs devem existir na base de dados antes de fazer upload dos PDFs.</p>
+                <p class="text-xs text-gray-600 mb-2">Seleciona todos os PDFs de uma vez. O sistema cria automaticamente os DRs a partir dos PDFs.</p>
+                <p class="text-xs text-gray-500"><strong>Automático:</strong> Se o DR não existir, será criado automaticamente com o PDF anexado. Podes preencher os dados depois.</p>
                 <p class="text-xs text-gray-500 mt-1">Formatos aceites: DR 01:2025.pdf, DR_01_2025.pdf, DR-01-2025.pdf, DR 01 2025.pdf, 01_2025.pdf</p>
             </div>
             
@@ -211,39 +211,6 @@
             <div id="pdfUploadStatus" style="margin-top: 15px; display: none;"></div>
         </div>
 
-        <!-- Importar Damage Reports Existentes -->
-        <div class="section-card">
-            <div class="section-header">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
-                </svg>
-                <h3>Importar DRs Existentes</h3>
-            </div>
-            
-            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
-                <p class="text-sm text-gray-700 mb-2"><strong>📋 Tens 39 Damage Reports existentes?</strong></p>
-                <p class="text-xs text-gray-600">Importa-os em formato JSON para aparecerem no histórico. Formato esperado:</p>
-                <pre style="background: white; padding: 10px; border-radius: 4px; font-size: 11px; margin-top: 8px; overflow-x: auto;">
-{
-  "reports": [
-    {
-      "dr_number": "DR 01/2025",
-      "contract_number": "RA12345",
-      "client_name": "João Silva",
-      "vehicle_plate": "AA-00-BB",
-      ...
-    }
-  ]
-}</pre>
-            </div>
-            
-            <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
-            <button onclick="document.getElementById('importFileInput').click()" class="btn btn-primary" style="background: #009cb6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%;">
-                📥 Selecionar Ficheiro JSON
-            </button>
-            
-            <div id="importStatus" style="margin-top: 15px; display: none;"></div>
-        </div>
 
         <!-- Configuração de Numeração -->
         <div class="section-card">
