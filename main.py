@@ -12339,16 +12339,18 @@ async def get_vehicle_photo(vehicle_name: str):
                     if is_sw:
                         # Se for SW, buscar APENAS outras variações SW
                         # Ex: "renault megane sw auto" busca "renault megane sw"
+                        # Use || for concatenation to avoid % in params
                         row = con.execute(
-                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND (vehicle_key LIKE '%sw%' OR vehicle_key LIKE '%station wagon%' OR vehicle_key LIKE '%estate%') LIMIT 1",
-                            (base_model + '%',)
+                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? || '%' AND (vehicle_key LIKE '%sw%' OR vehicle_key LIKE '%station wagon%' OR vehicle_key LIKE '%estate%') LIMIT 1",
+                            (base_model,)
                         ).fetchone()
                     else:
                         # Se NÃO for SW, buscar variações NÃO-SW
                         # Ex: "renault megane auto" busca "renault megane" mas NÃO "renault megane sw"
+                        # Use || for concatenation to avoid % in params
                         row = con.execute(
-                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? AND vehicle_key NOT LIKE '%sw%' AND vehicle_key NOT LIKE '%station wagon%' AND vehicle_key NOT LIKE '%estate%' LIMIT 1",
-                            (base_model + '%',)
+                            "SELECT image_data, content_type FROM vehicle_images WHERE vehicle_key LIKE ? || '%' AND vehicle_key NOT LIKE '%sw%' AND vehicle_key NOT LIKE '%station wagon%' AND vehicle_key NOT LIKE '%estate%' LIMIT 1",
+                            (base_model,)
                         ).fetchone()
                 
                 if row:
