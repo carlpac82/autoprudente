@@ -12302,6 +12302,8 @@ async def download_vehicle_images(request: Request):
 async def get_vehicle_photo(vehicle_name: str):
     """Retorna a foto de um veículo específico"""
     # Não requer autenticação para permitir que as tags <img> funcionem
+    from fastapi.responses import Response
+    
     try:
         # Normalizar nome do veículo
         vehicle_key = vehicle_name.lower().strip()
@@ -12353,7 +12355,6 @@ async def get_vehicle_photo(vehicle_name: str):
                     image_data = row[0]
                     content_type = row[1] or 'image/jpeg'
                     
-                    from fastapi.responses import Response
                     return Response(
                         content=image_data,
                         media_type=content_type,
