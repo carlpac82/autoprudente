@@ -1933,10 +1933,17 @@
                             
                             const pdfBadge = report.has_pdf ? '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">📄 PDF</span>' : '';
                             
+                            const protectedIcon = report.is_protected ? `
+                                <svg style="width: 14px; height: 14px; color: #f59e0b; position: absolute; top: 8px; right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="DR Protegido - Gerado manualmente">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            ` : '';
+                            
                             html += `
-                        <div style="background: #f9fafb; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #009cb6; transition: all 0.2s;" 
+                        <div style="background: #f9fafb; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #009cb6; transition: all 0.2s; position: relative;" 
                              onmouseover="this.style.background='#f0f9fb'" 
                              onmouseout="this.style.background='#f9fafb'">
+                            ${protectedIcon}
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="flex: 1;">
                                     <div style="display: flex; align-items: center;">

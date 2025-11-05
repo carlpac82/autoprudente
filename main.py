@@ -13439,6 +13439,13 @@ async def create_damage_report(request: Request):
                 except Exception:
                     pass  # Coluna já existe
                 
+                # Adicionar coluna is_protected para DRs que não podem ser eliminados
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                    logging.info("✅ Coluna is_protected adicionada")
+                except Exception:
+                    pass  # Coluna já existe
+                
                 import datetime
                 year = datetime.datetime.now().year
                 cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%:{year}",))
@@ -13515,7 +13522,7 @@ async def list_damage_reports(request: Request):
                     SELECT 
                         id, dr_number, ra_number, contract_number, date,
                         client_name, vehicle_plate, vehicle_model,
-                        status, created_at, created_by, pdf_filename
+                        status, created_at, created_by, pdf_filename, is_protected
                     FROM damage_reports
                     ORDER BY 
                         CASE 
@@ -13545,7 +13552,8 @@ async def list_damage_reports(request: Request):
                         'created_at': row[9],
                         'created_by': row[10],
                         'has_pdf': row[11] is not None,
-                        'pdf_filename': row[11]
+                        'pdf_filename': row[11],
+                        'is_protected': row[12] == 1 if row[12] is not None else False
                     })
                 
                 return {"ok": True, "reports": reports}
@@ -13779,14 +13787,14 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                         existing = cursor.fetchone()
                         
                         if not existing:
-                            # Criar DR automaticamente a partir do PDF
-                            logging.info(f"📝 Criando DR {dr_number} automaticamente a partir do PDF")
+                            # Criar DR automaticamente a partir do PDF - PROTEGIDO (não pode ser eliminado)
+                            logging.info(f"🔒 Criando DR {dr_number} PROTEGIDO automaticamente a partir do PDF")
                             conn.execute("""
                                 INSERT INTO damage_reports (
                                     dr_number, date, client_name, vehicle_plate,
-                                    status, pdf_data, pdf_filename, 
+                                    status, pdf_data, pdf_filename, is_protected,
                                     created_at, created_by, updated_at
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
                                 dr_number,
                                 datetime.now().strftime('%Y-%m-%d'),  # date
@@ -13795,6 +13803,7 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                                 'draft',  # status
                                 pdf_data,  # pdf_data
                                 filename,  # pdf_filename
+                                1,  # is_protected - NUNCA pode ser eliminado
                                 datetime.now().isoformat(),  # created_at
                                 request.session.get('username', 'admin'),  # created_by
                                 datetime.now().isoformat()  # updated_at
@@ -14025,10 +14034,21 @@ async def fix_damage_reports_columns(request: Request):
                     pdf_filename_added = False
                     logging.info(f"Coluna pdf_filename já existe: {e}")
                 
+                # Adicionar coluna is_protected
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                    conn.commit()
+                    logging.info("✅ Coluna is_protected adicionada ao PostgreSQL")
+                    is_protected_added = True
+                except Exception as e:
+                    is_protected_added = False
+                    logging.info(f"Coluna is_protected já existe: {e}")
+                
                 return {
                     "ok": True,
                     "pdf_data_added": pdf_data_added,
                     "pdf_filename_added": pdf_filename_added,
+                    "is_protected_added": is_protected_added,
                     "message": "Colunas verificadas e adicionadas se necessário"
                 }
             finally:
