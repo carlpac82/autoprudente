@@ -13832,19 +13832,38 @@ def _ensure_damage_report_tables():
             """)
             
             # Tabela de templates PDF
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS damage_report_templates (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    version INTEGER NOT NULL,
-                    filename TEXT NOT NULL,
-                    file_data BLOB NOT NULL,
-                    num_pages INTEGER,
-                    uploaded_by TEXT,
-                    uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    is_active INTEGER DEFAULT 0,
-                    notes TEXT
-                )
-            """)
+            # Detectar PostgreSQL vs SQLite
+            is_postgres = hasattr(conn, 'cursor')
+            
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS damage_report_templates (
+                            id SERIAL PRIMARY KEY,
+                            version INTEGER NOT NULL,
+                            filename TEXT NOT NULL,
+                            file_data BYTEA NOT NULL,
+                            num_pages INTEGER,
+                            uploaded_by TEXT,
+                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            is_active INTEGER DEFAULT 0,
+                            notes TEXT
+                        )
+                    """)
+            else:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS damage_report_templates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        version INTEGER NOT NULL,
+                        filename TEXT NOT NULL,
+                        file_data BLOB NOT NULL,
+                        num_pages INTEGER,
+                        uploaded_by TEXT,
+                        uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        is_active INTEGER DEFAULT 0,
+                        notes TEXT
+                    )
+                """)
             
             # Tabela de histórico de mapeamentos
             conn.execute("""
