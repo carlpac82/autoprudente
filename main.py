@@ -13636,26 +13636,32 @@ async def list_damage_reports(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # TEMPORÁRIO: Marcar todos os DRs com PDF como protegidos
+                # TEMPORÁRIO: Marcar DRs 01-39/2025 e 01-03/2024 como protegidos
+                protected_drs = []
+                for i in range(1, 40):
+                    protected_drs.append(f"DR {i:02d}/2025")
+                for i in range(1, 4):
+                    protected_drs.append(f"DR {i:02d}/2024")
+                
                 if hasattr(conn, 'cursor'):
                     with conn.cursor() as cur:
-                        cur.execute("""
+                        for dr_num in protected_drs:
+                            cur.execute("""
+                                UPDATE damage_reports 
+                                SET is_protected = 1 
+                                WHERE dr_number = %s
+                            """, (dr_num,))
+                    conn.commit()
+                    logging.info(f"✅ {len(protected_drs)} DRs marcados como protegidos")
+                else:
+                    for dr_num in protected_drs:
+                        conn.execute("""
                             UPDATE damage_reports 
                             SET is_protected = 1 
-                            WHERE pdf_filename IS NOT NULL AND pdf_filename != ''
-                        """)
-                        count = cur.rowcount
+                            WHERE dr_number = ?
+                        """, (dr_num,))
                     conn.commit()
-                    logging.info(f"✅ {count} DRs com PDF marcados como protegidos")
-                else:
-                    cursor = conn.execute("""
-                        UPDATE damage_reports 
-                        SET is_protected = 1 
-                        WHERE pdf_filename IS NOT NULL AND pdf_filename != ''
-                    """)
-                    count = cursor.rowcount
-                    conn.commit()
-                    logging.info(f"✅ {count} DRs com PDF marcados como protegidos")
+                    logging.info(f"✅ {len(protected_drs)} DRs marcados como protegidos")
                 
             except Exception as e:
                 logging.error(f"Error protecting DRs: {e}")
