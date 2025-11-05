@@ -14504,23 +14504,27 @@ async def cleanup_invalid_drs():
                 for dr_number in invalid_drs:
                     try:
                         if hasattr(conn, 'cursor'):
-                            # PostgreSQL
+                            # PostgreSQL - rollback antes de cada tentativa
+                            conn.rollback()
                             with conn.cursor() as cur:
                                 cur.execute("DELETE FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                                conn.commit()
                                 if cur.rowcount > 0:
                                     deleted.append(dr_number)
                                     logging.info(f"✅ DR {dr_number} eliminado")
+                                else:
+                                    logging.info(f"ℹ️  DR {dr_number} não existe")
                         else:
                             # SQLite
                             cursor = conn.execute("DELETE FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                            conn.commit()
                             if cursor.rowcount > 0:
                                 deleted.append(dr_number)
                                 logging.info(f"✅ DR {dr_number} eliminado")
                     except Exception as e:
                         errors.append(f"{dr_number}: {str(e)}")
                         logging.error(f"❌ Erro ao eliminar {dr_number}: {e}")
-                
-                conn.commit()
+                        conn.rollback()
                 
                 return {
                     "ok": True,
