@@ -1121,6 +1121,23 @@ class PostgreSQLConnectionWrapper:
             query = query.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
             query = query.replace('AUTOINCREMENT', '')
         
+        # Convert SQLite datetime('now') to PostgreSQL NOW()
+        if "datetime('now')" in query or 'datetime("now")' in query:
+            query = query.replace("datetime('now')", "NOW()")
+            query = query.replace('datetime("now")', "NOW()")
+        
+        # Convert INSERT OR REPLACE to INSERT ... ON CONFLICT (basic conversion)
+        # This is a simple conversion - complex cases should use explicit PostgreSQL syntax
+        if 'INSERT OR REPLACE' in query.upper():
+            import logging
+            logging.warning(f"⚠️ INSERT OR REPLACE detected - using INSERT ... ON CONFLICT DO NOTHING")
+            # Simple replacement - will work for tables with primary keys
+            query = query.replace('INSERT OR REPLACE', 'INSERT')
+            query = query.replace('insert or replace', 'insert')
+            # Add ON CONFLICT DO NOTHING at the end if not already there
+            if 'ON CONFLICT' not in query.upper():
+                query = query.rstrip().rstrip(';') + ' ON CONFLICT DO NOTHING'
+        
         self._cursor = self._conn.cursor()
         try:
             if params:
