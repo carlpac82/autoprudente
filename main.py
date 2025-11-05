@@ -13690,6 +13690,107 @@ def _ensure_damage_report_tables():
         finally:
             conn.close()
 
+@app.post("/api/damage-reports/upload-pdfs-bulk")
+async def upload_damage_reports_pdfs_bulk(request: Request):
+    """Upload múltiplos PDFs de uma vez, detectando DR number do nome do ficheiro"""
+    require_auth(request)
+    
+    try:
+        import re
+        from datetime import datetime
+        
+        form = await request.form()
+        files = []
+        
+        # Coletar todos os ficheiros
+        for key in form.keys():
+            if key.startswith('files'):
+                file = form.get(key)
+                if file and hasattr(file, 'filename'):
+                    files.append(file)
+        
+        if not files:
+            return {"ok": False, "error": "Nenhum ficheiro fornecido"}
+        
+        results = {
+            "uploaded": 0,
+            "errors": [],
+            "details": []
+        }
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for file in files:
+                    try:
+                        filename = file.filename
+                        pdf_data = await file.read()
+                        
+                        # Detectar número do DR do nome do ficheiro
+                        # Padrões: DR 01/2025, DR_01_2025, DR-01-2025, DR01-2025, etc.
+                        patterns = [
+                            r'DR[\s_-]*(\d+)[\s_/-]*(\d{4})',  # DR 01/2025, DR_01_2025, DR-01-2025
+                            r'(\d+)[\s_/-]+(\d{4})',            # 01/2025, 01_2025
+                            r'DR[\s_-]*(\d+)',                  # DR 01, DR_01
+                        ]
+                        
+                        dr_number = None
+                        for pattern in patterns:
+                            match = re.search(pattern, filename, re.IGNORECASE)
+                            if match:
+                                if len(match.groups()) == 2:
+                                    num, year = match.groups()
+                                    dr_number = f"DR {int(num):02d}/{year}"
+                                else:
+                                    num = match.group(1)
+                                    current_year = datetime.now().year
+                                    dr_number = f"DR {int(num):02d}/{current_year}"
+                                break
+                        
+                        if not dr_number:
+                            results["errors"].append(f"{filename}: Não foi possível detectar número do DR")
+                            continue
+                        
+                        # Verificar se DR existe
+                        cursor = conn.execute("SELECT id FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                        if not cursor.fetchone():
+                            results["errors"].append(f"{filename}: DR {dr_number} não encontrado na base de dados")
+                            continue
+                        
+                        # Atualizar com PDF
+                        conn.execute("""
+                            UPDATE damage_reports 
+                            SET pdf_data = ?, pdf_filename = ?, updated_at = ?
+                            WHERE dr_number = ?
+                        """, (pdf_data, filename, datetime.now().isoformat(), dr_number))
+                        
+                        results["uploaded"] += 1
+                        results["details"].append({
+                            "filename": filename,
+                            "dr_number": dr_number,
+                            "size": len(pdf_data)
+                        })
+                        
+                    except Exception as e:
+                        results["errors"].append(f"{filename}: {str(e)}")
+                
+                conn.commit()
+                
+                logging.info(f"✅ {results['uploaded']} PDFs anexados em massa")
+                
+                return {
+                    "ok": True,
+                    "uploaded": results["uploaded"],
+                    "total": len(files),
+                    "errors": results["errors"],
+                    "details": results["details"]
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error bulk uploading PDFs: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.post("/api/damage-reports/upload-pdf/{dr_number}")
 async def upload_damage_report_pdf(request: Request, dr_number: str):
     """Upload PDF para um Damage Report existente"""

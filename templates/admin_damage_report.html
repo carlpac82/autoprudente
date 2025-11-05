@@ -168,25 +168,41 @@
             </div>
             
             <div style="background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0284c7;">
-                <p class="text-sm text-gray-700 mb-2"><strong>📄 Tens PDFs dos 39 DRs?</strong></p>
-                <p class="text-xs text-gray-600">Faz upload dos PDFs para ficarem associados aos DRs no histórico.</p>
-                <p class="text-xs text-gray-500 mt-2">Nome do ficheiro deve conter o número do DR (ex: DR_01_2025.pdf)</p>
+                <p class="text-sm text-gray-700 mb-2"><strong>📄 Upload em Massa dos 39 PDFs!</strong></p>
+                <p class="text-xs text-gray-600 mb-2">Seleciona todos os PDFs de uma vez. O número do DR será detectado automaticamente do nome do ficheiro.</p>
+                <p class="text-xs text-gray-500">✅ Formatos aceites: DR_01_2025.pdf, DR-01-2025.pdf, DR 01 2025.pdf, 01_2025.pdf, etc.</p>
             </div>
             
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Número do DR</label>
-                    <input type="text" id="pdfDrNumber" placeholder="DR 01/2025" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Ficheiro PDF</label>
-                    <input type="file" id="pdfFileInput" accept=".pdf" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
-                </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Múltiplos PDFs</label>
+                <input type="file" id="pdfBulkFileInput" accept=".pdf" multiple class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                <p class="text-xs text-gray-500 mt-2" id="fileCount">Nenhum ficheiro selecionado</p>
             </div>
             
-            <button onclick="uploadPdfToDR()" class="btn btn-primary" style="background: #0284c7; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%;">
-                📤 Upload PDF
+            <button onclick="uploadPdfsBulk()" class="btn btn-primary" style="background: #0284c7; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 10px;">
+                📤 Upload Todos os PDFs
             </button>
+            
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; color: #6b7280; font-size: 13px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+                    ➕ Upload Individual (opcional)
+                </summary>
+                <div style="margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                    <div class="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Número do DR</label>
+                            <input type="text" id="pdfDrNumber" placeholder="DR 01/2025" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ficheiro PDF</label>
+                            <input type="file" id="pdfFileInput" accept=".pdf" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                        </div>
+                    </div>
+                    <button onclick="uploadPdfToDR()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px; width: 100%;">
+                        Upload Individual
+                    </button>
+                </div>
+            </details>
             
             <div id="pdfUploadStatus" style="margin-top: 15px; display: none;"></div>
         </div>
@@ -360,6 +376,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadCoordinates();
             loadDRNumbering();
+            
+            // Listener para mostrar contagem de ficheiros
+            const bulkInput = document.getElementById('pdfBulkFileInput');
+            if (bulkInput) {
+                bulkInput.addEventListener('change', (e) => {
+                    const count = e.target.files.length;
+                    document.getElementById('fileCount').textContent = count > 0 
+                        ? `${count} ficheiro${count > 1 ? 's' : ''} selecionado${count > 1 ? 's' : ''}`
+                        : 'Nenhum ficheiro selecionado';
+                });
+            }
             
             // Listen for messages from iframe
             window.addEventListener('message', (event) => {
@@ -680,6 +707,80 @@
                 }
             } catch (error) {
                 console.error('Error loading DR numbering:', error);
+            }
+        }
+
+        async function uploadPdfsBulk() {
+            const fileInput = document.getElementById('pdfBulkFileInput');
+            const files = fileInput.files;
+            
+            if (!files || files.length === 0) {
+                showErrorMessage('Por favor seleciona pelo menos um ficheiro PDF');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('pdfUploadStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `<p style="color: #6b7280;">📤 A fazer upload de ${files.length} ficheiros...</p>`;
+            
+            try {
+                const formData = new FormData();
+                
+                // Adicionar todos os ficheiros
+                for (let i = 0; i < files.length; i++) {
+                    formData.append(`files${i}`, files[i]);
+                }
+                
+                const response = await fetch('/api/damage-reports/upload-pdfs-bulk', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    let html = `<div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 6px;">`;
+                    html += `<p style="color: #065f46; font-weight: 600; margin-bottom: 8px;">✅ Upload Concluído!</p>`;
+                    html += `<p style="color: #047857; font-size: 14px;">Anexados: ${result.uploaded} / ${result.total}</p>`;
+                    
+                    // Mostrar detalhes dos uploads bem-sucedidos
+                    if (result.details && result.details.length > 0) {
+                        html += `<details style="margin-top: 10px;"><summary style="cursor: pointer; color: #047857;">✅ ${result.details.length} PDFs anexados</summary>`;
+                        html += `<ul style="margin-top: 8px; font-size: 12px; color: #065f46;">`;
+                        result.details.forEach(detail => {
+                            html += `<li>${detail.filename} → ${detail.dr_number} (${(detail.size / 1024).toFixed(1)} KB)</li>`;
+                        });
+                        html += `</ul></details>`;
+                    }
+                    
+                    // Mostrar erros se houver
+                    if (result.errors && result.errors.length > 0) {
+                        html += `<details style="margin-top: 10px;"><summary style="cursor: pointer; color: #dc2626;">⚠️ ${result.errors.length} erros</summary>`;
+                        html += `<ul style="margin-top: 8px; font-size: 12px; color: #991b1b;">`;
+                        result.errors.forEach(err => {
+                            html += `<li>${err}</li>`;
+                        });
+                        html += `</ul></details>`;
+                    }
+                    
+                    html += `</div>`;
+                    statusDiv.innerHTML = html;
+                    
+                    showSuccessMessage(`${result.uploaded} PDFs anexados com sucesso!`);
+                    
+                    // Limpar input
+                    fileInput.value = '';
+                    document.getElementById('fileCount').textContent = 'Nenhum ficheiro selecionado';
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido');
+                }
+            } catch (error) {
+                console.error('Error uploading PDFs:', error);
+                statusDiv.innerHTML = `<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px;">
+                    <p style="color: #991b1b; font-weight: 600;">❌ Erro no Upload</p>
+                    <p style="color: #dc2626; font-size: 14px; margin-top: 4px;">${error.message}</p>
+                </div>`;
+                showErrorMessage('Erro ao fazer upload: ' + error.message);
             }
         }
 
