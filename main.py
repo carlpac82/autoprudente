@@ -15363,6 +15363,45 @@ async def list_notification_history(request: Request, limit: int = 50):
         logging.error(f"List notification history error: {e}")
         return _no_store_json({"ok": False, "error": str(e)}, 500)
 
+# TEMPORARY: Endpoint público para upload de fotos (REMOVER DEPOIS!)
+@app.post("/api/temp/upload-photo/{vehicle_name}")
+async def temp_upload_photo(vehicle_name: str, file: UploadFile = File(...)):
+    """TEMPORÁRIO: Upload de foto SEM autenticação - REMOVER DEPOIS!"""
+    try:
+        photo_data = await file.read()
+        content_type = file.content_type or 'image/jpeg'
+        
+        _ensure_vehicle_photos_table()
+        _ensure_vehicle_images_table()
+        
+        vehicle_key = vehicle_name.lower().strip()
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                conn.execute("""
+                    INSERT OR REPLACE INTO vehicle_photos (vehicle_name, photo_data, content_type, photo_url)
+                    VALUES (?, ?, ?, NULL)
+                """, (vehicle_key, photo_data, content_type))
+                
+                conn.execute("""
+                    INSERT OR REPLACE INTO vehicle_images (vehicle_key, image_data, content_type, source_url)
+                    VALUES (?, ?, ?, NULL)
+                """, (vehicle_key, photo_data, content_type))
+                
+                conn.commit()
+            finally:
+                conn.close()
+        
+        return _no_store_json({
+            "ok": True,
+            "message": "Foto enviada",
+            "vehicle": vehicle_name,
+            "size": len(photo_data)
+        })
+    except Exception as e:
+        return _no_store_json({"ok": False, "error": str(e)}, 500)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
