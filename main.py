@@ -13418,6 +13418,8 @@ async def create_damage_report(request: Request):
                         damage_images TEXT,
                         total_amount REAL,
                         status TEXT DEFAULT 'draft',
+                        pdf_data BLOB,
+                        pdf_filename TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         created_by TEXT,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -13500,9 +13502,9 @@ async def list_damage_reports(request: Request):
                     SELECT 
                         id, dr_number, ra_number, contract_number, date,
                         client_name, vehicle_plate, vehicle_model,
-                        status, created_at, created_by
+                        status, created_at, created_by, pdf_filename
                     FROM damage_reports
-                    ORDER BY created_at DESC
+                    ORDER BY dr_number DESC
                 """)
                 
                 reports = []
@@ -13518,7 +13520,9 @@ async def list_damage_reports(request: Request):
                         'vehicle_model': row[7],
                         'status': row[8],
                         'created_at': row[9],
-                        'created_by': row[10]
+                        'created_by': row[10],
+                        'has_pdf': row[11] is not None,
+                        'pdf_filename': row[11]
                     })
                 
                 return {"ok": True, "reports": reports}
@@ -13685,6 +13689,54 @@ def _ensure_damage_report_tables():
             logging.error(f"Error creating damage report tables: {e}")
         finally:
             conn.close()
+
+@app.post("/api/damage-reports/upload-pdf/{dr_number}")
+async def upload_damage_report_pdf(request: Request, dr_number: str):
+    """Upload PDF para um Damage Report existente"""
+    require_auth(request)
+    
+    try:
+        form = await request.form()
+        file = form.get('file')
+        
+        if not file:
+            return {"ok": False, "error": "Nenhum ficheiro fornecido"}
+        
+        # Ler conteúdo do PDF
+        pdf_data = await file.read()
+        filename = file.filename
+        
+        # Atualizar na BD
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Verificar se DR existe
+                cursor = conn.execute("SELECT id FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                if not cursor.fetchone():
+                    return {"ok": False, "error": f"DR {dr_number} não encontrado"}
+                
+                # Atualizar com PDF
+                conn.execute("""
+                    UPDATE damage_reports 
+                    SET pdf_data = ?, pdf_filename = ?, updated_at = ?
+                    WHERE dr_number = ?
+                """, (pdf_data, filename, datetime.now().isoformat(), dr_number))
+                
+                conn.commit()
+                
+                logging.info(f"✅ PDF anexado ao DR {dr_number}: {filename} ({len(pdf_data)} bytes)")
+                
+                return {
+                    "ok": True,
+                    "message": f"PDF anexado ao {dr_number}",
+                    "filename": filename,
+                    "size": len(pdf_data)
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error uploading PDF: {e}")
+        return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/import-bulk")
 async def import_damage_reports_bulk(request: Request):
