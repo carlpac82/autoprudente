@@ -15046,12 +15046,25 @@ async def save_damage_report_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("""
-                    SELECT version FROM damage_report_templates 
-                    WHERE is_active = 1 
-                    ORDER BY version DESC LIMIT 1
-                """)
-                row = cursor.fetchone()
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT version FROM damage_report_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT version FROM damage_report_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                
                 if row:
                     template_version = row[0]
             finally:
@@ -15062,49 +15075,101 @@ async def save_damage_report_coordinates(request: Request):
             conn = _db_connect()
             try:
                 # Limpar coordenadas antigas
-                conn.execute("DELETE FROM damage_report_coordinates")
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM damage_report_coordinates")
+                    cursor.close()
+                else:
+                    # SQLite
+                    conn.execute("DELETE FROM damage_report_coordinates")
+                
+                logging.info(f"💾 SAVE Coordinates: Salvando {len(coordinates)} campos")
                 
                 # Inserir novas coordenadas
                 for field_id, coord in coordinates.items():
                     field_type = _get_field_type(field_id)
                     
                     # Inserir em coordenadas atuais
-                    conn.execute("""
-                        INSERT INTO damage_report_coordinates 
-                        (field_id, x, y, width, height, page, field_type, template_version, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        field_id,
-                        coord['x'],
-                        coord['y'],
-                        coord['width'],
-                        coord['height'],
-                        coord.get('page', 1),
-                        field_type,
-                        template_version,
-                        datetime.now().isoformat()
-                    ))
+                    if hasattr(conn, 'cursor'):
+                        # PostgreSQL
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            INSERT INTO damage_report_coordinates 
+                            (field_id, x, y, width, height, page, field_type, template_version, updated_at)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            field_id,
+                            coord['x'],
+                            coord['y'],
+                            coord['width'],
+                            coord['height'],
+                            coord.get('page', 1),
+                            field_type,
+                            template_version,
+                            datetime.now().isoformat()
+                        ))
+                        cursor.close()
+                    else:
+                        # SQLite
+                        conn.execute("""
+                            INSERT INTO damage_report_coordinates 
+                            (field_id, x, y, width, height, page, field_type, template_version, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            field_id,
+                            coord['x'],
+                            coord['y'],
+                            coord['width'],
+                            coord['height'],
+                            coord.get('page', 1),
+                            field_type,
+                            template_version,
+                            datetime.now().isoformat()
+                        ))
                     
                     # Inserir em histórico
-                    conn.execute("""
-                        INSERT INTO damage_report_mapping_history 
-                        (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        template_version,
-                        field_id,
-                        coord['x'],
-                        coord['y'],
-                        coord['width'],
-                        coord['height'],
-                        coord.get('page', 1),
-                        field_type,
-                        username,
-                        datetime.now().isoformat()
-                    ))
+                    if hasattr(conn, 'cursor'):
+                        # PostgreSQL
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            INSERT INTO damage_report_mapping_history 
+                            (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            template_version,
+                            field_id,
+                            coord['x'],
+                            coord['y'],
+                            coord['width'],
+                            coord['height'],
+                            coord.get('page', 1),
+                            field_type,
+                            username,
+                            datetime.now().isoformat()
+                        ))
+                        cursor.close()
+                    else:
+                        # SQLite
+                        conn.execute("""
+                            INSERT INTO damage_report_mapping_history 
+                            (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            template_version,
+                            field_id,
+                            coord['x'],
+                            coord['y'],
+                            coord['width'],
+                            coord['height'],
+                            coord.get('page', 1),
+                            field_type,
+                            username,
+                            datetime.now().isoformat()
+                        ))
                 
                 conn.commit()
-                logging.info(f"✅ {len(coordinates)} coordenadas guardadas na BD (versão {template_version})")
+                logging.info(f"✅ SAVE: {len(coordinates)} coordenadas guardadas na BD (versão {template_version})")
             finally:
                 conn.close()
         
