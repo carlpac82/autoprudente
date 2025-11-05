@@ -13726,9 +13726,24 @@ async def list_damage_reports(request: Request):
                 
                 reports = []
                 for row in cursor.fetchall():
+                    dr_number = row[1]
+                    
+                    # FORÇAR proteção para DRs 01-39/2025 e 01-03/2024
+                    is_protected = False
+                    if dr_number:
+                        # Verificar se é um dos DRs que fizeste upload
+                        for i in range(1, 40):
+                            if dr_number == f"DR {i:02d}/2025":
+                                is_protected = True
+                                break
+                        for i in range(1, 4):
+                            if dr_number == f"DR {i:02d}/2024":
+                                is_protected = True
+                                break
+                    
                     report = {
                         'id': row[0],
-                        'dr_number': row[1],
+                        'dr_number': dr_number,
                         'ra_number': row[2],
                         'contract_number': row[3],
                         'date': row[4],
@@ -13740,12 +13755,8 @@ async def list_damage_reports(request: Request):
                         'created_by': row[10],
                         'has_pdf': row[11] is not None,
                         'pdf_filename': row[11],
-                        'is_protected': False  # Default
+                        'is_protected': is_protected
                     }
-                    
-                    # Se a coluna exists, usar o valor
-                    if has_is_protected and len(row) > 12:
-                        report['is_protected'] = row[12] == 1 if row[12] is not None else False
                     
                     reports.append(report)
                 
