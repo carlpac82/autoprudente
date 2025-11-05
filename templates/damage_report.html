@@ -1981,6 +1981,14 @@
                                             ` : `
                                                 <span style="color: #ef4444; font-size: 13px; padding: 8px;">Sem PDF</span>
                                             `}
+                                            ${!report.is_protected ? `
+                                                <button onclick="deleteDR('${report.dr_number}')" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'" title="Eliminar DR">
+                                                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                    <span style="font-size: 13px;">Eliminar</span>
+                                                </button>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -2106,6 +2114,40 @@
             } catch (error) {
                 console.error('Erro na requisição:', error);
                 alert('Erro: ' + error.message);
+            }
+        }
+        
+        // Eliminar DR
+        async function deleteDR(drNumber) {
+            if (!confirm(`Tem a certeza que deseja eliminar o DR ${drNumber}?\n\nEsta ação não pode ser revertida.`)) {
+                return;
+            }
+            
+            console.log('=== ELIMINAR DR ===');
+            console.log('DR Number:', drNumber);
+            
+            try {
+                const response = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                console.log('Resultado:', result);
+                
+                if (result.ok) {
+                    showNotification(`DR ${drNumber} eliminado com sucesso`, 'success');
+                    // Recarregar histórico
+                    loadHistory();
+                } else {
+                    if (response.status === 403) {
+                        showNotification('Este DR está protegido e não pode ser eliminado', 'error');
+                    } else {
+                        showNotification('Erro ao eliminar DR: ' + (result.error || 'Desconhecido'), 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao eliminar:', error);
+                showNotification('Erro ao eliminar DR', 'error');
             }
         }
         

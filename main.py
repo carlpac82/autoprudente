@@ -13448,9 +13448,11 @@ async def create_damage_report(request: Request):
                 
                 import datetime
                 year = datetime.datetime.now().year
-                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%:{year}",))
+                # Contar DRs do ano atual (formato "DR XX/YYYY")
+                cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
                 count = cursor.fetchone()[0] + 1
-                dr_number = f"{count}:{year}"
+                # Formato correto: DR XX/YYYY
+                dr_number = f"DR {count:02d}/{year}"
                 
                 conn.execute("""
                     INSERT INTO damage_reports (
@@ -14058,6 +14060,106 @@ async def import_damage_reports_bulk(request: Request):
     except Exception as e:
         logging.error(f"Error importing damage reports: {e}")
         return {"ok": False, "error": str(e)}
+
+@app.post("/api/damage-reports/cleanup-invalid")
+async def cleanup_invalid_drs(request: Request):
+    """TEMPORÁRIO: Eliminar DRs com formato antigo (:)"""
+    require_auth(request)
+    
+    try:
+        invalid_drs = ["1:2025", "2:2025", "3:2025"]
+        deleted = []
+        errors = []
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for dr_number in invalid_drs:
+                    try:
+                        # Verificar se existe
+                        if hasattr(conn, 'cursor'):
+                            with conn.cursor() as cur:
+                                cur.execute("SELECT id, is_protected FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                                row = cur.fetchone()
+                        else:
+                            cursor = conn.execute("SELECT id, is_protected FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                            row = cursor.fetchone()
+                        
+                        if row:
+                            # Verificar se é protegido
+                            if row[1]:
+                                errors.append(f"{dr_number}: Protegido, não pode ser eliminado")
+                            else:
+                                # Eliminar
+                                if hasattr(conn, 'cursor'):
+                                    with conn.cursor() as cur:
+                                        cur.execute("DELETE FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                                else:
+                                    conn.execute("DELETE FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                                deleted.append(dr_number)
+                                logging.info(f"✅ DR {dr_number} eliminado")
+                        else:
+                            errors.append(f"{dr_number}: Não encontrado")
+                    except Exception as e:
+                        errors.append(f"{dr_number}: {str(e)}")
+                
+                conn.commit()
+                
+                return {
+                    "ok": True,
+                    "deleted": deleted,
+                    "errors": errors
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error cleaning up DRs: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.delete("/api/damage-reports/{dr_number}")
+async def delete_damage_report(request: Request, dr_number: str):
+    """Eliminar DR - APENAS se não for protegido"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Verificar se DR existe e se é protegido
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT is_protected FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                        row = cur.fetchone()
+                else:
+                    cursor = conn.execute("SELECT is_protected FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    row = cursor.fetchone()
+                
+                if not row:
+                    raise HTTPException(status_code=404, detail="DR not found")
+                
+                is_protected = row[0]
+                if is_protected:
+                    raise HTTPException(status_code=403, detail="Este DR está protegido e não pode ser eliminado")
+                
+                # Eliminar DR
+                if hasattr(conn, 'cursor'):
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                    conn.commit()
+                else:
+                    conn.execute("DELETE FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    conn.commit()
+                
+                logging.info(f"✅ DR {dr_number} eliminado com sucesso")
+                return {"ok": True, "message": f"DR {dr_number} eliminado"}
+                
+            finally:
+                conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting DR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/damage-reports/debug")
 async def debug_damage_reports(request: Request):
