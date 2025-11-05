@@ -14233,9 +14233,9 @@ async def protect_uploaded_drs(request: Request):
         return {"ok": False, "error": str(e)}
 
 @app.get("/api/damage-reports/cleanup-invalid")
-async def cleanup_invalid_drs(request: Request):
-    """Eliminar DRs com formato antigo (:)"""
-    require_auth(request)
+async def cleanup_invalid_drs():
+    """Eliminar DRs com formato antigo (:) - SEM AUTH"""
+    # require_auth(request)
     
     try:
         invalid_drs = ["1:2025", "2:2025", "3:2025"]
