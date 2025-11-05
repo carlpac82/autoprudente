@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Admin • Damage Report Settings</title>
+    <title>Admin • Relatório de Danos</title>
     <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -104,51 +104,8 @@
     <main class="mx-auto max-w-7xl px-4 py-6">
         <!-- Page Title -->
         <div class="mb-6">
-            <h2 class="text-2xl font-semibold text-gray-800">Damage Report</h2>
-            <p class="text-sm text-gray-500 mt-1">Configurações e mapeamento de campos do PDF</p>
-        </div>
-
-        <!-- Mapper Section -->
-        <div class="section-card">
-            <div class="section-header">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                </svg>
-                <h3>Mapear Campos PDF</h3>
-                <span class="ml-auto text-sm text-gray-500">{{ mapped_fields }} / 30 campos</span>
-            </div>
-            
-            <div class="flex items-center justify-between">
-                <p class="text-sm text-gray-600">Define as posições dos campos no template PDF</p>
-                <button onclick="toggleMapper()" id="toggleMapperBtn" class="action-icon" title="Mostrar/Esconder Mapeador">
-                    <svg id="toggleIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                </button>
-            </div>
-            
-            <!-- Iframe Container (Hidden by default) -->
-            <div id="mapperContainer" style="display: none; margin-top: 1.5rem;">
-                <div class="border border-gray-200" style="height: 800px; position: relative;">
-                    <!-- Loading indicator -->
-                    <div id="iframeLoading" style="position: absolute; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 10;">
-                        <div style="text-align: center;">
-                            <svg style="width: 48px; height: 48px; stroke: #009cb6; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
-                                <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">Carregando mapeador...</p>
-                        </div>
-                    </div>
-                    <iframe id="mapperIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
-                </div>
-            </div>
-            <style>
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            </style>
+            <h2 class="text-2xl font-semibold text-gray-800">Relatório de Danos</h2>
+            <p class="text-sm text-gray-500 mt-1">Configurações do PDF de danos</p>
         </div>
 
         <!-- Actions Grid -->
@@ -264,42 +221,6 @@
                 }
             });
         });
-
-        function toggleMapper() {
-            const container = document.getElementById('mapperContainer');
-            const iframe = document.getElementById('mapperIframe');
-            const icon = document.getElementById('toggleIcon');
-            const loading = document.getElementById('iframeLoading');
-            
-            if (container.style.display === 'none') {
-                // Show mapper
-                container.style.display = 'block';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>';
-                
-                // Load iframe if not loaded
-                if (!iframe.src) {
-                    loading.style.display = 'flex';
-                    iframe.src = '/damage-report?iframe=1&tab=mapper';
-                    
-                    // Hide loading when iframe loads
-                    iframe.onload = function() {
-                        loading.style.display = 'none';
-                    };
-                    
-                    // Timeout fallback (10 seconds)
-                    setTimeout(() => {
-                        if (loading.style.display !== 'none') {
-                            loading.style.display = 'none';
-                            showErrorMessage('Mapeador demorou muito a carregar. Tenta recarregar a página.');
-                        }
-                    }, 10000);
-                }
-            } else {
-                // Hide mapper
-                container.style.display = 'none';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>';
-            }
-        }
 
         function showSuccessMessage(text = 'Coordenadas guardadas com sucesso!') {
             const msg = document.createElement('div');

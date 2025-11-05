@@ -2939,6 +2939,76 @@ async def admin_env_summary(request: Request):
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/admin/files")
+async def admin_list_files(request: Request):
+    """Listar todos os ficheiros guardados na base de dados"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT id, filename, filepath, content_type, file_size, uploaded_by, created_at
+                    FROM file_storage
+                    ORDER BY created_at DESC
+                    LIMIT 100
+                    """
+                )
+                files = []
+                for row in cursor.fetchall():
+                    files.append({
+                        "id": row[0],
+                        "filename": row[1],
+                        "filepath": row[2],
+                        "content_type": row[3],
+                        "file_size": row[4],
+                        "uploaded_by": row[5],
+                        "created_at": row[6]
+                    })
+                return JSONResponse({"ok": True, "files": files, "count": len(files)})
+            finally:
+                conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/admin/files/{file_id}")
+async def admin_get_file(request: Request, file_id: int):
+    """Recuperar ficheiro da base de dados"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT filename, file_data, content_type
+                    FROM file_storage
+                    WHERE id = ?
+                    """,
+                    (file_id,)
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return JSONResponse({"ok": False, "error": "File not found"}, status_code=404)
+                
+                from starlette.responses import Response
+                return Response(
+                    content=row[1],
+                    media_type=row[2] or "application/octet-stream",
+                    headers={"Content-Disposition": f'attachment; filename="{row[0]}"'}
+                )
+            finally:
+                conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/admin/adjust-preview")
 async def admin_adjust_preview(request: Request, price: str, url: str):
     try:
@@ -14673,36 +14743,23 @@ async def export_automated_prices_excel(request: Request):
         filename = f"ABBYCAR-{location_name}-01-31-{month_name}.xlsx"
         print(f"[BACKEND] Excel file ready: {filename} ({len(excel_bytes)} bytes)", flush=True)
         
-        # SALVAR NA BASE DE DADOS (persistente) - com proteção
-        print("[BACKEND] Attempting to save to database...", flush=True)
+        # SALVAR NA BASE DE DADOS (persistente)
+        print("[BACKEND] Saving to database...", flush=True)
         try:
-            import signal
-            
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Database save timeout")
-            
-            # Set 2 second timeout
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(2)
-            
-            try:
-                excel_bytes = excel_file.getvalue()
-                username = request.session.get("username", "admin")
-                save_file_to_db(
-                    filename=filename,
-                    filepath=f"/exports/{filename}",
-                    file_data=excel_bytes,
-                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    uploaded_by=username
-                )
-                signal.alarm(0)  # Cancel alarm
-                log_to_db("INFO", f"Excel export saved to DB: {filename}", "main", "export_automated_prices_excel")
-                print("[BACKEND] Saved to database successfully", flush=True)
-            except TimeoutError:
-                signal.alarm(0)  # Cancel alarm
-                print("[BACKEND] Database save timeout - continuing anyway", flush=True)
+            excel_bytes = excel_file.getvalue()
+            username = request.session.get("username", "admin")
+            save_file_to_db(
+                filename=filename,
+                filepath=f"/exports/{filename}",
+                file_data=excel_bytes,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                uploaded_by=username
+            )
+            log_to_db("INFO", f"Excel export saved to DB: {filename}", "main", "export_automated_prices_excel")
+            print(f"[BACKEND] ✅ Saved to database: {filename} ({len(excel_bytes)} bytes)", flush=True)
         except Exception as e:
-            print(f"[BACKEND] Database save failed: {str(e)} - continuing anyway", flush=True)
+            log_to_db("ERROR", f"Failed to save Excel to DB: {str(e)}", "main", "export_automated_prices_excel")
+            print(f"[BACKEND] ⚠️ Database save failed: {str(e)} - download will still work", flush=True)
         
         # Reset para retornar
         excel_file.seek(0)
