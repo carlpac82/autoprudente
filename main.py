@@ -13553,6 +13553,58 @@ async def get_damage_report(request: Request, dr_number: str):
         logging.error(f"Error getting damage report: {e}")
         return {"ok": False, "error": str(e)}
 
+def _get_next_dr_number():
+    """Gerar próximo número de DR com reset anual automático"""
+    from datetime import datetime
+    
+    with _db_lock:
+        conn = _db_connect()
+        try:
+            current_year = datetime.now().year
+            
+            # Obter configuração atual
+            cursor = conn.execute("""
+                SELECT current_year, current_number, prefix 
+                FROM damage_report_numbering 
+                WHERE id = 1
+            """)
+            row = cursor.fetchone()
+            
+            if not row:
+                # Criar configuração inicial
+                conn.execute("""
+                    INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                    VALUES (1, ?, 1, 'DR')
+                """, (current_year,))
+                conn.commit()
+                return f"DR 01/{current_year}"
+            
+            saved_year, current_number, prefix = row
+            
+            # Verificar se mudou o ano (reset)
+            if current_year > saved_year:
+                # Novo ano - reset para 01
+                new_number = 1
+                conn.execute("""
+                    UPDATE damage_report_numbering 
+                    SET current_year = ?, current_number = ?, updated_at = ?
+                    WHERE id = 1
+                """, (current_year, new_number, datetime.now().isoformat()))
+                conn.commit()
+                return f"{prefix} {new_number:02d}/{current_year}"
+            else:
+                # Mesmo ano - incrementar
+                new_number = current_number + 1
+                conn.execute("""
+                    UPDATE damage_report_numbering 
+                    SET current_number = ?, updated_at = ?
+                    WHERE id = 1
+                """, (new_number, datetime.now().isoformat()))
+                conn.commit()
+                return f"{prefix} {new_number:02d}/{current_year}"
+        finally:
+            conn.close()
+
 def _ensure_damage_report_tables():
     """Garantir que todas as tabelas do Damage Report existem"""
     with _db_lock:
@@ -13605,12 +13657,111 @@ def _ensure_damage_report_tables():
                 )
             """)
             
+            # Tabela de configuração de numeração
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS damage_report_numbering (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    current_year INTEGER NOT NULL,
+                    current_number INTEGER NOT NULL,
+                    prefix TEXT DEFAULT 'DR',
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_by TEXT
+                )
+            """)
+            
+            # Inserir configuração inicial se não existir
+            cursor = conn.execute("SELECT COUNT(*) FROM damage_report_numbering")
+            if cursor.fetchone()[0] == 0:
+                from datetime import datetime
+                current_year = datetime.now().year
+                conn.execute("""
+                    INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                    VALUES (1, ?, 40, 'DR')
+                """, (current_year,))
+            
             conn.commit()
             logging.info("✅ Tabelas do Damage Report verificadas/criadas")
         except Exception as e:
             logging.error(f"Error creating damage report tables: {e}")
         finally:
             conn.close()
+
+@app.get("/api/damage-reports/numbering/get")
+async def get_dr_numbering(request: Request):
+    """Obter configuração de numeração atual"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT current_year, current_number, prefix, updated_at
+                    FROM damage_report_numbering
+                    WHERE id = 1
+                """)
+                row = cursor.fetchone()
+                
+                if row:
+                    current_year, current_number, prefix, updated_at = row
+                    next_number = f"{prefix} {current_number + 1:02d}/{current_year}"
+                    return {
+                        "ok": True,
+                        "current_year": current_year,
+                        "current_number": current_number,
+                        "prefix": prefix,
+                        "next_number": next_number,
+                        "updated_at": updated_at
+                    }
+                else:
+                    return {"ok": False, "error": "Configuração não encontrada"}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting DR numbering: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/damage-reports/numbering/update")
+async def update_dr_numbering(request: Request):
+    """Atualizar configuração de numeração manualmente"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        
+        data = await request.json()
+        current_number = int(data.get('current_number', 1))
+        prefix = data.get('prefix', 'DR')
+        username = request.session.get('username', 'admin')
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                current_year = datetime.now().year
+                
+                conn.execute("""
+                    UPDATE damage_report_numbering
+                    SET current_number = ?, prefix = ?, current_year = ?, updated_at = ?, updated_by = ?
+                    WHERE id = 1
+                """, (current_number, prefix, current_year, datetime.now().isoformat(), username))
+                
+                conn.commit()
+                
+                next_number = f"{prefix} {current_number + 1:02d}/{current_year}"
+                logging.info(f"✅ Numeração DR atualizada: próximo será {next_number}")
+                
+                return {
+                    "ok": True,
+                    "message": "Numeração atualizada com sucesso",
+                    "next_number": next_number
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error updating DR numbering: {e}")
+        return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/save-coordinates")
 async def save_damage_report_coordinates(request: Request):

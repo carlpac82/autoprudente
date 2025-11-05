@@ -158,6 +158,36 @@
             </style>
         </div>
 
+        <!-- Configuração de Numeração -->
+        <div class="section-card">
+            <div class="section-header">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                </svg>
+                <h3>Numeração Automática</h3>
+            </div>
+            
+            <div style="background: #f0f9fb; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <p class="text-sm text-gray-600 mb-3">Próximo DR será: <strong id="nextDRNumber" style="color: #009cb6; font-size: 1.1rem;">DR 41/2025</strong></p>
+                <p class="text-xs text-gray-500">Reset automático dia 1 de Janeiro para DR 01/XXXX</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Prefixo</label>
+                    <input type="text" id="drPrefix" value="DR" class="w-full px-3 py-2 border border-gray-300 rounded-md" maxlength="10">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Número Atual</label>
+                    <input type="number" id="drCurrentNumber" value="40" class="w-full px-3 py-2 border border-gray-300 rounded-md" min="1">
+                </div>
+            </div>
+            
+            <button onclick="updateDRNumbering()" class="btn btn-primary mt-4" style="background: #009cb6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%;">
+                Atualizar Numeração
+            </button>
+        </div>
+
         <!-- Actions Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <!-- Upload Template -->
@@ -262,6 +292,7 @@
         // Load coordinates on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadCoordinates();
+            loadDRNumbering();
             
             // Listen for messages from iframe
             window.addEventListener('message', (event) => {
@@ -568,6 +599,46 @@
 
         function editField(fieldId) {
             window.location.href = `/damage-report?tab=mapper&field=${fieldId}`;
+        }
+
+        async function loadDRNumbering() {
+            try {
+                const response = await fetch('/api/damage-reports/numbering/get');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    document.getElementById('drPrefix').value = data.prefix || 'DR';
+                    document.getElementById('drCurrentNumber').value = data.current_number || 1;
+                    document.getElementById('nextDRNumber').textContent = data.next_number || 'DR 01/2025';
+                }
+            } catch (error) {
+                console.error('Error loading DR numbering:', error);
+            }
+        }
+
+        async function updateDRNumbering() {
+            try {
+                const prefix = document.getElementById('drPrefix').value || 'DR';
+                const currentNumber = parseInt(document.getElementById('drCurrentNumber').value) || 1;
+                
+                const response = await fetch('/api/damage-reports/numbering/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prefix, current_number: currentNumber })
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    document.getElementById('nextDRNumber').textContent = result.next_number;
+                    showSuccessMessage('Numeração atualizada! Próximo DR: ' + result.next_number);
+                } else {
+                    showErrorMessage('Erro ao atualizar numeração: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error updating DR numbering:', error);
+                showErrorMessage('Erro ao atualizar numeração');
+            }
         }
     </script>
 </body>
