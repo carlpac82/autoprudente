@@ -466,7 +466,7 @@ import logging
 import json
 
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
-from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
