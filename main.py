@@ -14540,12 +14540,46 @@ async def export_automated_prices_excel(request: Request):
         # Price calculation logic based on periods
         def calculate_price_for_day(group_prices, day):
             """
-            Get exact price for each period - NO division, use values as-is
-            These are FIXED prices per period (1 day fixed, 2 days fixed, etc.)
+            Calculate price based on day period:
+            - Days 1-7: NET fixed prices (no division)
+            - Days 8+: Daily prices (price / days)
             """
             # Try both string and integer keys (frontend sends integers)
             price = group_prices.get(day) or group_prices.get(str(day), '')
-            return float(price) if price else ''
+            
+            if not price:
+                return ''
+            
+            price = float(price)
+            
+            # Days 1-7: Fixed NET prices (no division)
+            if day <= 7:
+                return price
+            
+            # Days 8+: Daily prices (divide by days)
+            # 8-10 daily: use day 9 price / 9
+            # 11-12 daily: use day 9 price / 9
+            # 13-14 daily: use day 14 price / 14
+            # 15-21 daily: use day 22 price / 22
+            # 22-28 daily: use day 28 price / 28
+            
+            if day == 8:  # 8-10 daily
+                # Use day 9 price / 9
+                price_9 = group_prices.get(9) or group_prices.get('9', '')
+                if price_9:
+                    return float(price_9) / 9
+                return price / 8
+            elif day == 9:  # 11-12 daily
+                # Use day 9 price / 9
+                return price / 9
+            elif day == 14:  # 13-14 daily
+                return price / 14
+            elif day == 22:  # 15-21 daily
+                return price / 22
+            elif day == 28:  # 22-28 daily
+                return price / 28
+            
+            return price
         
         # Get Abbycar price adjustments
         abbycar_adjustment = _get_abbycar_adjustment()
