@@ -14279,7 +14279,7 @@ async def protect_uploaded_drs(request: Request):
 
 @app.post("/api/damage-reports/cleanup-invalid")
 async def cleanup_invalid_drs(request: Request):
-    """TEMPORÁRIO: Eliminar DRs com formato antigo (:)"""
+    """Eliminar DRs com formato antigo (:)"""
     require_auth(request)
     
     try:
@@ -14292,39 +14292,30 @@ async def cleanup_invalid_drs(request: Request):
             try:
                 for dr_number in invalid_drs:
                     try:
-                        # Verificar se existe
                         if hasattr(conn, 'cursor'):
+                            # PostgreSQL
                             with conn.cursor() as cur:
-                                cur.execute("SELECT id, is_protected FROM damage_reports WHERE dr_number = %s", (dr_number,))
-                                row = cur.fetchone()
+                                cur.execute("DELETE FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                                if cur.rowcount > 0:
+                                    deleted.append(dr_number)
+                                    logging.info(f"✅ DR {dr_number} eliminado")
                         else:
-                            cursor = conn.execute("SELECT id, is_protected FROM damage_reports WHERE dr_number = ?", (dr_number,))
-                            row = cursor.fetchone()
-                        
-                        if row:
-                            # Verificar se é protegido
-                            if row[1]:
-                                errors.append(f"{dr_number}: Protegido, não pode ser eliminado")
-                            else:
-                                # Eliminar
-                                if hasattr(conn, 'cursor'):
-                                    with conn.cursor() as cur:
-                                        cur.execute("DELETE FROM damage_reports WHERE dr_number = %s", (dr_number,))
-                                else:
-                                    conn.execute("DELETE FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                            # SQLite
+                            cursor = conn.execute("DELETE FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                            if cursor.rowcount > 0:
                                 deleted.append(dr_number)
                                 logging.info(f"✅ DR {dr_number} eliminado")
-                        else:
-                            errors.append(f"{dr_number}: Não encontrado")
                     except Exception as e:
                         errors.append(f"{dr_number}: {str(e)}")
+                        logging.error(f"❌ Erro ao eliminar {dr_number}: {e}")
                 
                 conn.commit()
                 
                 return {
                     "ok": True,
                     "deleted": deleted,
-                    "errors": errors
+                    "errors": errors,
+                    "message": f"{len(deleted)} DRs eliminados com sucesso"
                 }
             finally:
                 conn.close()
