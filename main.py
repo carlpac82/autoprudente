@@ -594,12 +594,17 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 def _ensure_damage_reports_tables():
     """Criar tabelas de Damage Reports no PostgreSQL"""
-    with _db_lock:
-        conn = _db_connect()
-        try:
-            is_postgres = hasattr(conn, 'cursor')
-            
-            if is_postgres:
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if not is_postgres:
+                    print("   ⚠️  SQLite detected, skipping DR tables", flush=True)
+                    return
+                
+                print("   🔧 Creating PostgreSQL DR tables...", flush=True)
                 with conn.cursor() as cur:
                     cur.execute("""
                         CREATE TABLE IF NOT EXISTS damage_reports (
@@ -693,9 +698,18 @@ def _ensure_damage_reports_tables():
                     cur.execute("CREATE INDEX IF NOT EXISTS idx_dr_number ON damage_reports(dr_number)")
                     cur.execute("CREATE INDEX IF NOT EXISTS idx_dr_created_at ON damage_reports(created_at DESC)")
                     
+                    print("   ✅ damage_reports", flush=True)
+                    print("   ✅ damage_report_coordinates", flush=True)
+                    print("   ✅ damage_report_templates", flush=True)
+                    print("   ✅ damage_report_numbering", flush=True)
+                    
                 conn.commit()
-        finally:
-            conn.close()
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"   ❌ Error creating DR tables: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
 
 @app.on_event("startup")
 async def startup_event():
