@@ -15054,7 +15054,9 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
     require_auth(request)
     
     try:
-        logging.info(f"🔍 Procurando PDF para DR: {dr_number}")
+        logging.info(f"🔍 Procurando PDF para DR: [{dr_number}] (len={len(dr_number)}, repr={repr(dr_number)})")
+        logging.info(f"📍 URL path: {request.url.path}")
+        logging.info(f"📍 Raw path: {request.scope.get('path', '')}")
         
         with _db_lock:
             conn = _db_connect()
