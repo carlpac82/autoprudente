@@ -11373,6 +11373,25 @@ def _ensure_vehicle_photos_table():
                         uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
+                
+                # Migration: Ensure columns exist (PostgreSQL)
+                if hasattr(con, 'cursor'):
+                    try:
+                        with con.cursor() as cur:
+                            # Add photo_url if missing
+                            cur.execute("""
+                                ALTER TABLE vehicle_photos 
+                                ADD COLUMN IF NOT EXISTS photo_url TEXT
+                            """)
+                            # Add uploaded_at if missing
+                            cur.execute("""
+                                ALTER TABLE vehicle_photos 
+                                ADD COLUMN IF NOT EXISTS uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
+                            """)
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"⚠️ Could not add vehicle_photos columns: {e}")
+                
                 con.commit()
             finally:
                 con.close()
@@ -13047,20 +13066,56 @@ async def get_vehicle_photo_metadata(vehicle_name: str, request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                row = con.execute(
-                    "SELECT source_url, downloaded_at, content_type FROM vehicle_images WHERE vehicle_key = ?",
-                    (vehicle_key,)
-                ).fetchone()
+                # Try vehicle_photos first (has photo_url)
+                if hasattr(con, 'cursor'):
+                    # PostgreSQL
+                    with con.cursor() as cur:
+                        cur.execute(
+                            "SELECT photo_url, uploaded_at, content_type FROM vehicle_photos WHERE vehicle_name = %s",
+                            (vehicle_key,)
+                        )
+                        row = cur.fetchone()
+                else:
+                    # SQLite
+                    row = con.execute(
+                        "SELECT photo_url, uploaded_at, content_type FROM vehicle_photos WHERE vehicle_name = ?",
+                        (vehicle_key,)
+                    ).fetchone()
                 
-                if row:
+                if row and row[0]:  # Has photo_url
+                    return _no_store_json({
+                        "ok": True,
+                        "source_url": row[0],  # photo_url
+                        "downloaded_at": row[1],
+                        "content_type": row[2]
+                    })
+                
+                # Fallback: try vehicle_images (has source_url)
+                if hasattr(con, 'cursor'):
+                    # PostgreSQL
+                    with con.cursor() as cur:
+                        cur.execute(
+                            "SELECT source_url, downloaded_at, content_type FROM vehicle_images WHERE vehicle_key = %s",
+                            (vehicle_key,)
+                        )
+                        row = cur.fetchone()
+                else:
+                    # SQLite
+                    row = con.execute(
+                        "SELECT source_url, downloaded_at, content_type FROM vehicle_images WHERE vehicle_key = ?",
+                        (vehicle_key,)
+                    ).fetchone()
+                
+                if row and row[0]:  # Has source_url
                     return _no_store_json({
                         "ok": True,
                         "source_url": row[0],
                         "downloaded_at": row[1],
                         "content_type": row[2]
                     })
-                else:
-                    return _no_store_json({"ok": False, "error": "Photo not found"}, 404)
+                
+                # No metadata found
+                return _no_store_json({"ok": False, "error": "Photo metadata not found"}, 404)
             finally:
                 con.close()
     except Exception as e:
