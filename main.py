@@ -14857,16 +14857,31 @@ async def get_dr_numbering(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("""
-                    SELECT current_year, current_number, prefix, updated_at
-                    FROM damage_report_numbering
-                    WHERE id = 1
-                """)
-                row = cursor.fetchone()
+                row = None
+                
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT current_year, current_number, prefix, updated_at
+                        FROM damage_report_numbering
+                        WHERE id = 1
+                    """)
+                    row = cursor.fetchone()
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT current_year, current_number, prefix, updated_at
+                        FROM damage_report_numbering
+                        WHERE id = 1
+                    """)
+                    row = cursor.fetchone()
                 
                 if row:
                     current_year, current_number, prefix, updated_at = row
                     next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
+                    logging.info(f"📊 GET Numbering: current={current_number}, next={next_number}")
                     return {
                         "ok": True,
                         "current_year": current_year,
@@ -14901,6 +14916,8 @@ async def update_dr_numbering(request: Request):
             try:
                 current_year = datetime.now().year
                 
+                logging.info(f"🔄 UPDATE Numbering: Recebido current_number={current_number}, prefix={prefix}")
+                
                 # Atualizar numeração (sem updated_by pois coluna não existe)
                 if hasattr(conn, 'cursor'):
                     # PostgreSQL
@@ -14910,6 +14927,7 @@ async def update_dr_numbering(request: Request):
                             SET current_number = %s, prefix = %s, current_year = %s, updated_at = %s
                             WHERE id = 1
                         """, (current_number, prefix, current_year, datetime.now().isoformat()))
+                        logging.info(f"✅ PostgreSQL UPDATE executado: current_number={current_number}")
                 else:
                     # SQLite
                     conn.execute("""
@@ -14917,11 +14935,12 @@ async def update_dr_numbering(request: Request):
                         SET current_number = ?, prefix = ?, current_year = ?, updated_at = ?
                         WHERE id = 1
                     """, (current_number, prefix, current_year, datetime.now().isoformat()))
+                    logging.info(f"✅ SQLite UPDATE executado: current_number={current_number}")
                 
                 conn.commit()
                 
                 next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
-                logging.info(f"✅ Numeração DR atualizada: próximo será {next_number}")
+                logging.info(f"✅ Numeração DR atualizada: current={current_number}, próximo={next_number}")
                 
                 return {
                     "ok": True,
