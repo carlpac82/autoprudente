@@ -2847,6 +2847,29 @@ async def price_automation_fill(request: Request):
         "current_user": current_user
     })
 
+@app.get("/damage-report", response_class=HTMLResponse)
+async def damage_report_page(request: Request):
+    """Página de Damage Report"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    # Get current user
+    user_id = request.session.get("user_id")
+    current_user = None
+    if user_id:
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        finally:
+            conn.close()
+    
+    return templates.TemplateResponse("damage_report.html", {
+        "request": request,
+        "current_user": current_user
+    })
+
 # --- Admin: environment summary and adjustment preview ---
 @app.get("/admin/env-summary")
 async def admin_env_summary(request: Request):
