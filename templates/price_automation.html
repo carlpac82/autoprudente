@@ -2615,6 +2615,7 @@
             } else if (tab === 'automated') {
                 historyTabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentAutomated.classList.remove('hidden');
+                loadAutomatedSearchHistory();
             } else if (tab === 'downloads') {
                 historyTabDownloads.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentDownloads.classList.remove('hidden');
@@ -6549,6 +6550,93 @@ Continue?`);
             
             loadCalendarScansHistory();
             showNotification('Calendar scan deleted', 'success');
+        }
+        
+        // ===== AUTOMATED SEARCH HISTORY =====
+        
+        async function loadAutomatedSearchHistory() {
+            const container = document.getElementById('historyMonthsAutomated');
+            container.innerHTML = '<div class="col-span-full text-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#009cb6] mx-auto"></div><p class="mt-2 text-gray-600">Loading...</p></div>';
+            
+            try {
+                const response = await fetch('/api/search-history/list?limit=100');
+                const data = await response.json();
+                
+                if (!data.ok || !data.history || data.history.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                            </svg>
+                            <p class="text-lg font-medium">No automated searches yet</p>
+                            <p class="text-sm mt-2">Run an automated search to see history here</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Group by date
+                const groupedByDate = {};
+                data.history.forEach(search => {
+                    const date = new Date(search.search_timestamp).toLocaleDateString('pt-PT');
+                    if (!groupedByDate[date]) {
+                        groupedByDate[date] = [];
+                    }
+                    groupedByDate[date].push(search);
+                });
+                
+                // Render cards
+                container.innerHTML = Object.entries(groupedByDate).map(([date, searches]) => `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${date}</h4>
+                                <p class="text-xs text-gray-500">${searches.length} search${searches.length > 1 ? 'es' : ''}</p>
+                            </div>
+                            <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            ${searches.map(search => `
+                                <div class="bg-gray-50 p-2 rounded text-xs">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="font-medium text-gray-900">${search.location}</span>
+                                        <span class="text-gray-600">${search.days} days</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 text-gray-600">
+                                        <div>
+                                            <span class="text-green-600">Min:</span> ${search.min_price ? search.min_price.toFixed(2) + '€' : 'N/A'}
+                                        </div>
+                                        <div>
+                                            <span class="text-blue-600">Avg:</span> ${search.avg_price ? search.avg_price.toFixed(2) + '€' : 'N/A'}
+                                        </div>
+                                        <div>
+                                            <span class="text-red-600">Max:</span> ${search.max_price ? search.max_price.toFixed(2) + '€' : 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div class="mt-1 text-gray-500">
+                                        ${search.results_count} results | ${new Date(search.search_timestamp).toLocaleTimeString('pt-PT', {hour: '2-digit', minute: '2-digit'})}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading automated search history:', error);
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-500">
+                        <svg class="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-lg font-medium">Error loading history</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
         }
         
         // ===== DOWNLOADS HISTORY =====
