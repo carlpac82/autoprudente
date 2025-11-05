@@ -2504,6 +2504,8 @@
             
             // Try backend Excel (20 second timeout)
             try {
+                console.log('[ABBYCAR] Sending request to backend...', { location, date, priceCount: Object.keys(prices).length });
+                
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 20000);
                 
@@ -2515,9 +2517,12 @@
                 });
                 
                 clearTimeout(timeoutId);
+                console.log('[ABBYCAR] Response status:', response.status, response.statusText);
                 
                 if (response.ok) {
                     const blob = await response.blob();
+                    console.log('[ABBYCAR] Blob received:', blob.size, 'bytes, type:', blob.type);
+                    
                     if (blob.size > 1000) {
                         // Extract filename from Content-Disposition header
                         const contentDisposition = response.headers.get('Content-Disposition');
@@ -2544,7 +2549,7 @@
                     }
                 }
             } catch (error) {
-                console.warn('Backend Excel failed:', error.message);
+                console.error('[ABBYCAR] Backend Excel failed:', error.message, error);
             }
             
             // Fallback: CSV
