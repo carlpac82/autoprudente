@@ -2162,9 +2162,11 @@
         }
         
         async function exportWebsiteCSV() {
-            console.log('📤 Exporting Website CSV...');
+            console.log('📤 Starting Website CSV export...');
             
             try {
+                showNotification('📊 Generating Website CSV...', 'info');
+                
                 // Same format as Way2Rentals
                 const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
                                            'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
@@ -2277,12 +2279,20 @@
                 csvContent += rowData.join(';') + '\n';
             });
             
+            console.log('📦 Creating CSV blob...');
+            
             // Download CSV
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            console.log('Blob size:', blob.size, 'bytes');
+            
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ File downloaded:', filename);
             
             // Save to downloads history
             saveDownloadToHistory(filename, 'website', location);
@@ -2533,11 +2543,14 @@
         
         async function downloadAutomatedPricesExcel() {
             try {
+                console.log('📊 Starting Excel download...');
                 showNotification('📊 Generating Excel file...', 'info');
                 
                 // Get location and date
                 const location = document.getElementById('locationAuto')?.value || 'Unknown';
                 const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+                
+                console.log('Location:', location, 'Date:', date);
                 
                 // Collect prices from table (only AUTO column)
                 const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
@@ -2555,9 +2568,10 @@
                     });
                 });
                 
-                console.log('📊 Collected prices:', prices);
+                console.log('📊 Collected prices:', Object.keys(prices).length, 'groups');
                 
                 // Send to backend
+                console.log('📤 Sending request to backend...');
                 const response = await fetch('/api/export-automated-prices-excel', {
                     method: 'POST',
                     headers: {
@@ -2570,12 +2584,24 @@
                     })
                 });
                 
+                console.log('Response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error('Failed to generate Excel file');
+                    const errorText = await response.text();
+                    console.error('Backend error:', errorText);
+                    throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}`);
                 }
+                
+                console.log('✅ Response OK, creating blob...');
                 
                 // Download file
                 const blob = await response.blob();
+                console.log('Blob size:', blob.size, 'bytes, type:', blob.type);
+                
+                if (blob.size < 100) {
+                    throw new Error('Excel file is too small - likely corrupted');
+                }
+                
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -2586,14 +2612,16 @@
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
+                console.log('✅ File downloaded:', filename);
+                
                 // Save to downloads history
                 saveDownloadToHistory(filename, 'abbycar', location);
                 
-                showNotification('Excel file downloaded successfully!', 'success');
+                showNotification('✅ Excel file downloaded successfully!', 'success');
                 
             } catch (error) {
-                console.error('Error downloading Excel:', error);
-                showNotification('Error generating Excel file: ' + error.message, 'error');
+                console.error('❌ Error downloading Excel:', error);
+                showNotification('❌ Error: ' + error.message, 'error');
             }
         }
         
