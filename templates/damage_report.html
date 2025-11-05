@@ -1963,32 +1963,36 @@
                                                 ${report.client_name || 'A preencher'} • ${report.vehicle_plate || 'A preencher'}
                                             </p>
                                         </div>
-                                        <div style="display: flex; gap: 8px;">
-                                            ${report.has_pdf ? `
-                                                <button onclick="testPDFPreview('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Visualizar PDF">
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            ${report.is_protected ? `
+                                                <!-- DR Protegido (upload) - Apenas Ver/Download -->
+                                                <button onclick="window.open('/api/damage-reports/${encodeURIComponent(report.dr_number)}/pdf-original?preview=true', '_blank')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Ver PDF">
                                                     <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                                     </svg>
                                                     <span style="font-size: 13px;">Ver</span>
                                                 </button>
-                                                <button onclick="testPDFDownload('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Download PDF">
+                                                <button onclick="window.open('/api/damage-reports/${encodeURIComponent(report.dr_number)}/pdf-original', '_blank')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Download PDF">
                                                     <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                     </svg>
                                                     <span style="font-size: 13px;">Download</span>
                                                 </button>
                                             ` : `
-                                                <span style="color: #ef4444; font-size: 13px; padding: 8px;">Sem PDF</span>
-                                            `}
-                                            ${!report.is_protected ? `
-                                                <button onclick="deleteDR('${report.dr_number}')" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'" title="Eliminar DR">
+                                                <!-- DR Manual - Editar e Eliminar -->
+                                                <button onclick="editDR('${report.dr_number}')" style="background: #009cb6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#007a8c'" onmouseout="this.style.background='#009cb6'" title="Editar DR">
                                                     <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                     </svg>
-                                                    <span style="font-size: 13px;">Eliminar</span>
+                                                    <span style="font-size: 13px;">Editar</span>
                                                 </button>
-                                            ` : ''}
+                                                <button onclick="deleteDR('${report.dr_number}')" style="background: transparent; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'" title="Eliminar DR">
+                                                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            `}
                                         </div>
                                     </div>
                                 </div>
@@ -2117,14 +2121,98 @@
             }
         }
         
+        // Editar DR - Carrega dados e muda para tab Criar
+        async function editDR(drNumber) {
+            try {
+                const response = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}`);
+                const result = await response.json();
+                
+                if (result.ok && result.report) {
+                    const report = result.report;
+                    
+                    // Preencher formulário
+                    document.getElementById('contractNumber').value = report.contract_number || '';
+                    document.getElementById('date').value = report.date || '';
+                    document.getElementById('clientName').value = report.client_name || '';
+                    document.getElementById('clientEmail').value = report.client_email || '';
+                    document.getElementById('clientPhone').value = report.client_phone || '';
+                    document.getElementById('address').value = report.client_address || '';
+                    document.getElementById('city').value = report.client_city || '';
+                    document.getElementById('postalCode').value = report.client_postal_code || '';
+                    document.getElementById('country').value = report.client_country || '';
+                    document.getElementById('vehiclePlate').value = report.vehicle_plate || '';
+                    document.getElementById('vehicleModel').value = report.vehicle_model || '';
+                    document.getElementById('vehicleBrand').value = report.vehicle_brand || '';
+                    document.getElementById('pickupDate').value = report.pickup_date || '';
+                    document.getElementById('pickupTime').value = report.pickup_time || '';
+                    document.getElementById('pickupLocation').value = report.pickup_location || '';
+                    document.getElementById('returnDate').value = report.return_date || '';
+                    document.getElementById('returnTime').value = report.return_time || '';
+                    document.getElementById('returnLocation').value = report.return_location || '';
+                    document.getElementById('observations').value = report.observations || '';
+                    
+                    // Carregar danos se existirem
+                    if (report.damage_diagram_data) {
+                        try {
+                            damages = JSON.parse(report.damage_diagram_data);
+                            damageCounter = Math.max(...damages.map(d => d.number), 0);
+                            // Recriar pins
+                            damages.forEach(d => {
+                                const container = document.querySelector(`[data-view="${d.view}"]`);
+                                if (container) {
+                                    const pin = document.createElement('div');
+                                    pin.className = 'damage-pin';
+                                    pin.id = d.id;
+                                    pin.textContent = d.number;
+                                    pin.style.left = d.x + 'px';
+                                    pin.style.top = d.y + 'px';
+                                    pin.onclick = (e) => {
+                                        e.stopPropagation();
+                                        removeDamagePin(d.id);
+                                    };
+                                    container.appendChild(pin);
+                                }
+                            });
+                            updateDamageList();
+                        } catch (e) {
+                            console.error('Erro ao carregar danos:', e);
+                        }
+                    }
+                    
+                    // Carregar itens de reparo
+                    if (report.repair_items) {
+                        try {
+                            repairItems = JSON.parse(report.repair_items);
+                            updateRepairTable();
+                        } catch (e) {
+                            console.error('Erro ao carregar reparos:', e);
+                        }
+                    }
+                    
+                    // Guardar DR number atual para update
+                    currentDRNumber = drNumber;
+                    
+                    // Mudar para tab Criar
+                    document.querySelector('[onclick="showTab(\'create\')"]').click();
+                    
+                    // Scroll para o topo
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    showNotification(`A editar DR ${drNumber}`, 'success');
+                } else {
+                    showNotification('Erro ao carregar DR', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao editar:', error);
+                showNotification('Erro ao carregar DR para edição', 'error');
+            }
+        }
+        
         // Eliminar DR
         async function deleteDR(drNumber) {
             if (!confirm(`Tem a certeza que deseja eliminar o DR ${drNumber}?\n\nEsta ação não pode ser revertida.`)) {
                 return;
             }
-            
-            console.log('=== ELIMINAR DR ===');
-            console.log('DR Number:', drNumber);
             
             try {
                 const response = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}`, {
@@ -2132,17 +2220,15 @@
                 });
                 
                 const result = await response.json();
-                console.log('Resultado:', result);
                 
                 if (result.ok) {
                     showNotification(`DR ${drNumber} eliminado com sucesso`, 'success');
-                    // Recarregar histórico
                     loadHistory();
                 } else {
                     if (response.status === 403) {
                         showNotification('Este DR está protegido e não pode ser eliminado', 'error');
                     } else {
-                        showNotification('Erro ao eliminar DR: ' + (result.error || 'Desconhecido'), 'error');
+                        showNotification('Erro ao eliminar DR', 'error');
                     }
                 }
             } catch (error) {

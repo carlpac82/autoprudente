@@ -13618,14 +13618,26 @@ async def get_damage_report(request: Request, dr_number: str):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
-                row = cursor.fetchone()
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT * FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                        row = cur.fetchone()
+                        columns = [desc[0] for desc in cur.description]
+                else:
+                    # SQLite
+                    cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
                 
                 if not row:
                     return {"ok": False, "error": "Damage Report not found"}
                 
-                columns = [desc[0] for desc in cursor.description]
                 report = dict(zip(columns, row))
+                
+                # Converter bytes/memoryview para None (não enviar PDFs grandes)
+                if 'pdf_data' in report and report['pdf_data']:
+                    report['pdf_data'] = None  # Não enviar o PDF completo
                 
                 return {"ok": True, "report": report}
             finally:
