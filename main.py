@@ -13770,26 +13770,15 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                             logging.info(f"📝 Criando DR {dr_number} automaticamente a partir do PDF")
                             conn.execute("""
                                 INSERT INTO damage_reports (
-                                    dr_number, ra_number, contract_number, date,
-                                    client_name, client_email, client_phone, client_address,
-                                    client_city, client_postal_code, vehicle_plate, vehicle_model,
-                                    damages, status, pdf_data, pdf_filename, 
+                                    dr_number, date, client_name, vehicle_plate,
+                                    status, pdf_data, pdf_filename, 
                                     created_at, created_by, updated_at
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (
                                 dr_number,
-                                None,  # ra_number
-                                None,  # contract_number
                                 datetime.now().strftime('%Y-%m-%d'),  # date
                                 'A preencher',  # client_name
-                                None,  # client_email
-                                None,  # client_phone
-                                None,  # client_address
-                                None,  # client_city
-                                None,  # client_postal_code
                                 'A preencher',  # vehicle_plate
-                                None,  # vehicle_model
-                                '[]',  # damages (JSON vazio)
                                 'draft',  # status
                                 pdf_data,  # pdf_data
                                 filename,  # pdf_filename
