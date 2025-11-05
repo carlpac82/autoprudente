@@ -13991,10 +13991,11 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                                 datetime.now().isoformat()  # updated_at
                             ))
                         else:
-                            # Atualizar DR existente com PDF
+                            # Atualizar DR existente com PDF e marcar como protegido
+                            logging.info(f"🔒 Atualizando DR {dr_number} e marcando como PROTEGIDO")
                             conn.execute("""
                                 UPDATE damage_reports 
-                                SET pdf_data = ?, pdf_filename = ?, updated_at = ?
+                                SET pdf_data = ?, pdf_filename = ?, is_protected = 1, updated_at = ?
                                 WHERE dr_number = ?
                             """, (pdf_data, filename, datetime.now().isoformat(), dr_number))
                         
@@ -14187,6 +14188,51 @@ async def import_damage_reports_bulk(request: Request):
                 conn.close()
     except Exception as e:
         logging.error(f"Error importing damage reports: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/damage-reports/protect-uploaded")
+async def protect_uploaded_drs(request: Request):
+    """TEMPORÁRIO: Marcar todos os DRs com PDF como protegidos"""
+    require_auth(request)
+    
+    try:
+        protected_count = 0
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Marcar todos os DRs que têm PDF como protegidos
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE damage_reports 
+                            SET is_protected = 1 
+                            WHERE pdf_data IS NOT NULL AND (is_protected IS NULL OR is_protected = 0)
+                        """)
+                        protected_count = cur.rowcount
+                    conn.commit()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        UPDATE damage_reports 
+                        SET is_protected = 1 
+                        WHERE pdf_data IS NOT NULL AND (is_protected IS NULL OR is_protected = 0)
+                    """)
+                    protected_count = cursor.rowcount
+                    conn.commit()
+                
+                logging.info(f"✅ {protected_count} DRs marcados como protegidos")
+                
+                return {
+                    "ok": True,
+                    "protected_count": protected_count,
+                    "message": f"{protected_count} DRs marcados como protegidos"
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error protecting DRs: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/cleanup-invalid")
