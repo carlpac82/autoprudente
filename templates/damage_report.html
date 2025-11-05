@@ -1888,18 +1888,52 @@
                 const historyList = document.getElementById('historyList');
                 
                 if (data.ok && data.reports && data.reports.length > 0) {
-                    historyList.innerHTML = data.reports.map(report => {
-                        const createdDate = report.created_at ? new Date(report.created_at).toLocaleString('pt-PT', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }) : 'N/A';
+                    // Agrupar por ano
+                    const reportsByYear = {};
+                    data.reports.forEach(report => {
+                        const match = report.dr_number.match(/\/(\d{4})/);
+                        const year = match ? match[1] : 'Outros';
+                        if (!reportsByYear[year]) {
+                            reportsByYear[year] = [];
+                        }
+                        reportsByYear[year].push(report);
+                    });
+                    
+                    // Ordenar anos (mais recente primeiro)
+                    const years = Object.keys(reportsByYear).sort((a, b) => {
+                        if (a === 'Outros') return 1;
+                        if (b === 'Outros') return -1;
+                        return parseInt(b) - parseInt(a);
+                    });
+                    
+                    let html = '';
+                    
+                    years.forEach(year => {
+                        // Cabeçalho do ano
+                        html += `
+                            <div style="background: linear-gradient(135deg, #009cb6 0%, #007a8c 100%); color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; margin-top: ${year !== years[0] ? '25px' : '0'}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📅 ${year}</h3>
+                                    <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">
+                                        ${reportsByYear[year].length} relatório${reportsByYear[year].length > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
                         
-                        const pdfBadge = report.has_pdf ? '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">📄 PDF</span>' : '';
-                        
-                        return `
+                        // Relatórios do ano
+                        reportsByYear[year].forEach(report => {
+                            const createdDate = report.created_at ? new Date(report.created_at).toLocaleString('pt-PT', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) : 'N/A';
+                            
+                            const pdfBadge = report.has_pdf ? '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px;">📄 PDF</span>' : '';
+                            
+                            html += `
                         <div style="background: #f9fafb; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #009cb6; transition: all 0.2s;" 
                              onmouseover="this.style.background='#f0f9fb'" 
                              onmouseout="this.style.background='#f9fafb'">
@@ -1938,8 +1972,11 @@
                                 </div>
                             </div>
                         </div>
-                        `;
-                    }).join('');
+                            `;
+                        });
+                    });
+                    
+                    historyList.innerHTML = html;
                 } else {
                     historyList.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #6b7280;">

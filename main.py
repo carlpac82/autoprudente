@@ -13504,7 +13504,17 @@ async def list_damage_reports(request: Request):
                         client_name, vehicle_plate, vehicle_model,
                         status, created_at, created_by, pdf_filename
                     FROM damage_reports
-                    ORDER BY dr_number DESC
+                    ORDER BY 
+                        CASE 
+                            WHEN dr_number LIKE '%/%' THEN 
+                                CAST(SUBSTR(dr_number, INSTR(dr_number, '/') + 1) AS INTEGER)
+                            ELSE 9999
+                        END DESC,
+                        CASE 
+                            WHEN dr_number LIKE 'DR %' THEN 
+                                CAST(SUBSTR(dr_number, 4, INSTR(dr_number, '/') - 4) AS INTEGER)
+                            ELSE 0
+                        END DESC
                 """)
                 
                 reports = []
