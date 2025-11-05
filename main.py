@@ -1885,6 +1885,18 @@ LOCATION_CODES = {
 
 def init_db():
     """Initialize all database tables (works with both SQLite and PostgreSQL)"""
+    
+    def safe_create_index(conn, index_sql, index_name="index"):
+        """Safely create index - won't crash if columns don't exist"""
+        try:
+            conn.execute(index_sql)
+        except Exception as idx_err:
+            logging.warning(f"Could not create {index_name}: {idx_err}")
+            try:
+                conn.rollback()
+            except:
+                pass
+    
     with _db_lock:
         conn = _db_connect()  # Use _db_connect() instead of direct sqlite3.connect()
         try:
@@ -1906,7 +1918,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_q ON price_snapshots(location, days, ts)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_snapshots_q ON price_snapshots(location, days, ts)", "idx_snapshots_q")
             
             # Tabela para regras automatizadas de preços
             conn.execute(
@@ -1942,16 +1954,7 @@ def init_db():
                 )
                 """
             )
-            # Try to create index - may fail if column 'priority' doesn't exist yet
-            try:
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_strategies ON pricing_strategies(location, grupo, month, day, priority)")
-            except Exception as idx_err:
-                logging.warning(f"Could not create idx_strategies index (run fix_pricing_strategies_table.py): {idx_err}")
-                # CRITICAL: Rollback transaction to continue after error in PostgreSQL
-                try:
-                    conn.rollback()
-                except:
-                    pass
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_strategies ON pricing_strategies(location, grupo, month, day, priority)", "idx_strategies")
             
             # Tabela para histórico de preços automatizados
             conn.execute(
@@ -1972,7 +1975,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_auto_prices_history ON automated_prices_history(location, grupo, pickup_date, created_at)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_auto_prices_history ON automated_prices_history(location, grupo, pickup_date, created_at)", "idx_auto_prices_history")
             
             # Tabela para logs do sistema (evitar perda em disco efêmero)
             conn.execute(
@@ -1989,7 +1992,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_system_logs ON system_logs(level, created_at)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_system_logs ON system_logs(level, created_at)", "idx_system_logs")
             
             # Tabela para cache de dados (evitar perda em disco efêmero)
             conn.execute(
@@ -2019,7 +2022,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_file_storage ON file_storage(filepath, uploaded_by)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_file_storage ON file_storage(filepath, uploaded_by)", "idx_file_storage")
             
             # Tabela para histórico de exports (Way2Rentals, Abbycar, etc.)
             conn.execute(
@@ -2042,7 +2045,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_export_history ON export_history(broker, location, year, month, export_date)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_export_history ON export_history(broker, location, year, month, export_date)", "idx_export_history")
             
             # Tabela para AI Learning Data (substituir localStorage)
             conn.execute(
@@ -2059,7 +2062,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_ai_learning ON ai_learning_data(grupo, days, location, timestamp DESC)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_ai_learning ON ai_learning_data(grupo, days, location, timestamp DESC)", "idx_ai_learning")
             
             # Tabela para User Settings (localStorage persistente)
             conn.execute(
@@ -2073,7 +2076,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_user_settings ON user_settings(user_key, updated_at DESC)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_user_settings ON user_settings(user_key, updated_at DESC)", "idx_user_settings")
             
             # Tabela para Commercial Vans Pricing (C3, C4, C5)
             conn.execute(
@@ -2113,7 +2116,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_automated_rules ON automated_price_rules(location, grupo, month, day)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_automated_rules ON automated_price_rules(location, grupo, month, day)", "idx_automated_rules")
             
             # Tabela para Price Automation Settings
             conn.execute(
@@ -2185,7 +2188,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_price_history ON price_history(history_type, year, month, location, saved_at DESC)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_price_history ON price_history(history_type, year, month, location, saved_at DESC)", "idx_price_history")
             
             # Tabela para Search History (histórico de pesquisas)
             conn.execute(
@@ -2206,7 +2209,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_search_history ON search_history(location, start_date, search_timestamp DESC)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_search_history ON search_history(location, start_date, search_timestamp DESC)", "idx_search_history")
             
             # Tabela para Notification Rules (regras de notificação)
             conn.execute(
@@ -2225,7 +2228,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_notification_rules ON notification_rules(enabled, priority, rule_type)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_notification_rules ON notification_rules(enabled, priority, rule_type)", "idx_notification_rules")
             
             # Tabela para Notification History (histórico de notificações enviadas)
             conn.execute(
@@ -2243,7 +2246,7 @@ def init_db():
                 )
                 """
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_notification_history ON notification_history(sent_at DESC, status)")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_notification_history ON notification_history(sent_at DESC, status)", "idx_notification_history")
             
         finally:
             conn.commit()
