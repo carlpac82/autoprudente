@@ -5254,12 +5254,24 @@
                     const carsForDay = supplierData[day] || [];
                     console.log(`[HISTORY] Day ${day}: ${carsForDay.length} cars`);
                     
+                    // DEBUG: Log first car structure
+                    if (carsForDay.length > 0) {
+                        console.log('[HISTORY] Sample car structure:', {
+                            car: carsForDay[0].car,
+                            supplier: carsForDay[0].supplier,
+                            group: carsForDay[0].group,
+                            price: carsForDay[0].price || carsForDay[0].price_num,
+                            photo: carsForDay[0].photo
+                        });
+                    }
+                    
                     // Group cars by grupo
                     const pricesByGroup = {};
                     carsForDay.forEach(carEntry => {
-                        const grupo = carEntry.car?.car;
-                        const supplier = carEntry.car?.supplier?.toLowerCase();
-                        const price = carEntry.price;
+                        // carEntry.car is the car NAME (string), not an object!
+                        const grupo = carEntry.group || extractGroup(carEntry.car);
+                        const supplier = (carEntry.supplier || '').toLowerCase();
+                        const price = carEntry.price_num || carEntry.price;
                         
                         if (grupo && supplier === 'autoprudente' && price) {
                             pricesByGroup[grupo] = price;
