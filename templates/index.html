@@ -3316,13 +3316,83 @@
         });
       }
       
+      // Auto-update: Verificar periodicamente se há novas pesquisas
+      let lastSearchTimestamp = null;
+      let autoUpdateInterval = null;
+      
+      async function checkForNewSearches() {
+        try {
+          const response = await fetch('/api/recent-searches/load', {
+            credentials: 'same-origin'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok && data.searches && data.searches.length > 0) {
+              const latestTimestamp = data.searches[0].timestamp;
+              
+              // Se há nova pesquisa (timestamp diferente)
+              if (lastSearchTimestamp && latestTimestamp !== lastSearchTimestamp) {
+                console.log('🔄 NEW SEARCH DETECTED! Auto-updating preview...');
+                lastSearchTimestamp = latestTimestamp;
+                await loadRecentSearches();
+                
+                // Mostrar notificação visual
+                const container = document.getElementById('recentSearchesContainer');
+                if (container) {
+                  container.classList.add('ring-2', 'ring-[#f4ad0f]', 'ring-opacity-50');
+                  setTimeout(() => {
+                    container.classList.remove('ring-2', 'ring-[#f4ad0f]', 'ring-opacity-50');
+                  }, 2000);
+                }
+              } else if (!lastSearchTimestamp) {
+                // Primeira vez - guardar timestamp
+                lastSearchTimestamp = latestTimestamp;
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[AUTO-UPDATE] Error checking for new searches:', e);
+        }
+      }
+      
+      // Iniciar auto-update (verificar a cada 10 segundos)
+      function startAutoUpdate() {
+        if (autoUpdateInterval) {
+          clearInterval(autoUpdateInterval);
+        }
+        
+        console.log('🔄 AUTO-UPDATE: Started (check every 10 seconds)');
+        autoUpdateInterval = setInterval(checkForNewSearches, 10000); // 10 segundos
+      }
+      
+      // Parar auto-update
+      function stopAutoUpdate() {
+        if (autoUpdateInterval) {
+          clearInterval(autoUpdateInterval);
+          autoUpdateInterval = null;
+          console.log('⏸️ AUTO-UPDATE: Stopped');
+        }
+      }
+      
       // Carregar pesquisas ao iniciar página
       document.addEventListener('DOMContentLoaded', function() {
         loadRecentSearches();
+        startAutoUpdate(); // Iniciar auto-update
       });
       
       // Tentar carregar agora também
       setTimeout(loadRecentSearches, 500);
+      
+      // Parar auto-update quando utilizador sai da página
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+          stopAutoUpdate();
+        } else {
+          loadRecentSearches();
+          startAutoUpdate();
+        }
+      });
     </script>
   </body>
 </html>
