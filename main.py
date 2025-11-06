@@ -17146,9 +17146,26 @@ def _ensure_missing_tables():
                                 UNIQUE(location, grupo, month, day)
                             )
                         """)
-                        logging.info("✅ automated_price_rules table ensured")
+                        logging.info("✅ automated_price_rules table created/verified")
                     except Exception as e:
-                        logging.warning(f"⚠️ automated_price_rules: {e}")
+                        logging.warning(f"⚠️ automated_price_rules table: {e}")
+                    
+                    # 6b. Remove NOT NULL constraint from rules_json (old column)
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_price_rules' AND column_name='rules_json'
+                                ) THEN
+                                    ALTER TABLE automated_price_rules ALTER COLUMN rules_json DROP NOT NULL;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_price_rules.rules_json constraint removed")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_price_rules.rules_json: {e}")
                     
                     conn.commit()
                 else:
