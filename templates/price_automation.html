@@ -4048,13 +4048,17 @@
                 setTimeout(() => {
                     updateTableCellValues(currentFillMode);
                     updateTableHeaderIcons(currentFillMode);
+                    
+                    // Update chip colors IMMEDIATELY after table update
+                    console.log('[CHIPS] Updating chip colors after table fill...');
+                    initDayChipsAuto();
                 }, 500);
                 
                 setTimeout(() => {
                     progressBar.classList.add('hidden');
-                    // Update chip colors after prices loaded
+                    // Update chip colors AGAIN to ensure they're correct
+                    console.log('[CHIPS] Final chip update after price generation');
                     initDayChipsAuto();
-                    console.log('[CHIPS] Updated after price generation');
                 }, 2000);
                 
             } catch (error) {
@@ -4428,12 +4432,21 @@
         function checkIfDayHasPricesAuto(day) {
             // Check if any cell for this day has a value in AUTO column
             const inputs = document.querySelectorAll(`#pricesTableAuto input[data-dias="${day}"][data-type="auto"]`);
+            let hasPrices = false;
+            let priceCount = 0;
+            
             for (let input of inputs) {
                 if (input.value && input.value !== '' && input.value !== '-' && parseFloat(input.value) > 0) {
-                    return true;
+                    hasPrices = true;
+                    priceCount++;
                 }
             }
-            return false;
+            
+            if (hasPrices) {
+                console.log(`[CHIPS] Day ${day}: HAS ${priceCount} prices → Chip should be BLUE`);
+            }
+            
+            return hasPrices;
         }
         
         // Initialize day chips
