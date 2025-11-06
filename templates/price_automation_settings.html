@@ -3596,17 +3596,42 @@
                 if (result.ok && result.strategies) {
                     strategiesData = result.strategies;
                     console.log('✅ Strategies definitions loaded from database');
+                } else {
+                    console.warn('⚠️ No strategies definitions loaded from server');
                 }
                 
                 // Load automated price rules from database
+                console.log('📥 Loading automated price rules from database...');
                 const rulesResponse = await fetch('/api/price-automation/rules/load');
+                
+                if (!rulesResponse.ok) {
+                    console.error(`❌ Failed to load rules: HTTP ${rulesResponse.status}`);
+                    console.log('💾 Keeping existing localStorage data');
+                    return; // ✅ NÃO sobrescrever se der erro!
+                }
+                
                 const rulesResult = await rulesResponse.json();
                 
                 if (rulesResult.ok && rulesResult.rules) {
-                    // Save to localStorage
-                    localStorage.setItem('automatedPriceRules', JSON.stringify(rulesResult.rules));
-                    console.log('✅ Automated price rules loaded from database');
-                    console.log('📦 Rules loaded:', rulesResult.rules);
+                    // Contar estratégias antes de sobrescrever
+                    const existingRules = localStorage.getItem('automatedPriceRules');
+                    const existingCount = existingRules ? JSON.stringify(existingRules).length : 0;
+                    const newCount = JSON.stringify(rulesResult.rules).length;
+                    
+                    console.log(`📊 Existing data: ${existingCount} bytes, New data: ${newCount} bytes`);
+                    
+                    // ✅ SÓ sobrescrever se tiver dados OU se localStorage está vazio
+                    if (newCount > 10 || existingCount === 0) {
+                        localStorage.setItem('automatedPriceRules', JSON.stringify(rulesResult.rules));
+                        console.log('✅ Automated price rules loaded from database');
+                        console.log('📦 Rules loaded:', rulesResult.rules);
+                    } else {
+                        console.warn('⚠️ Backend returned empty/minimal data - NOT overwriting localStorage!');
+                        console.log('💾 Keeping existing localStorage data');
+                    }
+                } else {
+                    console.error('❌ Backend returned error or no data');
+                    console.log('💾 Keeping existing localStorage data');
                 }
                 
                 // Load AI learning data from database
