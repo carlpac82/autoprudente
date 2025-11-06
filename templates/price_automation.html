@@ -3856,20 +3856,22 @@
                             if (data.items && data.items.length > 0) {
                                 console.log(`${day} days - ${data.items.length} cars found`);
                                 
-                                // Save recent search for homepage preview (non-blocking)
+                                // Save recent search for homepage preview with FULL RESULTS (non-blocking)
                                 fetch('/api/recent-searches/save', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     credentials: 'same-origin',
                                     body: JSON.stringify({
-                                        location: currentLocation,
-                                        startDate: searchDateStr,
-                                        days: day,
-                                        timestamp: new Date().toISOString(),
-                                        resultsCount: data.items.length
+                                        searches: [{
+                                            location: currentLocation,
+                                            startDate: searchDateStr,
+                                            days: day,
+                                            results: data.items, // FULL RESULTS para comparação no preview
+                                            timestamp: new Date().toISOString()
+                                        }]
                                     })
                                 })
-                                .then(() => console.log(`✅ Recent search saved: ${currentLocation}, ${searchDateStr}, ${day} days`))
+                                .then(() => console.log(`✅ Recent search saved with ${data.items.length} cars: ${currentLocation}, ${searchDateStr}, ${day} days`))
                                 .catch(e => console.warn('[RECENT] Failed to save search:', e));
                                 
                                 // Store ALL cars for Auto price calculations
