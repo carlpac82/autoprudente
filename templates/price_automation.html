@@ -362,8 +362,8 @@
             <div class="border-t pt-4 mb-4">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-sm font-medium text-gray-700">Dias a pesquisar:</span>
-                    <button onclick="toggleAllDaysCurrent()" class="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Select/Deselect All">
-                        <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button onclick="toggleAllDaysCurrent()" class="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Selecionar/Desselecionar Todos">
+                        <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </button>
@@ -549,11 +549,10 @@
                 <div class="mt-4 pt-4 border-t">
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-sm font-medium text-gray-700">Selecionar Dias:</label>
-                        <button onclick="toggleAllDaysAuto()" class="flex items-center gap-1 px-2 py-1 text-xs bg-[#009cb6] text-white rounded hover:bg-[#007a8f] transition-colors" title="Selecionar/Desselecionar Todos">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        <button onclick="toggleAllDaysAuto()" class="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Selecionar/Desselecionar Todos">
+                            <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            Todos
                         </button>
                     </div>
                     <div id="dayChipsAuto" class="flex flex-wrap gap-2">
@@ -4517,12 +4516,13 @@
             availableDays.forEach(day => {
                 const isSelected = selectedDaysAuto.includes(day);
                 const chip = document.createElement('button');
-                chip.className = `px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                chip.className = `w-10 h-8 flex items-center justify-center text-sm font-medium transition-all ${
                     isSelected 
-                        ? 'bg-[#009cb6] text-white shadow-md' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-[#f4ad0f] text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`;
-                chip.textContent = `${day}${day === 1 ? ' dia' : ' dias'}`;
+                chip.textContent = `${day}`;
+                chip.title = `${day} ${day === 1 ? 'dia' : 'dias'}`;
                 chip.onclick = () => toggleDaySelectionAuto(day);
                 container.appendChild(chip);
             });
@@ -4564,7 +4564,7 @@
             container.innerHTML = '';
             dias.forEach(day => {
                 const chip = document.createElement('button');
-                chip.className = 'px-3 py-1.5 rounded text-sm font-medium transition-all bg-[#009cb6] text-white shadow-sm hover:bg-[#007a8f]';
+                chip.className = 'w-10 h-8 flex items-center justify-center text-sm font-medium transition-all bg-[#f4ad0f] text-white';
                 chip.textContent = `${day}`;
                 chip.title = `${day} ${day === 1 ? 'dia' : 'dias'}`;
                 container.appendChild(chip);
