@@ -14705,11 +14705,6 @@ async def setup_dr_tables():
                         )
                     """)
                     
-def _get_current_user_from_session(request: Request):
-    """Helper to get current user from session using _db_connect()"""
-    user_id = request.session.get("user_id")
-    if not user_id:
-        return None
                     # 4. Numeração
                     cur.execute("""
                         CREATE TABLE IF NOT EXISTS damage_report_numbering (
