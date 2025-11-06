@@ -690,7 +690,7 @@
         }
 
         function clearAllFields() {
-            if (confirm('Tem a certeza que deseja limpar TODOS os campos mapeados? Esta ação não pode ser desfeita.')) {
+            if (createCustomConfirm('Tem a certeza que deseja limpar TODOS os campos mapeados? Esta ação não pode ser desfeita.')) {
                 fieldCoordinates = {};
                 selectedField = null;
                 currentFieldIndex = 0;
@@ -700,6 +700,7 @@
                 updateCurrentField();
                 redrawCanvas();
                 showNotification('Todos os campos foram limpos', 'warning');
+                console.log('[MAPPER] Cleared all fields');
             }
         }
 
@@ -710,15 +711,40 @@
 
         function deleteSelectedBox() {
             if (selectedField && fieldCoordinates[selectedField]) {
-                if (confirm(`Eliminar campo "${FIELDS_TO_MAP.find(f => f.id === selectedField)?.name}"?`)) {
+                const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
+                
+                // Use custom confirmation to avoid exiting fullscreen
+                if (createCustomConfirm(`Eliminar campo "${fieldName}"?`)) {
                     delete fieldCoordinates[selectedField];
                     selectedField = null;
                     document.getElementById('deleteBtn').disabled = true;
                     updateMappedList();
                     updateProgress();
                     redrawCanvas();
+                    console.log(`[MAPPER] Deleted field: ${fieldName}`);
                 }
             }
+        }
+        
+        function createCustomConfirm(message) {
+            // Simple confirmation that doesn't exit fullscreen
+            // For now, use confirm but prevent fullscreen exit
+            const wasFullscreen = !!document.fullscreenElement;
+            const result = confirm(message);
+            
+            // If was in fullscreen and exited, try to re-enter
+            if (wasFullscreen && !document.fullscreenElement) {
+                setTimeout(() => {
+                    const elem = document.documentElement;
+                    if (elem.requestFullscreen) {
+                        elem.requestFullscreen().catch(err => {
+                            console.log('[FULLSCREEN] Could not re-enter:', err);
+                        });
+                    }
+                }, 100);
+            }
+            
+            return result;
         }
 
         function redrawCanvas() {

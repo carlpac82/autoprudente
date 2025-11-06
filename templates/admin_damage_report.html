@@ -615,16 +615,26 @@
 
         async function loadDRNumbering() {
             try {
+                console.log('[DR-NUMBERING] Loading from server...');
                 const response = await fetch('/api/damage-reports/numbering/get');
                 const data = await response.json();
+                
+                console.log('[DR-NUMBERING] Loaded:', data);
                 
                 if (data.ok) {
                     document.getElementById('drPrefix').value = data.prefix || 'DR';
                     document.getElementById('drCurrentNumber').value = data.current_number || 1;
                     document.getElementById('nextDRNumber').textContent = data.next_number || 'DR 01/2025';
+                    console.log('[DR-NUMBERING] UI updated:', {
+                        prefix: data.prefix,
+                        current: data.current_number,
+                        next: data.next_number
+                    });
+                } else {
+                    console.error('[DR-NUMBERING] Server error:', data.error);
                 }
             } catch (error) {
-                console.error('Error loading DR numbering:', error);
+                console.error('[DR-NUMBERING] Load error:', error);
             }
         }
 
@@ -877,6 +887,8 @@
                 const prefix = document.getElementById('drPrefix').value || 'DR';
                 const currentNumber = parseInt(document.getElementById('drCurrentNumber').value) || 1;
                 
+                console.log('[DR-NUMBERING] Updating:', { prefix, currentNumber });
+                
                 const response = await fetch('/api/damage-reports/numbering/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -884,10 +896,13 @@
                 });
                 
                 const result = await response.json();
+                console.log('[DR-NUMBERING] Server response:', result);
                 
                 if (result.ok) {
-                    document.getElementById('nextDRNumber').textContent = result.next_number;
+                    // Recarregar do servidor para garantir consistência
+                    await loadDRNumbering();
                     showSuccessMessage('Numeração atualizada! Próximo DR: ' + result.next_number);
+                    console.log('[DR-NUMBERING] Updated successfully, reloaded from server');
                 } else {
                     showErrorMessage('Erro ao atualizar numeração: ' + result.error);
                 }
