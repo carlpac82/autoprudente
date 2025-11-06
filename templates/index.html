@@ -2814,6 +2814,16 @@
           });
           
           console.log('[RECENT] Displayed', searches.length, 'searches');
+          
+          // NOVO: Auto-ativar comparação se houver 2+ pesquisas
+          if (searches.length >= 2 && !compareMode) {
+            console.log('[PREVIEW] Auto-activating comparison mode (2+ searches detected)');
+            // Selecionar as 2 pesquisas mais recentes automaticamente
+            selectedForCompare = [0, 1];
+            showComparison();
+          } else if (searches.length === 1) {
+            console.log('[PREVIEW] Single search detected - showing summary only');
+          }
         } catch (e) {
           console.error('[RECENT] Error loading searches:', e);
         }
@@ -3252,15 +3262,27 @@
       if (originalFetchAllBtn) {
         originalFetchAllBtn.addEventListener('click', function() {
           // Aguardar resultados carregarem
-          setTimeout(() => {
+          setTimeout(async () => {
             const results = window.lastSearchResults || [];
             if (results.length > 0) {
-              saveRecentSearch({
+              await saveRecentSearch({
                 location: document.getElementById('location').value,
                 startDate: document.getElementById('startDate').value,
                 days: parseInt(document.getElementById('days').value),
                 results: results.slice(0, 50) // Guardar apenas top 50 para não sobrecarregar
               });
+              
+              // NOVO: Carregar preview automaticamente após guardar pesquisa
+              console.log('[PREVIEW] Auto-loading preview after search...');
+              await loadRecentSearches();
+              
+              // Scroll suave até ao preview
+              setTimeout(() => {
+                const previewContainer = document.getElementById('recentSearchesPreview');
+                if (previewContainer && !previewContainer.classList.contains('hidden')) {
+                  previewContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 300);
             }
           }, 2000);
         });
