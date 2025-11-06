@@ -269,14 +269,14 @@
           } else {
             // Erro
             document.body.removeChild(modal);
-            alert(`❌ Erro: ${data.error || 'Falha ao baixar fotos'}`);
+            showNotification(`Error: ${data.error || 'Failed to download photos'}`, 'error');
             button.disabled = false;
             button.innerHTML = originalHTML;
           }
         } catch (error) {
           console.error('[DOWNLOAD ALL PHOTOS] Erro:', error);
           document.body.removeChild(modal);
-          alert(`❌ Erro ao baixar fotos: ${error.message}`);
+          showNotification(`Error downloading photos: ${error.message}`, 'error');
           button.disabled = false;
           button.innerHTML = originalHTML;
         }
@@ -385,7 +385,7 @@
           } else {
             // Erro
             document.body.removeChild(modal);
-            alert(`❌ Erro: ${data.error || 'Falha ao fazer scraping'}`);
+            showNotification(`Error: ${data.error || 'Failed to scrape photos'}`, 'error');
             button.disabled = false;
             button.innerHTML = originalHTML;
           }
@@ -394,7 +394,7 @@
           if (document.getElementById('progressModal')) {
             document.body.removeChild(modal);
           }
-          alert(`❌ Erro ao fazer scraping: ${error.message}`);
+          showNotification(`Error scraping photos: ${error.message}`, 'error');
           button.disabled = false;
           button.innerHTML = originalHTML;
         }

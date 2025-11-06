@@ -40,15 +40,15 @@
           
           if (result.ok) {
             // Success - reload page to show new photo
-            alert('✅ Photo downloaded successfully!');
-            window.location.reload();
+            showNotification('Photo downloaded successfully', 'success');
+            setTimeout(() => window.location.reload(), 1000);
           } else {
-            alert('❌ Error: ' + (result.error || 'Failed to download photo'));
+            showNotification('Error: ' + (result.error || 'Failed to download photo'), 'error');
             btn.disabled = false;
             btn.innerHTML = originalHtml;
           }
         } catch (error) {
-          alert('❌ Error: ' + error.message);
+          showNotification('Error: ' + error.message, 'error');
           btn.disabled = false;
           btn.innerHTML = originalHtml;
         }
