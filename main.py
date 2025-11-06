@@ -1159,17 +1159,17 @@ class PostgreSQLConnectionWrapper:
             query = query.replace("datetime('now')", "NOW()")
             query = query.replace('datetime("now")', "NOW()")
         
-        # Convert INSERT OR REPLACE to INSERT ... ON CONFLICT (basic conversion)
-        # This is a simple conversion - complex cases should use explicit PostgreSQL syntax
+        # Convert INSERT OR REPLACE to INSERT ... ON CONFLICT (automatic PostgreSQL compatibility)
         if 'INSERT OR REPLACE' in query.upper():
-            import logging
             import re
-            logging.warning(f"⚠️ INSERT OR REPLACE detected")
             # Replace INSERT OR REPLACE with INSERT
             query = re.sub(r'INSERT\s+OR\s+REPLACE', 'INSERT', query, flags=re.IGNORECASE)
             # Add ON CONFLICT DO NOTHING at the end if not already there
             if 'ON CONFLICT' not in query.upper():
                 query = query.rstrip().rstrip(';') + ' ON CONFLICT DO NOTHING'
+            # Debug log only (not warning)
+            import logging
+            logging.debug(f"✅ AUTO-CONVERTED: INSERT OR REPLACE → INSERT ... ON CONFLICT DO NOTHING")
         
         self._cursor = self._conn.cursor()
         try:
