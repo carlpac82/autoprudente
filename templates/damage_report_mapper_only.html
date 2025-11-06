@@ -43,13 +43,30 @@
             border: 1px solid #d1d5db;
         }
         .btn {
-            padding: 10px 16px;
+            padding: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
         }
         .btn-primary {
             background: #009cb6;
@@ -139,42 +156,45 @@
                 <div id="mappedFieldsList" class="mapped-list"></div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="btn btn-primary" onclick="saveFieldCoordinates()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <button class="btn btn-primary" onclick="saveFieldCoordinates()" title="Guardar Coordenadas">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                         <polyline points="17 21 17 13 7 13 7 21"></polyline>
                         <polyline points="7 3 7 8 15 8"></polyline>
                     </svg>
-                    Guardar Coordenadas
                 </button>
-                <button class="btn btn-secondary" onclick="toggleEditMode()" id="editModeBtn" style="background: #8b5cf6;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                <button class="btn btn-secondary" onclick="toggleEditMode()" id="editModeBtn" style="background: #8b5cf6;" title="Modo Editar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
-                    Modo Editar: OFF
                 </button>
-                <button class="btn btn-secondary" onclick="deleteSelectedBox()" id="deleteBtn" style="background: #ef4444; color: white;" disabled>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                <button class="btn btn-secondary" onclick="deleteSelectedBox()" id="deleteBtn" style="background: #ef4444; color: white;" disabled title="Eliminar Caixa">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
-                    Eliminar Caixa
                 </button>
-                <button class="btn btn-secondary" onclick="skipCurrentField()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                        <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                        <line x1="19" y1="5" x2="19" y2="19"></line>
-                    </svg>
-                    Pular Campo
-                </button>
-                <button class="btn btn-secondary" onclick="previousField()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                <button class="btn btn-secondary" onclick="previousField()" title="Campo Anterior">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="19" y1="12" x2="5" y2="12"></line>
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
-                    Campo Anterior
+                </button>
+                <button class="btn btn-secondary" onclick="skipCurrentField()" title="Pular Campo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                        <line x1="19" y1="5" x2="19" y2="19"></line>
+                    </svg>
+                </button>
+                <button class="btn" onclick="clearAllFields()" style="background: #f4ad0f; color: white;" title="Limpar Todos os Campos">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -407,18 +427,80 @@
             const field = FIELDS_TO_MAP[currentFieldIndex];
             if (!field) return;
             
+            // Get initial box coordinates
+            let boxX = Math.min(startX, endX) / scale;
+            let boxY = Math.min(startY, endY) / scale;
+            let boxW = Math.abs(endX - startX) / scale;
+            let boxH = Math.abs(endY - startY) / scale;
+            
+            // Try to detect white boxes/lines in the PDF
+            const detectedBox = detectWhiteBoxInArea(boxX, boxY, boxW, boxH);
+            if (detectedBox) {
+                console.log('White box detected, adjusting coordinates...');
+                boxX = detectedBox.x;
+                boxY = detectedBox.y;
+                boxW = detectedBox.width;
+                boxH = detectedBox.height;
+            }
+            
             fieldCoordinates[field.id] = {
                 page: currentPage,
-                x: Math.min(startX, endX) / scale,
-                y: Math.min(startY, endY) / scale,
-                width: Math.abs(endX - startX) / scale,
-                height: Math.abs(endY - startY) / scale
+                x: boxX,
+                y: boxY,
+                width: boxW,
+                height: boxH
             };
             
             updateMappedList();
             currentFieldIndex++;
             updateCurrentField();
             redrawMappedBoxes();
+        }
+
+        function detectWhiteBoxInArea(x, y, width, height) {
+            // Convert to canvas coordinates
+            const canvasX = Math.floor(x * scale);
+            const canvasY = Math.floor(y * scale);
+            const canvasW = Math.floor(width * scale);
+            const canvasH = Math.floor(height * scale);
+            
+            // Get image data for the selected area
+            const imageData = ctx.getImageData(canvasX, canvasY, canvasW, canvasH);
+            const data = imageData.data;
+            
+            // Find edges of white area (threshold: RGB > 240)
+            let minX = canvasW, minY = canvasH, maxX = 0, maxY = 0;
+            let foundWhite = false;
+            
+            for (let py = 0; py < canvasH; py++) {
+                for (let px = 0; px < canvasW; px++) {
+                    const idx = (py * canvasW + px) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    
+                    // Check if pixel is white (or very light)
+                    if (r > 240 && g > 240 && b > 240) {
+                        foundWhite = true;
+                        if (px < minX) minX = px;
+                        if (px > maxX) maxX = px;
+                        if (py < minY) minY = py;
+                        if (py > maxY) maxY = py;
+                    }
+                }
+            }
+            
+            // If found white area larger than 50% of selection, use it
+            if (foundWhite && (maxX - minX) * (maxY - minY) > (canvasW * canvasH * 0.5)) {
+                return {
+                    x: (canvasX + minX) / scale,
+                    y: (canvasY + minY) / scale,
+                    width: (maxX - minX) / scale,
+                    height: (maxY - minY) / scale
+                };
+            }
+            
+            return null;
         }
 
         function redrawMappedBoxes() {
@@ -597,14 +679,33 @@
         function toggleEditMode() {
             isEditMode = !isEditMode;
             const btn = document.getElementById('editModeBtn');
-            btn.textContent = isEditMode ? '✏️ Modo Editar: ON' : '✏️ Modo Editar: OFF';
             btn.style.background = isEditMode ? '#10b981' : '#8b5cf6';
+            btn.title = isEditMode ? 'Modo Editar: ON' : 'Modo Editar: OFF';
             
             if (!isEditMode) {
                 selectedField = null;
                 document.getElementById('deleteBtn').disabled = true;
             }
             redrawCanvas();
+        }
+
+        function clearAllFields() {
+            if (confirm('Tem a certeza que deseja limpar TODOS os campos mapeados? Esta ação não pode ser desfeita.')) {
+                fieldCoordinates = {};
+                selectedField = null;
+                currentFieldIndex = 0;
+                document.getElementById('deleteBtn').disabled = true;
+                updateMappedList();
+                updateProgress();
+                updateCurrentField();
+                redrawCanvas();
+                showNotification('Todos os campos foram limpos', 'warning');
+            }
+        }
+
+        function showNotification(message, type) {
+            // Simple notification - can be enhanced later
+            console.log(`[${type.toUpperCase()}] ${message}`);
         }
 
         function deleteSelectedBox() {
