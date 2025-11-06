@@ -16682,7 +16682,7 @@ def _ensure_recent_searches_table():
                         days INTEGER NOT NULL,
                         results_data TEXT NOT NULL,
                         timestamp TEXT NOT NULL,
-                        user TEXT,
+                        "user" TEXT,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
@@ -16691,7 +16691,7 @@ def _ensure_recent_searches_table():
                 try:
                     conn.execute("""
                         CREATE INDEX IF NOT EXISTS idx_recent_searches_user 
-                        ON recent_searches(user, created_at DESC)
+                        ON recent_searches("user", created_at DESC)
                     """)
                 except Exception:
                     pass  # Index might already exist
