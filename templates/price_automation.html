@@ -4725,77 +4725,82 @@
         }
         }
         
-        function generateHistoryMonths() {
+        async function generateHistoryMonths() {
             const containerCurrent = document.getElementById('historyMonthsCurrent');
             const containerAutomated = document.getElementById('historyMonthsAutomated');
-            containerCurrent.innerHTML = '';
-            containerAutomated.innerHTML = '';
+            containerCurrent.innerHTML = '<div class="col-span-full text-center py-4 text-gray-500">Loading history...</div>';
+            containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-gray-500">Loading history...</div>';
             
-            const now = new Date();
-            const months = [];
+            console.log('📅 Loading search history from PostgreSQL...');
             
-            // Debug: listar todas as chaves do localStorage
-            console.log('=== DEBUG HISTÓRICO ===');
-            console.log('Todas as chaves no localStorage:');
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('priceHistory_') || key.startsWith('automatedPriceHistory_')) {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    if (Array.isArray(data)) {
-                        console.log(`${key}: ${data.length} versões`);
-                        data.forEach((v, idx) => {
-                            console.log(`  Versão ${idx + 1}: ${v.priceCount} preços, data: ${v.date}`);
-                        });
-                    } else {
-                        console.log(`${key}: ${data.priceCount} preços, data: ${data.date} (formato antigo)`);
+            try {
+                // Fetch history from server
+                const response = await fetch('/api/automated-search/history?months=24');
+                const data = await response.json();
+                
+                if (!data.ok) {
+                    throw new Error(data.error || 'Failed to load history');
+                }
+                
+                const history = data.history || {};
+                const monthKeys = data.monthKeys || [];
+                
+                console.log('✅ History loaded:', Object.keys(history).length, 'months with data');
+                
+                // Clear containers
+                containerCurrent.innerHTML = '';
+                containerAutomated.innerHTML = '';
+                
+                // Generate buttons for each month
+                monthKeys.forEach(monthKey => {
+                    const [year, month] = monthKey.split('-');
+                    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+                    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    
+                    // Current Prices History
+                    const hasCurrentData = history[monthKey] && history[monthKey].current && history[monthKey].current.length > 0;
+                    
+                    const buttonCurrent = document.createElement('button');
+                    buttonCurrent.className = `p-3 border rounded text-sm ${hasCurrentData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
+                    buttonCurrent.textContent = monthName;
+                    buttonCurrent.disabled = !hasCurrentData;
+                    
+                    if (hasCurrentData) {
+                        buttonCurrent.onclick = () => showHistoryMonthFromServer(monthKey, monthName, 'current', history[monthKey].current);
                     }
+                    
+                    containerCurrent.appendChild(buttonCurrent);
+                    
+                    // Automated Prices History
+                    const hasAutomatedData = history[monthKey] && history[monthKey].automated && history[monthKey].automated.length > 0;
+                    
+                    const buttonAutomated = document.createElement('button');
+                    buttonAutomated.className = `p-3 border rounded text-sm ${hasAutomatedData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
+                    buttonAutomated.textContent = monthName;
+                    buttonAutomated.disabled = !hasAutomatedData;
+                    
+                    if (hasAutomatedData) {
+                        buttonAutomated.onclick = () => showHistoryMonthFromServer(monthKey, monthName, 'automated', history[monthKey].automated);
+                    }
+                    
+                    containerAutomated.appendChild(buttonAutomated);
+                    
+                    if (hasCurrentData || hasAutomatedData) {
+                        console.log(`${monthKey}: Current=${hasCurrentData ? history[monthKey].current.length + ' versions' : 'NO DATA'}, Automated=${hasAutomatedData ? history[monthKey].automated.length + ' versions' : 'NO DATA'}`);
+                    }
+                });
+                
+                if (Object.keys(history).length === 0) {
+                    containerCurrent.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No search history yet. Run some searches to see history here.</div>';
+                    containerAutomated.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No search history yet. Run some searches to see history here.</div>';
                 }
+                
+            } catch (error) {
+                console.error('❌ Error loading history:', error);
+                containerCurrent.innerHTML = '<div class="col-span-full text-center py-4 text-red-500">Error loading history</div>';
+                containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-red-500">Error loading history</div>';
+                showNotification('Error loading search history', 'error');
             }
-            
-            // Gerar 24 meses (2 anos)
-            for (let i = 0; i < 24; i++) {
-                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                months.push(date);
-            }
-            
-            months.forEach(date => {
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                
-                // Current Prices History
-                const currentHistoryKey = `priceHistory_${monthKey}`;
-                const hasCurrentData = localStorage.getItem(currentHistoryKey) !== null;
-                
-                const buttonCurrent = document.createElement('button');
-                buttonCurrent.className = `p-3 border rounded text-sm ${hasCurrentData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
-                buttonCurrent.textContent = monthName;
-                buttonCurrent.disabled = !hasCurrentData;
-                
-                if (hasCurrentData) {
-                    buttonCurrent.onclick = () => showHistoryMonth(monthKey, monthName, 'current');
-                }
-                
-                containerCurrent.appendChild(buttonCurrent);
-                
-                // Automated Prices History
-                const automatedHistoryKey = `automatedPriceHistory_${monthKey}`;
-                const hasAutomatedData = localStorage.getItem(automatedHistoryKey) !== null;
-                
-                const buttonAutomated = document.createElement('button');
-                buttonAutomated.className = `p-3 border rounded text-sm ${hasAutomatedData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
-                buttonAutomated.textContent = monthName;
-                buttonAutomated.disabled = !hasAutomatedData;
-                
-                if (hasAutomatedData) {
-                    buttonAutomated.onclick = () => showHistoryMonth(monthKey, monthName, 'automated');
-                }
-                
-                containerAutomated.appendChild(buttonAutomated);
-                
-                console.log(`${monthKey}: Current=${hasCurrentData ? 'TEM DADOS' : 'SEM DADOS'}, Automated=${hasAutomatedData ? 'TEM DADOS' : 'SEM DADOS'}`);
-            });
-            
-            console.log('=== FIM DEBUG ===');
         }
 
         function showHistoryMonth(monthKey, monthName, type = 'current') {
@@ -4918,6 +4923,136 @@
         function closeHistory() {
             document.getElementById('historyTableContainer').classList.add('hidden');
         }
+        
+        function showHistoryMonthFromServer(monthKey, monthName, type, historyArray) {
+            if (!historyArray || historyArray.length === 0) {
+                showNotification('No history data available', 'warning');
+                return;
+            }
+            
+            try {
+                document.getElementById('historyTitle').textContent = `${type === 'automated' ? 'Automated' : 'Current'} Prices - ${monthName} (${historyArray.length} versions)`;
+                document.getElementById('historyTableContainer').classList.remove('hidden');
+                
+                const container = document.getElementById('historyTableContainer');
+                
+                // Clear old tables
+                const oldTables = container.querySelectorAll('.history-version-table');
+                oldTables.forEach(t => t.remove());
+                
+                // Create a table for each version
+                historyArray.forEach((historyData, index) => {
+                    const versionDate = new Date(historyData.date);
+                    const dateStr = versionDate.toLocaleString('en-US', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const versionDiv = document.createElement('div');
+                    versionDiv.className = 'history-version-table mb-6';
+                    
+                    const versionTitle = document.createElement('div');
+                    versionTitle.className = 'bg-gray-100 px-4 py-2 font-semibold text-sm border-t border-x flex justify-between items-center';
+                    versionTitle.innerHTML = `
+                        <span>Version ${index + 1} - ${dateStr} (${historyData.priceCount} prices)</span>
+                        <button onclick="deleteSearchHistory(${historyData.id})" class="text-red-600 hover:text-red-800 text-xs">
+                            Delete
+                        </button>
+                    `;
+                    versionDiv.appendChild(versionTitle);
+                    
+                    const tableDiv = document.createElement('div');
+                    tableDiv.className = 'bg-white shadow overflow-x-auto border';
+                    
+                    const table = document.createElement('table');
+                    table.className = 'w-full text-xs';
+                    
+                    // Header
+                    const thead = document.createElement('thead');
+                    thead.className = 'bg-gray-50';
+                    
+                    let headerRow = '<tr><th class="px-2 py-3 text-left font-semibold border-r bg-gray-100">Group</th>';
+                    historyData.dias.forEach((d, idx) => {
+                        headerRow += `<th class="px-2 py-2 text-center font-semibold border-r">${d}d</th>`;
+                    });
+                    headerRow += '</tr>';
+                    
+                    thead.innerHTML = headerRow;
+                    table.appendChild(thead);
+                    
+                    // Body
+                    const tbody = document.createElement('tbody');
+                    const grupos = Object.keys(historyData.prices || {});
+                    
+                    grupos.forEach(grupo => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-t hover:bg-gray-50';
+                        
+                        const tdGrupo = document.createElement('td');
+                        tdGrupo.className = 'px-2 py-3 font-semibold border-r';
+                        tdGrupo.textContent = grupo;
+                        tr.appendChild(tdGrupo);
+                        
+                        historyData.dias.forEach((day) => {
+                            const price = historyData.prices[grupo][day];
+                            
+                            const td = document.createElement('td');
+                            td.className = 'px-2 py-2 text-right border-r';
+                            td.textContent = price ? `€${parseFloat(price).toFixed(2)}` : '-';
+                            tr.appendChild(td);
+                        });
+                        
+                        tbody.appendChild(tr);
+                    });
+                    
+                    table.appendChild(tbody);
+                    tableDiv.appendChild(table);
+                    versionDiv.appendChild(tableDiv);
+                    
+                    // Insert before historyTableContainer
+                    const historyTableContainer = document.getElementById('historyTableContainer');
+                    const firstChild = historyTableContainer.querySelector('.bg-white.shadow.mb-4');
+                    if (firstChild && firstChild.nextSibling) {
+                        historyTableContainer.insertBefore(versionDiv, firstChild.nextSibling);
+                    } else {
+                        historyTableContainer.appendChild(versionDiv);
+                    }
+                });
+                
+            } catch (e) {
+                console.error('Error displaying history:', e);
+                showNotification('Error displaying history data', 'error');
+            }
+        }
+        
+        async function deleteSearchHistory(searchId) {
+            if (!confirm('Delete this search from history?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/automated-search/${searchId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    showNotification('Search deleted from history', 'success');
+                    // Reload history
+                    closeHistory();
+                    await generateHistoryMonths();
+                } else {
+                    throw new Error(result.error || 'Failed to delete');
+                }
+            } catch (error) {
+                console.error('Error deleting search:', error);
+                showNotification('Error deleting search', 'error');
+            }
+        }
 
         function saveToHistory() {
             const now = new Date();
@@ -4991,14 +5126,11 @@
             return priceCount;
         }
         
-        function saveAutomatedPriceHistory(automatedPricesByGroup, dias) {
+        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated') {
             if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
                 console.log('⚠️ No automated prices to save to history');
                 return 0;
             }
-            
-            const now = new Date();
-            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             
             // Prepare prices data
             const pricesData = {};
@@ -5019,41 +5151,36 @@
                 return 0;
             }
             
-            // Create history entry
-            const historyEntry = {
-                date: now.toISOString(),
-                priceCount: priceCount,
-                prices: pricesData,
-                dias: dias
-            };
+            // Get location from page
+            const location = document.getElementById('locationAuto')?.value || 'Albufeira';
             
-            // Load existing history for this month
-            const existingData = localStorage.getItem(`automatedPriceHistory_${monthKey}`);
-            let historyArray = [];
-            
-            if (existingData) {
-                try {
-                    const parsed = JSON.parse(existingData);
-                    historyArray = Array.isArray(parsed) ? parsed : [parsed];
-                } catch (e) {
-                    console.error('Error parsing existing history:', e);
-                    historyArray = [];
+            // Send to server (PostgreSQL)
+            try {
+                const response = await fetch('/api/automated-search/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        location: location,
+                        searchType: searchType,
+                        prices: pricesData,
+                        dias: dias,
+                        priceCount: priceCount
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    console.log(`✅ Automated price history saved to PostgreSQL: ID=${result.searchId}, Month=${result.monthKey}, Prices=${priceCount}`);
+                    return priceCount;
+                } else {
+                    console.error('❌ Error saving to PostgreSQL:', result.error);
+                    return 0;
                 }
+            } catch (error) {
+                console.error('❌ Error saving search history:', error);
+                return 0;
             }
-            
-            // Add new entry at the beginning
-            historyArray.unshift(historyEntry);
-            
-            // Keep only last 3 versions
-            if (historyArray.length > 3) {
-                historyArray = historyArray.slice(0, 3);
-            }
-            
-            // Save to localStorage
-            localStorage.setItem(`automatedPriceHistory_${monthKey}`, JSON.stringify(historyArray));
-            console.log(`✅ Automated price history saved: ${monthKey} with ${priceCount} prices (${historyArray.length} versions)`);
-            
-            return priceCount;
         }
 
         // ===== AI INSIGHTS FUNCTIONS =====

@@ -19105,6 +19105,230 @@ async def save_price_snapshots(request: Request):
         logging.error(f"❌ Error saving price snapshots: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# ============================================================
+# AUTOMATED SEARCH HISTORY ENDPOINTS
+# ============================================================
+
+@app.post("/api/automated-search/save")
+async def save_automated_search_history(request: Request):
+    """Save automated search results to PostgreSQL"""
+    try:
+        data = await request.json()
+        
+        location = data.get('location', '')
+        search_type = data.get('searchType', 'automated')  # 'automated' or 'current'
+        prices_data = data.get('prices', {})  # { "B1": { "31": 25.50, "60": 23.00 }, ... }
+        dias = data.get('dias', [])
+        price_count = data.get('priceCount', 0)
+        
+        if not prices_data:
+            return JSONResponse({"ok": False, "error": "No prices data provided"}, status_code=400)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                # Create table if not exists
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS automated_search_history (
+                                id SERIAL PRIMARY KEY,
+                                location TEXT NOT NULL,
+                                search_type TEXT NOT NULL,
+                                search_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                month_key TEXT NOT NULL,
+                                prices_data JSONB NOT NULL,
+                                dias TEXT NOT NULL,
+                                price_count INTEGER DEFAULT 0,
+                                user_email TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        cur.execute("""
+                            CREATE INDEX IF NOT EXISTS idx_automated_search_month 
+                            ON automated_search_history(month_key, search_type, search_date DESC)
+                        """)
+                else:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS automated_search_history (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            location TEXT NOT NULL,
+                            search_type TEXT NOT NULL,
+                            search_date TEXT DEFAULT CURRENT_TIMESTAMP,
+                            month_key TEXT NOT NULL,
+                            prices_data TEXT NOT NULL,
+                            dias TEXT NOT NULL,
+                            price_count INTEGER DEFAULT 0,
+                            user_email TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    conn.execute("""
+                        CREATE INDEX IF NOT EXISTS idx_automated_search_month 
+                        ON automated_search_history(month_key, search_type, search_date DESC)
+                    """)
+                
+                # Generate month_key
+                from datetime import datetime
+                now = datetime.now()
+                month_key = f"{now.year}-{str(now.month).zfill(2)}"
+                
+                # Save search
+                import json
+                prices_json = json.dumps(prices_data)
+                dias_json = json.dumps(dias)
+                user_email = request.session.get('user_email', 'unknown')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO automated_search_history 
+                            (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                            VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                            RETURNING id
+                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                        search_id = cur.fetchone()[0]
+                    conn.commit()
+                else:
+                    cursor = conn.execute("""
+                        INSERT INTO automated_search_history 
+                        (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                    search_id = cursor.lastrowid
+                    conn.commit()
+                
+                logging.info(f"✅ Automated search saved: ID={search_id}, Type={search_type}, Prices={price_count}, Month={month_key}")
+                return JSONResponse({
+                    "ok": True, 
+                    "message": f"Search saved successfully",
+                    "searchId": search_id,
+                    "monthKey": month_key
+                })
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error saving automated search: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/automated-search/history")
+async def get_automated_search_history(request: Request, months: int = 24):
+    """Get automated search history for the last N months"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Generate month keys for last N months
+        month_keys = []
+        now = datetime.now()
+        for i in range(months):
+            date = datetime(now.year, now.month, 1) - timedelta(days=i*30)
+            month_key = f"{date.year}-{str(date.month).zfill(2)}"
+            if month_key not in month_keys:
+                month_keys.append(month_key)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                history = {}
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Get all searches for these months
+                        cur.execute("""
+                            SELECT id, location, search_type, search_date, month_key, 
+                                   prices_data, dias, price_count
+                            FROM automated_search_history
+                            WHERE month_key = ANY(%s)
+                            ORDER BY search_date DESC
+                        """, (month_keys,))
+                        rows = cur.fetchall()
+                else:
+                    placeholders = ','.join(['?' for _ in month_keys])
+                    rows = conn.execute(f"""
+                        SELECT id, location, search_type, search_date, month_key, 
+                               prices_data, dias, price_count
+                        FROM automated_search_history
+                        WHERE month_key IN ({placeholders})
+                        ORDER BY search_date DESC
+                    """, month_keys).fetchall()
+                
+                # Group by month_key and search_type
+                import json
+                for row in rows:
+                    search_id, location, search_type, search_date, month_key, prices_data, dias, price_count = row
+                    
+                    if month_key not in history:
+                        history[month_key] = {
+                            'current': [],
+                            'automated': []
+                        }
+                    
+                    entry = {
+                        'id': search_id,
+                        'location': location,
+                        'date': search_date,
+                        'prices': json.loads(prices_data) if isinstance(prices_data, str) else prices_data,
+                        'dias': json.loads(dias) if isinstance(dias, str) else dias,
+                        'priceCount': price_count
+                    }
+                    
+                    history[month_key][search_type].append(entry)
+                    
+                    # Keep only last 3 versions per type
+                    if len(history[month_key][search_type]) > 3:
+                        history[month_key][search_type] = history[month_key][search_type][:3]
+                
+                return JSONResponse({
+                    "ok": True,
+                    "history": history,
+                    "monthKeys": month_keys
+                })
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error loading search history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.delete("/api/automated-search/{search_id}")
+async def delete_automated_search(request: Request, search_id: int):
+    """Delete a specific search from history"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "DELETE FROM automated_search_history WHERE id = %s",
+                            (search_id,)
+                        )
+                    conn.commit()
+                else:
+                    conn.execute(
+                        "DELETE FROM automated_search_history WHERE id = ?",
+                        (search_id,)
+                    )
+                    conn.commit()
+                
+                logging.info(f"✅ Deleted search ID: {search_id}")
+                return JSONResponse({"ok": True, "message": "Search deleted"})
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error deleting search: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
