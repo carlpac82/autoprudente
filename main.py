@@ -16674,7 +16674,10 @@ def _ensure_recent_searches_table():
             conn = _db_connect()
             try:
                 # Check if using PostgreSQL or SQLite
-                is_postgres = hasattr(conn, 'cursor') and not hasattr(conn, 'row_factory')
+                import psycopg2
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                
+                logging.info(f"🔍 Database type detected: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 if is_postgres:
                     # PostgreSQL syntax
@@ -16721,7 +16724,7 @@ def _ensure_recent_searches_table():
                     pass  # Index might already exist
                 
                 conn.commit()
-                logging.info("✅ recent_searches table created/verified")
+                logging.info(f"✅ recent_searches table created/verified ({'PostgreSQL' if is_postgres else 'SQLite'})")
             finally:
                 conn.close()
     except Exception as e:
