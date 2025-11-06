@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="version" content="v2025-11-03-monocromatic-notifications">
-    <title>Price Automation</title>
+    <title>Price Automation • Auto Prudente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="/static/i18n.js"></script>
@@ -91,15 +91,62 @@
         
         /* MOBILE OPTIMIZATIONS */
         @media (max-width: 768px) {
+            /* Container & Spacing */
             .mx-auto.max-w-7xl { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+            
+            /* Touch-friendly buttons & inputs */
             button, .btn { min-height: 44px; padding: 12px 16px; font-size: 16px; }
             input, select { min-height: 44px; font-size: 16px; padding: 10px 12px; }
-            .flex.items-center.gap-4 { flex-direction: column; align-items: stretch !important; }
+            
+            /* Layout adjustments */
+            .flex.items-center.gap-4 { flex-direction: column; align-items: stretch !important; gap: 0.75rem !important; }
             .grid.grid-cols-2 { grid-template-columns: 1fr !important; }
+            
+            /* Header */
             header img { max-height: 36px !important; }
             .desktop-nav { display: none !important; }
             .mobile-menu-btn { display: block !important; }
             h1 { font-size: 1.5rem !important; }
+            
+            /* Day selection chips - wrap better on mobile */
+            #dayChipsAuto { gap: 0.5rem !important; }
+            #dayChipsAuto button { 
+                font-size: 14px !important; 
+                padding: 10px 14px !important;
+                min-height: 40px !important;
+            }
+            
+            /* Price comparison cards - full width on mobile */
+            .price-card { 
+                width: 100% !important; 
+                min-width: 100% !important; 
+                margin: 0 !important;
+            }
+            
+            /* Tabela de preços - scroll horizontal */
+            .overflow-x-auto { 
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 1rem;
+            }
+            
+            /* Date pickers & selects stack vertically */
+            #dateSelectorsAuto > div { 
+                width: 100% !important; 
+            }
+            
+            /* Action buttons wrap */
+            .flex.items-center.gap-3 { 
+                flex-wrap: wrap !important; 
+                gap: 0.5rem !important; 
+            }
+            
+            /* Scroll to top button - larger touch target */
+            button[onclick*="scrollTo"] {
+                width: 52px !important;
+                height: 52px !important;
+                bottom: 20px !important;
+                right: 20px !important;
+            }
         }
         
         .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }

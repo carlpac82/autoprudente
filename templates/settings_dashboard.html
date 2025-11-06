@@ -64,12 +64,21 @@
         }
         
         .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }
-        .mobile-menu { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; backdrop-filter: blur(4px); }
-        .mobile-menu.active { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
-        .mobile-menu a { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: #1f2937; font-size: 18px; padding: 16px; width: 100%; max-width: 400px; text-align: center; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; }
-        .mobile-menu a:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); transform: translateY(-2px); }
-        .mobile-menu a svg { color: #009cb6; width: 24px; height: 24px; }
-        .mobile-menu-close { position: absolute; top: 20px; right: 20px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; color: #1f2937; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .mobile-menu { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; backdrop-filter: blur(4px); }
+        .mobile-menu.active { display: block; overflow-y: auto; }
+        .mobile-menu-container { padding: 20px; max-width: 500px; margin: 0 auto; }
+        .mobile-menu-header { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+        .mobile-menu-close { background: white; border: none; color: #1f2937; font-size: 28px; font-weight: 300; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .mobile-menu-section { margin-bottom: 24px; }
+        .mobile-menu-section-title { color: #f4ad0f; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 4px; }
+        .mobile-menu-section a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-radius: 12px; margin-bottom: 8px; color: #1f2937; font-size: 16px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; }
+        .mobile-menu-section a:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); background: #f8fafc; }
+        .mobile-menu-section a svg { width: 22px; height: 22px; color: #009cb6; flex-shrink: 0; }
+        .mobile-menu-section a span { flex: 1; }
+        .mobile-menu-logout { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.2); }
+        .mobile-menu-logout a { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(239,68,68,0.1); border-radius: 12px; color: #ef4444; font-size: 16px; font-weight: 600; transition: all 0.2s; }
+        .mobile-menu-logout a:hover { background: rgba(239,68,68,0.2); }
+        .mobile-menu-logout a svg { width: 22px; height: 22px; }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50">
@@ -116,36 +125,94 @@
     
     <!-- Mobile Menu -->
     <div class="mobile-menu" id="mobileMenu">
-        <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
-        <div style="color: #1d4ed8; font-weight: 600; padding: 10px; font-size: 14px; text-transform: uppercase;" data-i18n="settings.title">Settings</div>
-        <a href="/" onclick="closeMobileMenu()" class="flex items-center justify-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            <span>Home</span>
-        </a>
-        <a href="#" onclick="closeMobileMenu(); loadSection('users')" class="flex items-center justify-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-            <span data-i18n="common.users">Users</span>
-        </a>
-        <a href="#" onclick="closeMobileMenu(); loadSection('vehicles')" class="flex items-center justify-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-            <span data-i18n="settings.vehicles">Vehicles</span>
-        </a>
-        <a href="#" onclick="closeMobileMenu(); loadSection('price-adjustment')" class="flex items-center justify-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span data-i18n="settings.priceAdjustment">Price Adjustment</span>
-        </a>
-        <a href="#" onclick="closeMobileMenu(); loadSection('price-validation')" class="flex items-center justify-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span data-i18n="settings.priceValidation">Price Validation</span>
-        </a>
-        <a href="#" onclick="closeMobileMenu(); loadSection('price-automation-settings')" class="flex items-center justify-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span data-i18n="settings.title">Settings</span>
-        </a>
-        <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\'/logout\']').submit();" class="flex items-center justify-center gap-3" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 10px;">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            <span>Logout</span>
-        </a>
+      <div class="mobile-menu-container">
+        <!-- Header -->
+        <div class="mobile-menu-header">
+          <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
+        </div>
+        
+        <!-- Main Navigation -->
+        <div class="mobile-menu-section">
+          <div class="mobile-menu-section-title">Navegação Principal</div>
+          <a href="/" onclick="closeMobileMenu()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span>Início</span>
+          </a>
+          <a href="/price-history" onclick="closeMobileMenu()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            <span>Histórico de Preços</span>
+          </a>
+          <a href="/price-automation" onclick="closeMobileMenu()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Automação de Preços</span>
+          </a>
+        </div>
+        
+        <!-- Settings Section -->
+        <div class="mobile-menu-section">
+          <div class="mobile-menu-section-title">Definições</div>
+          <a href="#" onclick="closeMobileMenu(); loadSection('users')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            <span>Utilizadores</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('vehicles')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span>Veículos</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('price-adjustment')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Ajuste de Preços</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('price-validation')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Validação de Preços</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('damage-report')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Relatório de Danos</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('email')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            <span>Notificações Email</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('automated-reports')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Relatórios Automatizados</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('branding')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+            <span>Branding</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('appearance')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+            <span>Aparência</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('language')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+            <span>Idioma</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('formulas')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <span>Fórmulas</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('backup-restore')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            <span>Backup & Restore</span>
+          </a>
+          <a href="#" onclick="closeMobileMenu(); loadSection('price-automation-settings')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>Definições Avançadas</span>
+          </a>
+        </div>
+        
+        <!-- Logout -->
+        <div class="mobile-menu-logout">
+          <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\'/logout\']').submit();">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <span>Terminar Sessão</span>
+          </a>
+        </div>
+      </div>
     </div>
     
     <script>
