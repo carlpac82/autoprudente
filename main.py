@@ -11092,6 +11092,42 @@ async def load_price_history(request: Request, history_id: int):
         logging.error(f"❌ Error loading price history: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/prices/history/update/{history_id}")
+async def update_price_history(request: Request, history_id: int):
+    """Atualizar preços de um histórico específico"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        prices_data = data.get('prices', {})
+        username = request.state.user.get('username', 'admin') if hasattr(request.state, 'user') else 'admin'
+        
+        logging.info(f"💾 Updating price history {history_id} by {username}")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Update existing history with new timestamp
+                conn.execute(
+                    """
+                    UPDATE price_history 
+                    SET prices_data = ?,
+                        saved_at = CURRENT_TIMESTAMP,
+                        saved_by = ?
+                    WHERE id = ?
+                    """,
+                    (json.dumps(prices_data), username, history_id)
+                )
+                conn.commit()
+                
+                logging.info(f"✅ Price history {history_id} updated successfully")
+                return JSONResponse({"ok": True, "message": "History updated successfully"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error updating price history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # ============================================================
 # API ENDPOINTS - AI LEARNING DATA & USER SETTINGS
 # ============================================================
