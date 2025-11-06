@@ -141,7 +141,7 @@
             <!-- Anti-WAF Settings -->
             <div class="border-t pt-4 mb-4">
                 <h3 class="text-md font-semibold mb-3 text-gray-800 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                     <span>🛡️ Anti-WAF Protection</span>
@@ -498,7 +498,7 @@
 
                 <!-- Actions -->
                 <div class="mt-6 flex gap-3">
-                    <button onclick="clearAIData()" class="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded transition-colors">
+                    <button onclick="clearAIData()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-[#009cb6] hover:text-[#009cb6] rounded transition-colors">
                         <span data-i18n="priceAutomation.clearAIData">Clear AI Data</span>
                     </button>
                     <button onclick="refreshAISuggestions()" class="px-4 py-2 bg-[#f4ad0f] text-white hover:bg-[#009cb6] rounded transition-colors">
@@ -512,7 +512,7 @@
         <div class="flex justify-between items-center">
             <p class="text-sm text-gray-500" data-i18n="priceAutomation.changesSavedAuto">💡 Changes are saved automatically</p>
             <div class="flex gap-4">
-                <button onclick="clearAllStrategiesGlobal()" class="px-6 py-2 border border-red-300 text-red-700 hover:bg-red-50 transition-colors rounded flex items-center gap-2">
+                <button onclick="clearAllStrategiesGlobal()" class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-[#009cb6] hover:text-[#009cb6] transition-colors rounded flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
@@ -857,7 +857,7 @@
                         <span class="font-semibold text-[#009cb6]">${group}</span>
                         <span class="text-gray-700">${ruleText}</span>
                     </div>
-                    <button onclick="removeHierarchyRule('${group}')" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Remove rule">
+                    <button onclick="removeHierarchyRule('${group}')" class="p-1.5 text-gray-400 hover:text-[#009cb6] hover:bg-gray-50 rounded transition-colors" title="Remove rule">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -1515,12 +1515,12 @@
                             <div class="flex items-center justify-between mb-2">
                                 <p class="text-xs text-gray-500">First strategy has priority. If no price available, tries next strategy.</p>
                                 <button onclick="clearAllStrategiesForDay('${location}', '${grupo}')" 
-                                        class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 border border-red-300 flex items-center gap-1"
+                                        class="px-2 py-1 text-xs border border-gray-300 text-gray-600 rounded hover:bg-gray-50 hover:border-[#009cb6] hover:text-[#009cb6] transition-colors flex items-center gap-1"
                                         title="Clear all strategies for the selected day">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
-                                    Clear All (Selected Day)
+                                    Clear All (Day)
                                 </button>
                             </div>
                             <div id="strategiesList_${location}_${grupo}" class="space-y-2">
@@ -3138,7 +3138,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <button onclick="removeStrategy('${location}', '${grupo}', ${month}, ${day}, ${index})" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600" title="Remove">
+                        <button onclick="removeStrategy('${location}', '${grupo}', ${month}, ${day}, ${index})" class="px-2 py-1 text-xs border border-gray-300 text-gray-600 rounded hover:border-[#009cb6] hover:bg-[#009cb6] hover:text-white transition-colors" title="Remove">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
