@@ -3911,6 +3911,12 @@
                     // Keep cards hidden, show table by default
                     document.getElementById('priceComparisonCards').classList.add('hidden');
                     document.getElementById('priceTableContainer').classList.remove('hidden');
+                    
+                    // Save automated prices to history
+                    if (autoPricesGenerated > 0) {
+                        const savedCount = saveAutomatedPriceHistory(automatedPricesByGroup, dias);
+                        console.log(`💾 Saved ${savedCount} automated prices to history`);
+                    }
                 }
                 
                 progressText.textContent = ' Generation complete!';
@@ -4719,7 +4725,7 @@
         }
         }
         
-        function renderSmartInsights(insights) {
+        function generateHistoryMonths() {
             const containerCurrent = document.getElementById('historyMonthsCurrent');
             const containerAutomated = document.getElementById('historyMonthsAutomated');
             containerCurrent.innerHTML = '';
@@ -4982,6 +4988,71 @@
             
             localStorage.setItem(`priceHistory_${monthKey}`, JSON.stringify(historyArray));
             console.log(`Histórico guardado automaticamente: ${monthKey} com ${priceCount} preços (${historyArray.length} versões)`);
+            return priceCount;
+        }
+        
+        function saveAutomatedPriceHistory(automatedPricesByGroup, dias) {
+            if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
+                console.log('⚠️ No automated prices to save to history');
+                return 0;
+            }
+            
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            // Prepare prices data
+            const pricesData = {};
+            let priceCount = 0;
+            
+            for (const grupo in automatedPricesByGroup) {
+                pricesData[grupo] = {};
+                for (const day of dias) {
+                    if (automatedPricesByGroup[grupo][day] && automatedPricesByGroup[grupo][day].automated) {
+                        pricesData[grupo][day] = automatedPricesByGroup[grupo][day].automated;
+                        priceCount++;
+                    }
+                }
+            }
+            
+            if (priceCount === 0) {
+                console.log('⚠️ No automated prices found to save');
+                return 0;
+            }
+            
+            // Create history entry
+            const historyEntry = {
+                date: now.toISOString(),
+                priceCount: priceCount,
+                prices: pricesData,
+                dias: dias
+            };
+            
+            // Load existing history for this month
+            const existingData = localStorage.getItem(`automatedPriceHistory_${monthKey}`);
+            let historyArray = [];
+            
+            if (existingData) {
+                try {
+                    const parsed = JSON.parse(existingData);
+                    historyArray = Array.isArray(parsed) ? parsed : [parsed];
+                } catch (e) {
+                    console.error('Error parsing existing history:', e);
+                    historyArray = [];
+                }
+            }
+            
+            // Add new entry at the beginning
+            historyArray.unshift(historyEntry);
+            
+            // Keep only last 3 versions
+            if (historyArray.length > 3) {
+                historyArray = historyArray.slice(0, 3);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem(`automatedPriceHistory_${monthKey}`, JSON.stringify(historyArray));
+            console.log(`✅ Automated price history saved: ${monthKey} with ${priceCount} prices (${historyArray.length} versions)`);
+            
             return priceCount;
         }
 
