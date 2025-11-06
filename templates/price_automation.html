@@ -1123,7 +1123,23 @@
         // Get AI suggested price based on learning history
         function getAIPrice(group, days, location) {
             try {
-                const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}');
+                let aiDataStr = localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}';
+                
+                // Fix corrupted data (if localStorage contains "[object Object]" literal)
+                if (aiDataStr === '[object Object]' || aiDataStr.includes('[object Object]')) {
+                    console.warn('⚠️ Corrupted priceAIData detected, resetting...');
+                    aiDataStr = '{"adjustments": [], "patterns": {}, "suggestions": []}';
+                    localStorage.setItem('priceAIData', aiDataStr);
+                }
+                
+                const aiData = JSON.parse(aiDataStr);
+                
+                // Ensure structure exists
+                if (!aiData.adjustments || !Array.isArray(aiData.adjustments)) {
+                    console.warn('⚠️ Invalid priceAIData structure, resetting...');
+                    localStorage.setItem('priceAIData', '{"adjustments": [], "patterns": {}, "suggestions": []}');
+                    return null;
+                }
                 
                 // Filter adjustments for this group/days/location
                 const relevantAdjustments = aiData.adjustments.filter(adj => 
@@ -1146,6 +1162,9 @@
                 return avgPrice;
             } catch (error) {
                 console.error('Error getting AI price:', error);
+                // Reset corrupted data
+                console.warn('⚠️ Resetting priceAIData due to error');
+                localStorage.setItem('priceAIData', '{"adjustments": [], "patterns": {}, "suggestions": []}');
                 return null;
             }
         }
