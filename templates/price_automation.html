@@ -1286,7 +1286,9 @@
         };
         // Available days for selection
         const availableDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
-        let selectedDaysAuto = [1, 3, 31]; // Default selection
+        let selectedDaysAuto = [1, 3, 31]; // Default selection for Automated Prices
+        let selectedDaysCurrent = [1, 2, 3, 4, 5, 6, 7, 31]; // Default selection for Current Prices
+        let dias = [...selectedDaysCurrent]; // Current Prices active days
         
         // showNotification is now loaded from /static/notifications.js
 
@@ -4562,20 +4564,42 @@
             if (!container) return;
             
             container.innerHTML = '';
-            dias.forEach(day => {
-                // Check if prices are loaded for this day
+            availableDays.forEach(day => {
+                const isSelected = selectedDaysCurrent.includes(day);
                 const hasPrices = checkIfDayHasPrices(day);
                 const chip = document.createElement('button');
-                chip.className = `w-10 h-8 flex items-center justify-center text-sm font-medium transition-all ${
-                    hasPrices 
-                        ? 'bg-[#009cb6] text-white' 
-                        : 'bg-[#f4ad0f] text-white'
-                }`;
+                
+                // Color logic: Blue if has prices AND selected, Yellow if selected but no prices, Gray if not selected
+                let bgColor;
+                if (!isSelected) {
+                    bgColor = 'bg-gray-200 text-gray-700 hover:bg-gray-300';
+                } else if (hasPrices) {
+                    bgColor = 'bg-[#009cb6] text-white';
+                } else {
+                    bgColor = 'bg-[#f4ad0f] text-white';
+                }
+                
+                chip.className = `w-10 h-8 flex items-center justify-center text-sm font-medium transition-all ${bgColor}`;
                 chip.textContent = `${day}`;
                 chip.title = `${day} ${day === 1 ? 'dia' : 'dias'}`;
                 chip.dataset.day = day;
+                chip.onclick = () => toggleDaySelectionCurrent(day);
                 container.appendChild(chip);
             });
+        }
+        
+        // Toggle day selection for Current Prices
+        function toggleDaySelectionCurrent(day) {
+            const index = selectedDaysCurrent.indexOf(day);
+            if (index > -1) {
+                selectedDaysCurrent.splice(index, 1);
+            } else {
+                selectedDaysCurrent.push(day);
+            }
+            selectedDaysCurrent.sort((a, b) => a - b); // Keep sorted
+            dias = [...selectedDaysCurrent]; // Update dias array
+            initDayChipsCurrent();
+            initTable(); // Reinitialize table with new days
         }
         
         // Check if day has prices loaded
@@ -4609,9 +4633,14 @@
         
         // Toggle all days for Current Prices
         function toggleAllDaysCurrent() {
-            // Current prices não tem seleção individual - mostra todos os dias
-            // Mas pode recarregar a tabela
-            initTable();
+            if (selectedDaysCurrent.length === availableDays.length) {
+                selectedDaysCurrent = [1, 2, 3, 4, 5, 6, 7, 31]; // Reset to default
+            } else {
+                selectedDaysCurrent = [...availableDays]; // Select all
+            }
+            dias = [...selectedDaysCurrent]; // Update dias array
+            initDayChipsCurrent();
+            initTable(); // Reinitialize table with new days
         }
         
         function initTableAuto() {
