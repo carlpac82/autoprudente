@@ -10781,10 +10781,23 @@ async def save_automated_price_rules(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # Detectar tipo de BD
-                import psycopg2
-                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                # Detectar tipo de BD - ROBUST METHOD
+                is_postgres = False
+                conn_type = type(conn).__name__
+                
+                if 'psycopg' in conn_type.lower() or conn_type == 'connection':
+                    is_postgres = True
+                elif os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                else:
+                    try:
+                        import psycopg2
+                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                    except:
+                        pass
+                
                 placeholder = "%s" if is_postgres else "?"
+                logging.info(f"💾 Saving to {'PostgreSQL' if is_postgres else 'SQLite'} (conn type: {conn_type})")
                 
                 # Limpar regras antigas
                 conn.execute("DELETE FROM automated_price_rules")
@@ -10872,10 +10885,23 @@ async def save_pricing_strategies(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # Detectar tipo de BD
-                import psycopg2
-                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                # Detectar tipo de BD - ROBUST METHOD
+                is_postgres = False
+                conn_type = type(conn).__name__
+                
+                if 'psycopg' in conn_type.lower() or conn_type == 'connection':
+                    is_postgres = True
+                elif os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                else:
+                    try:
+                        import psycopg2
+                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                    except:
+                        pass
+                
                 placeholder = "%s" if is_postgres else "?"
+                logging.info(f"💾 Saving strategies to {'PostgreSQL' if is_postgres else 'SQLite'} (conn type: {conn_type})")
                 
                 # Limpar estratégias antigas
                 conn.execute("DELETE FROM pricing_strategies")
