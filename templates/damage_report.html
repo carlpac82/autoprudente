@@ -47,6 +47,7 @@
         
         .header h1 {
             margin: 0;
+            margin-left: 20px;
             font-size: 20px;
             font-weight: 600;
             display: flex;
@@ -141,8 +142,6 @@
             margin: 0;
             font-size: 20px;
             color: #1f2937;
-            padding-left: 15px;
-            border-left: 4px solid #f4ad0f;
         }
         
         .icon-mono {
@@ -153,12 +152,7 @@
             stroke-width: 2;
         }
         
-        /* Aplicar barra amarela a TODOS os títulos h2 e h3 na página */
-        .card h2:not([style*="border"]),
-        .card h3:not([style*="border"]) {
-            padding-left: 15px;
-            border-left: 4px solid #f4ad0f;
-        }
+        /* Barra amarela APENAS no título principal (h1) - removida de h2/h3 */
         
         .form-grid {
             display: grid;
