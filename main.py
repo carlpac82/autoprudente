@@ -20013,8 +20013,8 @@ async def save_automated_search_history(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/automated-search/history")
-async def get_automated_search_history(request: Request, months: int = 24):
-    """Get automated search history for the last N months"""
+async def get_automated_search_history(request: Request, months: int = 24, location: str = None):
+    """Get automated search history for the last N months, optionally filtered by location"""
     try:
         from datetime import datetime, timedelta
         
@@ -20033,53 +20033,66 @@ async def get_automated_search_history(request: Request, months: int = 24):
                 is_postgres = hasattr(conn, 'cursor')
                 history = {}
                 
+                # Build WHERE clause for location filter
+                location_filter = ""
+                if location:
+                    location_filter = " AND location = %s" if is_postgres else " AND location = ?"
+                
                 if is_postgres:
                     with conn.cursor() as cur:
                         # Try to get all searches with supplier_data (new schema)
                         try:
-                            cur.execute("""
+                            query = f"""
                                 SELECT id, location, search_type, search_date, month_key, 
                                        prices_data, dias, price_count, supplier_data
                                 FROM automated_search_history
-                                WHERE month_key = ANY(%s)
+                                WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
-                            """, (month_keys,))
+                            """
+                            params = (month_keys, location) if location else (month_keys,)
+                            cur.execute(query, params)
                             rows = cur.fetchall()
                             has_supplier_data = True
                         except Exception as e:
                             # Column doesn't exist - rollback transaction and use old schema
                             logging.warning(f"supplier_data column not found, using old schema: {e}")
                             conn.rollback()
-                            cur.execute("""
+                            query = f"""
                                 SELECT id, location, search_type, search_date, month_key, 
                                        prices_data, dias, price_count
                                 FROM automated_search_history
-                                WHERE month_key = ANY(%s)
+                                WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
-                            """, (month_keys,))
+                            """
+                            params = (month_keys, location) if location else (month_keys,)
+                            cur.execute(query, params)
                             rows = cur.fetchall()
                             has_supplier_data = False
                 else:
                     placeholders = ','.join(['?' for _ in month_keys])
                     try:
-                        rows = conn.execute(f"""
+                        query = f"""
                             SELECT id, location, search_type, search_date, month_key, 
                                    prices_data, dias, price_count, supplier_data
                             FROM automated_search_history
-                            WHERE month_key IN ({placeholders})
+                            WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
-                        """, month_keys).fetchall()
+                        """
+                        params = (*month_keys, location) if location else month_keys
+                        rows = conn.execute(query, params).fetchall()
                         has_supplier_data = True
                     except Exception as e:
                         logging.warning(f"supplier_data column not found, using old schema: {e}")
                         conn.rollback()
-                        rows = conn.execute(f"""
+                        query = f"""
                             SELECT id, location, search_type, search_date, month_key, 
                                    prices_data, dias, price_count
                             FROM automated_search_history
-                            WHERE month_key IN ({placeholders})
+                            WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
-                        """, month_keys).fetchall()
+                        """
+                        params = (*month_keys, location) if location else month_keys
+                        rows = conn.execute(query, params).fetchall()
                         has_supplier_data = False
                 
                 # Group by month_key and search_type
