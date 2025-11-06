@@ -2143,6 +2143,7 @@ def init_db():
             safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_snapshots_q ON price_snapshots(location, days, ts)", "idx_snapshots_q")
             
             # Tabela para regras automatizadas de preços
+            logging.info("📋 Creating automated_price_rules table (if not exists)...")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS automated_price_rules (
@@ -2158,6 +2159,14 @@ def init_db():
                 )
                 """
             )
+            
+            # Check if table has data
+            try:
+                cursor = conn.execute("SELECT COUNT(*) FROM automated_price_rules")
+                count = cursor.fetchone()[0]
+                logging.info(f"✅ automated_price_rules table ready - {count} existing rules")
+            except Exception as check_err:
+                logging.warning(f"⚠️ Could not count rules: {check_err}")
             
             # Tabela para estratégias de pricing
             conn.execute(
