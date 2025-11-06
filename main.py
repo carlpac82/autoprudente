@@ -794,6 +794,14 @@ async def startup_event():
     except Exception as e:
         print(f"⚠️  Recent Searches table error: {e}", flush=True)
     
+    # Ensure all missing tables/columns
+    try:
+        print(f"🔧 Ensuring missing tables/columns...", flush=True)
+        _ensure_missing_tables()
+        print(f"✅ All missing tables/columns ready", flush=True)
+    except Exception as e:
+        print(f"⚠️  Missing tables error: {e}", flush=True)
+    
     print(f"========================================", flush=True)
 
 @app.exception_handler(HTTPException)
@@ -9910,6 +9918,10 @@ async def get_price_history(request: Request):
     with _db_lock:
         conn = _db_connect()
         try:
+            # Detect database type
+            import psycopg2
+            is_postgres = isinstance(conn, psycopg2.extensions.connection)
+            
             # Evolução de preços ao longo do tempo (últimos 30 dias) - MIN, AVG, MAX
             evolution_query = """
                 SELECT DATE(ts) as date, 
@@ -9919,18 +9931,21 @@ async def get_price_history(request: Request):
                 FROM price_snapshots
                 WHERE price_num IS NOT NULL AND price_num > 0
             """
+            evolution_query = _adapt_query_for_db(evolution_query, is_postgres)
             evolution_args = []
+            placeholder = "%s" if is_postgres else "?"
             if location:
-                evolution_query += " AND location = ?"
+                evolution_query += f" AND location = {placeholder}"
                 evolution_args.append(location)
             if days:
-                evolution_query += " AND days = ?"
+                evolution_query += f" AND days = {placeholder}"
                 evolution_args.append(int(days))
             # Nota: categoria não está na tabela, filtrar por car name como aproximação
             # if category:
-            #     evolution_query += " AND car LIKE ?"
+            #     evolution_query += f" AND car LIKE {placeholder}"
             #     evolution_args.append(f"%{category}%")
-            evolution_query += " GROUP BY DATE(ts) ORDER BY DATE(ts) DESC LIMIT 30"
+            group_by_clause = " GROUP BY DATE(ts::timestamp) ORDER BY DATE(ts::timestamp) DESC LIMIT 30" if is_postgres else " GROUP BY DATE(ts) ORDER BY DATE(ts) DESC LIMIT 30"
+            evolution_query += group_by_clause
             
             evolution_rows = conn.execute(evolution_query, tuple(evolution_args)).fetchall()
             evolution_labels = [r[0] for r in reversed(evolution_rows)]
@@ -9947,7 +9962,7 @@ async def get_price_history(request: Request):
             """
             comparison_args = []
             if days:
-                comparison_query += " AND days = ?"
+                comparison_query += f" AND days = {placeholder}"
                 comparison_args.append(int(days))
             comparison_query += " GROUP BY location ORDER BY location"
             
@@ -9962,17 +9977,24 @@ async def get_price_history(request: Request):
             ]
             
             # Preços médios por mês do ano
-            monthly_query = """
-                SELECT CAST(strftime('%m', ts) AS INTEGER) as month, AVG(price_num) as avg_price
-                FROM price_snapshots
-                WHERE price_num IS NOT NULL AND price_num > 0
-            """
+            if is_postgres:
+                monthly_query = """
+                    SELECT EXTRACT(MONTH FROM ts::timestamp)::INTEGER as month, AVG(price_num) as avg_price
+                    FROM price_snapshots
+                    WHERE price_num IS NOT NULL AND price_num > 0
+                """
+            else:
+                monthly_query = """
+                    SELECT CAST(strftime('%m', ts) AS INTEGER) as month, AVG(price_num) as avg_price
+                    FROM price_snapshots
+                    WHERE price_num IS NOT NULL AND price_num > 0
+                """
             monthly_args = []
             if location:
-                monthly_query += " AND location = ?"
+                monthly_query += f" AND location = {placeholder}"
                 monthly_args.append(location)
             if days:
-                monthly_query += " AND days = ?"
+                monthly_query += f" AND days = {placeholder}"
                 monthly_args.append(int(days))
             monthly_query += " GROUP BY month ORDER BY month"
             
@@ -16729,6 +16751,211 @@ def _ensure_recent_searches_table():
                 conn.close()
     except Exception as e:
         logging.error(f"⚠️ Error creating recent_searches table: {e}")
+
+def _ensure_missing_columns():
+    """Add missing columns to existing tables for PostgreSQL compatibility"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                import psycopg2
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                
+                logging.info(f"🔧 Checking missing columns ({'PostgreSQL' if is_postgres else 'SQLite'})...")
+                
+                # Add price_num to price_snapshots if missing
+                try:
+                    if is_postgres:
+                        conn.execute("""
+                            ALTER TABLE price_snapshots 
+                            ADD COLUMN IF NOT EXISTS price_num NUMERIC
+                        """)
+                    else:
+                        # SQLite doesn't support IF NOT EXISTS in ALTER
+                        try:
+                            conn.execute("ALTER TABLE price_snapshots ADD COLUMN price_num REAL")
+                        except:
+                            pass  # Column already exists
+                    logging.info("  ✅ price_snapshots.price_num checked")
+                except Exception as e:
+                    logging.warning(f"  ⚠️ price_snapshots.price_num: {e}")
+                
+                # Add location to ai_learning_data if missing
+                try:
+                    if is_postgres:
+                        conn.execute("""
+                            ALTER TABLE ai_learning_data 
+                            ADD COLUMN IF NOT EXISTS location TEXT
+                        """)
+                    else:
+                        try:
+                            conn.execute("ALTER TABLE ai_learning_data ADD COLUMN location TEXT")
+                        except:
+                            pass
+                    logging.info("  ✅ ai_learning_data.location checked")
+                except Exception as e:
+                    logging.warning(f"  ⚠️ ai_learning_data.location: {e}")
+                
+                # Add config to automated_price_rules if missing
+                try:
+                    if is_postgres:
+                        conn.execute("""
+                            ALTER TABLE automated_price_rules 
+                            ADD COLUMN IF NOT EXISTS config TEXT
+                        """)
+                    else:
+                        try:
+                            conn.execute("ALTER TABLE automated_price_rules ADD COLUMN config TEXT")
+                        except:
+                            pass
+                    logging.info("  ✅ automated_price_rules.config checked")
+                except Exception as e:
+                    logging.warning(f"  ⚠️ automated_price_rules.config: {e}")
+                
+                conn.commit()
+                logging.info("✅ Missing columns check completed")
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"⚠️ Error checking missing columns: {e}")
+
+def _ensure_suppliers_table():
+    """Create suppliers table if missing"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                import psycopg2
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                
+                if is_postgres:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS suppliers (
+                            id SERIAL PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            logo_path TEXT,
+                            active INTEGER DEFAULT 1,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                else:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS suppliers (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            logo_path TEXT,
+                            active INTEGER DEFAULT 1,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                
+                conn.commit()
+                logging.info(f"✅ suppliers table created/verified ({'PostgreSQL' if is_postgres else 'SQLite'})")
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"⚠️ Error creating suppliers table: {e}")
+        import traceback
+        traceback.print_exc()
+
+def _adapt_query_for_db(query: str, is_postgres: bool) -> str:
+    """Adapt SQL query syntax for PostgreSQL or SQLite"""
+    if is_postgres:
+        # PostgreSQL: DATE(ts::timestamp) instead of DATE(ts)
+        query = query.replace("DATE(ts)", "DATE(ts::timestamp)")
+        # PostgreSQL: strftime -> EXTRACT
+        query = query.replace("strftime('%m', ts)", "EXTRACT(MONTH FROM ts::timestamp)")
+        query = query.replace("strftime('%Y', ts)", "EXTRACT(YEAR FROM ts::timestamp)")
+        # PostgreSQL: ? placeholders -> %s
+        query = query.replace(" = ?", " = %s")
+        query = query.replace(" IN (?", " IN (%s")
+    return query
+
+def _ensure_missing_tables():
+    """Ensure all missing tables and columns exist (suppliers, ai_learning_data, automated_price_rules, price_snapshots)"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                import psycopg2
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                
+                logging.info(f"🔍 Checking missing tables/columns ({'PostgreSQL' if is_postgres else 'SQLite'})")
+                
+                if is_postgres:
+                    cursor = conn.cursor()
+                    
+                    # 1. Ensure suppliers table exists
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS suppliers (
+                            id SERIAL PRIMARY KEY,
+                            name TEXT NOT NULL UNIQUE,
+                            logo_path TEXT,
+                            active INTEGER DEFAULT 1,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    logging.info("✅ suppliers table created/verified")
+                    
+                    # 2. Ensure ai_learning_data has location column
+                    cursor.execute("""
+                        DO $$ 
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name='ai_learning_data' AND column_name='location'
+                            ) THEN
+                                ALTER TABLE ai_learning_data ADD COLUMN location TEXT;
+                            END IF;
+                        END $$;
+                    """)
+                    logging.info("✅ ai_learning_data.location column ensured")
+                    
+                    # 3. Ensure automated_price_rules has config column
+                    cursor.execute("""
+                        DO $$ 
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name='automated_price_rules' AND column_name='config'
+                            ) THEN
+                                ALTER TABLE automated_price_rules ADD COLUMN config TEXT;
+                            END IF;
+                        END $$;
+                    """)
+                    logging.info("✅ automated_price_rules.config column ensured")
+                    
+                    # 4. Ensure price_snapshots exists with price_num (should already exist from init_db)
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS price_snapshots (
+                            id SERIAL PRIMARY KEY,
+                            ts TIMESTAMP NOT NULL,
+                            location TEXT NOT NULL,
+                            pickup_date TEXT,
+                            pickup_time TEXT,
+                            days INTEGER,
+                            supplier TEXT,
+                            car TEXT,
+                            price_text TEXT,
+                            price_num REAL,
+                            currency TEXT,
+                            link TEXT
+                        )
+                    """)
+                    logging.info("✅ price_snapshots table ensured")
+                    
+                    conn.commit()
+                else:
+                    # SQLite - just ensure tables exist (columns should be there from init_db)
+                    logging.info("✅ SQLite detected - tables managed by init_db()")
+                
+                logging.info(f"✅ All missing tables/columns verified")
+            finally:
+                if is_postgres and 'cursor' in locals():
+                    cursor.close()
+                conn.close()
+    except Exception as e:
+        logging.error(f"⚠️ Error ensuring missing tables: {e}")
         import traceback
         traceback.print_exc()
 
