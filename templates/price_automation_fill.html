@@ -192,7 +192,7 @@
             const pickupDate = document.getElementById('pickupDate').value;
 
             if (!pickupDate) {
-                alert('⚠️ Selecione uma data primeiro');
+                showNotification('Please select a date first', 'warning');
                 return;
             }
 

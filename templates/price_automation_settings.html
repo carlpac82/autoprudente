@@ -716,7 +716,7 @@
 
             // Validate
             if (settings.maxAlternativeDays < 0 || settings.maxAlternativeDays > 7) {
-                alert('⚠️ Alternative search days must be between 0 and 7');
+                showNotification('Alternative search days must be between 0 and 7', 'warning');
                 return;
             }
 
@@ -1342,7 +1342,7 @@
             if (confirm('⚠️ Are you sure you want to clear all AI learning data? This cannot be undone.')) {
                 localStorage.removeItem('priceAIData');
                 loadAISettings();
-                alert('✅ AI data cleared successfully!');
+                showNotification('AI data cleared successfully', 'success');
             }
         }
         
@@ -1405,7 +1405,7 @@
             // Refresh
             refreshAISuggestions();
             
-            alert('✅ Generated 10 sample AI adjustments! Refresh to see suggestions.');
+            showNotification('Generated 10 sample AI adjustments! Refresh to see suggestions', 'success', 4000);
         }
         
         function switchLocation(location) {
@@ -1750,7 +1750,7 @@
                     if (selectedMonth) {
                         selectDayChip(location, grupo, day, this, selectedMonth);
                     } else {
-                        alert('⚠️ Please select a month first!');
+                        showNotification('Please select a month first', 'warning');
                     }
                 };
                 
@@ -2214,7 +2214,7 @@
                 });
                 
                 if (selectedSuppliers.length === 0) {
-                    alert('⚠️ Please select at least one supplier!');
+                    showNotification('Please select at least one supplier', 'warning');
                     return;
                 }
                 
@@ -2582,9 +2582,9 @@
                             if (sourceDayRule) {
                                 // Copy configuration to current day
                                 loadDayConfigurationFromObject(location, grupo, sourceDayRule);
-                                alert(`✅ Configuration copied from ${sourceDay}d to ${currentDay}d`);
+                                showNotification(`Configuration copied from ${sourceDay}d to ${currentDay}d`, 'success');
                             } else {
-                                alert(`⚠️ No configuration found for ${sourceDay}d`);
+                                showNotification(`No configuration found for ${sourceDay}d`, 'warning');
                             }
                         } catch (e) {
                             alert('Error copying configuration');
@@ -2858,7 +2858,7 @@
                 });
                 
                 if (selectedMonths.length === 0 || selectedDays.length === 0) {
-                    alert('⚠️ Select at least one month and one day!');
+                    showNotification('Select at least one month and one day', 'warning');
                     return;
                 }
                 
@@ -2868,7 +2868,7 @@
                 const sourceConfig = rules[location]?.[grupo]?.months?.[sourceMonth]?.days?.[sourceDay];
                 
                 if (!sourceConfig || !sourceConfig.strategies) {
-                    alert('⚠️ No strategies to copy!');
+                    showNotification('No strategies to copy', 'warning');
                     return;
                 }
             
@@ -2899,11 +2899,11 @@
                     body: JSON.stringify(rules)
                 }).catch(err => console.error('DB save error:', err));
                 
-                alert(`✅ Copied to ${copiedCount} days!`);
+                showNotification(`Copied to ${copiedCount} days`, 'success');
                 
             } catch (error) {
                 console.error('❌ Error during copy:', error);
-                alert('❌ Error copying: ' + error.message);
+                showNotification('Error copying: ' + error.message, 'error');
             } finally {
                 // ALWAYS close modal
                 const modal = document.querySelector('.fixed.inset-0');
@@ -3432,7 +3432,7 @@
                     
                     // Validate format
                     if (!importedSettings.version || !importedSettings.globalSettings) {
-                        alert('❌ Invalid settings file format');
+                        showNotification('Invalid settings file format', 'error');
                         return;
                     }
                     
@@ -3496,7 +3496,7 @@
                     
                 } catch (error) {
                     console.error('Import error:', error);
-                    alert('❌ Error importing settings: ' + error.message);
+                    showNotification('Error importing settings: ' + error.message, 'error');
                 }
             };
             
@@ -3938,7 +3938,11 @@
             document.querySelector('.fixed.inset-0').remove();
             
             // Show success and reload current view if needed
-            alert(`✅ Copied ${selectedStrategyIndexes.length} strategy(s) to ${copiedCount} location(s)\n(${selectedGrupos.length} group(s) × ${selectedMonths.length} month(s) × ${selectedDays.length} day(s))!`);
+            showNotification(
+                `Copied ${selectedStrategyIndexes.length} strategy(s) to ${copiedCount} location(s) (${selectedGrupos.length} group(s) × ${selectedMonths.length} month(s) × ${selectedDays.length} day(s))`,
+                'success',
+                4000
+            );
             
             // If current day is one of the target days, rebuild to show new strategies
             const currentDayChip = document.querySelector(`button[data-location="${location}"][data-grupo="${grupo}"][data-day][data-selected="true"]`);
