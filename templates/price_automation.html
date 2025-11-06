@@ -4011,7 +4011,7 @@
                             const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
                             if (inputAuto) {
                                 inputAuto.value = ''; // Empty but editable
-                                inputAuto.placeholder = 'Manual';
+                                inputAuto.placeholder = '-';
                             }
                             continue; // Skip automatic calculation but field is still visible
                         }
@@ -4773,7 +4773,7 @@
                     
                     const inputAuto = document.createElement('input');
                     inputAuto.type = 'text';
-                    inputAuto.placeholder = 'Manual';
+                    inputAuto.placeholder = '-';
                     inputAuto.className = 'w-full px-0.5 py-0.5 text-center text-[10px] border-0 bg-transparent focus:ring-1 focus:ring-[#f4ad0f] text-[#f4ad0f] font-semibold cursor-text';
                     inputAuto.dataset.grupo = grupo;
                     inputAuto.dataset.dias = day;
