@@ -3475,6 +3475,27 @@
             }
         }
         
+        // FAST non-blocking save for strategies (no await, no UI blocking)
+        function saveStrategiesToDatabase() {
+            const rules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
+            
+            // Save in background without blocking UI
+            fetch('/api/price-automation/rules/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(rules)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    console.log('✅ Strategies saved to database (background)');
+                } else {
+                    console.error('❌ Error saving:', data.error);
+                }
+            })
+            .catch(e => console.error('❌ Network error:', e));
+        }
+        
         // OLD function kept for compatibility with global save
         async function saveAutomatedRules() {
             // This function is now only called from the main "Save Settings" button
@@ -4112,28 +4133,36 @@
                 }
             }
             
-            // Save
+            // Save to localStorage immediately
             localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
             
-            try {
-                await fetch('/api/price-automation/rules/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(rules)
-                });
-            } catch (e) {
-                console.error('Error saving:', e);
-            }
-            
-            // Close modal
+            // Close modal IMMEDIATELY
             document.querySelector('.fixed.inset-0').remove();
             
-            // Show success and reload current view if needed
+            // Show success notification IMMEDIATELY
             showNotification(
-                `Copied ${selectedStrategyIndexes.length} strategy(s) to ${copiedCount} location(s) (${selectedGrupos.length} group(s) × ${selectedMonths.length} month(s) × ${selectedDays.length} day(s))`,
+                `✅ Copying ${selectedStrategyIndexes.length} strategy(s) to ${copiedCount} combination(s)...`,
                 'success',
-                4000
+                2000
             );
+            
+            // Save to database in background (non-blocking)
+            fetch('/api/price-automation/rules/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(rules)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    console.log('✅ Strategies saved to database');
+                } else {
+                    console.error('❌ Error saving to database:', data.error);
+                }
+            })
+            .catch(e => {
+                console.error('❌ Network error saving:', e);
+            });
             
             // If current day is one of the target days, rebuild to show new strategies
             const currentDayChip = document.querySelector(`button[data-location="${location}"][data-grupo="${grupo}"][data-day][data-selected="true"]`);
