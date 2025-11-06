@@ -1506,7 +1506,17 @@
                                     </button>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-500 mb-2">First strategy has priority. If no price available, tries next strategy.</p>
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs text-gray-500">First strategy has priority. If no price available, tries next strategy.</p>
+                                <button onclick="clearAllStrategiesForDay('${location}', '${grupo}')" 
+                                        class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 border border-red-300 flex items-center gap-1"
+                                        title="Clear all strategies for the selected day">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Clear All (Selected Day)
+                                </button>
+                            </div>
                             <div id="strategiesList_${location}_${grupo}" class="space-y-2">
                                 <!-- Strategies will be added here -->
                             </div>
@@ -3189,7 +3199,65 @@
             const key = `${location}_${grupo}_${month}_${day}`;
             strategiesData[key].splice(index, 1);
             
+            // Update localStorage
+            const saved = localStorage.getItem('automatedPriceRules');
+            if (saved) {
+                const rules = JSON.parse(saved);
+                if (!rules[location]) rules[location] = {};
+                if (!rules[location][grupo]) rules[location][grupo] = {months: {}};
+                if (!rules[location][grupo].months[month]) rules[location][grupo].months[month] = {days: {}};
+                if (!rules[location][grupo].months[month].days[day]) rules[location][grupo].months[month].days[day] = {};
+                
+                rules[location][grupo].months[month].days[day].strategies = strategiesData[key];
+                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            }
+            
+            // Save to database
+            saveStrategiesToDatabase();
+            
             renderStrategiesList(location, grupo, month, day);
+            
+            console.log(`✅ Strategy removed. Remaining: ${strategiesData[key].length}`);
+        }
+        
+        function clearAllStrategiesForDay(location, grupo) {
+            // Get currently selected day
+            const selectedDayChip = document.querySelector(`button[data-location="${location}"][data-grupo="${grupo}"][data-day][data-selected="true"]`);
+            if (!selectedDayChip) {
+                alert('Please select a day first');
+                return;
+            }
+            
+            const day = parseInt(selectedDayChip.dataset.day);
+            const monthPicker = document.getElementById(`monthPicker_${location}_${grupo}`);
+            if (!monthPicker) return;
+            
+            const month = parseInt(monthPicker.value);
+            const monthName = monthPicker.options[monthPicker.selectedIndex].text;
+            
+            if (!confirm(`Clear ALL strategies for ${location}/${grupo}/${monthName}/Day ${day}?`)) return;
+            
+            const key = `${location}_${grupo}_${month}_${day}`;
+            strategiesData[key] = [];
+            
+            // Update localStorage
+            const saved = localStorage.getItem('automatedPriceRules');
+            if (saved) {
+                const rules = JSON.parse(saved);
+                if (!rules[location]) rules[location] = {};
+                if (!rules[location][grupo]) rules[location][grupo] = {months: {}};
+                if (!rules[location][grupo].months[month]) rules[location][grupo].months[month] = {days: {}};
+                
+                rules[location][grupo].months[month].days[day] = {strategies: []};
+                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            }
+            
+            // Save to database
+            saveStrategiesToDatabase();
+            
+            renderStrategiesList(location, grupo, month, day);
+            
+            console.log(`✅ All strategies cleared for ${location}/${grupo}/${monthName}/Day ${day}`);
         }
         
         function generateSuppliersCheckboxes(location, grupo) {
