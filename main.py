@@ -19461,6 +19461,44 @@ async def delete_automated_search(request: Request, search_id: int):
         logging.error(f"❌ Error deleting search: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/clean-automated-history")
+async def clean_automated_history():
+    """Delete all automated search history entries - NO AUTH REQUIRED"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                deleted_count = 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM automated_search_history")
+                        deleted_count = cur.fetchone()[0]
+                        
+                        cur.execute("DELETE FROM automated_search_history")
+                    conn.commit()
+                else:
+                    cursor = conn.execute("SELECT COUNT(*) FROM automated_search_history")
+                    deleted_count = cursor.fetchone()[0]
+                    
+                    conn.execute("DELETE FROM automated_search_history")
+                    conn.commit()
+                
+                logging.info(f"✅ Deleted {deleted_count} entries from automated_search_history")
+                return JSONResponse({
+                    "ok": True,
+                    "message": f"Deleted {deleted_count} history entries",
+                    "count": deleted_count
+                })
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error cleaning history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/migrate-supplier-data-column")
 async def migrate_supplier_data_column():
     """Add supplier_data column to automated_search_history table - NO AUTH REQUIRED"""
