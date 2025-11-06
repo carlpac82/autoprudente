@@ -229,10 +229,39 @@
             });
         }
 
-        function handleOAuthSuccess(data) {
+        async function handleOAuthSuccess(data) {
             isConnected = true;
             
-            // Save OAuth token with profile info
+            console.log('[EMAIL-OAUTH] Saving token to server...');
+            
+            // Save OAuth token to SERVER (PostgreSQL)
+            try {
+                const response = await fetch('/api/oauth/save-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: data.provider,
+                        email: data.email,
+                        name: data.name || '',
+                        picture: data.picture || '',
+                        googleId: data.googleId || '',
+                        token: data.token,
+                        refreshToken: data.refreshToken,
+                        expiresAt: data.expiresAt
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('[EMAIL-OAUTH] Server response:', result);
+                
+                if (!result.ok) {
+                    console.error('[EMAIL-OAUTH] Failed to save to server:', result.error);
+                }
+            } catch (error) {
+                console.error('[EMAIL-OAUTH] Error saving to server:', error);
+            }
+            
+            // ALSO save to localStorage (backup)
             localStorage.setItem('emailOAuthToken', JSON.stringify({
                 provider: data.provider,
                 email: data.email,
@@ -255,7 +284,7 @@
             
             // Use global notification system (no emoji)
             if (typeof showNotification === 'function') {
-                showNotification('Conta conectada com sucesso! Foto de perfil atualizada.', 'success');
+                showNotification('Conta conectada com sucesso! Token guardado no servidor.', 'success');
             }
         }
 
@@ -281,10 +310,12 @@
             }
         }
 
-        function disconnectAccount() {
+        async function disconnectAccount() {
             isConnected = false;
             localStorage.removeItem('emailOAuthToken');
             document.getElementById('connectionStatus').style.display = 'none';
+            
+            console.log('[EMAIL-OAUTH] Account disconnected');
             
             // Use global notification system
             if (typeof showNotification === 'function') {
@@ -319,10 +350,11 @@
             }
         }
 
-        function saveEmailSettings() {
+        async function saveEmailSettings() {
             // Check if using OAuth (connected)
+            let settings;
             if (isConnected) {
-                const settings = {
+                settings = {
                     provider: currentProvider,
                     recipients: document.getElementById('notificationRecipients').value,
                     notifyPriceChanges: document.getElementById('notifyPriceChanges').checked,
@@ -331,41 +363,59 @@
                     notifyErrors: document.getElementById('notifyErrors').checked,
                     useOAuth: true
                 };
+            } else {
+                // Manual email config
+                settings = {
+                    provider: currentProvider,
+                    email: document.getElementById('emailAddress').value,
+                    password: document.getElementById('emailPassword').value,
+                    smtpServer: document.getElementById('smtpServer').value,
+                    smtpPort: document.getElementById('smtpPort').value,
+                    recipients: document.getElementById('notificationRecipients').value,
+                    notifyPriceChanges: document.getElementById('notifyPriceChanges').checked,
+                    notifyDailyReport: document.getElementById('notifyDailyReport').checked,
+                    notifyWeeklyReport: document.getElementById('notifyWeeklyReport').checked,
+                    notifyErrors: document.getElementById('notifyErrors').checked,
+                    useOAuth: false
+                };
                 
-                localStorage.setItem('emailSettings', JSON.stringify(settings));
-                showNotification('Configurações de email guardadas!', 'success');
-                return;
+                // Validate
+                if (!settings.email) {
+                    showNotification('Por favor, insira um endereço de email', 'warning');
+                    return;
+                }
+                
+                if (!settings.password) {
+                    showNotification('Por favor, insira a password', 'warning');
+                    return;
+                }
             }
             
-            // Manual email config
-            const settings = {
-                provider: currentProvider,
-                email: document.getElementById('emailAddress').value,
-                password: document.getElementById('emailPassword').value,
-                smtpServer: document.getElementById('smtpServer').value,
-                smtpPort: document.getElementById('smtpPort').value,
-                recipients: document.getElementById('notificationRecipients').value,
-                notifyPriceChanges: document.getElementById('notifyPriceChanges').checked,
-                notifyDailyReport: document.getElementById('notifyDailyReport').checked,
-                notifyWeeklyReport: document.getElementById('notifyWeeklyReport').checked,
-                notifyErrors: document.getElementById('notifyErrors').checked,
-                useOAuth: false
-            };
+            console.log('[EMAIL-SETTINGS] Saving to server:', settings);
             
-            // Validate
-            if (!settings.email) {
-                showNotification('Por favor, insira um endereço de email', 'warning');
-                return;
+            // Save to SERVER (PostgreSQL)
+            try {
+                const response = await fetch('/api/email/settings/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                const result = await response.json();
+                console.log('[EMAIL-SETTINGS] Server response:', result);
+                
+                if (result.ok) {
+                    showNotification('Configurações de email guardadas no servidor!', 'success');
+                } else {
+                    showNotification('Erro ao guardar: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('[EMAIL-SETTINGS] Error saving to server:', error);
+                showNotification('Erro ao guardar configurações', 'error');
             }
             
-            if (!settings.password) {
-                showNotification('Por favor, insira a password', 'warning');
-                return;
-            }
-            
-            // Save to localStorage
+            // ALSO save to localStorage (backup)
             localStorage.setItem('emailSettings', JSON.stringify(settings));
-            showNotification('Configurações de email guardadas!', 'success');
         }
 
         async function testEmail() {
@@ -419,20 +469,88 @@
             }
         }
 
-        function loadEmailSettings() {
-            // Check OAuth connection
-            const oauthToken = localStorage.getItem('emailOAuthToken');
-            if (oauthToken) {
-                try {
-                    const token = JSON.parse(oauthToken);
+        async function loadEmailSettings() {
+            console.log('[EMAIL-SETTINGS] Loading from server...');
+            
+            // 1. Try to load OAuth token from SERVER first
+            try {
+                const response = await fetch('/api/oauth/load-token?provider=gmail');
+                const data = await response.json();
+                
+                if (data.ok && data.token) {
+                    console.log('[EMAIL-OAUTH] Loaded from server:', data.token.email);
                     isConnected = true;
-                    document.getElementById('connectedEmail').textContent = token.email;
+                    document.getElementById('connectedEmail').textContent = data.token.email;
                     document.getElementById('connectionStatus').style.display = 'block';
-                } catch (e) {
-                    console.error('Error loading OAuth token:', e);
+                    
+                    // Update localStorage with server data
+                    localStorage.setItem('emailOAuthToken', JSON.stringify({
+                        provider: 'gmail',
+                        email: data.token.email,
+                        name: data.token.name || '',
+                        picture: data.token.picture || '',
+                        googleId: data.token.googleId || '',
+                        token: data.token.token,
+                        refreshToken: data.token.refreshToken,
+                        expiresAt: data.token.expiresAt
+                    }));
+                } else {
+                    // Fallback to localStorage
+                    console.log('[EMAIL-OAUTH] Not found on server, trying localStorage...');
+                    const oauthToken = localStorage.getItem('emailOAuthToken');
+                    if (oauthToken) {
+                        const token = JSON.parse(oauthToken);
+                        isConnected = true;
+                        document.getElementById('connectedEmail').textContent = token.email;
+                        document.getElementById('connectionStatus').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('[EMAIL-OAUTH] Error loading from server:', error);
+                // Fallback to localStorage
+                const oauthToken = localStorage.getItem('emailOAuthToken');
+                if (oauthToken) {
+                    try {
+                        const token = JSON.parse(oauthToken);
+                        isConnected = true;
+                        document.getElementById('connectedEmail').textContent = token.email;
+                        document.getElementById('connectionStatus').style.display = 'block';
+                    } catch (e) {
+                        console.error('Error loading OAuth token from localStorage:', e);
+                    }
                 }
             }
             
+            // 2. Try to load email settings from SERVER first
+            try {
+                const response = await fetch('/api/email/settings/load');
+                const data = await response.json();
+                
+                if (data.ok && data.settings) {
+                    console.log('[EMAIL-SETTINGS] Loaded from server:', data.settings);
+                    const settings = data.settings;
+                    
+                    selectProvider(settings.provider || 'gmail');
+                    document.getElementById('emailAddress').value = settings.email || '';
+                    document.getElementById('emailPassword').value = settings.password || '';
+                    document.getElementById('smtpServer').value = settings.smtpServer || 'smtp.gmail.com';
+                    document.getElementById('smtpPort').value = settings.smtpPort || '587';
+                    document.getElementById('notificationRecipients').value = settings.recipients || '';
+                    document.getElementById('notifyPriceChanges').checked = settings.notifyPriceChanges !== false;
+                    document.getElementById('notifyDailyReport').checked = settings.notifyDailyReport || false;
+                    document.getElementById('notifyWeeklyReport').checked = settings.notifyWeeklyReport || false;
+                    document.getElementById('notifyErrors').checked = settings.notifyErrors !== false;
+                    
+                    // Update localStorage with server data
+                    localStorage.setItem('emailSettings', JSON.stringify(settings));
+                    return; // Success, no need to check localStorage
+                }
+            } catch (error) {
+                console.error('[EMAIL-SETTINGS] Error loading from server:', error);
+            }
+            
+            // 3. Fallback to localStorage if server fails
+            console.log('[EMAIL-SETTINGS] Not found on server, trying localStorage...');
             const saved = localStorage.getItem('emailSettings');
             if (saved) {
                 try {
@@ -449,7 +567,7 @@
                     document.getElementById('notifyWeeklyReport').checked = settings.notifyWeeklyReport || false;
                     document.getElementById('notifyErrors').checked = settings.notifyErrors !== false;
                 } catch (e) {
-                    console.error('Error loading email settings:', e);
+                    console.error('Error loading email settings from localStorage:', e);
                 }
             }
         }

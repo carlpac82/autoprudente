@@ -17638,6 +17638,76 @@ async def update_google_profile(request: Request):
         logging.error(f"Error updating Google profile: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/email/settings/save")
+async def save_email_settings(request: Request):
+    """Save email settings to database (persists across deploys)"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        username = request.session.get('username', 'default')
+        
+        # Convert settings dict to JSON string
+        import json
+        settings_json = json.dumps(data)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Save to user_settings table
+                conn.execute(
+                    """
+                    INSERT INTO user_settings (user_key, setting_key, setting_value, updated_at)
+                    VALUES (?, 'email_settings', ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT (user_key, setting_key) DO UPDATE SET
+                        setting_value = EXCLUDED.setting_value,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (username, settings_json)
+                )
+                conn.commit()
+                logging.info(f"✅ Email settings saved to database for user {username}")
+                return JSONResponse({"ok": True, "message": "Settings saved successfully"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error saving email settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/email/settings/load")
+async def load_email_settings(request: Request):
+    """Load email settings from database"""
+    require_auth(request)
+    
+    try:
+        username = request.session.get('username', 'default')
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT setting_value
+                    FROM user_settings
+                    WHERE user_key = ? AND setting_key = 'email_settings'
+                    """,
+                    (username,)
+                )
+                row = cursor.fetchone()
+                
+                if row:
+                    import json
+                    settings = json.loads(row[0])
+                    logging.info(f"✅ Email settings loaded from database for user {username}")
+                    return JSONResponse({"ok": True, "settings": settings})
+                else:
+                    return JSONResponse({"ok": False, "error": "No settings found"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error loading email settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/reports/test-daily")
 async def test_daily_report(request: Request):
     """Send test daily report email via Gmail API"""
