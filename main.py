@@ -16659,6 +16659,99 @@ async def get_search_history(request: Request):
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
+@app.post("/api/recent-searches/save")
+async def save_recent_searches(request: Request):
+    """Save recent searches from homepage to PostgreSQL"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        searches = data.get('searches', [])
+        username = request.session.get("username", "admin")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Ensure table exists
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS recent_searches (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        location TEXT NOT NULL,
+                        start_date TEXT NOT NULL,
+                        days INTEGER NOT NULL,
+                        results_data TEXT NOT NULL,
+                        timestamp TEXT NOT NULL,
+                        user TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Clear old searches for this user (keep max 3)
+                conn.execute("DELETE FROM recent_searches WHERE user = ?", (username,))
+                
+                # Insert new searches
+                for search in searches[:3]:  # Max 3 searches
+                    conn.execute("""
+                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        search.get('location'),
+                        search.get('startDate'),
+                        search.get('days'),
+                        json.dumps(search.get('results', [])),
+                        search.get('timestamp'),
+                        username
+                    ))
+                
+                conn.commit()
+                
+                return _no_store_json({"ok": True, "message": "Recent searches saved"})
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        import traceback
+        logging.error(f"Failed to save recent searches: {str(e)}")
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/recent-searches/load")
+async def load_recent_searches(request: Request):
+    """Load recent searches from PostgreSQL"""
+    require_auth(request)
+    try:
+        username = request.session.get("username", "admin")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT location, start_date, days, results_data, timestamp
+                    FROM recent_searches
+                    WHERE user = ?
+                    ORDER BY created_at DESC
+                    LIMIT 3
+                """, (username,))
+                
+                rows = cursor.fetchall()
+                searches = []
+                
+                for row in rows:
+                    searches.append({
+                        'location': row[0],
+                        'startDate': row[1],
+                        'days': row[2],
+                        'results': json.loads(row[3]) if row[3] else [],
+                        'timestamp': row[4]
+                    })
+                
+                return _no_store_json({"ok": True, "searches": searches})
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        import traceback
+        logging.error(f"Failed to load recent searches: {str(e)}")
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
 @app.post("/api/save-vans-pricing")
 async def save_vans_pricing(request: Request):
     """Save Commercial Vans pricing to PostgreSQL"""
