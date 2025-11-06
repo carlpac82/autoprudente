@@ -2536,20 +2536,37 @@ def save_search_to_history(location: str, start_date: str, end_date: str, days: 
         with _db_lock:
             conn = _db_connect()
             try:
-                conn.execute(
-                    """
-                    INSERT INTO search_history 
-                    (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
-                )
+                # PostgreSQL e SQLite compatibility
+                if hasattr(conn, 'cursor'):
+                    # PostgreSQL - usar %s e "user" com aspas
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        INSERT INTO search_history 
+                        (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, "user", search_params)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
+                    )
+                    cursor.close()
+                else:
+                    # SQLite - usar ?
+                    conn.execute(
+                        """
+                        INSERT INTO search_history 
+                        (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (location, start_date, end_date, days, results_count, min_price, max_price, avg_price, user, search_params)
+                    )
                 conn.commit()
-                log_to_db("INFO", f"Search saved to history: {location}, {start_date}-{end_date}, {results_count} results", "main", "save_search_to_history")
+                logging.info(f"✅ Search saved to history: {location}, {start_date}-{end_date}, {results_count} results")
             finally:
                 conn.close()
     except Exception as e:
-        log_to_db("ERROR", f"Failed to save search history: {str(e)}", "main", "save_search_to_history")
+        logging.error(f"❌ Failed to save search history: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 def send_notification(rule_id: int, notification_type: str, recipient: str, subject: str, message: str):
     """Enviar notificação e salvar no histórico"""
