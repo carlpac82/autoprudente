@@ -4055,16 +4055,16 @@
                         } else {
                             console.log(` ${grupo}/${day}d: No price calculated (autoPrice=${autoPrice})`);
                         }
-                    }
-                    
-                    // Update chip color for this day if it has any Auto prices
-                    const dayHasAutoPrices = grupos.some(g => {
-                        const input = document.querySelector(`#pricesTableAuto input[data-grupo="${g}"][data-dias="${day}"][data-type="auto"]`);
-                        return input && input.value && input.value !== '-' && parseFloat(input.value) > 0;
-                    });
-                    
-                    if (dayHasAutoPrices) {
-                        updateDayChipColor(day, true);
+                        
+                        // Update chip color for this specific day after processing all groups
+                        const dayHasAutoPricesForThisDay = grupos.some(g => {
+                            const input = document.querySelector(`#pricesTableAuto input[data-grupo="${g}"][data-dias="${day}"][data-type="auto"]`);
+                            return input && input.value && input.value !== '-' && parseFloat(input.value) > 0;
+                        });
+                        
+                        if (dayHasAutoPricesForThisDay) {
+                            updateDayChipColor(day, true);
+                        }
                     }
                 }
                 
