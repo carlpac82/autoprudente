@@ -3927,6 +3927,8 @@
                                     
                                     // Stop trying alternative dates if we found prices
                                     if (foundPrices) {
+                                        // Update chip color to blue when prices are loaded
+                                        updateDayChipColor(day, true);
                                         break;
                                     }
                                 }
@@ -4038,6 +4040,16 @@
                         } else {
                             console.log(` ${grupo}/${day}d: No price calculated (autoPrice=${autoPrice})`);
                         }
+                    }
+                    
+                    // Update chip color for this day if it has any Auto prices
+                    const dayHasAutoPrices = grupos.some(g => {
+                        const input = document.querySelector(`#pricesTableAuto input[data-grupo="${g}"][data-dias="${day}"][data-type="auto"]`);
+                        return input && input.value && input.value !== '-' && parseFloat(input.value) > 0;
+                    });
+                    
+                    if (dayHasAutoPrices) {
+                        updateDayChipColor(day, true);
                     }
                 }
                 
@@ -4524,6 +4536,31 @@
                 chip.onclick = () => toggleDaySelectionAuto(day);
                 container.appendChild(chip);
             });
+        }
+        
+        // Update single chip color when prices are loaded (FAST - no full rebuild)
+        function updateDayChipColor(day, hasPrices) {
+            const container = document.getElementById('dayChipsAuto');
+            if (!container) return;
+            
+            const chip = Array.from(container.children).find(btn => parseInt(btn.dataset.day) === day);
+            if (!chip) return;
+            
+            const isSelected = selectedDaysAuto.includes(day);
+            
+            // Remove all color classes
+            chip.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 
+                                  'bg-[#009cb6]', 'bg-[#f4ad0f]', 'text-white');
+            
+            // Apply new color based on state
+            if (!isSelected) {
+                chip.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            } else if (hasPrices) {
+                chip.classList.add('bg-[#009cb6]', 'text-white'); // AZUL quando tem preços
+                console.log(`✅ Chip ${day}d mudou para AZUL (preços carregados)`);
+            } else {
+                chip.classList.add('bg-[#f4ad0f]', 'text-white'); // AMARELO quando selecionado mas sem preços
+            }
         }
         
         // Toggle day selection
