@@ -324,170 +324,6 @@
         </div>
 
         <!-- Tab: Automated Prices -->
-
-        <!-- Controles -->
-        <div class="bg-white shadow mb-6 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.location">Location</label>
-                        <select id="location" class="px-3 py-2 border border-gray-300 rounded">
-                            <option value="Aeroporto de Faro">Aeroporto de Faro</option>
-                            <option value="Albufeira" selected>Albufeira</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.startDate">Start Date</label>
-                        <input type="date" id="pickupDate" class="px-3 py-2 border border-gray-300 rounded">
-                    </div>
-                    <div class="flex items-end gap-2">
-                        <button id="btnSearchAll" onclick="toggleSearch()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Search all prices">
-                            <svg class="w-6 h-6 text-[#f4ad0f] search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <svg class="w-6 h-6 text-red-600 stop-search-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <!-- Day Selection Chips -->
-                    <div class="flex items-center gap-2 border-l pl-3">
-                        <button onclick="toggleAllDaysCurrent()" class="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Selecionar/Desselecionar Todos">
-                            <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </button>
-                        <div id="dayChipsCurrent" class="flex flex-wrap gap-2">
-                            <!-- Chips serão gerados por JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gestão de Colunas -->
-            <div class="border-t pt-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600" data-i18n="automation.manageColumns">Manage columns:</span>
-                    <button onclick="showAddColumnDialog()" class="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-sm flex items-center gap-1" title="Add column">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        <span data-i18n="automation.add">Add</span>
-                    </button>
-                    <button onclick="showRemoveColumnDialog()" class="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-sm flex items-center gap-1" title="Remove column">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                        </svg>
-                        <span data-i18n="automation.remove">Remove</span>
-                    </button>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-gray-600 font-medium" data-i18n="automation.tariffPeriod">Tariff Period:</span>
-                    <input type="number" id="wr_start_day" min="1" max="31" value="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="01">
-                    <span class="text-sm text-gray-500" data-i18n="automation.to">to</span>
-                    <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
-                </div>
-                <div class="flex items-center gap-1">
-                    <span class="text-sm text-gray-600 mr-2" data-i18n="automation.downloadExcel">Download Excel:</span>
-                    <button onclick="downloadExcel('website')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Website">
-                        <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                        </svg>
-                    </button>
-                    <button onclick="downloadExcel('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Way2Rentals">
-                        <svg class="w-6 h-6 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                        </svg>
-                    </button>
-                    <button onclick="downloadExcel('abbycar')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Abbycar">
-                        <svg class="w-6 h-6 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Progresso -->
-        <div id="progressBar" class="bg-white shadow mb-6 p-4 hidden">
-            <div class="flex items-center gap-3">
-                <svg class="w-5 h-5 animate-spin text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <div class="flex-1">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span id="progressText">A pesquisar...</span>
-                        <span id="progressPercent">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div id="progressFill" class="bg-[#009cb6] h-2 transition-all" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabela de Preços -->
-        <div class="bg-white shadow overflow-x-auto">
-            <table class="w-full text-xs">
-                <thead class="bg-gray-50 sticky top-0">
-                    <tr>
-                        <th rowspan="2" class="px-2 py-3 text-left font-semibold border-r">Group</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">1d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">2d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">3d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">4d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">5d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">6d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">7d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">8d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">9d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">14d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">22d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">28d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">31d</th>
-                        <th colspan="2" class="px-2 py-2 text-center font-semibold border-r">60d</th>
-                    </tr>
-                    <tr>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#f4ad0f] font-semibold">NET</th>
-                        <th class="px-1 py-1 text-center text-[10px] bg-gray-50 text-[#009cb6] font-semibold border-r">Real</th>
-                    </tr>
-                </thead>
-                <tbody id="pricesTable">
-                </tbody>
-            </table>
-        </div>
-
-        </div>
-
-        <!-- Tab: Automated Prices -->
         <div id="contentAutomated">
 
         <!-- Controles -->
@@ -898,10 +734,7 @@
                 <!-- History Tabs -->
                 <div class="mb-4 border-b border-gray-200">
                     <nav class="flex gap-4">
-                        <button onclick="switchHistoryTab('current')" id="historyTabCurrent" class="px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold">
-                            <span data-i18n="automation.currentPrices">Current Prices</span>
-                        </button>
-                        <button onclick="switchHistoryTab('automated')" id="historyTabAutomated" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                        <button onclick="switchHistoryTab('automated')" id="historyTabAutomated" class="px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold">
                             <span data-i18n="automation.automatedPrices">Automated Prices</span>
                         </button>
                         <button onclick="switchHistoryTab('downloads')" id="historyTabDownloads" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900">
@@ -913,15 +746,8 @@
                     </nav>
                 </div>
                 
-                <!-- Current Prices History -->
-                <div id="historyContentCurrent">
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsCurrent">
-                        <!-- Meses serão gerados dinamicamente -->
-                    </div>
-                </div>
-                
                 <!-- Automated Prices History -->
-                <div id="historyContentAutomated" class="hidden">
+                <div id="historyContentAutomated">
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsAutomated">
                         <!-- Meses serão gerados dinamicamente -->
                     </div>
@@ -2673,32 +2499,23 @@
         
         function switchTab(tab) {
             console.log('[TAB] Switching to:', tab);
-            const tabCurrent = document.getElementById('tabCurrent');
             const tabAutomated = document.getElementById('tabAutomated');
             const tabVans = document.getElementById('tabVans');
             const tabHistory = document.getElementById('tabHistory');
-            const contentCurrent = document.getElementById('contentCurrent');
             const contentAutomated = document.getElementById('contentAutomated');
             const contentVans = document.getElementById('contentVans');
             const contentHistory = document.getElementById('contentHistory');
             
             // Reset all tabs
-            tabCurrent.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             tabAutomated.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             tabVans.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             tabHistory.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
-            contentCurrent.classList.add('hidden');
             contentAutomated.classList.add('hidden');
             contentVans.classList.add('hidden');
             contentHistory.classList.add('hidden');
             
             // Activate selected tab
-            if (tab === 'current') {
-                tabCurrent.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
-                contentCurrent.classList.remove('hidden');
-                console.log('[TAB] Current prices tab activated, initializing chips...');
-                initDayChipsCurrent(); // Initialize day chips for current prices - IMMEDIATE
-            } else if (tab === 'automated') {
+            if (tab === 'automated') {
                 tabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentAutomated.classList.remove('hidden');
                 console.log('[TAB] Automated prices tab activated, initializing chips...');
@@ -2712,35 +2529,29 @@
             } else if (tab === 'history') {
                 tabHistory.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentHistory.classList.remove('hidden');
-                generateHistoryMonths(); // Generate both history tabs
+                generateHistoryMonths(); // Generate history tabs
+                switchHistoryTab('automated'); // Default to automated tab
             }
         }
         
         function switchHistoryTab(tab) {
-            const historyTabCurrent = document.getElementById('historyTabCurrent');
             const historyTabAutomated = document.getElementById('historyTabAutomated');
             const historyTabDownloads = document.getElementById('historyTabDownloads');
             const historyTabCalendar = document.getElementById('historyTabCalendar');
-            const historyContentCurrent = document.getElementById('historyContentCurrent');
             const historyContentAutomated = document.getElementById('historyContentAutomated');
             const historyContentDownloads = document.getElementById('historyContentDownloads');
             const historyContentCalendar = document.getElementById('historyContentCalendar');
             
             // Reset all history tabs
-            historyTabCurrent.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             historyTabAutomated.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             historyTabDownloads.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
             historyTabCalendar.className = 'px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-900';
-            historyContentCurrent.classList.add('hidden');
             historyContentAutomated.classList.add('hidden');
             historyContentDownloads.classList.add('hidden');
             historyContentCalendar.classList.add('hidden');
             
             // Activate selected history tab
-            if (tab === 'current') {
-                historyTabCurrent.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
-                historyContentCurrent.classList.remove('hidden');
-            } else if (tab === 'automated') {
+            if (tab === 'automated') {
                 historyTabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 historyContentAutomated.classList.remove('hidden');
             } else if (tab === 'downloads') {
@@ -5129,9 +4940,7 @@
         }
         
         async function generateHistoryMonths() {
-            const containerCurrent = document.getElementById('historyMonthsCurrent');
             const containerAutomated = document.getElementById('historyMonthsAutomated');
-            containerCurrent.innerHTML = '<div class="col-span-full text-center py-4 text-gray-500">Loading history...</div>';
             containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-gray-500">Loading history...</div>';
             
             console.log('📅 Loading search history from PostgreSQL...');
@@ -5151,7 +4960,6 @@
                 console.log('History loaded:', Object.keys(history).length, 'months with data');
                 
                 // Clear containers
-                containerCurrent.innerHTML = '';
                 containerAutomated.innerHTML = '';
                 
                 // Generate buttons for each month
@@ -5159,20 +4967,6 @@
                     const [year, month] = monthKey.split('-');
                     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
                     const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    
-                    // Current Prices History
-                    const hasCurrentData = history[monthKey] && history[monthKey].current && history[monthKey].current.length > 0;
-                    
-                    const buttonCurrent = document.createElement('button');
-                    buttonCurrent.className = `p-3 border rounded text-sm ${hasCurrentData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
-                    buttonCurrent.textContent = monthName;
-                    buttonCurrent.disabled = !hasCurrentData;
-                    
-                    if (hasCurrentData) {
-                        buttonCurrent.onclick = () => showHistoryMonthFromServer(monthKey, monthName, 'current', history[monthKey].current);
-                    }
-                    
-                    containerCurrent.appendChild(buttonCurrent);
                     
                     // Automated Prices History
                     const hasAutomatedData = history[monthKey] && history[monthKey].automated && history[monthKey].automated.length > 0;
@@ -7721,11 +7515,10 @@ Continue?`);
         }
 
         loadCustomDias();
-        document.getElementById('pickupDate').valueAsDate = new Date();
         document.getElementById('pickupDateAuto').valueAsDate = new Date();
-        initTable();
         
         // Abrir tab Automated Prices por padrão (isso já inicializa os chips)
+        console.log('[INIT] Opening Automated Prices tab by default...');
         switchTab('automated');
         
         // Replace remaining "Auto" and "Real" text headers with icons
