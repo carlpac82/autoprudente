@@ -17021,6 +17021,40 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ ai_learning_data.original_price: {e}")
                     
+                    # 2c. Ensure ai_learning_data has new_price column (may be named net_price)
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='ai_learning_data' AND column_name='new_price'
+                                ) THEN
+                                    ALTER TABLE ai_learning_data ADD COLUMN new_price REAL;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ ai_learning_data.new_price column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ ai_learning_data.new_price: {e}")
+                    
+                    # 2d. Ensure ai_learning_data has timestamp column (may be named ts)
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='ai_learning_data' AND column_name='timestamp'
+                                ) THEN
+                                    ALTER TABLE ai_learning_data ADD COLUMN timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ ai_learning_data.timestamp column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ ai_learning_data.timestamp: {e}")
+                    
                     # 3. Ensure automated_price_rules has config column
                     try:
                         conn.execute("""
@@ -17076,9 +17110,26 @@ def _ensure_missing_tables():
                                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
                         """)
-                        logging.info("✅ pricing_strategies table ensured")
+                        logging.info("✅ pricing_strategies table created/verified")
                     except Exception as e:
-                        logging.warning(f"⚠️ pricing_strategies: {e}")
+                        logging.warning(f"⚠️ pricing_strategies table: {e}")
+                    
+                    # 5b. Ensure pricing_strategies has config column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='pricing_strategies' AND column_name='config'
+                                ) THEN
+                                    ALTER TABLE pricing_strategies ADD COLUMN config TEXT NOT NULL DEFAULT '{}';
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ pricing_strategies.config column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ pricing_strategies.config: {e}")
                     
                     # 6. Ensure automated_price_rules table exists (CRITICAL!)
                     try:
