@@ -227,21 +227,25 @@
         }
         
         .btn-secondary {
+            background: white;
+            color: #6b7280;
+            border: 2px solid #6b7280;
+        }
+        
+        .btn-secondary:hover {
             background: #6b7280;
             color: white;
         }
         
-        .btn-secondary:hover {
-            background: #4b5563;
-        }
-        
         .btn-success {
-            background: #10b981;
-            color: white;
+            background: white;
+            color: #10b981;
+            border: 2px solid #10b981;
         }
         
         .btn-success:hover {
-            background: #059669;
+            background: #10b981;
+            color: white;
         }
         
         .upload-area {
@@ -764,23 +768,20 @@
 
             <!-- Botões -->
             <div class="action-buttons">
-                <button type="button" class="btn btn-secondary" onclick="clearForm()">
-                    <svg class="icon-mono" viewBox="0 0 24 24">
+                <button type="button" class="btn btn-secondary" onclick="clearForm()" title="Limpar formulário" style="width: 48px; height: 48px; padding: 12px; border-radius: 8px;">
+                    <svg class="icon-mono" style="width: 24px; height: 24px;" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                    Limpar
                 </button>
-                <button type="button" class="btn btn-primary" onclick="downloadPDF()" id="downloadBtn" style="display: none;">
-                    <svg class="icon-mono" viewBox="0 0 24 24">
+                <button type="button" class="btn btn-primary" onclick="downloadPDF()" id="downloadBtn" title="Download PDF" style="display: none; width: 48px; height: 48px; padding: 12px; border-radius: 8px;">
+                    <svg class="icon-mono" style="width: 24px; height: 24px;" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    Download PDF
                 </button>
-                <button type="submit" class="btn btn-success" id="submitButton">
-                    <svg class="icon-mono" viewBox="0 0 24 24">
+                <button type="submit" class="btn btn-success" id="submitButton" title="Guardar Damage Report" style="width: 48px; height: 48px; padding: 12px; border-radius: 8px;">
+                    <svg class="icon-mono" style="width: 24px; height: 24px;" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                     </svg>
-                    <span id="submitButtonText">Guardar Damage Report</span>
                 </button>
             </div>
         </form>
@@ -2225,9 +2226,12 @@
                     // Guardar DR number atual para update
                     currentDRNumber = drNumber;
                     
-                    // Mudar texto do botão para "Atualizar DR"
-                    document.getElementById('submitButtonText').textContent = 'Atualizar DR';
-                    document.getElementById('submitButton').style.background = '#f59e0b';
+                    // Mudar estilo do botão para modo "Atualizar DR"
+                    const submitBtn = document.getElementById('submitButton');
+                    submitBtn.title = 'Atualizar DR';
+                    submitBtn.style.background = '#f59e0b';
+                    submitBtn.style.borderColor = '#f59e0b';
+                    submitBtn.style.color = 'white';
                     
                     // Mudar para tab Criar
                     document.querySelector('[onclick="showTab(\'create\')"]').click();
@@ -2638,8 +2642,11 @@
                 document.getElementById('previewBtn').style.display = 'none';
                 
                 // Resetar botão para modo criar
-                document.getElementById('submitButtonText').textContent = 'Guardar Damage Report';
-                document.getElementById('submitButton').style.background = '';
+                const submitBtn = document.getElementById('submitButton');
+                submitBtn.title = 'Guardar Damage Report';
+                submitBtn.style.background = '';
+                submitBtn.style.borderColor = '';
+                submitBtn.style.color = '';
             }
         }
 
@@ -2687,7 +2694,7 @@
                     currentDRNumber = result.dr_number;
                     
                     // Verificar se foi criação ou atualização
-                    const isUpdate = document.getElementById('submitButtonText').textContent === 'Atualizar DR';
+                    const isUpdate = document.getElementById('submitButton').title === 'Atualizar DR';
                     showNotification(`Damage Report ${result.dr_number} ${isUpdate ? 'atualizado' : 'criado'} com sucesso!`, 'success');
                     
                     // Mostrar botões no header e no formulário
@@ -2696,8 +2703,11 @@
                     document.getElementById('previewBtn').style.display = 'inline-flex';
                     
                     // Resetar botão para modo criar
-                    document.getElementById('submitButtonText').textContent = 'Guardar Damage Report';
-                    document.getElementById('submitButton').style.background = '';
+                    const submitBtn = document.getElementById('submitButton');
+                    submitBtn.title = 'Guardar Damage Report';
+                    submitBtn.style.background = '';
+                    submitBtn.style.borderColor = '';
+                    submitBtn.style.color = '';
                     
                     // Recarregar histórico
                     loadHistory();
