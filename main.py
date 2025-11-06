@@ -17328,10 +17328,15 @@ async def load_recent_searches(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("""
+                # PostgreSQL compatibility
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                user_col = '"user"' if is_postgres else 'user'
+                
+                cursor = conn.execute(f"""
                     SELECT location, start_date, days, results_data, timestamp
                     FROM recent_searches
-                    WHERE user = ?
+                    WHERE {user_col} = {placeholder}
                     ORDER BY created_at DESC
                     LIMIT 3
                 """, (username,))
