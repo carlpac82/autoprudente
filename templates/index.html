@@ -567,7 +567,8 @@
         
         <!-- Recent Searches Preview -->
         <div id="recentSearchesPreview" class="mt-6 hidden">
-          <div class="flex items-center justify-between mb-4">
+          <!-- Header com filtros e ordenação -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
             <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <svg class="w-5 h-5 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
@@ -575,10 +576,61 @@
               </svg>
               <span>Últimas Pesquisas</span>
             </h3>
-            <button onclick="clearRecentSearches()" class="text-xs text-gray-500 hover:text-red-500 transition-colors">
-              Limpar histórico
-            </button>
+            
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Filtro por local -->
+              <div class="flex items-center gap-2">
+                <button onclick="filterByLocation('all')" id="filterAll" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors">
+                  Todos
+                </button>
+                <button onclick="filterByLocation('Aeroporto de Faro')" id="filterFaro" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                  Faro
+                </button>
+                <button onclick="filterByLocation('Albufeira')" id="filterAlbufeira" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                  Albufeira
+                </button>
+              </div>
+              
+              <!-- Separador -->
+              <div class="h-6 w-px bg-gray-300"></div>
+              
+              <!-- Ordenação -->
+              <select onchange="sortSearches(this.value)" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 focus:border-[#009cb6] focus:ring-1 focus:ring-[#009cb6]">
+                <option value="date">Mais recentes</option>
+                <option value="price-asc">Preço menor</option>
+                <option value="price-desc">Preço maior</option>
+                <option value="location">Por local</option>
+              </select>
+              
+              <!-- Separador -->
+              <div class="h-6 w-px bg-gray-300"></div>
+              
+              <!-- Comparar -->
+              <button onclick="toggleCompareMode()" id="btnCompare" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-[#009cb6] hover:text-white transition-colors flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <span>Comparar</span>
+              </button>
+              
+              <!-- Limpar -->
+              <button onclick="clearRecentSearches()" class="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+                Limpar
+              </button>
+            </div>
           </div>
+          
+          <!-- Modo comparação -->
+          <div id="compareMessage" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            Selecione 2 pesquisas para comparar lado-a-lado
+          </div>
+          
+          <!-- Área de comparação -->
+          <div id="compareArea" class="hidden mb-4 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <!-- Comparação será inserida aqui -->
+          </div>
+          
+          <!-- Grid de cards -->
           <div id="recentSearchesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Cards will be inserted here -->
           </div>
@@ -2693,7 +2745,7 @@
       // Carregar pesquisas recentes
       function loadRecentSearches() {
         try {
-          const searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+          const searches = getFilteredAndSortedSearches ? getFilteredAndSortedSearches() : JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
           const container = document.getElementById('recentSearchesPreview');
           const grid = document.getElementById('recentSearchesGrid');
           
@@ -2718,11 +2770,75 @@
         }
       }
       
+      // Estado global para comparação
+      let compareMode = false;
+      let selectedForCompare = [];
+      let currentFilter = 'all';
+      let currentSort = 'date';
+      
+      // Função auxiliar para obter imagem do carro
+      function getCarImage(car) {
+        // Tentar obter do campo photo
+        if (car.photo && car.photo !== '') return car.photo;
+        
+        // Tentar mapear por nome do carro (usar a mesma lógica do price_automation)
+        const carName = (car.car || '').toLowerCase();
+        
+        // Mapeamento de grupos para imagens
+        const groupImages = {
+          'B1': '/static/car-images/mini-4-doors.jpg',
+          'B2': '/static/car-images/mini-5-doors.jpg',
+          'D': '/static/car-images/economy.jpg',
+          'E1': '/static/car-images/mini-automatic.jpg',
+          'E2': '/static/car-images/economy-automatic.jpg',
+          'F': '/static/car-images/suv.jpg',
+          'G': '/static/car-images/premium.jpg',
+          'J1': '/static/car-images/crossover.jpg',
+          'J2': '/static/car-images/station-wagon.jpg',
+          'L1': '/static/car-images/suv-automatic.jpg',
+          'L2': '/static/car-images/station-wagon-automatic.jpg',
+          'M1': '/static/car-images/7-seater.jpg',
+          'M2': '/static/car-images/7-seater-automatic.jpg',
+          'N': '/static/car-images/9-seater.jpg'
+        };
+        
+        // Usar imagem do grupo se disponível
+        if (car.group && groupImages[car.group]) {
+          return groupImages[car.group];
+        }
+        
+        // Fallback SVG
+        return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60' fill='%23009cb6'%3E%3Cpath d='M20,40 L10,40 L10,30 C10,25 12,22 15,20 L30,20 L30,10 L70,10 L70,20 L85,20 C88,22 90,25 90,30 L90,40 L80,40 C80,35 77,32 73,32 C69,32 66,35 66,40 L34,40 C34,35 31,32 27,32 C23,32 20,35 20,40 Z'/%3E%3C/svg%3E`;
+      }
+      
       // Criar card de preview
       function createSearchPreviewCard(search, index) {
         const card = document.createElement('div');
-        card.className = 'bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-[#009cb6] hover:shadow-lg transition-all cursor-pointer';
-        card.onclick = () => applySearch(search);
+        card.className = 'bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-[#009cb6] hover:shadow-lg transition-all';
+        card.dataset.searchIndex = index;
+        card.dataset.location = search.location;
+        
+        // Se está em modo comparação, adicionar checkbox
+        if (compareMode) {
+          card.style.cursor = 'default';
+          const checkbox = document.createElement('div');
+          checkbox.className = 'absolute top-2 right-2 z-10';
+          checkbox.innerHTML = `
+            <input type="checkbox" 
+                   class="w-5 h-5 rounded border-gray-300 text-[#009cb6] focus:ring-[#009cb6] cursor-pointer" 
+                   onchange="toggleCompareSelection(${index})"
+                   ${selectedForCompare.includes(index) ? 'checked' : ''}>
+          `;
+          card.appendChild(checkbox);
+          card.style.position = 'relative';
+        } else {
+          card.style.cursor = 'pointer';
+          card.onclick = () => applySearch(search);
+        }
+        
+        // Container com padding
+        const content = document.createElement('div');
+        content.className = 'p-4';
         
         // Header com local e data
         const header = document.createElement('div');
@@ -2742,7 +2858,7 @@
             <span>${search.days} ${search.days === 1 ? 'dia' : 'dias'}</span>
           </div>
         `;
-        card.appendChild(header);
+        content.appendChild(header);
         
         // Agrupar carros por grupo
         const groupedCars = {};
@@ -2827,8 +2943,22 @@
               }
             }
             
+            // Adicionar imagem do carro do grupo
+            const firstCar = cars[0];
+            if (firstCar) {
+              const carImg = document.createElement('div');
+              carImg.className = 'mt-2 mb-2';
+              carImg.innerHTML = `
+                <img src="${getCarImage(firstCar)}" 
+                     alt="${firstCar.car || group}" 
+                     class="w-full h-20 object-cover rounded-lg"
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\' fill=\\'%23009cb6\\'%3E%3Cpath d=\\'M20,40 L10,40 L10,30 C10,25 12,22 15,20 L30,20 L30,10 L70,10 L70,20 L85,20 C88,22 90,25 90,30 L90,40 L80,40 C80,35 77,32 73,32 C69,32 66,35 66,40 L34,40 C34,35 31,32 27,32 C23,32 20,35 20,40 Z\\'/%3E%3C/svg%3E'">
+              `;
+              groupDiv.insertBefore(carImg, comparison);
+            }
+            
             groupDiv.appendChild(comparison);
-            card.appendChild(groupDiv);
+            content.appendChild(groupDiv);
           }
         });
         
@@ -2837,8 +2967,9 @@
         footer.className = 'mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400 text-right';
         const date = new Date(search.timestamp);
         footer.textContent = `${date.toLocaleDateString('pt-PT')} às ${date.toLocaleTimeString('pt-PT', {hour: '2-digit', minute: '2-digit'})}`;
-        card.appendChild(footer);
+        content.appendChild(footer);
         
+        card.appendChild(content);
         return card;
       }
       
@@ -2875,6 +3006,173 @@
           document.getElementById('recentSearchesPreview').classList.add('hidden');
           showNotification('Histórico de pesquisas limpo', 'success');
         }
+      }
+      
+      // ========================================
+      // FILTROS E ORDENAÇÃO
+      // ========================================
+      
+      function filterByLocation(location) {
+        currentFilter = location;
+        
+        // Atualizar botões
+        document.getElementById('filterAll').className = location === 'all' 
+          ? 'px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors'
+          : 'px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+        document.getElementById('filterFaro').className = location === 'Aeroporto de Faro'
+          ? 'px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors'
+          : 'px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+        document.getElementById('filterAlbufeira').className = location === 'Albufeira'
+          ? 'px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors'
+          : 'px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+        
+        // Recarregar com filtro
+        loadRecentSearches();
+      }
+      
+      function sortSearches(sortBy) {
+        currentSort = sortBy;
+        loadRecentSearches();
+      }
+      
+      function getFilteredAndSortedSearches() {
+        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        
+        // Aplicar filtro
+        if (currentFilter !== 'all') {
+          searches = searches.filter(s => s.location === currentFilter);
+        }
+        
+        // Aplicar ordenação
+        searches.sort((a, b) => {
+          switch(currentSort) {
+            case 'date':
+              return new Date(b.timestamp) - new Date(a.timestamp);
+            case 'price-asc':
+              const avgPriceA = getAveragePrice(a.results);
+              const avgPriceB = getAveragePrice(b.results);
+              return avgPriceA - avgPriceB;
+            case 'price-desc':
+              const avgPriceA2 = getAveragePrice(a.results);
+              const avgPriceB2 = getAveragePrice(b.results);
+              return avgPriceB2 - avgPriceA2;
+            case 'location':
+              return a.location.localeCompare(b.location);
+            default:
+              return 0;
+          }
+        });
+        
+        return searches;
+      }
+      
+      function getAveragePrice(results) {
+        if (!results || results.length === 0) return 0;
+        const autoprudente = results.filter(r => (r.supplier || '').toLowerCase().includes('autoprudente'));
+        if (autoprudente.length === 0) return 0;
+        const sum = autoprudente.reduce((acc, r) => acc + (parseFloat(r.price_num) || 0), 0);
+        return sum / autoprudente.length;
+      }
+      
+      // ========================================
+      // MODO COMPARAÇÃO
+      // ========================================
+      
+      function toggleCompareMode() {
+        compareMode = !compareMode;
+        selectedForCompare = [];
+        
+        const btn = document.getElementById('btnCompare');
+        const msg = document.getElementById('compareMessage');
+        const area = document.getElementById('compareArea');
+        
+        if (compareMode) {
+          btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors flex items-center gap-1';
+          msg.classList.remove('hidden');
+          area.classList.add('hidden');
+        } else {
+          btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-[#009cb6] hover:text-white transition-colors flex items-center gap-1';
+          msg.classList.add('hidden');
+          area.classList.add('hidden');
+        }
+        
+        loadRecentSearches();
+      }
+      
+      function toggleCompareSelection(index) {
+        if (selectedForCompare.includes(index)) {
+          selectedForCompare = selectedForCompare.filter(i => i !== index);
+        } else {
+          if (selectedForCompare.length < 2) {
+            selectedForCompare.push(index);
+          } else {
+            showNotification('Máximo 2 pesquisas para comparar', 'warning');
+            return;
+          }
+        }
+        
+        if (selectedForCompare.length === 2) {
+          showComparison();
+        } else {
+          document.getElementById('compareArea').classList.add('hidden');
+        }
+      }
+      
+      function showComparison() {
+        const searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        const search1 = searches[selectedForCompare[0]];
+        const search2 = searches[selectedForCompare[1]];
+        
+        if (!search1 || !search2) return;
+        
+        const area = document.getElementById('compareArea');
+        area.classList.remove('hidden');
+        area.innerHTML = `
+          <div class="bg-white rounded-lg p-4 border-2 border-[#009cb6]">
+            <h4 class="font-semibold mb-2">${search1.location} - ${search1.days} ${search1.days === 1 ? 'dia' : 'dias'}</h4>
+            ${createComparisonSummary(search1)}
+          </div>
+          <div class="bg-white rounded-lg p-4 border-2 border-[#009cb6]">
+            <h4 class="font-semibold mb-2">${search2.location} - ${search2.days} ${search2.days === 1 ? 'dia' : 'dias'}</h4>
+            ${createComparisonSummary(search2)}
+          </div>
+        `;
+      }
+      
+      function createComparisonSummary(search) {
+        const autoprudente = search.results.filter(r => (r.supplier || '').toLowerCase().includes('autoprudente'));
+        const avgPrice = autoprudente.length > 0 
+          ? (autoprudente.reduce((acc, r) => acc + (parseFloat(r.price_num) || 0), 0) / autoprudente.length).toFixed(2)
+          : 'N/A';
+        
+        const groups = {};
+        search.results.forEach(r => {
+          const group = r.group || 'Others';
+          if (!groups[group]) groups[group] = 0;
+          groups[group]++;
+        });
+        
+        return `
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Média AutoPrudente:</span>
+              <span class="font-bold text-[#009cb6]">${avgPrice}€</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Total resultados:</span>
+              <span class="font-semibold">${search.results.length}</span>
+            </div>
+            <div class="mt-3 pt-3 border-t">
+              <div class="text-xs text-gray-500 mb-1">Grupos disponíveis:</div>
+              ${Object.keys(groups).slice(0, 5).map(g => `
+                <div class="flex justify-between text-xs">
+                  <span>${g}:</span>
+                  <span>${groups[g]}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
       }
       
       // Hook para guardar pesquisa quando é feita
