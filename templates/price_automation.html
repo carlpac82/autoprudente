@@ -3390,7 +3390,7 @@
                     
                     // Find lowest REAL supplier price (not automated)
                     groupCars.forEach(carEntry => {
-                        const price = carEntry.price_num || carEntry.price;
+                        const price = parseFloat(carEntry.price_num || carEntry.price || 0);
                         if (price && price < globalLowestPrice) {
                             globalLowestPrice = price;
                             globalLowestGroup = grupo;
@@ -3419,7 +3419,7 @@
                     
                     // Find lowest REAL supplier price
                     groupCars.forEach(carEntry => {
-                        const price = carEntry.price_num || carEntry.price;
+                        const price = parseFloat(carEntry.price_num || carEntry.price || 0);
                         if (price && price < dayLowestPrice) {
                             dayLowestPrice = price;
                             dayLowestGroup = grupo;
@@ -3501,10 +3501,17 @@
             // if (groupCars.length === 0) return null;
             
             // Get automated price
-            const automatedPrice = automatedPricesByGroup[grupo]?.[day];
+            const automatedPriceRaw = automatedPricesByGroup[grupo]?.[day];
+            const automatedPrice = automatedPriceRaw?.automated 
+                ? parseFloat(automatedPriceRaw.automated) 
+                : (automatedPriceRaw ? parseFloat(automatedPriceRaw) : null);
             
-            // Sort by price
-            const sortedCars = groupCars.sort((a, b) => a.price_num - b.price_num);
+            // Sort by price (handle both price_num and price)
+            const sortedCars = groupCars.sort((a, b) => {
+                const priceA = parseFloat(a.price_num || a.price || 0);
+                const priceB = parseFloat(b.price_num || b.price || 0);
+                return priceA - priceB;
+            });
             
             // Find AutoPrudente
             const autoPrudentecar = sortedCars.find(c => (c.supplier || '').toLowerCase().includes('autoprudente'));
@@ -3528,11 +3535,13 @@
             }
             
             if (autoPrudentecar) {
-                allPrices.push({ type: 'autoprudente', price: autoPrudentecar.price_num, car: autoPrudentecar, label: 'AutoPrudente' });
+                const apPrice = parseFloat(autoPrudentecar.price_num || autoPrudentecar.price || 0);
+                allPrices.push({ type: 'autoprudente', price: apPrice, car: autoPrudentecar, label: 'AutoPrudente' });
             }
             
             competitors.forEach(car => {
-                allPrices.push({ type: 'competitor', price: car.price_num, car: car, label: car.supplier });
+                const compPrice = parseFloat(car.price_num || car.price || 0);
+                allPrices.push({ type: 'competitor', price: compPrice, car: car, label: car.supplier });
             });
             
             // Sort all prices together
@@ -3628,7 +3637,7 @@
                                             <div class="text-xs font-semibold" style="color: ${cardColor};">Automated Price ${grupo}</div>
                                         </div>
                                         <div>
-                                            <div class="font-bold ${isFirst ? 'text-base' : 'text-sm'}" style="color: ${cardColor};" id="price-display-${grupo}-${day}">${item.price.toFixed(2)}€</div>
+                                            <div class="font-bold ${isFirst ? 'text-base' : 'text-sm'}" style="color: ${cardColor};" id="price-display-${grupo}-${day}">${parseFloat(item.price).toFixed(2)}€</div>
                                         </div>
                                     </div>
                                     <div class="bg-gray-50 rounded p-2 space-y-2">
@@ -3646,7 +3655,7 @@
                                                    id="price-manual-${grupo}-${day}"
                                                    min="0" 
                                                    step="0.01" 
-                                                   value="${item.price.toFixed(2)}"
+                                                   value="${parseFloat(item.price).toFixed(2)}"
                                                    class="px-2 py-1 text-sm border border-gray-300 rounded w-20"
                                                    style="border-color: ${cardColor}33;"
                                                    onchange="updateAutomatedPrice('${grupo}', ${day}, this.value, ${minPrice}, ${maxPrice})"
@@ -3672,7 +3681,7 @@
                                         <div class="text-xs text-gray-600 truncate">Group ${grupo}</div>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <div class="font-bold text-sm text-purple-600 flex-shrink-0">${item.price.toFixed(2)}€</div>
+                                        <div class="font-bold text-sm text-purple-600 flex-shrink-0">${parseFloat(item.price).toFixed(2)}€</div>
                                         <button onclick="acceptAISuggestion('${grupo}', ${day}, ${item.price})" 
                                                 class="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition-colors flex items-center gap-1"
                                                 title="Accept AI suggestion">
@@ -3702,7 +3711,7 @@
                                         </div>
                                         <div class="text-xs text-gray-600 truncate">${item.car.car}</div>
                                     </div>
-                                    <div class="font-bold text-sm text-[#009cb6] flex-shrink-0">${item.price.toFixed(2)}€</div>
+                                    <div class="font-bold text-sm text-[#009cb6] flex-shrink-0">${parseFloat(item.price).toFixed(2)}€</div>
                                 </div>
                             `;
                         } else {
@@ -3723,7 +3732,7 @@
                                         </div>
                                         <div class="text-xs text-gray-500 truncate">${item.car.car}</div>
                                     </div>
-                                    <div class="font-semibold text-xs text-gray-900 flex-shrink-0">${item.price.toFixed(2)}€</div>
+                                    <div class="font-semibold text-xs text-gray-900 flex-shrink-0">${parseFloat(item.price).toFixed(2)}€</div>
                                 </div>
                             `;
                         }
