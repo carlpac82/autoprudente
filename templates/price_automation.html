@@ -3472,17 +3472,16 @@
                 }
             });
             
-            // Add scroll-to-top button at the end
+            // Add scroll-to-top icon button at the end
             const scrollTopBtn = document.createElement('div');
             scrollTopBtn.className = 'flex justify-center mt-8 mb-4';
             scrollTopBtn.innerHTML = `
                 <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" 
-                        class="flex items-center gap-2 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8f] transition-colors shadow-md" 
+                        class="w-12 h-12 rounded-full border-2 border-[#009cb6] text-[#009cb6] hover:bg-[#009cb6] hover:text-white transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg" 
                         title="Voltar ao topo">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
                     </svg>
-                    <span class="font-medium">Voltar ao Topo</span>
                 </button>
             `;
             container.appendChild(scrollTopBtn);
