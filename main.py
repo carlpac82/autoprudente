@@ -2431,6 +2431,31 @@ def init_db():
             )
             safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_automated_search_month ON automated_search_history(month_key, search_type, search_date DESC)", "idx_automated_search_month")
             
+            # Tabela para Car Groups (grupos de carros parametrizados)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS car_groups (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  code TEXT UNIQUE NOT NULL,
+                  name TEXT,
+                  model TEXT,
+                  brand TEXT,
+                  category TEXT,
+                  doors INTEGER,
+                  seats INTEGER,
+                  transmission TEXT,
+                  luggage INTEGER,
+                  photo_url TEXT,
+                  enabled INTEGER DEFAULT 1,
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_car_groups_name ON car_groups(LOWER(name))", "idx_car_groups_name")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_car_groups_model ON car_groups(LOWER(model))", "idx_car_groups_model")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_car_groups_code ON car_groups(code)", "idx_car_groups_code")
+            
             # Tabela para Notification Rules (regras de notificação)
             conn.execute(
                 """

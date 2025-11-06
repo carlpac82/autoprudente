@@ -3915,6 +3915,8 @@
                 showNotification(message, realPricesGenerated > 0 ? 'success' : 'warning');
                 
                 // Render price comparison cards (hidden by default, user can toggle)
+                console.log(`[SAVE-HISTORY-CHECK] autoPrices=${autoPricesGenerated}, realPrices=${realPricesGenerated}, grupos=${Object.keys(automatedPricesByGroup).length}`);
+                
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
                     console.log('Rendering price comparison cards...');
                     renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
@@ -3923,10 +3925,16 @@
                     document.getElementById('priceTableContainer').classList.remove('hidden');
                     
                     // Save automated prices to history
+                    console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}`);
                     if (autoPricesGenerated > 0) {
+                        console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory...`);
                         const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
-                        console.log(`Saved ${savedCount} automated prices to history`);
+                        console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
+                    } else {
+                        console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated} (must be > 0)`);
                     }
+                } else {
+                    console.warn(`[SAVE-HISTORY] NO RENDERING: No prices generated (auto=${autoPricesGenerated}, real=${realPricesGenerated})`);
                 }
                 
                 progressText.textContent = ' Generation complete!';
@@ -5301,8 +5309,14 @@
         }
         
         async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated') {
+            console.log('[SAVE-FUNCTION] saveAutomatedPriceHistory called with:', {
+                grupos: Object.keys(automatedPricesByGroup || {}).length,
+                dias: dias?.length,
+                searchType: searchType
+            });
+            
             if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
-                console.log('No automated prices to save to history');
+                console.warn('[SAVE-FUNCTION] No automated prices to save to history - empty object');
                 return 0;
             }
             
@@ -5320,15 +5334,21 @@
                 }
             }
             
+            console.log('[SAVE-FUNCTION] Collected prices:', {
+                grupos: Object.keys(pricesData).length,
+                totalPrices: priceCount,
+                sample: Object.keys(pricesData).slice(0, 2)
+            });
+            
             if (priceCount === 0) {
-                console.log('No automated prices found to save');
+                console.warn('[SAVE-FUNCTION] No automated prices found to save - priceCount=0');
                 return 0;
             }
             
             // Get location from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
             
-            console.log('Sending to PostgreSQL:', {
+            console.log('[SAVE-FUNCTION] Sending to PostgreSQL:', {
                 location: location,
                 searchType: searchType,
                 pricesDataSample: Object.keys(pricesData).slice(0, 3),
