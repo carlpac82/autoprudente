@@ -1339,7 +1339,7 @@
         }
         
         function clearAIData() {
-            if (confirm('⚠️ Are you sure you want to clear all AI learning data? This cannot be undone.')) {
+            if (confirm('Are you sure you want to clear all AI learning data? This cannot be undone.')) {
                 localStorage.removeItem('priceAIData');
                 loadAISettings();
                 showNotification('AI data cleared successfully', 'success');
@@ -1352,7 +1352,7 @@
             
             if (!suggestion) return;
             
-            alert(`🤖 AI Suggestion Applied!\n\nThis would apply the rule to ${suggestion.group} in ${suggestion.location}.\n\n(Full implementation coming soon)`);
+            showNotification(`AI Suggestion Applied! This would apply the rule to ${suggestion.group} in ${suggestion.location}. (Full implementation coming soon)`, 'info', 5000);
             
             // TODO: Actually apply the rule to manual settings
         }
@@ -3437,7 +3437,7 @@
                     }
                     
                     // Confirm import
-                    if (!confirm('⚠️ This will overwrite all current settings. Continue?')) {
+                    if (!confirm('This will overwrite all current settings. Continue?')) {
                         return;
                     }
                     
@@ -3516,8 +3516,8 @@
             console.log('='.repeat(60));
             
             if (!saved) {
-                console.log('❌ No data found in localStorage');
-                alert('❌ No data found in localStorage.\n\nCheck console (F12) for details.');
+                console.log('No data found in localStorage');
+                showNotification('No data found in localStorage. Check console (F12) for details', 'warning', 4000);
                 return;
             }
             
@@ -3556,13 +3556,11 @@
                 console.log('='.repeat(60));
                 
                 // Show summary alert
-                alert(`📊 Debug Data Summary:\n\n` +
-                      `Total Configurations: ${totalConfigs}\n\n` +
-                      `Check console (F12) for detailed breakdown.`);
+                showNotification(`Debug Data Summary: Total Configurations: ${totalConfigs}. Check console (F12) for detailed breakdown`, 'info', 5000);
                 
             } catch (e) {
-                console.error('❌ Error parsing data:', e);
-                alert('❌ Error parsing data.\n\nCheck console (F12) for details.');
+                console.error('Error parsing data:', e);
+                showNotification('Error parsing data. Check console (F12) for details', 'error');
             }
         }
         
@@ -3572,7 +3570,7 @@
             const dayChip = document.querySelector(`button[data-location="${location}"][data-grupo="${grupo}"][data-day][data-selected="true"]`);
             
             if (!monthChip || !dayChip) {
-                alert('⚠️ Please select a month and day first!');
+                showNotification('Please select a month and day first', 'warning');
                 return;
             }
             
@@ -3610,7 +3608,7 @@
             }
             
             if (strategies.length === 0) {
-                alert('⚠️ No configuration found for this day!\n\nPlease configure at least one strategy first.');
+                showNotification('No configuration found for this day! Please configure at least one strategy first', 'warning', 4000);
                 return;
             }
             
@@ -3855,27 +3853,27 @@
             });
             
             if (selectedStrategyIndexes.length === 0) {
-                alert('⚠️ Please select at least one strategy to copy!');
+                showNotification('Please select at least one strategy to copy', 'warning');
                 return;
             }
             
             if (selectedLocations.length === 0) {
-                alert('⚠️ Please select at least one location!');
+                showNotification('Please select at least one location', 'warning');
                 return;
             }
             
             if (selectedGrupos.length === 0) {
-                alert('⚠️ Please select at least one vehicle group!');
+                showNotification('Please select at least one vehicle group', 'warning');
                 return;
             }
             
             if (selectedMonths.length === 0) {
-                alert('⚠️ Please select at least one target month!');
+                showNotification('Please select at least one target month', 'warning');
                 return;
             }
             
             if (selectedDays.length === 0) {
-                alert('⚠️ Please select at least one target day!');
+                showNotification('Please select at least one target day', 'warning');
                 return;
             }
             
@@ -3893,7 +3891,7 @@
             console.log(`✂️ strategiesToCopy:`, strategiesToCopy);
             
             if (strategiesToCopy.length === 0) {
-                alert('❌ ERROR: No strategies to copy!\n\nCheck console for details.');
+                showNotification('ERROR: No strategies to copy! Check console for details', 'error');
                 return;
             }
             
@@ -3956,15 +3954,15 @@
         }
         
         function clearAllRules() {
-            if (!confirm('🗑️ Clear ALL automated price rules?\n\n' +
+            if (!confirm('Clear ALL automated price rules?\n\n' +
                         'This will DELETE all configurations for all locations, groups, months and days.\n\n' +
-                        '⚠️ This action cannot be undone!\n\n' +
+                        'This action cannot be undone!\n\n' +
                         'Click OK to proceed or Cancel to abort.')) {
                 return;
             }
             
             // Second confirmation
-            if (!confirm('⚠️ FINAL WARNING!\n\n' +
+            if (!confirm('FINAL WARNING!\n\n' +
                         'Are you absolutely sure?\n\n' +
                         'All your automated price rules will be permanently deleted.')) {
                 return;
@@ -3990,12 +3988,12 @@
             .then(r => r.json())
             .then(result => {
                 console.log('✅ Database cleared');
-                alert('✅ All rules cleared! Reloading page...');
+                showNotification('All rules cleared! Reloading page...', 'success');
                 setTimeout(() => location.reload(), 1000);
             })
             .catch(error => {
                 console.error('❌ Error:', error);
-                alert('✅ Rules cleared from localStorage! Page will reload...');
+                showNotification('Rules cleared from localStorage! Page will reload...', 'success');
                 setTimeout(() => location.reload(), 1000);
             });
         }
