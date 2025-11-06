@@ -4201,14 +4201,16 @@
             
             // Filter cars by group AND exclude configured suppliers
             const excludedSuppliers = getExcludedSuppliers();
+            console.log(`🚫 Excluded suppliers for calculations:`, excludedSuppliers);
+            
             const groupCars = cars.filter(item => {
                 const carGroup = item.group || extractGroup(item.car);
                 const supplier = (item.supplier || '').toLowerCase();
                 
-                // Exclude configured suppliers from calculations
+                // Exclude configured suppliers from calculations (ESPECIALLY AUTO PRUDENTE)
                 for (const excluded of excludedSuppliers) {
                     if (supplier.includes(excluded)) {
-                        console.log(`⏭️ Excluding ${excluded} car: ${item.car}`);
+                        console.log(`⏭️ EXCLUDING ${excluded.toUpperCase()} car from automated price calculation: ${item.car} (${item.price_num}€)`);
                         return false;
                     }
                 }
@@ -4216,7 +4218,7 @@
                 return carGroup === grupo;
             });
             
-            console.log(`2️⃣ Cars for group ${grupo} (excluding ${excludedSuppliers.join(', ')}):`, groupCars.length);
+            console.log(`2️⃣ Cars for group ${grupo} AFTER EXCLUDING ${excludedSuppliers.join(', ').toUpperCase()}:`, groupCars.length);
             
             if (groupCars.length === 0) {
                 console.log(` NO CARS for group ${grupo}`);
