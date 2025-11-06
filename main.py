@@ -17060,6 +17060,45 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ price_snapshots: {e}")
                     
+                    # 5. Ensure pricing_strategies table exists (CRITICAL!)
+                    try:
+                        conn.execute("""
+                            CREATE TABLE IF NOT EXISTS pricing_strategies (
+                                id SERIAL PRIMARY KEY,
+                                location TEXT NOT NULL,
+                                grupo TEXT NOT NULL,
+                                month INTEGER,
+                                day INTEGER,
+                                priority INTEGER NOT NULL DEFAULT 1,
+                                strategy_type TEXT NOT NULL,
+                                config TEXT NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        logging.info("✅ pricing_strategies table ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ pricing_strategies: {e}")
+                    
+                    # 6. Ensure automated_price_rules table exists (CRITICAL!)
+                    try:
+                        conn.execute("""
+                            CREATE TABLE IF NOT EXISTS automated_price_rules (
+                                id SERIAL PRIMARY KEY,
+                                location TEXT NOT NULL,
+                                grupo TEXT NOT NULL,
+                                month INTEGER NOT NULL,
+                                day INTEGER NOT NULL,
+                                config TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(location, grupo, month, day)
+                            )
+                        """)
+                        logging.info("✅ automated_price_rules table ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_price_rules: {e}")
+                    
                     conn.commit()
                 else:
                     # SQLite - just ensure tables exist (columns should be there from init_db)
