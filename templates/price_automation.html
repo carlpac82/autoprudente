@@ -517,12 +517,12 @@
                     
                     <!-- Save Edited Version Button (hidden by default) -->
                     <button id="btnSaveEditedVersion" onclick="saveEditedHistoryAsNewVersion()" 
-                            class="hidden px-4 py-2 bg-[#f4ad0f] hover:bg-[#009cb6] text-white rounded text-sm font-semibold transition-colors flex items-center gap-2" 
-                            title="Save current prices as new version with current timestamp">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="hidden items-center gap-2 bg-[#10b981] text-white px-4 py-2 rounded-lg hover:bg-[#059669] transition-all shadow-md font-semibold" 
+                            title="Guardar edição como nova versão com timestamp atual">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                         </svg>
-                        <span>Save Edited Version</span>
+                        <span>Guardar Edição</span>
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
@@ -3337,17 +3337,32 @@
             const tableContainer = document.getElementById('priceTableContainer');
             const btnCards = document.getElementById('btnViewCards');
             const btnTable = document.getElementById('btnViewTable');
+            const btnSave = document.getElementById('btnSaveEditedVersion');
             
             if (view === 'cards') {
                 cardsContainer.classList.remove('hidden');
                 tableContainer.classList.add('hidden');
                 btnCards.className = 'p-2 border border-[#009cb6] bg-[#009cb6] bg-opacity-10 rounded transition-colors';
                 btnTable.className = 'p-2 border border-gray-300 hover:bg-gray-50 rounded transition-colors';
+                
+                // Hide save button in visual mode (can't edit in cards view)
+                if (btnSave && window.editingHistoryData) {
+                    btnSave.style.opacity = '0.5';
+                    btnSave.style.pointerEvents = 'none';
+                    btnSave.title = 'Mude para vista de tabela para guardar edições';
+                }
             } else {
                 cardsContainer.classList.add('hidden');
                 tableContainer.classList.remove('hidden');
                 btnCards.className = 'p-2 border border-gray-300 hover:bg-gray-50 rounded transition-colors';
                 btnTable.className = 'p-2 border border-[#009cb6] bg-[#009cb6] bg-opacity-10 rounded transition-colors';
+                
+                // Show save button in table mode if editing
+                if (btnSave && window.editingHistoryData) {
+                    btnSave.style.opacity = '1';
+                    btnSave.style.pointerEvents = 'auto';
+                    btnSave.title = 'Guardar edição como nova versão com timestamp atual';
+                }
             }
         }
         
@@ -4976,18 +4991,20 @@
                     versionTitle.className = 'bg-gray-100 px-4 py-2 font-semibold text-sm border-t border-x flex justify-between items-center';
                     versionTitle.innerHTML = `
                         <span>Version ${index + 1} - ${dateStr} (${historyData.priceCount} prices)</span>
-                        <div class="flex gap-2">
-                            <button onclick='openHistoryInTable(${JSON.stringify(historyData)})' 
-                                    class="bg-[#009cb6] text-white px-3 py-1 rounded text-xs hover:bg-[#f4ad0f]">
-                                Open in Table
-                            </button>
-                            <button onclick='openHistoryInVisual(${JSON.stringify(historyData)})' 
-                                    class="bg-[#009cb6] text-white px-3 py-1 rounded text-xs hover:bg-[#f4ad0f]">
-                                Open in Visual
+                        <div class="flex gap-2 items-center">
+                            <button onclick='editHistoryVersion(${JSON.stringify(historyData)})' 
+                                    class="flex items-center gap-1 text-[#009cb6] hover:text-[#007a8f] transition-colors" title="Editar Versão">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                <span class="text-xs font-medium">Editar</span>
                             </button>
                             <button onclick="deleteSearchHistory(${historyData.id})" 
-                                    class="text-red-600 hover:text-red-800 text-xs px-2">
-                                Delete
+                                    class="flex items-center gap-1 text-red-600 hover:text-red-800 transition-colors" title="Eliminar Versão">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                <span class="text-xs font-medium">Eliminar</span>
                             </button>
                         </div>
                     `;
@@ -5083,117 +5100,73 @@
             }
         }
         
-        function openHistoryInTable(historyData) {
-            console.log('Opening history in table mode...', historyData);
+        function editHistoryVersion(historyData) {
+            console.log('[HISTORY] Editing version:', historyData);
             
-            // Close history view
-            closeHistory();
+            // Store original data for reference
+            window.editingHistoryData = historyData;
             
-            // Switch to main tab
-            switchTab('main');
+            // Switch to automated prices tab
+            switchTab('automated');
+            
+            // Load search parameters
+            const dias = historyData.dias;
+            const prices = historyData.prices;
+            
+            // Update global dias
+            window.dias = dias;
             
             // Ensure table is initialized
             initTableAuto();
             
-            // Load prices into table
-            const dias = historyData.dias;
-            const prices = historyData.prices;
-            
-            // Update dias if different
-            window.dias = dias;
-            
-            // Fill table with prices
+            // Fill table with prices from history
             Object.keys(prices).forEach(grupo => {
                 dias.forEach(day => {
                     const price = prices[grupo][day];
                     if (price) {
-                        // Find input cells
                         const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
                         
                         if (inputAuto) {
                             inputAuto.value = parseFloat(price).toFixed(2);
-                            inputAuto.classList.add('bg-yellow-50');
+                            inputAuto.classList.add('bg-blue-50');
                         }
                     }
                 });
             });
             
-            // Show table mode
+            // Show table mode by default
             document.getElementById('priceTableContainer').classList.remove('hidden');
             document.getElementById('priceComparisonCards').classList.add('hidden');
             
             // Show Save Edited Version button
+            showSaveEditedButton();
+            
+            showNotification('Versão carregada para edição - Edite os preços e clique em Guardar Edição', 'success');
+        }
+        
+        function showSaveEditedButton() {
             const btnSave = document.getElementById('btnSaveEditedVersion');
             if (btnSave) {
                 btnSave.classList.remove('hidden');
-                btnSave.classList.add('flex'); // Ensure flex display
+                btnSave.classList.add('flex');
+                console.log('[HISTORY] Save button shown');
             }
-            
-            showNotification('History loaded - Edit prices and click Save Edited Version to create new version', 'success');
         }
         
-        function openHistoryInVisual(historyData) {
-            console.log('Opening history in visual mode...', historyData);
-            
-            // Close history view
-            closeHistory();
-            
-            // Switch to main tab
-            switchTab('main');
-            
-            // Prepare data for visual cards
-            const dias = historyData.dias;
-            const prices = historyData.prices;
-            
-            // Create mock car data for visual display
-            const allCarsByDay = {};
-            const automatedPricesByGroup = {};
-            
-            dias.forEach(day => {
-                allCarsByDay[day] = [];
-                
-                Object.keys(prices).forEach(grupo => {
-                    const price = prices[grupo][day];
-                    if (price) {
-                        if (!automatedPricesByGroup[grupo]) {
-                            automatedPricesByGroup[grupo] = {};
-                        }
-                        automatedPricesByGroup[grupo][day] = {
-                            automated: parseFloat(price),
-                            real: parseFloat(price)
-                        };
-                        
-                        // Add mock car entry for visual
-                        allCarsByDay[day].push({
-                            car: { 
-                                car: grupo,
-                                supplier: 'From History'
-                            },
-                            price: parseFloat(price)
-                        });
-                    }
-                });
-            });
-            
-            // Render visual cards
-            renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
-            
-            // Show visual mode
-            document.getElementById('priceComparisonCards').classList.remove('hidden');
-            document.getElementById('priceTableContainer').classList.add('hidden');
-            
-            // Hide Save button in visual mode
+        function hideSaveEditedButton() {
             const btnSave = document.getElementById('btnSaveEditedVersion');
             if (btnSave) {
                 btnSave.classList.add('hidden');
                 btnSave.classList.remove('flex');
             }
-            
-            showNotification('History loaded in visual mode - Switch to table to edit and save', 'success');
         }
         
+        
         async function saveEditedHistoryAsNewVersion() {
-            console.log('Saving edited prices as new version...');
+            console.log('[HISTORY] Saving edited version...');
+            
+            // Show loading notification
+            showNotification('A guardar edição...', 'info');
             
             // Collect current prices from table
             const automatedPricesByGroup = {};
@@ -5222,17 +5195,34 @@
             const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
             
             if (savedCount > 0) {
-                showNotification(`Saved ${savedCount} prices as new version with current timestamp`, 'success');
+                const now = new Date();
+                const dateStr = now.toLocaleString('pt-PT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                showNotification(`Edição guardada com sucesso! ${savedCount} preços salvos em ${dateStr}`, 'success');
                 
                 // Hide Save button after successful save
-                const btnSave = document.getElementById('btnSaveEditedVersion');
-                if (btnSave) {
-                    btnSave.classList.add('hidden');
-                    btnSave.classList.remove('flex');
-                }
+                hideSaveEditedButton();
+                
+                // Clear editing flag
+                window.editingHistoryData = null;
+                
+                // Clear blue highlighting from cells
+                document.querySelectorAll('input.bg-blue-50').forEach(input => {
+                    input.classList.remove('bg-blue-50');
+                });
                 
                 // Refresh history to show new version
                 await generateHistoryMonths();
+                
+                console.log('[HISTORY] Saved successfully with timestamp:', dateStr);
+            } else {
+                showNotification('Erro ao guardar edição', 'error');
             }
         }
 
