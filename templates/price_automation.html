@@ -514,6 +514,16 @@
                             <path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                         </svg>
                     </button>
+                    
+                    <!-- Save Edited Version Button (hidden by default) -->
+                    <button id="btnSaveEditedVersion" onclick="saveEditedHistoryAsNewVersion()" 
+                            class="hidden px-4 py-2 bg-[#f4ad0f] hover:bg-[#009cb6] text-white rounded text-sm font-semibold transition-colors flex items-center gap-2" 
+                            title="Save current prices as new version with current timestamp">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        </svg>
+                        <span>Save Edited Version</span>
+                    </button>
                 </div>
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-gray-600" data-i18n="automation.manageColumns">Manage columns:</span>
@@ -3906,7 +3916,7 @@
                 
                 // Render price comparison cards (hidden by default, user can toggle)
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
-                    console.log('🎨 Rendering price comparison cards...');
+                    console.log('Rendering price comparison cards...');
                     renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
                     // Keep cards hidden, show table by default
                     document.getElementById('priceComparisonCards').classList.add('hidden');
@@ -3915,14 +3925,14 @@
                     // Save automated prices to history
                     if (autoPricesGenerated > 0) {
                         const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
-                        console.log(`💾 Saved ${savedCount} automated prices to history`);
+                        console.log(`Saved ${savedCount} automated prices to history`);
                     }
                 }
                 
                 progressText.textContent = ' Generation complete!';
                 
                 // Apply current fill mode (Auto/AI) to table
-                console.log(`🔄 Applying ${currentFillMode.toUpperCase()} mode to table...`);
+                console.log(`Applying ${currentFillMode.toUpperCase()} mode to table...`);
                 setTimeout(() => {
                     updateTableCellValues(currentFillMode);
                     updateTableHeaderIcons(currentFillMode);
@@ -4745,7 +4755,7 @@
                 const history = data.history || {};
                 const monthKeys = data.monthKeys || [];
                 
-                console.log('✅ History loaded:', Object.keys(history).length, 'months with data');
+                console.log('History loaded:', Object.keys(history).length, 'months with data');
                 
                 // Clear containers
                 containerCurrent.innerHTML = '';
@@ -4958,9 +4968,20 @@
                     versionTitle.className = 'bg-gray-100 px-4 py-2 font-semibold text-sm border-t border-x flex justify-between items-center';
                     versionTitle.innerHTML = `
                         <span>Version ${index + 1} - ${dateStr} (${historyData.priceCount} prices)</span>
-                        <button onclick="deleteSearchHistory(${historyData.id})" class="text-red-600 hover:text-red-800 text-xs">
-                            Delete
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick='openHistoryInTable(${JSON.stringify(historyData)})' 
+                                    class="bg-[#009cb6] text-white px-3 py-1 rounded text-xs hover:bg-[#f4ad0f]">
+                                Open in Table
+                            </button>
+                            <button onclick='openHistoryInVisual(${JSON.stringify(historyData)})' 
+                                    class="bg-[#009cb6] text-white px-3 py-1 rounded text-xs hover:bg-[#f4ad0f]">
+                                Open in Visual
+                            </button>
+                            <button onclick="deleteSearchHistory(${historyData.id})" 
+                                    class="text-red-600 hover:text-red-800 text-xs px-2">
+                                Delete
+                            </button>
+                        </div>
                     `;
                     versionDiv.appendChild(versionTitle);
                     
@@ -5053,6 +5074,159 @@
                 showNotification('Error deleting search', 'error');
             }
         }
+        
+        function openHistoryInTable(historyData) {
+            console.log('Opening history in table mode...', historyData);
+            
+            // Close history view
+            closeHistory();
+            
+            // Switch to main tab
+            switchTab('main');
+            
+            // Ensure table is initialized
+            initTableAuto();
+            
+            // Load prices into table
+            const dias = historyData.dias;
+            const prices = historyData.prices;
+            
+            // Update dias if different
+            window.dias = dias;
+            
+            // Fill table with prices
+            Object.keys(prices).forEach(grupo => {
+                dias.forEach(day => {
+                    const price = prices[grupo][day];
+                    if (price) {
+                        // Find input cells
+                        const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                        
+                        if (inputAuto) {
+                            inputAuto.value = parseFloat(price).toFixed(2);
+                            inputAuto.classList.add('bg-yellow-50');
+                        }
+                    }
+                });
+            });
+            
+            // Show table mode
+            document.getElementById('priceTableContainer').classList.remove('hidden');
+            document.getElementById('priceComparisonCards').classList.add('hidden');
+            
+            // Show Save Edited Version button
+            const btnSave = document.getElementById('btnSaveEditedVersion');
+            if (btnSave) {
+                btnSave.classList.remove('hidden');
+                btnSave.classList.add('flex'); // Ensure flex display
+            }
+            
+            showNotification('History loaded - Edit prices and click Save Edited Version to create new version', 'success');
+        }
+        
+        function openHistoryInVisual(historyData) {
+            console.log('Opening history in visual mode...', historyData);
+            
+            // Close history view
+            closeHistory();
+            
+            // Switch to main tab
+            switchTab('main');
+            
+            // Prepare data for visual cards
+            const dias = historyData.dias;
+            const prices = historyData.prices;
+            
+            // Create mock car data for visual display
+            const allCarsByDay = {};
+            const automatedPricesByGroup = {};
+            
+            dias.forEach(day => {
+                allCarsByDay[day] = [];
+                
+                Object.keys(prices).forEach(grupo => {
+                    const price = prices[grupo][day];
+                    if (price) {
+                        if (!automatedPricesByGroup[grupo]) {
+                            automatedPricesByGroup[grupo] = {};
+                        }
+                        automatedPricesByGroup[grupo][day] = {
+                            automated: parseFloat(price),
+                            real: parseFloat(price)
+                        };
+                        
+                        // Add mock car entry for visual
+                        allCarsByDay[day].push({
+                            car: { 
+                                car: grupo,
+                                supplier: 'From History'
+                            },
+                            price: parseFloat(price)
+                        });
+                    }
+                });
+            });
+            
+            // Render visual cards
+            renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
+            
+            // Show visual mode
+            document.getElementById('priceComparisonCards').classList.remove('hidden');
+            document.getElementById('priceTableContainer').classList.add('hidden');
+            
+            // Hide Save button in visual mode
+            const btnSave = document.getElementById('btnSaveEditedVersion');
+            if (btnSave) {
+                btnSave.classList.add('hidden');
+                btnSave.classList.remove('flex');
+            }
+            
+            showNotification('History loaded in visual mode - Switch to table to edit and save', 'success');
+        }
+        
+        async function saveEditedHistoryAsNewVersion() {
+            console.log('Saving edited prices as new version...');
+            
+            // Collect current prices from table
+            const automatedPricesByGroup = {};
+            let priceCount = 0;
+            
+            grupos.forEach(grupo => {
+                automatedPricesByGroup[grupo] = {};
+                dias.forEach(day => {
+                    const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                    
+                    if (inputAuto && inputAuto.value) {
+                        automatedPricesByGroup[grupo][day] = {
+                            automated: parseFloat(inputAuto.value)
+                        };
+                        priceCount++;
+                    }
+                });
+            });
+            
+            if (priceCount === 0) {
+                showNotification('No prices to save', 'warning');
+                return;
+            }
+            
+            // Save as new version with current timestamp
+            const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
+            
+            if (savedCount > 0) {
+                showNotification(`Saved ${savedCount} prices as new version with current timestamp`, 'success');
+                
+                // Hide Save button after successful save
+                const btnSave = document.getElementById('btnSaveEditedVersion');
+                if (btnSave) {
+                    btnSave.classList.add('hidden');
+                    btnSave.classList.remove('flex');
+                }
+                
+                // Refresh history to show new version
+                await generateHistoryMonths();
+            }
+        }
 
         function saveToHistory() {
             const now = new Date();
@@ -5128,7 +5302,7 @@
         
         async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated') {
             if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
-                console.log('⚠️ No automated prices to save to history');
+                console.log('No automated prices to save to history');
                 return 0;
             }
             
@@ -5147,14 +5321,14 @@
             }
             
             if (priceCount === 0) {
-                console.log('⚠️ No automated prices found to save');
+                console.log('No automated prices found to save');
                 return 0;
             }
             
             // Get location from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
             
-            console.log('📤 Sending to PostgreSQL:', {
+            console.log('Sending to PostgreSQL:', {
                 location: location,
                 searchType: searchType,
                 pricesDataSample: Object.keys(pricesData).slice(0, 3),
@@ -5179,14 +5353,14 @@
                 const result = await response.json();
                 
                 if (result.ok) {
-                    console.log(`✅ Automated price history saved to PostgreSQL: ID=${result.searchId}, Month=${result.monthKey}, Prices=${priceCount}`);
+                    console.log(`Automated price history saved to PostgreSQL: ID=${result.searchId}, Month=${result.monthKey}, Prices=${priceCount}`);
                     return priceCount;
                 } else {
-                    console.error('❌ Error saving to PostgreSQL:', result.error);
+                    console.error('Error saving to PostgreSQL:', result.error);
                     return 0;
                 }
             } catch (error) {
-                console.error('❌ Error saving search history:', error);
+                console.error('Error saving search history:', error);
                 return 0;
             }
         }
