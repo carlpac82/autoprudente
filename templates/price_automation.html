@@ -3914,7 +3914,7 @@
                     
                     // Save automated prices to history
                     if (autoPricesGenerated > 0) {
-                        const savedCount = saveAutomatedPriceHistory(automatedPricesByGroup, dias);
+                        const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
                         console.log(`💾 Saved ${savedCount} automated prices to history`);
                     }
                 }
@@ -5153,6 +5153,14 @@
             
             // Get location from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
+            
+            console.log('📤 Sending to PostgreSQL:', {
+                location: location,
+                searchType: searchType,
+                pricesDataSample: Object.keys(pricesData).slice(0, 3),
+                dias: dias,
+                priceCount: priceCount
+            });
             
             // Send to server (PostgreSQL)
             try {

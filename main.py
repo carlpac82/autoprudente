@@ -19140,7 +19140,10 @@ async def save_automated_search_history(request: Request):
         dias = data.get('dias', [])
         price_count = data.get('priceCount', 0)
         
+        logging.info(f"📥 Received save request: Location={location}, Type={search_type}, Dias={dias}, PriceCount={price_count}, Groups={list(prices_data.keys())}")
+        
         if not prices_data:
+            logging.warning("⚠️ No prices data provided in save request")
             return JSONResponse({"ok": False, "error": "No prices data provided"}, status_code=400)
         
         with _db_lock:
