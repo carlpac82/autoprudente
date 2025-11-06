@@ -17242,22 +17242,40 @@ async def save_recent_searches(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # Ensure table exists
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS recent_searches (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        location TEXT NOT NULL,
-                        start_date TEXT NOT NULL,
-                        days INTEGER NOT NULL,
-                        results_data TEXT NOT NULL,
-                        timestamp TEXT NOT NULL,
-                        user TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
+                # Ensure table exists (compatible with both PostgreSQL and SQLite)
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS recent_searches (
+                            id SERIAL PRIMARY KEY,
+                            location TEXT NOT NULL,
+                            start_date TEXT NOT NULL,
+                            days INTEGER NOT NULL,
+                            results_data TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            "user" TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                else:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS recent_searches (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            location TEXT NOT NULL,
+                            start_date TEXT NOT NULL,
+                            days INTEGER NOT NULL,
+                            results_data TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            user TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
                 
                 # Clear old searches for this user (keep max 3)
-                conn.execute("DELETE FROM recent_searches WHERE user = ?", (username,))
+                placeholder = "%s" if is_postgres else "?"
+                user_col = '"user"' if is_postgres else 'user'
+                conn.execute(f"DELETE FROM recent_searches WHERE {user_col} = {placeholder}", (username,))
                 
                 # Insert new searches with COMPLETE data
                 for idx, search in enumerate(searches[:3]):  # Max 3 searches
@@ -17266,9 +17284,10 @@ async def save_recent_searches(request: Request):
                     
                     logging.info(f"[RECENT-SEARCHES] Search {idx+1}: {search.get('location')} - {len(results)} cars - {len(results_json)} bytes")
                     
-                    conn.execute("""
-                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                    placeholders_str = ', '.join([placeholder] * 6)
+                    conn.execute(f"""
+                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, {user_col})
+                        VALUES ({placeholders_str})
                     """, (
                         search.get('location'),
                         search.get('startDate'),
