@@ -10853,6 +10853,39 @@ async def save_automated_price_rules(request: Request):
         logging.error(f"❌ Error saving automated price rules: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/price-automation/rules/debug")
+async def debug_automated_price_rules(request: Request):
+    """DEBUG: Verificar estado das regras na base de dados"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Check if table exists
+                try:
+                    cursor = conn.execute("SELECT COUNT(*) FROM automated_price_rules")
+                    count = cursor.fetchone()[0]
+                    logging.info(f"✅ Table exists, {count} rules found")
+                except Exception as table_err:
+                    logging.error(f"❌ Table doesn't exist or error: {table_err}")
+                    return JSONResponse({"ok": False, "error": "Table doesn't exist", "detail": str(table_err)})
+                
+                # Get all data
+                cursor = conn.execute("SELECT location, grupo, month, day, config FROM automated_price_rules")
+                rows = cursor.fetchall()
+                
+                return JSONResponse({
+                    "ok": True,
+                    "count": len(rows),
+                    "rows": [{"location": r[0], "grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in rows[:10]]
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Debug error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/price-automation/rules/load")
 async def load_automated_price_rules(request: Request):
     """Carregar regras automatizadas de preços da base de dados"""
