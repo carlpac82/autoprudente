@@ -10875,10 +10875,19 @@ async def debug_automated_price_rules(request: Request):
                 cursor = conn.execute("SELECT location, grupo, month, day, config FROM automated_price_rules")
                 rows = cursor.fetchall()
                 
+                # Get unique locations
+                locations = {}
+                for r in rows:
+                    loc = r[0]
+                    if loc not in locations:
+                        locations[loc] = 0
+                    locations[loc] += 1
+                
                 return JSONResponse({
                     "ok": True,
                     "count": len(rows),
-                    "rows": [{"location": r[0], "grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in rows[:10]]
+                    "locations": locations,
+                    "sample_rows": [{"location": r[0], "grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in rows[:10]]
                 })
             finally:
                 conn.close()
