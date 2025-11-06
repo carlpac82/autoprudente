@@ -5263,8 +5263,12 @@
                     });
                 });
                 
-                // Render visual cards (hidden by default)
-                console.log('[HISTORY] Rendering price comparison cards...');
+                // Render visual cards (hidden by default) with all UI improvements
+                console.log('[HISTORY] Rendering price comparison cards with UI improvements...');
+                console.log('[HISTORY] - Price previews in day headers');
+                console.log('[HISTORY] - Global "LOWEST PRICE" badge');
+                console.log('[HISTORY] - Default state: first day open, others closed');
+                console.log('[HISTORY] - Scroll-to-top button');
                 renderPriceComparisonCards(supplierData, automatedPricesByGroup, dias);
             } else {
                 console.warn('[HISTORY] No supplier data available - visual cards will be empty');
