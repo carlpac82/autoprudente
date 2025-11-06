@@ -1622,16 +1622,19 @@
                             </div>
                         </div>
                         
-                        <!-- SAVE BUTTON FOR THIS SPECIFIC DAY -->
+                        <!-- AUTO-SAVE INFO -->
                         <div class="border-t pt-3 mt-3">
-                            <button 
-                                onclick="saveCurrentDayConfiguration('${location}', '${grupo}')" 
-                                class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded transition-colors shadow">
-                                💾 Save Configuration for This Day
-                            </button>
-                            <p class="text-xs text-gray-500 mt-2 text-center">
-                                This will save the configuration for the currently selected month and day only
-                            </p>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                                <svg class="w-5 h-5 mx-auto mb-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p class="text-xs text-blue-800 font-medium">
+                                    Changes save automatically
+                                </p>
+                                <p class="text-xs text-blue-600 mt-1">
+                                    Your strategies are saved to the database when you add, remove, or reorder them
+                                </p>
+                            </div>
                         </div>
                         </div>
                     </div>
@@ -3359,16 +3362,27 @@
         
         async function loadStrategies() {
             try {
-                // Load strategies from database
+                // Load strategies definitions from database
                 const response = await fetch('/api/price-automation/strategies/load');
                 const result = await response.json();
                 
                 if (result.ok && result.strategies) {
                     strategiesData = result.strategies;
-                    console.log('✅ Strategies loaded from database');
+                    console.log('✅ Strategies definitions loaded from database');
+                }
+                
+                // Load automated price rules from database
+                const rulesResponse = await fetch('/api/price-automation/rules/load');
+                const rulesResult = await rulesResponse.json();
+                
+                if (rulesResult.ok && rulesResult.rules) {
+                    // Save to localStorage
+                    localStorage.setItem('automatedPriceRules', JSON.stringify(rulesResult.rules));
+                    console.log('✅ Automated price rules loaded from database');
+                    console.log('📦 Rules loaded:', rulesResult.rules);
                 }
             } catch (err) {
-                console.error('Error loading strategies from database:', err);
+                console.error('Error loading from database:', err);
             }
         }
         
