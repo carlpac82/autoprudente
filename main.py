@@ -16705,14 +16705,27 @@ def _ensure_recent_searches_table():
         with _db_lock:
             conn = _db_connect()
             try:
-                # Check if using PostgreSQL or SQLite
-                try:
-                    import psycopg2
-                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
-                except:
-                    is_postgres = False
+                # Check if using PostgreSQL or SQLite - MULTIPLE METHODS
+                is_postgres = False
                 
-                logging.info(f"🔍 Database type detected: {'PostgreSQL' if is_postgres else 'SQLite'} (conn type: {type(conn).__name__})")
+                # Method 1: Check connection type name
+                conn_type = type(conn).__name__
+                if 'psycopg' in conn_type.lower() or conn_type == 'connection':
+                    is_postgres = True
+                
+                # Method 2: Check if DATABASE_URL exists (PostgreSQL indicator)
+                if not is_postgres and os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                
+                # Method 3: Try isinstance check
+                if not is_postgres:
+                    try:
+                        import psycopg2
+                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                    except:
+                        pass
+                
+                logging.info(f"🔍 Database type detected: {'PostgreSQL' if is_postgres else 'SQLite'} (conn type: {conn_type}, DATABASE_URL: {bool(os.getenv('DATABASE_URL'))})")
                 
                 if is_postgres:
                     # PostgreSQL syntax
@@ -16892,8 +16905,20 @@ def _ensure_missing_tables():
         with _db_lock:
             conn = _db_connect()
             try:
-                import psycopg2
-                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                # Robust PostgreSQL detection
+                is_postgres = False
+                conn_type = type(conn).__name__
+                
+                if 'psycopg' in conn_type.lower() or conn_type == 'connection':
+                    is_postgres = True
+                elif os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                else:
+                    try:
+                        import psycopg2
+                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                    except:
+                        pass
                 
                 logging.info(f"🔍 Checking missing tables/columns ({'PostgreSQL' if is_postgres else 'SQLite'})")
                 
