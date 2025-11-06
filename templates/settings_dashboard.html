@@ -287,13 +287,13 @@
         let currentSection = null;
         
         function loadSection(section) {
-            console.log('[LOAD] Section:', section);
+            console.log('[SETTINGS-NAV] Loading section:', section);
             
-            // Update active menu item
             const contentArea = document.getElementById('content-area');
             
             // Se já está carregado, apenas mostrar
             if (currentSection === section && iframeCache[section]) {
+                console.log('[SETTINGS-NAV] Section already active:', section);
                 return;
             }
             
@@ -301,25 +301,24 @@
             Object.keys(iframeCache).forEach(key => {
                 if (iframeCache[key]) {
                     iframeCache[key].style.display = 'none';
+                    console.log('[SETTINGS-NAV] Hiding iframe:', key);
                 }
             });
             
             // Se já existe no cache, apenas mostrar
             if (iframeCache[section]) {
+                console.log('[SETTINGS-NAV] Showing cached iframe:', section);
                 iframeCache[section].style.display = 'block';
                 currentSection = section;
+                
+                // Remover loading se existir
+                const loading = contentArea.querySelector('.loading-spinner');
+                if (loading) loading.remove();
+                
                 return;
             }
             
-            // Show loading state apenas na primeira vez
-            contentArea.innerHTML = `
-                <div class="flex items-center justify-center h-64">
-                    <div class="text-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#009cb6] mx-auto mb-4"></div>
-                        <p class="text-gray-500">Loading ${section}...</p>
-                    </div>
-                </div>
-            `;
+            console.log('[SETTINGS-NAV] Creating new iframe for:', section);
             
             // Map sections to URLs
             const urls = {
@@ -340,34 +339,70 @@
             
             const url = urls[section];
             if (!url) {
+                console.error('[SETTINGS-NAV] Section not found:', section);
                 contentArea.innerHTML = '<p class="text-red-500">Section not found</p>';
                 return;
             }
             
-            // Criar iframe com loading lazy
+            // Create loading spinner (NÃO usar innerHTML para não apagar iframes!)
+            const existingLoading = contentArea.querySelector('.loading-spinner');
+            if (existingLoading) existingLoading.remove();
+            
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-spinner flex items-center justify-center h-64';
+            loadingDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#009cb6] mx-auto mb-4"></div>
+                    <p class="text-gray-500">A carregar ${section}...</p>
+                </div>
+            `;
+            contentArea.appendChild(loadingDiv);
+            
+            // Criar iframe
             const iframe = document.createElement('iframe');
             iframe.src = url;
             iframe.className = 'w-full border-0';
-            iframe.style.cssText = 'height: 85vh; width: 100%;';
+            iframe.style.cssText = 'height: 85vh; width: 100%; display: none;';
             iframe.loading = 'lazy';
             
-            // Remover loading quando carregar
+            // Mostrar iframe quando carregar
             iframe.onload = function() {
-                const loading = contentArea.querySelector('.animate-spin');
+                console.log('[SETTINGS-NAV] Iframe loaded:', section);
+                iframe.style.display = 'block';
+                
+                // Remover loading
+                const loading = contentArea.querySelector('.loading-spinner');
+                if (loading) loading.remove();
+            };
+            
+            // Erro ao carregar
+            iframe.onerror = function() {
+                console.error('[SETTINGS-NAV] Iframe error:', section);
+                const loading = contentArea.querySelector('.loading-spinner');
                 if (loading) {
-                    loading.parentElement.parentElement.remove();
+                    loading.innerHTML = '<p class="text-red-500">Erro ao carregar. Tente novamente.</p>';
                 }
             };
             
-            // Adicionar ao cache
+            // Adicionar ao cache E ao DOM
             iframeCache[section] = iframe;
             currentSection = section;
-            
-            // Adicionar ao DOM
             contentArea.appendChild(iframe);
+            
+            console.log('[SETTINGS-NAV] Iframe added to DOM:', section);
         }
         
-        // Users already loaded in HTML, no need for DOMContentLoaded
+        // Initialize: add pre-loaded iframe to cache
+        document.addEventListener('DOMContentLoaded', function() {
+            const contentArea = document.getElementById('content-area');
+            const preloadedIframe = contentArea.querySelector('iframe');
+            
+            if (preloadedIframe) {
+                console.log('[SETTINGS-NAV] Adding pre-loaded iframe to cache: users');
+                iframeCache['users'] = preloadedIframe;
+                currentSection = 'users';
+            }
+        });
     </script>
 </body>
 </html>
