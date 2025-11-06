@@ -1567,11 +1567,22 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
             with _db_lock:
                 conn = _db_connect()
                 try:
-                    # Tentar match exato primeiro
-                    row = conn.execute(
-                        "SELECT code FROM car_groups WHERE LOWER(name) = ? OR LOWER(model) = ?",
-                        (car_clean_lower, car_clean_lower)
-                    ).fetchone()
+                    is_postgres = hasattr(conn, 'cursor')
+                    
+                    if is_postgres:
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                "SELECT code FROM car_groups WHERE LOWER(name) = %s OR LOWER(model) = %s",
+                                (car_clean_lower, car_clean_lower)
+                            )
+                            row = cur.fetchone()
+                    else:
+                        # SQLite
+                        row = conn.execute(
+                            "SELECT code FROM car_groups WHERE LOWER(name) = ? OR LOWER(model) = ?",
+                            (car_clean_lower, car_clean_lower)
+                        ).fetchone()
                     
                     if row:
                         # Extrair código do grupo (ex: B1-FIAT500 -> B1)
@@ -1580,7 +1591,8 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
                         return group_code
                 finally:
                     conn.close()
-        except Exception:
+        except Exception as e:
+            logging.error(f"Error querying car_groups: {e}")
             pass  # Se falhar, continuar para próxima prioridade
     
     # PRIORIDADE 2: Consultar dicionário VEHICLES de carjet_direct.py
@@ -14733,6 +14745,75 @@ async def setup_dr_tables():
                 conn.close()
     except Exception as e:
         logging.error(f"Error creating tables: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/setup-car-groups-table")
+async def setup_car_groups_table():
+    """Criar tabela car_groups no PostgreSQL - SEM AUTH"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS car_groups (
+                                id SERIAL PRIMARY KEY,
+                                code TEXT UNIQUE NOT NULL,
+                                name TEXT,
+                                model TEXT,
+                                brand TEXT,
+                                category TEXT,
+                                doors INTEGER,
+                                seats INTEGER,
+                                transmission TEXT,
+                                luggage INTEGER,
+                                photo_url TEXT,
+                                enabled BOOLEAN DEFAULT TRUE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        # Criar índices
+                        cur.execute("CREATE INDEX IF NOT EXISTS idx_car_groups_name ON car_groups(LOWER(name))")
+                        cur.execute("CREATE INDEX IF NOT EXISTS idx_car_groups_model ON car_groups(LOWER(model))")
+                        cur.execute("CREATE INDEX IF NOT EXISTS idx_car_groups_code ON car_groups(code)")
+                    conn.commit()
+                else:
+                    # SQLite
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS car_groups (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            code TEXT UNIQUE NOT NULL,
+                            name TEXT,
+                            model TEXT,
+                            brand TEXT,
+                            category TEXT,
+                            doors INTEGER,
+                            seats INTEGER,
+                            transmission TEXT,
+                            luggage INTEGER,
+                            photo_url TEXT,
+                            enabled INTEGER DEFAULT 1,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_car_groups_name ON car_groups(LOWER(name))")
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_car_groups_model ON car_groups(LOWER(model))")
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_car_groups_code ON car_groups(code)")
+                    conn.commit()
+                
+                return {"ok": True, "message": "Tabela car_groups criada com sucesso!"}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error creating car_groups table: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.get("/cleanup-drs")
