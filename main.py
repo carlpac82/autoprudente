@@ -18240,8 +18240,8 @@ async def restore_backup(request: Request):
         })
         
     except Exception as e:
-        logging.error(f"Backup restore error: {str(e)}")
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+        logging.error(f"Backup restore error: {str(e)}", exc_info=True)
+        return JSONResponse({"ok": False, "error": f"Erro ao restaurar backup: {str(e)}"}, status_code=500)
 
 @app.post("/api/fix-schema-emergency")
 async def fix_schema_emergency(request: Request):
