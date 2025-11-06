@@ -2125,8 +2125,9 @@
             const ignoredGroups = ['BK1', 'BK2', 'C3', 'C4', 'C5', 'DK', 'EK1', 'EK2', 'FK', 
                                    'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
             
-            // Way2Rentals day periods
-            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+            // Use ONLY selected days from chips (dias variable)
+            const way2rentalsDays = [...dias];
+            console.log('[WAY2RENTALS] Using selected days:', way2rentalsDays);
             
             // Commission: 13.66%
             const commission = 0.1366;
@@ -2271,7 +2272,9 @@
             const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
                                    'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
             
-            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+            // Use ONLY selected days from chips (dias variable)
+            const way2rentalsDays = [...dias];
+            console.log('[WEBSITE] Using selected days:', way2rentalsDays);
             
             // Website adjustment: FIXO 14% (sem backend)
             const websiteAdjustment = 14;
@@ -2295,7 +2298,8 @@
             // Get prices from Price Automation table (pricesTableAuto)
             const pricesData = {};
             const automationGroups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
-            const automationDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+            // Use selected days from chips
+            const automationDays = [...dias];
             
             automationGroups.forEach(grupo => {
                 pricesData[grupo] = {};
@@ -4821,8 +4825,9 @@
             const ignoredGroups = ['BK1', 'BK2', 'C3', 'C4', 'C5', 'DK', 'EK1', 'EK2', 'FK', 
                                    'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
             
-            // Way2Rentals day periods
-            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+            // Use ONLY selected days from chips (selectedDaysAuto variable)
+            const way2rentalsDays = [...selectedDaysAuto];
+            console.log('[WAY2RENTALS-AUTO] Using selected days:', way2rentalsDays);
             
             // Commission: 13.66%
             const commission = 0.1366;
@@ -4981,7 +4986,9 @@
                 const ignoredGroups = ['BK1', 'BK2', 'DK', 'EK1', 'EK2', 'FK', 'G', 
                                        'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
                 
-                const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+                // Use ONLY selected days from chips (selectedDaysAuto variable)
+                const way2rentalsDays = [...selectedDaysAuto];
+                console.log('[WEBSITE-AUTO] Using selected days:', way2rentalsDays);
                 
                 // Website adjustment: FIXO 14%
                 const websiteAdjustment = 14;
@@ -5001,7 +5008,8 @@
                 // Get prices from Price Automation table (pricesTableAuto)
                 const pricesData = {};
                 const automationGroups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
-                const automationDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+                // Use selected days from chips
+                const automationDays = [...selectedDaysAuto];
                 
                 automationGroups.forEach(grupo => {
                     pricesData[grupo] = {};
