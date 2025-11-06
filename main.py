@@ -16673,26 +16673,50 @@ def _ensure_recent_searches_table():
         with _db_lock:
             conn = _db_connect()
             try:
-                # Create table (works for both SQLite and PostgreSQL)
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS recent_searches (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        location TEXT NOT NULL,
-                        start_date TEXT NOT NULL,
-                        days INTEGER NOT NULL,
-                        results_data TEXT NOT NULL,
-                        timestamp TEXT NOT NULL,
-                        "user" TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
+                # Check if using PostgreSQL or SQLite
+                is_postgres = hasattr(conn, 'cursor') and not hasattr(conn, 'row_factory')
                 
-                # Create index for faster queries (only if not exists)
-                try:
+                if is_postgres:
+                    # PostgreSQL syntax
                     conn.execute("""
-                        CREATE INDEX IF NOT EXISTS idx_recent_searches_user 
-                        ON recent_searches("user", created_at DESC)
+                        CREATE TABLE IF NOT EXISTS recent_searches (
+                            id SERIAL PRIMARY KEY,
+                            location TEXT NOT NULL,
+                            start_date TEXT NOT NULL,
+                            days INTEGER NOT NULL,
+                            results_data TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            "user" TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
                     """)
+                else:
+                    # SQLite syntax
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS recent_searches (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            location TEXT NOT NULL,
+                            start_date TEXT NOT NULL,
+                            days INTEGER NOT NULL,
+                            results_data TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            user TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                
+                # Create index for faster queries
+                try:
+                    if is_postgres:
+                        conn.execute("""
+                            CREATE INDEX IF NOT EXISTS idx_recent_searches_user 
+                            ON recent_searches("user", created_at DESC)
+                        """)
+                    else:
+                        conn.execute("""
+                            CREATE INDEX IF NOT EXISTS idx_recent_searches_user 
+                            ON recent_searches(user, created_at DESC)
+                        """)
                 except Exception:
                     pass  # Index might already exist
                 
