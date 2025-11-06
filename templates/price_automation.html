@@ -3313,6 +3313,38 @@
             
             container.innerHTML = '';
             
+            // Se estiver a editar histórico, mostrar header com data da versão
+            if (window.currentHistoryTimestamp) {
+                const timestamp = new Date(window.currentHistoryTimestamp);
+                const dateStr = timestamp.toLocaleString('pt-PT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const historyHeader = document.createElement('div');
+                historyHeader.className = 'bg-gradient-to-r from-[#009cb6] to-[#007a8f] text-white p-4 rounded-lg mb-6 shadow-lg';
+                historyHeader.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                                <h3 class="font-bold text-lg">Versão do Histórico</h3>
+                                <p class="text-sm opacity-90">${dateStr}</p>
+                            </div>
+                        </div>
+                        <div class="text-sm opacity-90">
+                            ${selectedDays.length} dia(s) • Modo Visual
+                        </div>
+                    </div>
+                `;
+                container.appendChild(historyHeader);
+            }
+            
             const grupos = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
             
             // Calculate global lowest price across all days and groups (EXCLUDE AUTOMATED)
@@ -5366,8 +5398,9 @@
         function editHistoryVersion(historyData) {
             console.log('[HISTORY] Editing version:', historyData);
             
-            // Store original data for reference
+            // Store original data for reference (incluindo timestamp)
             window.editingHistoryData = historyData;
+            window.currentHistoryTimestamp = historyData.timestamp || new Date().toISOString();
             
             // Switch to automated prices tab
             switchTab('automated');
@@ -5480,14 +5513,20 @@
                 console.warn('[HISTORY] No supplier data available - visual cards will be empty');
             }
             
-            // Show table mode by default
-            document.getElementById('priceTableContainer').classList.remove('hidden');
-            document.getElementById('priceComparisonCards').classList.add('hidden');
+            // Show VISUAL mode (cards) by default - HISTÓRICO usa cards com data
+            document.getElementById('priceTableContainer').classList.add('hidden');
+            document.getElementById('priceComparisonCards').classList.remove('hidden');
+            
+            // Update toggle buttons state
+            const btnCards = document.getElementById('btnViewCards');
+            const btnTable = document.getElementById('btnViewTable');
+            if (btnCards) btnCards.className = 'p-2 border border-[#009cb6] bg-[#009cb6] bg-opacity-10 rounded transition-colors';
+            if (btnTable) btnTable.className = 'p-2 border border-gray-300 hover:bg-gray-50 rounded transition-colors';
             
             // Show Save Edited Version button
             showSaveEditedButton();
             
-            showNotification('Versão carregada para edição - Edite os preços e clique em Guardar Edição', 'success');
+            showNotification('Versão carregada para edição - Modo visual ativo', 'success');
         }
         
         function showSaveEditedButton() {
@@ -5556,8 +5595,9 @@
                 // Hide Save button after successful save
                 hideSaveEditedButton();
                 
-                // Clear editing flag
+                // Clear editing flag and timestamp
                 window.editingHistoryData = null;
+                window.currentHistoryTimestamp = null;
                 
                 // Clear blue highlighting from cells
                 document.querySelectorAll('input.bg-blue-50').forEach(input => {
