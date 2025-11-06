@@ -33,22 +33,50 @@
         }
         
         /* SCROLLBAR CUSTOMIZATION */
+        .scrollbar-thin {
+            scrollbar-width: thin;
+            scrollbar-color: #6b7280 #e5e7eb; /* Firefox */
+        }
+        
         .scrollbar-thin::-webkit-scrollbar {
-            width: 6px;
+            width: 8px; /* Aumentado de 6px para 8px - mais visível */
         }
         
         .scrollbar-thin::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #e5e7eb;
             border-radius: 10px;
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #d1d5db;
+            background: #6b7280; /* Mais escuro - melhor contraste */
             border-radius: 10px;
+            border: 2px solid #e5e7eb; /* Borda para destacar */
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
+            background: #4b5563; /* Ainda mais escuro no hover */
+        }
+        
+        /* Scrollbar específica para cards AUTO (fundo azul) */
+        .bg-blue-50 .scrollbar-thin,
+        [style*="background"] .scrollbar-thin {
+            scrollbar-color: #0284c7 #bfdbfe; /* Firefox - azul */
+        }
+        
+        .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-track,
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar-track {
+            background: #bfdbfe; /* Azul claro */
+        }
+        
+        .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-thumb,
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #0284c7; /* Azul médio - bem visível */
+            border: 2px solid #bfdbfe;
+        }
+        
+        .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-thumb:hover,
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #0369a1; /* Azul escuro no hover */
         }
         
         /* PRICE SLIDER CUSTOMIZATION */
@@ -3488,7 +3516,7 @@
                     </p>
                 </div>
                 
-                <div id="price-list-${grupo}-${day}" class="space-y-1 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div id="price-list-${grupo}-${day}" class="space-y-1 max-h-96 overflow-y-auto scrollbar-thin">
                     ${allPrices.map((item, index) => {
                         const isFirst = index === 0;
                         const isLast = index === allPrices.length - 1;
