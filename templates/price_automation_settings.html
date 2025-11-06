@@ -1030,7 +1030,7 @@
             // Close modal
             modal.remove();
             
-            showNotification(`✅ ${selectedDeps.length} rule(s) applied for group ${targetGroup}`);
+            showNotification(`${selectedDeps.length} rule(s) applied for group ${targetGroup}`, 'success');
         }
         
         // Remove Hierarchy Rule
@@ -1039,7 +1039,7 @@
                 delete groupHierarchyRules[group];
                 renderHierarchyRules();
                 saveSettings();
-                showNotification(`✅ Rule removed for group ${group}`);
+                showNotification(`Rule removed for group ${group}`, 'success');
             }
         }
         
@@ -3079,7 +3079,7 @@
             saveStrategies();
             
             // Show success message
-            showNotification(`✅ ${strategyName} added as strategy #${strategiesData[key].length}`, 'success');
+            showNotification(`${strategyName} added as strategy #${strategiesData[key].length}`, 'success');
         }
         
         function renderStrategiesList(location, grupo, month, day) {

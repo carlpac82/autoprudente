@@ -360,15 +360,15 @@
                 if (result.ok) {
                     // Also save to localStorage as backup
                     localStorage.setItem('automatedReportsSettings', JSON.stringify(settings));
-                    showNotification('✅ Configurações guardadas no PostgreSQL!', 'success');
+                    showNotification('Configurações guardadas com sucesso!', 'success');
                 } else {
-                    showNotification('❌ Erro ao guardar: ' + (result.error || 'Desconhecido'), 'error');
+                    showNotification('Erro ao guardar: ' + (result.error || 'Desconhecido'), 'error');
                 }
             } catch (error) {
                 console.error('Error saving settings:', error);
                 // Fallback to localStorage only
                 localStorage.setItem('automatedReportsSettings', JSON.stringify(settings));
-                showNotification('⚠️ Guardado apenas localmente', 'warning');
+                showNotification('Guardado apenas localmente (sem conexão com servidor)', 'warning');
             }
         }
 

@@ -1451,9 +1451,9 @@
                 updateMappedFieldsList();
                 populateFieldSelector(); // Atualizar dropdown
                 
-                showNotification(`✅ ${field.name} mapeado!`, 'success');
+                showNotification(`${field.name} mapeado com sucesso!`, 'success');
             } else {
-                showNotification('⚠️ Caixa muito pequena, tenta novamente', 'warning');
+                showNotification('Caixa muito pequena, tenta novamente', 'warning');
             }
             
             isDragging = false;
@@ -1583,7 +1583,7 @@
         
         async function saveFieldCoordinates() {
             if (Object.keys(fieldCoordinates).length === 0) {
-                showNotification('❌ Nenhum campo foi mapeado!', 'error');
+                showNotification('Nenhum campo foi mapeado!', 'error');
                 return;
             }
             
@@ -1597,17 +1597,17 @@
                 const result = await response.json();
                 
                 if (result.ok) {
-                    showNotification(`✅ ${Object.keys(fieldCoordinates).length} coordenadas guardadas!`, 'success');
+                    showNotification(`${Object.keys(fieldCoordinates).length} coordenadas guardadas com sucesso!`, 'success');
                     
                     // Notificar parent window se estiver em iframe
                     if (window.parent !== window) {
                         window.parent.postMessage({ type: 'coordinatesSaved', count: result.count }, '*');
                     }
                 } else {
-                    showNotification('❌ Erro ao guardar: ' + result.error, 'error');
+                    showNotification('Erro ao guardar: ' + result.error, 'error');
                 }
             } catch (error) {
-                showNotification('❌ Erro ao guardar coordenadas', 'error');
+                showNotification('Erro ao guardar coordenadas', 'error');
                 console.error(error);
             }
         }
@@ -1618,7 +1618,7 @@
             // Copiar a última caixa mapeada
             const mappedFields = Object.keys(fieldCoordinates);
             if (mappedFields.length === 0) {
-                showNotification('⚠️ Nenhuma caixa para copiar!', 'warning');
+                showNotification('Nenhuma caixa para copiar!', 'warning');
                 return;
             }
             
@@ -1633,12 +1633,12 @@
         
         function pasteBox() {
             if (!copiedBox) {
-                showNotification('⚠️ Nenhuma caixa copiada!', 'warning');
+                showNotification('Nenhuma caixa copiada!', 'warning');
                 return;
             }
             
             if (currentFieldIndex >= FIELDS_TO_MAP.length) {
-                showNotification('⚠️ Todos os campos já foram mapeados!', 'warning');
+                showNotification('Todos os campos já foram mapeados!', 'warning');
                 return;
             }
             
@@ -1671,7 +1671,7 @@
             updateMappedFieldsList();
             populateFieldSelector();
             
-            showNotification(`✅ Caixa colada! Ajusta a posição se necessário`, 'success');
+            showNotification('Caixa colada! Ajusta a posição se necessário', 'success');
         }
         
         // Atualizar preview com PDF original preenchido
