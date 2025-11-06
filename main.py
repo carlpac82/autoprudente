@@ -17004,6 +17004,23 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ ai_learning_data.location: {e}")
                     
+                    # 2b. Ensure ai_learning_data has original_price column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='ai_learning_data' AND column_name='original_price'
+                                ) THEN
+                                    ALTER TABLE ai_learning_data ADD COLUMN original_price REAL;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ ai_learning_data.original_price column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ ai_learning_data.original_price: {e}")
+                    
                     # 3. Ensure automated_price_rules has config column
                     try:
                         conn.execute("""
