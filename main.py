@@ -10864,21 +10864,29 @@ async def save_automated_price_rules(request: Request):
 
 @app.get("/api/price-automation/rules/debug")
 async def debug_automated_price_rules(request: Request):
-    """DEBUG: Verificar estado das regras na base de dados"""
-    require_auth(request)
-    
+    """Debug endpoint to check if automated_price_rules table exists and has data"""
     try:
+        # Get database info
+        db_type = "PostgreSQL" if USE_POSTGRES else "SQLite"
+        db_url_preview = POSTGRES_DATABASE_URL[:50] + "..." if USE_POSTGRES and POSTGRES_DATABASE_URL else "local.db"
+        
         with _db_lock:
             conn = _db_connect()
             try:
-                # Check if table exists
+                # Check if table exists and count rows
                 try:
                     cursor = conn.execute("SELECT COUNT(*) FROM automated_price_rules")
                     count = cursor.fetchone()[0]
-                    logging.info(f"✅ Table exists, {count} rules found")
+                    logging.info(f"✅ Table exists, {count} rules found in {db_type}")
                 except Exception as table_err:
                     logging.error(f"❌ Table doesn't exist or error: {table_err}")
-                    return JSONResponse({"ok": False, "error": "Table doesn't exist", "detail": str(table_err)})
+                    return JSONResponse({
+                        "ok": False, 
+                        "error": "Table doesn't exist", 
+                        "detail": str(table_err),
+                        "db_type": db_type,
+                        "db_url": db_url_preview
+                    })
                 
                 # Get all data
                 cursor = conn.execute("SELECT location, grupo, month, day, config FROM automated_price_rules")
@@ -10895,6 +10903,8 @@ async def debug_automated_price_rules(request: Request):
                 return JSONResponse({
                     "ok": True,
                     "count": len(rows),
+                    "db_type": db_type,
+                    "db_url": db_url_preview,
                     "locations": locations,
                     "sample_rows": [{"location": r[0], "grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in rows[:10]]
                 })
