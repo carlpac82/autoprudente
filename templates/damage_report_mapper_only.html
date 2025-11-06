@@ -118,6 +118,14 @@
             align-items: center;
             margin-bottom: 15px;
         }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -143,7 +151,7 @@
                     Escolhe um campo
                 </div>
                 <div style="margin-top: 10px;">
-                    <span id="fieldProgress">0 / 38 campos</span>
+                    <span id="fieldProgress">0 / 62 campos</span>
                 </div>
             </div>
 
@@ -225,9 +233,31 @@
             { id: 'return_location', name: 'Local Devolução', type: 'text' },
             { id: 'fuel_level_pickup', name: 'Nível Combustível (Recolha)', type: 'text' },
             { id: 'fuel_level_return', name: 'Nível Combustível (Devolução)', type: 'text' },
-            { id: 'damage_description', name: 'Descrição Danos', type: 'textarea' },
-            { id: 'damage_table', name: 'Tabela de Danos', type: 'table' },
-            { id: 'repair_items_table', name: 'Tabela Itens Reparação', type: 'table' },
+            { id: 'damage_description_line_1', name: 'Descrição Danos - Linha 1', type: 'text' },
+            { id: 'damage_description_line_2', name: 'Descrição Danos - Linha 2', type: 'text' },
+            { id: 'damage_description_line_3', name: 'Descrição Danos - Linha 3', type: 'text' },
+            { id: 'damage_description_line_4', name: 'Descrição Danos - Linha 4', type: 'text' },
+            { id: 'damage_description_line_5', name: 'Descrição Danos - Linha 5', type: 'text' },
+            { id: 'damage_description_line_6', name: 'Descrição Danos - Linha 6', type: 'text' },
+            { id: 'damage_description_line_7', name: 'Descrição Danos - Linha 7', type: 'text' },
+            { id: 'damage_description_line_8', name: 'Descrição Danos - Linha 8', type: 'text' },
+            { id: 'damage_description_line_9', name: 'Descrição Danos - Linha 9', type: 'text' },
+            { id: 'damage_description_line_10', name: 'Descrição Danos - Linha 10', type: 'text' },
+            { id: 'damage_description_line_11', name: 'Descrição Danos - Linha 11', type: 'text' },
+            { id: 'damage_description_line_12', name: 'Descrição Danos - Linha 12', type: 'text' },
+            { id: 'damage_description_line_13', name: 'Descrição Danos - Linha 13', type: 'text' },
+            { id: 'damage_description_line_14', name: 'Descrição Danos - Linha 14', type: 'text' },
+            { id: 'damage_description_line_15', name: 'Descrição Danos - Linha 15', type: 'text' },
+            { id: 'repair_line_1', name: 'Reparação - Linha 1 (Detalhes/Qtd/Horas/Preço/Total)', type: 'table' },
+            { id: 'repair_line_2', name: 'Reparação - Linha 2', type: 'table' },
+            { id: 'repair_line_3', name: 'Reparação - Linha 3', type: 'table' },
+            { id: 'repair_line_4', name: 'Reparação - Linha 4', type: 'table' },
+            { id: 'repair_line_5', name: 'Reparação - Linha 5', type: 'table' },
+            { id: 'repair_line_6', name: 'Reparação - Linha 6', type: 'table' },
+            { id: 'repair_line_7', name: 'Reparação - Linha 7', type: 'table' },
+            { id: 'repair_line_8', name: 'Reparação - Linha 8', type: 'table' },
+            { id: 'repair_line_9', name: 'Reparação - Linha 9', type: 'table' },
+            { id: 'repair_line_10', name: 'Reparação - Linha 10', type: 'table' },
             { id: 'total_repair_cost', name: 'Custo Total Reparação', type: 'text' },
             { id: 'vehicle_diagram', name: 'Diagrama do Veículo', type: 'diagram' },
             { id: 'damage_photo_1', name: 'Foto 1', type: 'image' },
@@ -433,14 +463,37 @@
             let boxW = Math.abs(endX - startX) / scale;
             let boxH = Math.abs(endY - startY) / scale;
             
-            // Try to detect white boxes/lines in the PDF
-            const detectedBox = detectWhiteBoxInArea(boxX, boxY, boxW, boxH);
-            if (detectedBox) {
-                console.log('White box detected, adjusting coordinates...');
-                boxX = detectedBox.x;
-                boxY = detectedBox.y;
-                boxW = detectedBox.width;
-                boxH = detectedBox.height;
+            // Special auto-detection for vehicle diagram
+            if (field.type === 'diagram') {
+                const diagramBox = autoDetectVehicleDiagram();
+                if (diagramBox) {
+                    console.log('Vehicle diagram auto-detected:', diagramBox);
+                    boxX = diagramBox.x;
+                    boxY = diagramBox.y;
+                    boxW = diagramBox.width;
+                    boxH = diagramBox.height;
+                    showCustomNotification('Diagrama do veículo detetado automaticamente!', 'success');
+                } else {
+                    // Try to detect white boxes/lines in the PDF
+                    const detectedBox = detectWhiteBoxInArea(boxX, boxY, boxW, boxH);
+                    if (detectedBox) {
+                        console.log('White box detected, adjusting coordinates...');
+                        boxX = detectedBox.x;
+                        boxY = detectedBox.y;
+                        boxW = detectedBox.width;
+                        boxH = detectedBox.height;
+                    }
+                }
+            } else {
+                // Try to detect white boxes/lines in the PDF
+                const detectedBox = detectWhiteBoxInArea(boxX, boxY, boxW, boxH);
+                if (detectedBox) {
+                    console.log('White box detected, adjusting coordinates...');
+                    boxX = detectedBox.x;
+                    boxY = detectedBox.y;
+                    boxW = detectedBox.width;
+                    boxH = detectedBox.height;
+                }
             }
             
             fieldCoordinates[field.id] = {
@@ -457,6 +510,55 @@
             redrawMappedBoxes();
         }
 
+        function autoDetectVehicleDiagram() {
+            // Auto-detect vehicle diagram by looking for a large rectangular area
+            // with car outline (typically in cyan/blue color on white background)
+            try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                // Look for cyan/blue lines (typical car diagram color)
+                // RGB values for cyan: around (0, 174, 239) or similar blue tones
+                let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                let foundDiagram = false;
+                
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const idx = (y * canvas.width + x) * 4;
+                        const r = data[idx];
+                        const g = data[idx + 1];
+                        const b = data[idx + 2];
+                        
+                        // Detect cyan/blue lines (car outline color)
+                        // Typical cyan: low red, medium-high green, high blue
+                        if (r < 100 && g > 100 && b > 150 && b > r && b > g) {
+                            foundDiagram = true;
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                        }
+                    }
+                }
+                
+                // If found diagram with reasonable size (at least 200x150 pixels)
+                if (foundDiagram && (maxX - minX) > 200 && (maxY - minY) > 150) {
+                    // Add some padding
+                    const padding = 20;
+                    return {
+                        x: Math.max(0, (minX - padding)) / scale,
+                        y: Math.max(0, (minY - padding)) / scale,
+                        width: Math.min(canvas.width, (maxX - minX + padding * 2)) / scale,
+                        height: Math.min(canvas.height, (maxY - minY + padding * 2)) / scale
+                    };
+                }
+            } catch (error) {
+                console.error('[MAPPER] Error auto-detecting diagram:', error);
+            }
+            
+            return null;
+        }
+        
         function detectWhiteBoxInArea(x, y, width, height) {
             // Convert to canvas coordinates
             const canvasX = Math.floor(x * scale);
@@ -588,49 +690,66 @@
             });
         }
 
-        async function saveFieldCoordinates() {
+        async function saveFieldCoordinates(e) {
+            if (e) e.preventDefault();
             try {
+                console.log('[MAPPER] Saving coordinates:', fieldCoordinates);
                 const response = await fetch('/api/damage-reports/save-coordinates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ coordinates: fieldCoordinates })
+                    body: JSON.stringify(fieldCoordinates)
                 });
                 const result = await response.json();
+                console.log('[MAPPER] Save result:', result);
                 if (result.ok) {
-                    alert('Coordenadas guardadas com sucesso!');
+                    showCustomNotification('Coordenadas guardadas com sucesso!', 'success');
                     window.parent.postMessage({ type: 'coordinatesSaved' }, '*');
                 } else {
-                    alert('Erro ao guardar: ' + result.error);
+                    showCustomNotification('Erro ao guardar: ' + result.error, 'error');
                 }
             } catch (error) {
-                alert('Erro ao guardar coordenadas');
+                console.error('[MAPPER] Save error:', error);
+                showCustomNotification('Erro ao guardar coordenadas', 'error');
             }
         }
 
-        function skipCurrentField() {
+        function skipCurrentField(e) {
+            if (e) e.preventDefault();
             currentFieldIndex++;
+            if (currentFieldIndex >= FIELDS_TO_MAP.length) {
+                currentFieldIndex = FIELDS_TO_MAP.length - 1;
+                showCustomNotification('Já está no último campo', 'info');
+            }
             updateCurrentField();
         }
 
-        function previousField() {
+        function previousField(e) {
+            if (e) e.preventDefault();
             if (currentFieldIndex > 0) {
                 currentFieldIndex--;
                 updateCurrentField();
+            } else {
+                showCustomNotification('Já está no primeiro campo', 'info');
             }
         }
 
         async function loadExistingCoordinates() {
             try {
+                console.log('[MAPPER] Loading existing coordinates...');
                 const response = await fetch('/api/damage-reports/get-coordinates');
                 const data = await response.json();
+                console.log('[MAPPER] Load response:', data);
                 if (data.ok && data.coordinates) {
                     fieldCoordinates = data.coordinates;
+                    console.log('[MAPPER] Loaded coordinates:', fieldCoordinates);
                     updateMappedList();
                     updateProgress();
                     redrawMappedBoxes();
+                } else {
+                    console.log('[MAPPER] No existing coordinates found');
                 }
             } catch (error) {
-                console.error('Error loading coordinates:', error);
+                console.error('[MAPPER] Error loading coordinates:', error);
             }
         }
 
@@ -676,7 +795,8 @@
             return null;
         }
 
-        function toggleEditMode() {
+        function toggleEditMode(e) {
+            if (e) e.preventDefault();
             isEditMode = !isEditMode;
             const btn = document.getElementById('editModeBtn');
             btn.style.background = isEditMode ? '#10b981' : '#8b5cf6';
@@ -687,64 +807,148 @@
                 document.getElementById('deleteBtn').disabled = true;
             }
             redrawCanvas();
+            console.log('[MAPPER] Edit mode:', isEditMode ? 'ON' : 'OFF');
         }
 
-        function clearAllFields() {
-            if (createCustomConfirm('Tem a certeza que deseja limpar TODOS os campos mapeados? Esta ação não pode ser desfeita.')) {
-                fieldCoordinates = {};
-                selectedField = null;
-                currentFieldIndex = 0;
-                document.getElementById('deleteBtn').disabled = true;
-                updateMappedList();
-                updateProgress();
-                updateCurrentField();
-                redrawCanvas();
-                showNotification('Todos os campos foram limpos', 'warning');
-                console.log('[MAPPER] Cleared all fields');
-            }
-        }
-
-        function showNotification(message, type) {
-            // Simple notification - can be enhanced later
-            console.log(`[${type.toUpperCase()}] ${message}`);
-        }
-
-        function deleteSelectedBox() {
-            if (selectedField && fieldCoordinates[selectedField]) {
-                const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
-                
-                // Use custom confirmation to avoid exiting fullscreen
-                if (createCustomConfirm(`Eliminar campo "${fieldName}"?`)) {
-                    delete fieldCoordinates[selectedField];
+        function clearAllFields(e) {
+            if (e) e.preventDefault();
+            showCustomConfirmModal(
+                'Limpar Todos os Campos?',
+                'Tem a certeza que deseja limpar TODOS os campos mapeados? Esta ação não pode ser desfeita.',
+                () => {
+                    fieldCoordinates = {};
                     selectedField = null;
+                    currentFieldIndex = 0;
                     document.getElementById('deleteBtn').disabled = true;
                     updateMappedList();
                     updateProgress();
+                    updateCurrentField();
                     redrawCanvas();
-                    console.log(`[MAPPER] Deleted field: ${fieldName}`);
+                    showNotification('Todos os campos foram limpos', 'warning');
+                    console.log('[MAPPER] Cleared all fields');
                 }
+            );
+        }
+
+        function showNotification(message, type) {
+            showCustomNotification(message, type);
+        }
+        
+        function showCustomNotification(message, type = 'info') {
+            const colors = {
+                'success': '#10b981',
+                'error': '#ef4444',
+                'warning': '#f59e0b',
+                'info': '#009cb6'
+            };
+            
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                color: #1f2937;
+                padding: 16px 20px;
+                border-left: 4px solid ${colors[type] || colors.info};
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 100000;
+                max-width: 400px;
+                font-size: 14px;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function deleteSelectedBox(e) {
+            if (e) e.preventDefault();
+            if (selectedField && fieldCoordinates[selectedField]) {
+                const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
+                
+                showCustomConfirmModal(
+                    'Eliminar Campo?',
+                    `Tem a certeza que deseja eliminar o campo "${fieldName}"?`,
+                    () => {
+                        delete fieldCoordinates[selectedField];
+                        selectedField = null;
+                        document.getElementById('deleteBtn').disabled = true;
+                        updateMappedList();
+                        updateProgress();
+                        redrawCanvas();
+                        showCustomNotification(`Campo "${fieldName}" eliminado`, 'info');
+                        console.log(`[MAPPER] Deleted field: ${fieldName}`);
+                    }
+                );
             }
         }
         
-        function createCustomConfirm(message) {
-            // Simple confirmation that doesn't exit fullscreen
-            // For now, use confirm but prevent fullscreen exit
-            const wasFullscreen = !!document.fullscreenElement;
-            const result = confirm(message);
+        function showCustomConfirmModal(title, message, onConfirm) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 999999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
             
-            // If was in fullscreen and exited, try to re-enter
-            if (wasFullscreen && !document.fullscreenElement) {
-                setTimeout(() => {
-                    const elem = document.documentElement;
-                    if (elem.requestFullscreen) {
-                        elem.requestFullscreen().catch(err => {
-                            console.log('[FULLSCREEN] Could not re-enter:', err);
-                        });
-                    }
-                }, 100);
-            }
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 24px;
+                border-radius: 12px;
+                max-width: 400px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            `;
             
-            return result;
+            content.innerHTML = `
+                <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px;">${title}</h3>
+                <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 14px; line-height: 1.5;">${message}</p>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="cancelBtn" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Cancelar</button>
+                    <button id="confirmBtn" style="padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Confirmar</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            const cancelBtn = content.querySelector('#cancelBtn');
+            const confirmBtn = content.querySelector('#confirmBtn');
+            
+            cancelBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.remove();
+            };
+            
+            confirmBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.remove();
+                if (onConfirm) onConfirm();
+            };
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    e.preventDefault();
+                    modal.remove();
+                }
+            };
         }
 
         function redrawCanvas() {
