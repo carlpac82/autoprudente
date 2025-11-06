@@ -3482,7 +3482,10 @@
                         </div>
                         ${lowestPriceInGroup ? `<span class="text-xs font-bold text-[#f4ad0f]">${lowestPriceInGroup.toFixed(2)}€</span>` : ''}
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">${allPrices.length} results</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        ${allPrices.length} results
+                        ${isGlobalLowest ? `<span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-[9px] font-bold rounded-full">LOWEST PRICE</span>` : ''}
+                    </p>
                 </div>
                 
                 <div id="price-list-${grupo}-${day}" class="space-y-1 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
@@ -4189,18 +4192,26 @@
                 return calculateFollowLowestFromAllCars(allCarsByDay, grupo, day, config);
             }
             
-            // Filter cars by group and selected suppliers
+            // Filter cars by group and selected suppliers AND EXCLUDE Auto Prudente
             const groupCars = cars.filter(item => {
                 const carGroup = item.group || extractGroup(item.car);
                 const supplier = (item.supplier || '').toLowerCase();
                 
                 if (carGroup !== grupo) return false;
                 
+                // EXCLUDE Auto Prudente from automated price calculations
+                if (supplier.includes('autoprudente')) return false;
+                
                 // Check if supplier matches any selected supplier
                 return selectedSuppliers.some(s => supplier.includes(s.toLowerCase()));
             });
             
-            if (groupCars.length === 0) return null;
+            if (groupCars.length === 0) {
+                console.log(`Follow Suppliers - Group ${grupo} ${day}d: NO competitors found (only Auto Prudente)`);
+                return null;
+            }
+            
+            console.log(`Follow Suppliers - Group ${grupo} ${day}d: ${groupCars.length} competitors (Auto Prudente excluded)`);
             
             // Sort cars by price (ascending)
             const sortedCars = groupCars
@@ -4242,18 +4253,27 @@
             
             const selectedSuppliers = config.suppliers || [];
             
-            // Filter cars by group and (optionally) selected suppliers
+            // Filter cars by group and (optionally) selected suppliers AND EXCLUDE Auto Prudente
             const groupCars = cars.filter(item => {
                 const carGroup = item.group || extractGroup(item.car);
                 if (carGroup !== grupo) return false;
                 
+                const supplier = (item.supplier || '').toLowerCase();
+                
+                // EXCLUDE Auto Prudente from automated price calculations
+                if (supplier.includes('autoprudente')) return false;
+                
                 if (selectedSuppliers.length === 0) return true;
                 
-                const supplier = (item.supplier || '').toLowerCase();
                 return selectedSuppliers.some(s => supplier.includes(s.toLowerCase()));
             });
             
-            if (groupCars.length === 0) return null;
+            if (groupCars.length === 0) {
+                console.log(`Follow Average - Group ${grupo} ${day}d: NO competitors found (only Auto Prudente)`);
+                return null;
+            }
+            
+            console.log(`Follow Average - Group ${grupo} ${day}d: ${groupCars.length} competitors (Auto Prudente excluded)`);
             
             // Calculate average price
             let totalPrice = 0;
