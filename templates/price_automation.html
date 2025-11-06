@@ -4733,17 +4733,16 @@
                                 const input = cell.querySelector('input');
                                 if (input) {
                                     input.value = ''; // Deixar vazio
-                                    input.placeholder = 'No data';
+                                    input.placeholder = '-';
                                 }
                             });
                             
+                            // Também limpar coluna "Real"
                             cellsReal.forEach(cell => {
-                                cell.classList.remove('bg-[#009cb6]', 'bg-opacity-50');
-                                cell.classList.add('bg-orange-200');
                                 const input = cell.querySelector('input');
                                 if (input) {
                                     input.value = ''; // Deixar vazio
-                                    input.placeholder = 'No data';
+                                    input.placeholder = '-';
                                 }
                             });
                         }
