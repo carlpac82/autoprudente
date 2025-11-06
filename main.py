@@ -1273,6 +1273,30 @@ def _get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
+def _get_current_user_from_session(request: Request):
+    """Helper to get current user from session using _db_connect()"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    
+    try:
+        conn = _db_connect()
+        try:
+            if hasattr(conn, 'cursor'):
+                # PostgreSQL
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+                current_user = cursor.fetchone()
+                cursor.close()
+            else:
+                # SQLite
+                current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+            return current_user
+        finally:
+            conn.close()
+    except Exception:
+        return None
+
 # --- Activity Log ---
 def _ensure_activity_table():
     with _db_lock:
@@ -2950,7 +2974,7 @@ async def home(request: Request):
     # Load supplier logos for preloading
     supplier_logos = []
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _db_connect()
         try:
             rows = conn.execute("SELECT DISTINCT logo_path FROM suppliers WHERE logo_path IS NOT NULL AND active = 1").fetchall()
             supplier_logos = [row[0] for row in rows if row[0]]
@@ -2979,14 +3003,7 @@ async def admin_root(request: Request, section: str = None):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
     # Get current user
-    user_id = request.session.get("user_id")
-    current_user = None
-    if user_id:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        finally:
-            conn.close()
+    current_user = _get_current_user_from_session(request)
     
     return templates.TemplateResponse("settings_dashboard.html", {
         "request": request,
@@ -3003,14 +3020,7 @@ async def price_history(request: Request):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
     # Get current user
-    user_id = request.session.get("user_id")
-    current_user = None
-    if user_id:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        finally:
-            conn.close()
+    current_user = _get_current_user_from_session(request)
     
     return templates.TemplateResponse("price_history.html", {
         "request": request,
@@ -3038,14 +3048,7 @@ async def price_automation(request: Request):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
     # Get current user
-    user_id = request.session.get("user_id")
-    current_user = None
-    if user_id:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        finally:
-            conn.close()
+    current_user = _get_current_user_from_session(request)
     
     return templates.TemplateResponse("price_automation.html", {
         "request": request,
@@ -3061,14 +3064,7 @@ async def price_automation_fill(request: Request):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
     # Get current user
-    user_id = request.session.get("user_id")
-    current_user = None
-    if user_id:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        finally:
-            conn.close()
+    current_user = _get_current_user_from_session(request)
     
     return templates.TemplateResponse("price_automation_fill.html", {
         "request": request,
@@ -3084,14 +3080,7 @@ async def damage_report_page(request: Request):
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
     # Get current user
-    user_id = request.session.get("user_id")
-    current_user = None
-    if user_id:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        finally:
-            conn.close()
+    current_user = _get_current_user_from_session(request)
     
     return templates.TemplateResponse("damage_report.html", {
         "request": request,
@@ -9719,7 +9708,7 @@ def save_snapshots(location: str, start_dt, days: int, items: List[Dict[str, Any
     from datetime import datetime
     ts = datetime.utcnow().isoformat(timespec="seconds")
     with _db_lock:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _db_connect()
         try:
             for it in items:
                 conn.execute(
@@ -9778,7 +9767,7 @@ async def get_history(request: Request):
     args.append(limit)
 
     with _db_lock:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _db_connect()
         try:
             rows = conn.execute(q, tuple(args)).fetchall()
         finally:
@@ -9854,7 +9843,7 @@ async def get_price_history(request: Request):
     category = params.get("category", "")
     
     with _db_lock:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _db_connect()
         try:
             # Evolução de preços ao longo do tempo (últimos 30 dias) - MIN, AVG, MAX
             evolution_query = """
@@ -11159,7 +11148,7 @@ async def save_ai_learning(request: Request):
         adjustment = data.get("adjustment", {})
         
         with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
+            conn = _db_connect()
             try:
                 conn.execute(
                     """
@@ -11196,7 +11185,7 @@ async def load_ai_learning(request: Request):
         limit = int(request.query_params.get("limit", 100))
         
         with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
+            conn = _db_connect()
             try:
                 query = "SELECT grupo, days, location, original_price, new_price, timestamp FROM ai_learning_data WHERE 1=1"
                 params = []
@@ -11239,7 +11228,7 @@ async def save_user_settings(request: Request):
         settings = data.get("settings", {})
         
         with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
+            conn = _db_connect()
             try:
                 for key, value in settings.items():
                     # Serializar valor como JSON
@@ -11272,7 +11261,7 @@ async def load_user_settings(request: Request):
         user_key = request.query_params.get("user_key", "default")
         
         with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
+            conn = _db_connect()
             try:
                 cursor = conn.execute(
                     """
@@ -11735,7 +11724,7 @@ async def get_uncategorized_vehicles(request: Request):
         
         # Buscar carros únicos do histórico recente
         with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
+            conn = _db_connect()
             try:
                 query = """
                     SELECT DISTINCT car 
@@ -14716,21 +14705,11 @@ async def setup_dr_tables():
                         )
                     """)
                     
-                    # 3. Templates
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS damage_report_templates (
-                            id SERIAL PRIMARY KEY,
-                            version INTEGER NOT NULL,
-                            filename TEXT NOT NULL,
-                            file_data BYTEA NOT NULL,
-                            num_pages INTEGER,
-                            uploaded_by TEXT,
-                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            is_active INTEGER DEFAULT 0,
-                            notes TEXT
-                        )
-                    """)
-                    
+def _get_current_user_from_session(request: Request):
+    """Helper to get current user from session using _db_connect()"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
                     # 4. Numeração
                     cur.execute("""
                         CREATE TABLE IF NOT EXISTS damage_report_numbering (
