@@ -19262,21 +19262,43 @@ async def save_automated_search_history(request: Request):
                 
                 if is_postgres:
                     with conn.cursor() as cur:
-                        cur.execute("""
-                            INSERT INTO automated_search_history 
-                            (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                            VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
-                            RETURNING id
-                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
-                        search_id = cur.fetchone()[0]
+                        try:
+                            # Try new schema with supplier_data
+                            cur.execute("""
+                                INSERT INTO automated_search_history 
+                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
+                                RETURNING id
+                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                            search_id = cur.fetchone()[0]
+                        except Exception as e:
+                            # Column doesn't exist - rollback and use old schema
+                            conn.rollback()
+                            logging.warning(f"supplier_data column not found on save, using old schema: {e}")
+                            cur.execute("""
+                                INSERT INTO automated_search_history 
+                                (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                                RETURNING id
+                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                            search_id = cur.fetchone()[0]
                     conn.commit()
                 else:
-                    cursor = conn.execute("""
-                        INSERT INTO automated_search_history 
-                        (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
-                    search_id = cursor.lastrowid
+                    try:
+                        cursor = conn.execute("""
+                            INSERT INTO automated_search_history 
+                            (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                        search_id = cursor.lastrowid
+                    except Exception as e:
+                        logging.warning(f"supplier_data column not found on save, using old schema: {e}")
+                        cursor = conn.execute("""
+                            INSERT INTO automated_search_history 
+                            (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                        search_id = cursor.lastrowid
                     conn.commit()
                 
                 logging.info(f"✅ Automated search saved: ID={search_id}, Type={search_type}, Prices={price_count}, Month={month_key}")
@@ -19317,32 +19339,59 @@ async def get_automated_search_history(request: Request, months: int = 24):
                 
                 if is_postgres:
                     with conn.cursor() as cur:
-                        # Get all searches for these months
-                        cur.execute("""
+                        # Try to get all searches with supplier_data (new schema)
+                        try:
+                            cur.execute("""
+                                SELECT id, location, search_type, search_date, month_key, 
+                                       prices_data, dias, price_count, supplier_data
+                                FROM automated_search_history
+                                WHERE month_key = ANY(%s)
+                                ORDER BY search_date DESC
+                            """, (month_keys,))
+                            rows = cur.fetchall()
+                            has_supplier_data = True
+                        except Exception as e:
+                            # Column doesn't exist yet - use old schema
+                            logging.warning(f"supplier_data column not found, using old schema: {e}")
+                            cur.execute("""
+                                SELECT id, location, search_type, search_date, month_key, 
+                                       prices_data, dias, price_count
+                                FROM automated_search_history
+                                WHERE month_key = ANY(%s)
+                                ORDER BY search_date DESC
+                            """, (month_keys,))
+                            rows = cur.fetchall()
+                            has_supplier_data = False
+                else:
+                    placeholders = ','.join(['?' for _ in month_keys])
+                    try:
+                        rows = conn.execute(f"""
                             SELECT id, location, search_type, search_date, month_key, 
                                    prices_data, dias, price_count, supplier_data
                             FROM automated_search_history
-                            WHERE month_key = ANY(%s)
+                            WHERE month_key IN ({placeholders})
                             ORDER BY search_date DESC
-                        """, (month_keys,))
-                        rows = cur.fetchall()
-                else:
-                    placeholders = ','.join(['?' for _ in month_keys])
-                    rows = conn.execute(f"""
-                        SELECT id, location, search_type, search_date, month_key, 
-                               prices_data, dias, price_count, supplier_data
-                        FROM automated_search_history
-                        WHERE month_key IN ({placeholders})
-                        ORDER BY search_date DESC
-                    """, month_keys).fetchall()
+                        """, month_keys).fetchall()
+                        has_supplier_data = True
+                    except Exception as e:
+                        logging.warning(f"supplier_data column not found, using old schema: {e}")
+                        rows = conn.execute(f"""
+                            SELECT id, location, search_type, search_date, month_key, 
+                                   prices_data, dias, price_count
+                            FROM automated_search_history
+                            WHERE month_key IN ({placeholders})
+                            ORDER BY search_date DESC
+                        """, month_keys).fetchall()
+                        has_supplier_data = False
                 
                 # Group by month_key and search_type
                 import json
                 for row in rows:
-                    if is_postgres:
+                    if has_supplier_data:
                         search_id, location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
                     else:
-                        search_id, location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
+                        search_id, location, search_type, search_date, month_key, prices_data, dias, price_count = row
+                        supplier_data = None
                     
                     if month_key not in history:
                         history[month_key] = {
