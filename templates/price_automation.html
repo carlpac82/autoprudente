@@ -3984,17 +3984,24 @@
                         
                         console.log(`📦 ${grupo}/${day}d: Found ${strategies.length} strategies`);
                         
+                        let autoPrice = null;
+                        
                         // Check if there are configured strategies to calculate Auto
                         if (strategies.length === 0) {
-                            // NO strategies: Auto stays empty
-                            console.warn(`⚠️ ${grupo}/${day}d: NO STRATEGIES configured - Auto price will be EMPTY`);
-                            console.warn(`   💡 To fix: Go to Admin Settings → Configure strategies for ${grupo}/${day}d`);
-                            continue;
+                            // NO strategies: Auto field stays EMPTY but EDITABLE for manual input
+                            console.log(`ℹ️ ${grupo}/${day}d: No strategies configured - Auto field available for MANUAL input`);
+                            
+                            // Ensure Auto field exists and is editable (no value set)
+                            const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                            if (inputAuto) {
+                                inputAuto.value = ''; // Empty but editable
+                                inputAuto.placeholder = 'Manual';
+                            }
+                            continue; // Skip automatic calculation but field is still visible
                         }
                         
                         // WITH strategies: Use FIRST strategy (priority 1)
                         const strategy = strategies[0];
-                        let autoPrice = null;
                         
                         // Calculate Auto price based on strategy
                         // Strategy structure: {type, diffType, diffValue, suppliers, calcMethod, etc.}
@@ -4750,12 +4757,13 @@
                     
                     const inputAuto = document.createElement('input');
                     inputAuto.type = 'text';
-                    inputAuto.placeholder = '-';
-                    inputAuto.className = 'w-full px-0.5 py-0.5 text-center text-[10px] border-0 bg-transparent focus:ring-1 focus:ring-[#f4ad0f] text-[#f4ad0f] font-semibold';
+                    inputAuto.placeholder = 'Manual';
+                    inputAuto.className = 'w-full px-0.5 py-0.5 text-center text-[10px] border-0 bg-transparent focus:ring-1 focus:ring-[#f4ad0f] text-[#f4ad0f] font-semibold cursor-text';
                     inputAuto.dataset.grupo = grupo;
                     inputAuto.dataset.dias = day;
                     inputAuto.dataset.type = 'auto';
-                    inputAuto.readOnly = true; // Auto-generated, read-only
+                    inputAuto.readOnly = false; // EDITÁVEL - permite input manual quando não há estratégias
+                    inputAuto.title = 'Auto price - editable for manual input';
                     
                     tdAuto.appendChild(inputAuto);
                     tr.appendChild(tdAuto);
