@@ -2412,6 +2412,25 @@ def init_db():
             )
             safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_search_history ON search_history(location, start_date, search_timestamp DESC)", "idx_search_history")
             
+            # Tabela para Automated Search History (histórico de pesquisas automatizadas)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS automated_search_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  location TEXT NOT NULL,
+                  search_type TEXT NOT NULL,
+                  search_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  month_key TEXT NOT NULL,
+                  prices_data TEXT NOT NULL,
+                  dias TEXT NOT NULL,
+                  price_count INTEGER DEFAULT 0,
+                  user_email TEXT,
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_automated_search_month ON automated_search_history(month_key, search_type, search_date DESC)", "idx_automated_search_month")
+            
             # Tabela para Notification Rules (regras de notificação)
             conn.execute(
                 """
@@ -19109,81 +19128,6 @@ async def save_price_snapshots(request: Request):
 # AUTOMATED SEARCH HISTORY ENDPOINTS
 # ============================================================
 
-@app.get("/setup-automated-search-history")
-async def setup_automated_search_history():
-    """Create automated_search_history table - NO AUTH"""
-    try:
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                is_postgres = hasattr(conn, 'cursor')
-                
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        # Create table
-                        cur.execute("""
-                            CREATE TABLE IF NOT EXISTS automated_search_history (
-                                id SERIAL PRIMARY KEY,
-                                location TEXT NOT NULL,
-                                search_type TEXT NOT NULL,
-                                search_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                month_key TEXT NOT NULL,
-                                prices_data JSONB NOT NULL,
-                                dias TEXT NOT NULL,
-                                price_count INTEGER DEFAULT 0,
-                                user_email TEXT,
-                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                            )
-                        """)
-                        
-                        # Create index
-                        cur.execute("""
-                            CREATE INDEX IF NOT EXISTS idx_automated_search_month 
-                            ON automated_search_history(month_key, search_type, search_date DESC)
-                        """)
-                    
-                    conn.commit()
-                    logging.info("✅ Table automated_search_history created successfully")
-                    return JSONResponse({
-                        "ok": True, 
-                        "message": "Table automated_search_history created successfully"
-                    })
-                else:
-                    # SQLite
-                    conn.execute("""
-                        CREATE TABLE IF NOT EXISTS automated_search_history (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            location TEXT NOT NULL,
-                            search_type TEXT NOT NULL,
-                            search_date TEXT DEFAULT CURRENT_TIMESTAMP,
-                            month_key TEXT NOT NULL,
-                            prices_data TEXT NOT NULL,
-                            dias TEXT NOT NULL,
-                            price_count INTEGER DEFAULT 0,
-                            user_email TEXT,
-                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    
-                    conn.execute("""
-                        CREATE INDEX IF NOT EXISTS idx_automated_search_month 
-                        ON automated_search_history(month_key, search_type, search_date DESC)
-                    """)
-                    
-                    conn.commit()
-                    logging.info("✅ Table automated_search_history created successfully (SQLite)")
-                    return JSONResponse({
-                        "ok": True, 
-                        "message": "Table automated_search_history created successfully (SQLite)"
-                    })
-                    
-            finally:
-                conn.close()
-                
-    except Exception as e:
-        logging.error(f"❌ Error creating automated_search_history table: {str(e)}")
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
 @app.post("/api/automated-search/save")
 async def save_automated_search_history(request: Request):
     """Save automated search results to PostgreSQL"""
@@ -19203,47 +19147,6 @@ async def save_automated_search_history(request: Request):
             conn = _db_connect()
             try:
                 is_postgres = hasattr(conn, 'cursor')
-                
-                # Create table if not exists
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            CREATE TABLE IF NOT EXISTS automated_search_history (
-                                id SERIAL PRIMARY KEY,
-                                location TEXT NOT NULL,
-                                search_type TEXT NOT NULL,
-                                search_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                month_key TEXT NOT NULL,
-                                prices_data JSONB NOT NULL,
-                                dias TEXT NOT NULL,
-                                price_count INTEGER DEFAULT 0,
-                                user_email TEXT,
-                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                            )
-                        """)
-                        cur.execute("""
-                            CREATE INDEX IF NOT EXISTS idx_automated_search_month 
-                            ON automated_search_history(month_key, search_type, search_date DESC)
-                        """)
-                else:
-                    conn.execute("""
-                        CREATE TABLE IF NOT EXISTS automated_search_history (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            location TEXT NOT NULL,
-                            search_type TEXT NOT NULL,
-                            search_date TEXT DEFAULT CURRENT_TIMESTAMP,
-                            month_key TEXT NOT NULL,
-                            prices_data TEXT NOT NULL,
-                            dias TEXT NOT NULL,
-                            price_count INTEGER DEFAULT 0,
-                            user_email TEXT,
-                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    conn.execute("""
-                        CREATE INDEX IF NOT EXISTS idx_automated_search_month 
-                        ON automated_search_history(month_key, search_type, search_date DESC)
-                    """)
                 
                 # Generate month_key
                 from datetime import datetime
@@ -19310,49 +19213,6 @@ async def get_automated_search_history(request: Request, months: int = 24):
             try:
                 is_postgres = hasattr(conn, 'cursor')
                 history = {}
-                
-                # Ensure table exists
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            CREATE TABLE IF NOT EXISTS automated_search_history (
-                                id SERIAL PRIMARY KEY,
-                                location TEXT NOT NULL,
-                                search_type TEXT NOT NULL,
-                                search_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                month_key TEXT NOT NULL,
-                                prices_data JSONB NOT NULL,
-                                dias TEXT NOT NULL,
-                                price_count INTEGER DEFAULT 0,
-                                user_email TEXT,
-                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                            )
-                        """)
-                        cur.execute("""
-                            CREATE INDEX IF NOT EXISTS idx_automated_search_month 
-                            ON automated_search_history(month_key, search_type, search_date DESC)
-                        """)
-                    conn.commit()
-                else:
-                    conn.execute("""
-                        CREATE TABLE IF NOT EXISTS automated_search_history (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            location TEXT NOT NULL,
-                            search_type TEXT NOT NULL,
-                            search_date TEXT DEFAULT CURRENT_TIMESTAMP,
-                            month_key TEXT NOT NULL,
-                            prices_data TEXT NOT NULL,
-                            dias TEXT NOT NULL,
-                            price_count INTEGER DEFAULT 0,
-                            user_email TEXT,
-                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    conn.execute("""
-                        CREATE INDEX IF NOT EXISTS idx_automated_search_month 
-                        ON automated_search_history(month_key, search_type, search_date DESC)
-                    """)
-                    conn.commit()
                 
                 if is_postgres:
                     with conn.cursor() as cur:
