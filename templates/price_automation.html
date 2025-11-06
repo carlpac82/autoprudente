@@ -3950,6 +3950,8 @@
                         // Check if there are configured strategies to calculate Auto
                         if (strategies.length === 0) {
                             // NO strategies: Auto stays empty
+                            console.warn(`⚠️ ${grupo}/${day}d: NO STRATEGIES configured - Auto price will be EMPTY`);
+                            console.warn(`   💡 To fix: Go to Admin Settings → Configure strategies for ${grupo}/${day}d`);
                             continue;
                         }
                         
@@ -4008,10 +4010,16 @@
                 
                 // Custom message based on results
                 let message = '';
+                const totalPossibleAuto = grupos.length * dias.length;
+                const missingStrategies = totalPossibleAuto - autoPricesGenerated;
+                
                 if (autoPricesGenerated > 0 && realPricesGenerated > 0) {
-                    message = `Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)`;
+                    message = `✅ Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)`;
+                    if (missingStrategies > 0) {
+                        message += `\n\n⚠️ ${missingStrategies} groups/days without strategies configured`;
+                    }
                 } else if (realPricesGenerated > 0) {
-                    message = `Generated:\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)\n• 0 automated prices (no strategies configured)`;
+                    message = `⚠️ Generated:\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)\n• 0 automated prices\n\n❌ NO STRATEGIES CONFIGURED!\n💡 Go to Admin Settings to configure price strategies`;
                 } else {
                     message = 'No prices generated from Carjet.\nPlease check your date and location.';
                 }
