@@ -10781,6 +10781,11 @@ async def save_automated_price_rules(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detectar tipo de BD
+                import psycopg2
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                placeholder = "%s" if is_postgres else "?"
+                
                 # Limpar regras antigas
                 conn.execute("DELETE FROM automated_price_rules")
                 
@@ -10795,10 +10800,10 @@ async def save_automated_price_rules(request: Request):
                                         try:
                                             config_json = json.dumps(day_config)
                                             conn.execute(
-                                                """
+                                                f"""
                                                 INSERT INTO automated_price_rules 
                                                 (location, grupo, month, day, config, updated_at)
-                                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                                                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
                                                 """,
                                                 (location, grupo, int(month), int(day), config_json)
                                             )
@@ -10867,6 +10872,11 @@ async def save_pricing_strategies(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detectar tipo de BD
+                import psycopg2
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                placeholder = "%s" if is_postgres else "?"
+                
                 # Limpar estratégias antigas
                 conn.execute("DELETE FROM pricing_strategies")
                 
@@ -10889,10 +10899,10 @@ async def save_pricing_strategies(request: Request):
                             try:
                                 strategy_json = json.dumps(strategy)
                                 conn.execute(
-                                    """
+                                    f"""
                                     INSERT INTO pricing_strategies 
                                     (location, grupo, month, day, priority, strategy_type, config, updated_at)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
                                     """,
                                     (location, grupo, month, day, idx + 1, strategy.get('type', 'unknown'), strategy_json)
                                 )
