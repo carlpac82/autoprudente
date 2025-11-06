@@ -297,10 +297,12 @@
                 return;
             }
             
-            // Esconder todos os iframes
+            // Esconder todos os iframes (usar opacity e z-index)
             Object.keys(iframeCache).forEach(key => {
                 if (iframeCache[key]) {
-                    iframeCache[key].style.display = 'none';
+                    iframeCache[key].style.opacity = '0';
+                    iframeCache[key].style.pointerEvents = 'none';
+                    iframeCache[key].style.zIndex = '0';
                     console.log('[SETTINGS-NAV] Hiding iframe:', key);
                 }
             });
@@ -308,7 +310,9 @@
             // Se já existe no cache, apenas mostrar
             if (iframeCache[section]) {
                 console.log('[SETTINGS-NAV] Showing cached iframe:', section);
-                iframeCache[section].style.display = 'block';
+                iframeCache[section].style.opacity = '1';
+                iframeCache[section].style.pointerEvents = 'auto';
+                iframeCache[section].style.zIndex = '10';
                 currentSection = section;
                 
                 // Remover loading se existir
@@ -350,6 +354,7 @@
             
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'loading-spinner flex items-center justify-center h-64';
+            loadingDiv.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; z-index: 20; background: white;';
             loadingDiv.innerHTML = `
                 <div class="text-center">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#009cb6] mx-auto mb-4"></div>
@@ -358,17 +363,18 @@
             `;
             contentArea.appendChild(loadingDiv);
             
-            // Criar iframe
+            // Criar iframe (SEM lazy loading para evitar deadlock)
             const iframe = document.createElement('iframe');
             iframe.src = url;
             iframe.className = 'w-full border-0';
-            iframe.style.cssText = 'height: 85vh; width: 100%; display: none;';
-            iframe.loading = 'lazy';
+            iframe.style.cssText = 'height: 85vh; width: 100%; opacity: 0; position: absolute; top: 0; left: 0; transition: opacity 0.2s ease; z-index: 0;';
             
             // Mostrar iframe quando carregar
             iframe.onload = function() {
                 console.log('[SETTINGS-NAV] Iframe loaded:', section);
-                iframe.style.display = 'block';
+                iframe.style.opacity = '1';
+                iframe.style.zIndex = '10';
+                iframe.style.pointerEvents = 'auto';
                 
                 // Remover loading
                 const loading = contentArea.querySelector('.loading-spinner');
@@ -395,10 +401,17 @@
         // Initialize: add pre-loaded iframe to cache
         document.addEventListener('DOMContentLoaded', function() {
             const contentArea = document.getElementById('content-area');
+            
+            // Garantir que content-area seja position relative para iframes absolute
+            contentArea.style.position = 'relative';
+            contentArea.style.minHeight = '85vh';
+            
             const preloadedIframe = contentArea.querySelector('iframe');
             
             if (preloadedIframe) {
                 console.log('[SETTINGS-NAV] Adding pre-loaded iframe to cache: users');
+                // Aplicar estilos consistentes ao iframe pré-carregado
+                preloadedIframe.style.cssText = 'height: 85vh; width: 100%; opacity: 1; position: absolute; top: 0; left: 0; transition: opacity 0.2s ease; z-index: 10;';
                 iframeCache['users'] = preloadedIframe;
                 currentSection = 'users';
             }
