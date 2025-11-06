@@ -512,6 +512,12 @@
         <div class="flex justify-between items-center">
             <p class="text-sm text-gray-500" data-i18n="priceAutomation.changesSavedAuto">💡 Changes are saved automatically</p>
             <div class="flex gap-4">
+                <button onclick="clearAllStrategiesGlobal()" class="px-6 py-2 border border-red-300 text-red-700 hover:bg-red-50 transition-colors rounded flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <span>Clear All Strategies</span>
+                </button>
                 <button onclick="resetDefaults()" class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded">
                     <span data-i18n="priceAutomation.resetDefaults">Reset to Defaults</span>
                 </button>
@@ -3258,6 +3264,66 @@
             renderStrategiesList(location, grupo, month, day);
             
             console.log(`✅ All strategies cleared for ${location}/${grupo}/${monthName}/Day ${day}`);
+        }
+        
+        function clearAllStrategiesGlobal() {
+            if (!confirm('🚨 WARNING: This will DELETE ALL strategies for ALL locations, groups, and days!\n\nAre you absolutely sure?')) {
+                return;
+            }
+            
+            if (!confirm('⚠️ FINAL CONFIRMATION: All your pricing strategies will be permanently deleted. Continue?')) {
+                return;
+            }
+            
+            console.log('🗑️ Clearing ALL strategies globally...');
+            
+            // Clear all strategiesData keys
+            Object.keys(strategiesData).forEach(key => {
+                strategiesData[key] = [];
+            });
+            
+            // Clear localStorage
+            localStorage.removeItem('automatedPriceRules');
+            
+            // Save empty data to database
+            fetch('/api/price-automation/strategies/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    console.log('✅ All strategies cleared from database');
+                    showNotification('All strategies cleared successfully!', 'success');
+                    
+                    // Reload page to refresh UI
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    console.error('❌ Error clearing strategies:', data.error);
+                    showNotification('Error clearing strategies', 'error');
+                }
+            })
+            .catch(err => {
+                console.error('❌ Error:', err);
+                showNotification('Error clearing strategies', 'error');
+            });
+            
+            // Also clear rules
+            fetch('/api/price-automation/rules/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log('✅ All rules cleared from database');
+            })
+            .catch(err => {
+                console.error('❌ Error clearing rules:', err);
+            });
         }
         
         function generateSuppliersCheckboxes(location, grupo) {
