@@ -9,6 +9,9 @@ print("🔄 A eliminar DRs inválidos (1:2025, 2:2025, 3:2025)...")
 
 try:
     response = requests.post(API_URL)
+    print(f"Status: {response.status_code}")
+    print(f"Response: {response.text[:200]}")
+    
     result = response.json()
     
     if result.get("ok"):
