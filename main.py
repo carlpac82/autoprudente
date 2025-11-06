@@ -786,6 +786,14 @@ async def startup_event():
     except Exception as e:
         print(f"⚠️  Damage Reports tables error: {e}", flush=True)
     
+    # Create Recent Searches table
+    try:
+        print(f"🔍 Creating Recent Searches table...", flush=True)
+        _ensure_recent_searches_table()
+        print(f"✅ Recent Searches table ready", flush=True)
+    except Exception as e:
+        print(f"⚠️  Recent Searches table error: {e}", flush=True)
+    
     print(f"========================================", flush=True)
 
 @app.exception_handler(HTTPException)
@@ -16658,6 +16666,44 @@ async def get_search_history(request: Request):
     except Exception as e:
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+def _ensure_recent_searches_table():
+    """Create recent_searches table on startup"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Create table (works for both SQLite and PostgreSQL)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS recent_searches (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        location TEXT NOT NULL,
+                        start_date TEXT NOT NULL,
+                        days INTEGER NOT NULL,
+                        results_data TEXT NOT NULL,
+                        timestamp TEXT NOT NULL,
+                        user TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create index for faster queries (only if not exists)
+                try:
+                    conn.execute("""
+                        CREATE INDEX IF NOT EXISTS idx_recent_searches_user 
+                        ON recent_searches(user, created_at DESC)
+                    """)
+                except Exception:
+                    pass  # Index might already exist
+                
+                conn.commit()
+                logging.info("✅ recent_searches table created/verified")
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"⚠️ Error creating recent_searches table: {e}")
+        import traceback
+        traceback.print_exc()
 
 @app.post("/api/recent-searches/save")
 async def save_recent_searches(request: Request):
