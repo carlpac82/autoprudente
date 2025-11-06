@@ -32,46 +32,60 @@
             color: white;
         }
         
-        /* SCROLLBAR CUSTOMIZATION */
+        /* SCROLLBAR CUSTOMIZATION - SEMPRE VISÍVEL */
         .scrollbar-thin {
             scrollbar-width: thin;
             scrollbar-color: #6b7280 #e5e7eb; /* Firefox */
+            overflow-y: scroll !important; /* Forçar scrollbar sempre visível */
         }
         
         .scrollbar-thin::-webkit-scrollbar {
-            width: 8px; /* Aumentado de 6px para 8px - mais visível */
+            width: 10px; /* Aumentado para 10px - BEM visível */
+            display: block !important; /* Sempre mostrar */
         }
         
         .scrollbar-thin::-webkit-scrollbar-track {
-            background: #e5e7eb;
+            background: #e5e7eb; /* Cinza claro - track visível */
             border-radius: 10px;
+            border: 1px solid #d1d5db; /* Borda no track */
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #6b7280; /* Mais escuro - melhor contraste */
+            background: #6b7280; /* Cinza escuro - thumb visível */
             border-radius: 10px;
             border: 2px solid #e5e7eb; /* Borda para destacar */
+            min-height: 40px; /* Altura mínima do thumb */
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
             background: #4b5563; /* Ainda mais escuro no hover */
         }
         
-        /* Scrollbar específica para cards AUTO (fundo azul) */
+        /* Scrollbar específica para cards AUTO (fundo azul) - MAIS VISÍVEL */
         .bg-blue-50 .scrollbar-thin,
         [style*="background"] .scrollbar-thin {
             scrollbar-color: #0284c7 #bfdbfe; /* Firefox - azul */
+            overflow-y: scroll !important; /* Sempre visível */
+        }
+        
+        .bg-blue-50 .scrollbar-thin::-webkit-scrollbar {
+            width: 12px; /* Ainda mais largo nos cards azuis */
+            display: block !important;
         }
         
         .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-track,
         [style*="background"] .scrollbar-thin::-webkit-scrollbar-track {
-            background: #bfdbfe; /* Azul claro */
+            background: #bfdbfe; /* Azul claro - track BEM visível */
+            border: 1px solid #93c5fd; /* Borda azul no track */
+            border-radius: 10px;
         }
         
         .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-thumb,
         [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #0284c7; /* Azul médio - bem visível */
+            background: #0284c7; /* Azul forte - BEM visível */
             border: 2px solid #bfdbfe;
+            border-radius: 10px;
+            min-height: 40px;
         }
         
         .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-thumb:hover,
@@ -5410,7 +5424,7 @@
                         });
                     }
                     
-                    // Group cars by grupo
+                    // Group cars by grupo - INCLUIR TODAS AS VARIAÇÕES DE AUTOPRUDENTE
                     const pricesByGroup = {};
                     carsForDay.forEach(carEntry => {
                         // carEntry.car is the car NAME (string), not an object!
@@ -5418,10 +5432,19 @@
                         const supplier = (carEntry.supplier || '').toLowerCase();
                         const price = carEntry.price_num || carEntry.price;
                         
-                        if (grupo && supplier === 'autoprudente' && price) {
+                        // Aceitar múltiplas variações do nome Auto Prudente
+                        const isAutoPrudente = supplier.includes('autoprudente') || 
+                                             supplier.includes('auto prudente') ||
+                                             supplier.includes('auto-prudente') ||
+                                             supplier === 'aup';
+                        
+                        if (grupo && isAutoPrudente && price) {
                             pricesByGroup[grupo] = price;
+                            console.log(`[HISTORY] ✅ ${grupo} ${day}d: ${price}€ (Auto Prudente)`);
                         }
                     });
+                    
+                    console.log(`[HISTORY] Day ${day}: ${Object.keys(pricesByGroup).length} grupos com preços Auto Prudente`);
                     
                     // Fill Real column
                     Object.keys(pricesByGroup).forEach(grupo => {
