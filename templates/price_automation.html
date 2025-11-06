@@ -796,6 +796,16 @@
                 
                 <!-- Automated Prices History -->
                 <div id="historyContentAutomated">
+                    <!-- Location Filter -->
+                    <div class="mb-4 flex items-center gap-3">
+                        <label class="text-sm font-medium text-gray-700">Filter by Location:</label>
+                        <select id="historyLocationFilter" onchange="generateHistoryMonths()" class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#009cb6] focus:border-[#009cb6]">
+                            <option value="">All Locations</option>
+                            <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+                            <option value="Albufeira">Albufeira</option>
+                        </select>
+                    </div>
+                    
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsAutomated">
                         <!-- Meses serão gerados dinamicamente -->
                     </div>
@@ -5200,11 +5210,17 @@
             const containerAutomated = document.getElementById('historyMonthsAutomated');
             containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-gray-500">Loading history...</div>';
             
-            console.log('📅 Loading search history from PostgreSQL...');
+            // Get selected location filter
+            const locationFilter = document.getElementById('historyLocationFilter')?.value || '';
+            
+            console.log('📅 Loading search history from PostgreSQL...', locationFilter ? `filtered by: ${locationFilter}` : 'all locations');
             
             try {
-                // Fetch history from server
-                const response = await fetch('/api/automated-search/history?months=24');
+                // Fetch history from server with location filter
+                const url = locationFilter 
+                    ? `/api/automated-search/history?months=24&location=${encodeURIComponent(locationFilter)}`
+                    : '/api/automated-search/history?months=24';
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 if (!data.ok) {
