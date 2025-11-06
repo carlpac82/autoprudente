@@ -666,6 +666,22 @@ def _ensure_damage_reports_tables():
                     """)
                     
                     cur.execute("""
+                        CREATE TABLE IF NOT EXISTS damage_report_mapping_history (
+                            id SERIAL PRIMARY KEY,
+                            template_version INTEGER NOT NULL,
+                            field_id TEXT NOT NULL,
+                            x REAL NOT NULL,
+                            y REAL NOT NULL,
+                            width REAL NOT NULL,
+                            height REAL NOT NULL,
+                            page INTEGER DEFAULT 1,
+                            field_type TEXT,
+                            mapped_by TEXT,
+                            mapped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    cur.execute("""
                         CREATE TABLE IF NOT EXISTS damage_report_templates (
                             id SERIAL PRIMARY KEY,
                             version INTEGER NOT NULL,
@@ -700,6 +716,7 @@ def _ensure_damage_reports_tables():
                     
                     print("   ✅ damage_reports", flush=True)
                     print("   ✅ damage_report_coordinates", flush=True)
+                    print("   ✅ damage_report_mapping_history", flush=True)
                     print("   ✅ damage_report_templates", flush=True)
                     print("   ✅ damage_report_numbering", flush=True)
                     
@@ -14626,6 +14643,23 @@ async def setup_dr_tables():
                             field_type TEXT,
                             template_version INTEGER DEFAULT 1,
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    # 2b. Histórico de Mapeamento
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS damage_report_mapping_history (
+                            id SERIAL PRIMARY KEY,
+                            template_version INTEGER NOT NULL,
+                            field_id TEXT NOT NULL,
+                            x REAL NOT NULL,
+                            y REAL NOT NULL,
+                            width REAL NOT NULL,
+                            height REAL NOT NULL,
+                            page INTEGER DEFAULT 1,
+                            field_type TEXT,
+                            mapped_by TEXT,
+                            mapped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
                     
