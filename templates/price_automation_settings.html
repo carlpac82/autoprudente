@@ -1341,6 +1341,18 @@
         function clearAIData() {
             if (confirm('Are you sure you want to clear all AI learning data? This cannot be undone.')) {
                 localStorage.removeItem('priceAIData');
+                
+                // Also clear from database
+                fetch('/api/ai/learning/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adjustments: [], patterns: {}, suggestions: [] })
+                }).then(() => {
+                    console.log('✅ AI data cleared from database');
+                }).catch(err => {
+                    console.error('Error clearing AI data from database:', err);
+                });
+                
                 loadAISettings();
                 showNotification('AI data cleared successfully', 'success');
             }
@@ -3381,8 +3393,41 @@
                     console.log('✅ Automated price rules loaded from database');
                     console.log('📦 Rules loaded:', rulesResult.rules);
                 }
+                
+                // Load AI learning data from database
+                const aiResponse = await fetch('/api/ai/learning/load');
+                const aiResult = await aiResponse.json();
+                
+                if (aiResult.ok && aiResult.data) {
+                    // Save to localStorage
+                    localStorage.setItem('priceAIData', JSON.stringify(aiResult.data));
+                    console.log('✅ AI learning data loaded from database');
+                    console.log('🤖 AI data:', aiResult.data.adjustments.length, 'adjustments');
+                }
             } catch (err) {
                 console.error('Error loading from database:', err);
+            }
+        }
+        
+        // Auto-save AI learning data when modified
+        function saveAILearningData() {
+            try {
+                const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}');
+                
+                // Save to database
+                fetch('/api/ai/learning/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(aiData)
+                }).then(r => r.json()).then(result => {
+                    if (result.ok) {
+                        console.log('✅ AI learning data saved to database');
+                    }
+                }).catch(err => {
+                    console.error('Error saving AI data:', err);
+                });
+            } catch (err) {
+                console.error('Error in saveAILearningData:', err);
             }
         }
         

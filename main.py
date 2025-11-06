@@ -18849,6 +18849,154 @@ async def list_notification_history(request: Request, limit: int = 50):
         logging.error(f"List notification history error: {e}")
         return _no_store_json({"ok": False, "error": str(e)}, 500)
 
+# ============================================================
+# AI LEARNING DATA ENDPOINTS
+# ============================================================
+
+@app.post("/api/ai/learning/save")
+async def save_ai_learning_data(request: Request):
+    """Salvar dados de aprendizagem AI no PostgreSQL"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        adjustments = data.get('adjustments', [])
+        patterns = data.get('patterns', {})
+        suggestions = data.get('suggestions', [])
+        
+        logging.info(f"💾 Saving AI learning data: {len(adjustments)} adjustments")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Limpar dados antigos
+                conn.execute("DELETE FROM ai_learning_data")
+                
+                # Salvar novos ajustes
+                for adj in adjustments:
+                    conn.execute("""
+                        INSERT INTO ai_learning_data 
+                        (grupo, days, supplier, original_price, adjusted_price, 
+                         adjustment_type, adjustment_value, reason, context, 
+                         timestamp, success_score)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        adj.get('grupo'),
+                        adj.get('days'),
+                        adj.get('supplier'),
+                        adj.get('originalPrice'),
+                        adj.get('adjustedPrice'),
+                        adj.get('adjustmentType'),
+                        adj.get('adjustmentValue'),
+                        adj.get('reason'),
+                        json.dumps(adj.get('context', {})),
+                        adj.get('timestamp'),
+                        adj.get('successScore')
+                    ))
+                
+                conn.commit()
+                logging.info(f"✅ AI learning data saved: {len(adjustments)} adjustments")
+                return JSONResponse({"ok": True, "message": f"Saved {len(adjustments)} adjustments"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving AI learning data: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/ai/learning/load")
+async def load_ai_learning_data(request: Request):
+    """Carregar dados de aprendizagem AI do PostgreSQL"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("""
+                    SELECT grupo, days, supplier, original_price, adjusted_price,
+                           adjustment_type, adjustment_value, reason, context,
+                           timestamp, success_score
+                    FROM ai_learning_data
+                    ORDER BY timestamp DESC
+                    LIMIT 1000
+                """)
+                
+                rows = cursor.fetchall()
+                adjustments = []
+                
+                for row in rows:
+                    adjustments.append({
+                        'grupo': row[0],
+                        'days': row[1],
+                        'supplier': row[2],
+                        'originalPrice': row[3],
+                        'adjustedPrice': row[4],
+                        'adjustmentType': row[5],
+                        'adjustmentValue': row[6],
+                        'reason': row[7],
+                        'context': json.loads(row[8]) if row[8] else {},
+                        'timestamp': row[9],
+                        'successScore': row[10]
+                    })
+                
+                logging.info(f"✅ AI learning data loaded: {len(adjustments)} adjustments")
+                return JSONResponse({
+                    "ok": True,
+                    "data": {
+                        "adjustments": adjustments,
+                        "patterns": {},
+                        "suggestions": []
+                    }
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error loading AI learning data: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# ============================================================
+# PRICE SNAPSHOTS - Save automatically when scraping
+# ============================================================
+
+@app.post("/api/price-snapshots/save")
+async def save_price_snapshots(request: Request):
+    """Salvar snapshots de preços após scraping"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        snapshots = data.get('snapshots', [])
+        
+        logging.info(f"💾 Saving price snapshots: {len(snapshots)} items")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                for snapshot in snapshots:
+                    conn.execute("""
+                        INSERT INTO price_snapshots 
+                        (ts, location, grupo, days, supplier, car_name, price, 
+                         currency, url, search_params)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        snapshot.get('timestamp', datetime.now().isoformat()),
+                        snapshot.get('location'),
+                        snapshot.get('grupo'),
+                        snapshot.get('days'),
+                        snapshot.get('supplier'),
+                        snapshot.get('car_name'),
+                        snapshot.get('price'),
+                        snapshot.get('currency', 'EUR'),
+                        snapshot.get('url'),
+                        json.dumps(snapshot.get('search_params', {}))
+                    ))
+                
+                conn.commit()
+                logging.info(f"✅ Price snapshots saved: {len(snapshots)} items")
+                return JSONResponse({"ok": True, "message": f"Saved {len(snapshots)} snapshots"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving price snapshots: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
