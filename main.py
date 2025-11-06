@@ -10777,6 +10777,7 @@ async def save_automated_price_rules(request: Request):
     try:
         data = await request.json()
         logging.info(f"💾 Saving automated price rules for {len(data)} locations")
+        logging.info(f"📦 Data structure: {list(data.keys())}")
         
         with _db_lock:
             conn = _db_connect()
@@ -10800,18 +10801,28 @@ async def save_automated_price_rules(request: Request):
                 logging.info(f"💾 Saving to {'PostgreSQL' if is_postgres else 'SQLite'} (conn type: {conn_type})")
                 
                 # Limpar regras antigas
+                logging.info("🗑️ Deleting old rules...")
                 conn.execute("DELETE FROM automated_price_rules")
+                logging.info("✅ Old rules deleted")
                 
                 # Salvar novas regras
                 rules_count = 0
                 for location, grupos in data.items():
+                    logging.info(f"  📍 Location: {location} ({len(grupos)} groups)")
                     for grupo, grupo_data in grupos.items():
                         if 'months' in grupo_data:
+                            months_count = len(grupo_data['months'])
+                            logging.info(f"    📊 Group: {grupo} ({months_count} months)")
                             for month, month_data in grupo_data['months'].items():
                                 if 'days' in month_data:
+                                    days_count = len(month_data['days'])
+                                    logging.info(f"      📅 Month {month}: {days_count} days")
                                     for day, day_config in month_data['days'].items():
                                         try:
                                             config_json = json.dumps(day_config)
+                                            strategies_count = len(day_config.get('strategies', []))
+                                            logging.info(f"        💾 Saving {location}/{grupo}/M{month}/D{day} ({strategies_count} strategies)")
+                                            
                                             conn.execute(
                                                 f"""
                                                 INSERT INTO automated_price_rules 
@@ -10843,6 +10854,8 @@ async def load_automated_price_rules(request: Request):
     require_auth(request)
     
     try:
+        logging.info("📥 Loading automated price rules from database...")
+        
         with _db_lock:
             conn = _db_connect()
             try:
@@ -10850,6 +10863,8 @@ async def load_automated_price_rules(request: Request):
                     "SELECT location, grupo, month, day, config FROM automated_price_rules ORDER BY location, grupo, month, day"
                 )
                 rows = cursor.fetchall()
+                
+                logging.info(f"📦 Found {len(rows)} rules in database")
                 
                 rules = {}
                 for row in rows:
@@ -10863,9 +10878,17 @@ async def load_automated_price_rules(request: Request):
                         rules[location][grupo]["months"][str(month)] = {"days": {}}
                     
                     try:
-                        rules[location][grupo]["months"][str(month)]["days"][str(day)] = json.loads(config_json)
-                    except:
+                        config = json.loads(config_json)
+                        strategies_count = len(config.get('strategies', []))
+                        rules[location][grupo]["months"][str(month)]["days"][str(day)] = config
+                        logging.info(f"  ✅ Loaded {location}/{grupo}/M{month}/D{day} ({strategies_count} strategies)")
+                    except Exception as parse_err:
+                        logging.error(f"  ❌ Error parsing config for {location}/{grupo}/M{month}/D{day}: {parse_err}")
                         rules[location][grupo]["months"][str(month)]["days"][str(day)] = {}
+                
+                total_locations = len(rules)
+                total_groups = sum(len(g) for g in rules.values())
+                logging.info(f"✅ Loaded {len(rows)} rules for {total_locations} locations, {total_groups} groups")
                 
                 return JSONResponse({"ok": True, "rules": rules})
             finally:
