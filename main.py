@@ -19351,8 +19351,9 @@ async def get_automated_search_history(request: Request, months: int = 24):
                             rows = cur.fetchall()
                             has_supplier_data = True
                         except Exception as e:
-                            # Column doesn't exist yet - use old schema
+                            # Column doesn't exist - rollback transaction and use old schema
                             logging.warning(f"supplier_data column not found, using old schema: {e}")
+                            conn.rollback()
                             cur.execute("""
                                 SELECT id, location, search_type, search_date, month_key, 
                                        prices_data, dias, price_count
@@ -19375,6 +19376,7 @@ async def get_automated_search_history(request: Request, months: int = 24):
                         has_supplier_data = True
                     except Exception as e:
                         logging.warning(f"supplier_data column not found, using old schema: {e}")
+                        conn.rollback()
                         rows = conn.execute(f"""
                             SELECT id, location, search_type, search_date, month_key, 
                                    prices_data, dias, price_count
