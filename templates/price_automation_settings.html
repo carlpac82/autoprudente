@@ -2276,20 +2276,46 @@
             console.log(`✅ Strategy added. Total strategies: ${rules[location][grupo].months[month].days[day].strategies.length}`);
             console.log(`📦 Strategy data:`, strategy);
             
-            // Save to localStorage and database
+            // Save to localStorage
             localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            console.log(`💾 Saved to localStorage - Total locations: ${Object.keys(rules).length}`);
             
-            // Save to database
+            // Count total strategies
+            let totalStrategies = 0;
+            Object.values(rules).forEach(locationRules => {
+                Object.values(locationRules).forEach(grupoRules => {
+                    Object.values(grupoRules.months || {}).forEach(monthData => {
+                        Object.values(monthData.days || {}).forEach(dayData => {
+                            totalStrategies += (dayData.strategies || []).length;
+                        });
+                    });
+                });
+            });
+            console.log(`📊 Total strategies in localStorage: ${totalStrategies}`);
+            
+            // Save to database with detailed logging
+            console.log(`🌐 Sending to backend...`);
             fetch('/api/price-automation/rules/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(rules)
-            }).then(r => r.json()).then(result => {
+            })
+            .then(r => {
+                console.log(`📡 Backend response: ${r.status} ${r.statusText}`);
+                if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                return r.json();
+            })
+            .then(result => {
                 if (result.ok) {
-                    console.log('✅ Strategy saved to database');
+                    console.log('✅ Strategy saved to database successfully!');
+                    showNotification(`✅ Strategy added and saved (${totalStrategies} total)`, 'success');
+                } else {
+                    throw new Error(result.error || 'Unknown error');
                 }
-            }).catch(err => {
-                console.error('Error saving to database:', err);
+            })
+            .catch(err => {
+                console.error('❌ CRITICAL: Error saving to database:', err);
+                showNotification(`❌ Error saving: ${err.message}`, 'error');
             });
             
             // Close modal and rebuild

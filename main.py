@@ -17245,8 +17245,17 @@ async def save_recent_searches(request: Request):
                 
     except Exception as e:
         import traceback
-        logging.error(f"Failed to save recent searches: {str(e)}")
-        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+        error_detail = traceback.format_exc()
+        logging.error(f"❌ Failed to save recent searches: {str(e)}")
+        logging.error(f"   Traceback: {error_detail}")
+        
+        # Tentar identificar o tipo de erro
+        if "payload" in str(e).lower() or "too large" in str(e).lower():
+            logging.error("   💡 Error likely due to payload size")
+        elif "timeout" in str(e).lower():
+            logging.error("   💡 Error likely due to database timeout")
+        
+        return _no_store_json({"ok": False, "error": str(e), "traceback": error_detail}, 500)
 
 @app.get("/api/recent-searches/load")
 async def load_recent_searches(request: Request):
