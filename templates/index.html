@@ -2763,57 +2763,84 @@
       
       // Carregar pesquisas recentes (do servidor primeiro, localStorage como fallback)
       async function loadRecentSearches() {
+        console.log('[RECENT] ===== loadRecentSearches() called =====');
         try {
           let searches = [];
           
           // Tentar carregar do servidor primeiro
           try {
+            console.log('[RECENT] Fetching from server...');
             const response = await fetch('/api/recent-searches/load', {
               method: 'GET',
               credentials: 'same-origin'
             });
             
+            console.log('[RECENT] Server response status:', response.status);
+            
             if (response.ok) {
               const data = await response.json();
+              console.log('[RECENT] Server data:', data);
               if (data.ok && data.searches && data.searches.length > 0) {
                 searches = data.searches;
                 // Sincronizar com localStorage
                 localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
-                console.log('[RECENT] Loaded from server:', searches.length);
+                console.log('[RECENT] ✅ Loaded from server:', searches.length);
+              } else {
+                console.log('[RECENT] Server returned no searches');
               }
             }
           } catch (serverError) {
-            console.warn('[RECENT] Server load failed, using localStorage:', serverError);
+            console.warn('[RECENT] ⚠️ Server load failed, using localStorage:', serverError);
           }
           
           // Fallback: localStorage
           if (searches.length === 0) {
-            searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+            const storedData = localStorage.getItem(RECENT_SEARCHES_KEY);
+            console.log('[RECENT] localStorage data:', storedData ? 'exists' : 'empty');
+            searches = JSON.parse(storedData || '[]');
             console.log('[RECENT] Loaded from localStorage:', searches.length);
           }
           
+          console.log('[RECENT] Total searches before filter:', searches.length);
+          
           // Aplicar filtros e ordenação
-          searches = getFilteredAndSortedSearches ? getFilteredAndSortedSearches() : searches;
+          if (typeof getFilteredAndSortedSearches === 'function') {
+            searches = getFilteredAndSortedSearches();
+            console.log('[RECENT] After filter/sort:', searches.length);
+          }
           
           const container = document.getElementById('recentSearchesPreview');
           const grid = document.getElementById('recentSearchesGrid');
           
-          if (!container || !grid) return;
+          console.log('[RECENT] Container exists:', !!container);
+          console.log('[RECENT] Grid exists:', !!grid);
+          
+          if (!container || !grid) {
+            console.error('[RECENT] ❌ Container or grid not found!');
+            return;
+          }
           
           if (searches.length === 0) {
+            console.log('[RECENT] No searches to display, hiding container');
             container.classList.add('hidden');
             return;
           }
           
+          console.log('[RECENT] ✅ Showing container with', searches.length, 'searches');
           container.classList.remove('hidden');
           grid.innerHTML = '';
           
           searches.forEach((search, index) => {
+            console.log(`[RECENT] Creating card ${index + 1}:`, search.location, search.days, 'days');
             const card = createSearchPreviewCard(search, index);
-            grid.appendChild(card);
+            if (card) {
+              grid.appendChild(card);
+            } else {
+              console.warn(`[RECENT] ⚠️ Card ${index + 1} creation failed`);
+            }
           });
           
-          console.log('[RECENT] Displayed', searches.length, 'searches');
+          console.log('[RECENT] ✅ Displayed', searches.length, 'searches');
           
           // NOVO: Auto-ativar comparação se houver 2+ pesquisas
           if (searches.length >= 2 && !compareMode) {
@@ -2825,7 +2852,8 @@
             console.log('[PREVIEW] Single search detected - showing summary only');
           }
         } catch (e) {
-          console.error('[RECENT] Error loading searches:', e);
+          console.error('[RECENT] ❌ Error loading searches:', e);
+          console.error('[RECENT] Stack:', e.stack);
         }
       }
       
