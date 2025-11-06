@@ -3939,11 +3939,11 @@
                     document.getElementById('priceComparisonCards').classList.add('hidden');
                     document.getElementById('priceTableContainer').classList.remove('hidden');
                     
-                    // Save automated prices to history
+                    // Save automated prices to history with supplier data
                     console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}`);
                     if (autoPricesGenerated > 0) {
-                        console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory...`);
-                        const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
+                        console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
+                        const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
                         console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
                     } else {
                         console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated} (must be > 0)`);
@@ -5112,14 +5112,22 @@
             // Load search parameters
             const dias = historyData.dias;
             const prices = historyData.prices;
+            const supplierData = historyData.supplierData || {};
             
-            // Update global dias
+            console.log('[HISTORY] Loading data:', {
+                dias: dias.length,
+                grupos: Object.keys(prices).length,
+                supplierDays: Object.keys(supplierData).length
+            });
+            
+            // Update global dias and supplier data for visual cards
             window.dias = dias;
+            window.currentSupplierData = supplierData;
             
             // Ensure table is initialized
             initTableAuto();
             
-            // Fill table with prices from history
+            // Fill table with AUTOMATED prices (column "Auto")
             Object.keys(prices).forEach(grupo => {
                 dias.forEach(day => {
                     const price = prices[grupo][day];
@@ -5133,6 +5141,56 @@
                     }
                 });
             });
+            
+            // Fill table with REAL prices from supplier data (column "Real" - Auto Prudente)
+            if (supplierData && Object.keys(supplierData).length > 0) {
+                console.log('[HISTORY] Populating Real prices from supplier data...');
+                
+                dias.forEach(day => {
+                    const carsForDay = supplierData[day] || [];
+                    console.log(`[HISTORY] Day ${day}: ${carsForDay.length} cars`);
+                    
+                    // Group cars by grupo
+                    const pricesByGroup = {};
+                    carsForDay.forEach(carEntry => {
+                        const grupo = carEntry.car?.car;
+                        const supplier = carEntry.car?.supplier?.toLowerCase();
+                        const price = carEntry.price;
+                        
+                        if (grupo && supplier === 'autoprudente' && price) {
+                            pricesByGroup[grupo] = price;
+                        }
+                    });
+                    
+                    // Fill Real column
+                    Object.keys(pricesByGroup).forEach(grupo => {
+                        const inputReal = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
+                        if (inputReal) {
+                            inputReal.value = parseFloat(pricesByGroup[grupo]).toFixed(2);
+                            inputReal.classList.add('bg-blue-50');
+                        }
+                    });
+                });
+                
+                // Prepare data for visual cards
+                const automatedPricesByGroup = {};
+                Object.keys(prices).forEach(grupo => {
+                    automatedPricesByGroup[grupo] = {};
+                    dias.forEach(day => {
+                        if (prices[grupo][day]) {
+                            automatedPricesByGroup[grupo][day] = {
+                                automated: parseFloat(prices[grupo][day])
+                            };
+                        }
+                    });
+                });
+                
+                // Render visual cards (hidden by default)
+                console.log('[HISTORY] Rendering price comparison cards...');
+                renderPriceComparisonCards(supplierData, automatedPricesByGroup, dias);
+            } else {
+                console.warn('[HISTORY] No supplier data available - visual cards will be empty');
+            }
             
             // Show table mode by default
             document.getElementById('priceTableContainer').classList.remove('hidden');
@@ -5191,8 +5249,9 @@
                 return;
             }
             
-            // Save as new version with current timestamp
-            const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated');
+            // Save as new version with current timestamp, including supplier data
+            const supplierData = window.currentSupplierData || {};
+            const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', supplierData);
             
             if (savedCount > 0) {
                 const now = new Date();
@@ -5298,11 +5357,12 @@
             return priceCount;
         }
         
-        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated') {
+        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated', supplierData = {}) {
             console.log('[SAVE-FUNCTION] saveAutomatedPriceHistory called with:', {
                 grupos: Object.keys(automatedPricesByGroup || {}).length,
                 dias: dias?.length,
-                searchType: searchType
+                searchType: searchType,
+                supplierDataDays: Object.keys(supplierData || {}).length
             });
             
             if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
@@ -5364,7 +5424,8 @@
                         searchType: searchType,
                         prices: pricesData,
                         dias: dias,
-                        priceCount: priceCount
+                        priceCount: priceCount,
+                        supplierData: supplierData
                     })
                 });
                 

@@ -2425,6 +2425,7 @@ def init_db():
                   dias TEXT NOT NULL,
                   price_count INTEGER DEFAULT 0,
                   user_email TEXT,
+                  supplier_data TEXT,
                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
@@ -19234,6 +19235,7 @@ async def save_automated_search_history(request: Request):
         prices_data = data.get('prices', {})  # { "B1": { "31": 25.50, "60": 23.00 }, ... }
         dias = data.get('dias', [])
         price_count = data.get('priceCount', 0)
+        supplier_data = data.get('supplierData', {})  # allCarsByDay - dados individuais dos suppliers
         
         logging.info(f"📥 Received save request: Location={location}, Type={search_type}, Dias={dias}, PriceCount={price_count}, Groups={list(prices_data.keys())}")
         
@@ -19255,24 +19257,25 @@ async def save_automated_search_history(request: Request):
                 import json
                 prices_json = json.dumps(prices_data)
                 dias_json = json.dumps(dias)
+                supplier_data_json = json.dumps(supplier_data) if supplier_data else None
                 user_email = request.session.get('user_email', 'unknown')
                 
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute("""
                             INSERT INTO automated_search_history 
-                            (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                            VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                            (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                            VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
                             RETURNING id
-                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
                         search_id = cur.fetchone()[0]
                     conn.commit()
                 else:
                     cursor = conn.execute("""
                         INSERT INTO automated_search_history 
-                        (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                        (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
                     search_id = cursor.lastrowid
                     conn.commit()
                 
@@ -19317,7 +19320,7 @@ async def get_automated_search_history(request: Request, months: int = 24):
                         # Get all searches for these months
                         cur.execute("""
                             SELECT id, location, search_type, search_date, month_key, 
-                                   prices_data, dias, price_count
+                                   prices_data, dias, price_count, supplier_data
                             FROM automated_search_history
                             WHERE month_key = ANY(%s)
                             ORDER BY search_date DESC
@@ -19327,7 +19330,7 @@ async def get_automated_search_history(request: Request, months: int = 24):
                     placeholders = ','.join(['?' for _ in month_keys])
                     rows = conn.execute(f"""
                         SELECT id, location, search_type, search_date, month_key, 
-                               prices_data, dias, price_count
+                               prices_data, dias, price_count, supplier_data
                         FROM automated_search_history
                         WHERE month_key IN ({placeholders})
                         ORDER BY search_date DESC
@@ -19336,7 +19339,10 @@ async def get_automated_search_history(request: Request, months: int = 24):
                 # Group by month_key and search_type
                 import json
                 for row in rows:
-                    search_id, location, search_type, search_date, month_key, prices_data, dias, price_count = row
+                    if is_postgres:
+                        search_id, location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
+                    else:
+                        search_id, location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
                     
                     if month_key not in history:
                         history[month_key] = {
@@ -19350,7 +19356,8 @@ async def get_automated_search_history(request: Request, months: int = 24):
                         'date': search_date,
                         'prices': json.loads(prices_data) if isinstance(prices_data, str) else prices_data,
                         'dias': json.loads(dias) if isinstance(dias, str) else dias,
-                        'priceCount': price_count
+                        'priceCount': price_count,
+                        'supplierData': json.loads(supplier_data) if supplier_data and isinstance(supplier_data, str) else (supplier_data if supplier_data else {})
                     }
                     
                     history[month_key][search_type].append(entry)
@@ -19403,6 +19410,58 @@ async def delete_automated_search(request: Request, search_id: int):
                 
     except Exception as e:
         logging.error(f"❌ Error deleting search: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/migrate-supplier-data-column")
+async def migrate_supplier_data_column():
+    """Add supplier_data column to automated_search_history table - NO AUTH REQUIRED"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Check if column exists
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name='automated_search_history' 
+                            AND column_name='supplier_data'
+                        """)
+                        exists = cur.fetchone()
+                        
+                        if not exists:
+                            logging.info("Adding supplier_data column to automated_search_history...")
+                            cur.execute("""
+                                ALTER TABLE automated_search_history 
+                                ADD COLUMN supplier_data JSONB
+                            """)
+                            conn.commit()
+                            logging.info("✅ Column supplier_data added successfully")
+                            return JSONResponse({
+                                "ok": True,
+                                "message": "Column supplier_data added to automated_search_history"
+                            })
+                        else:
+                            logging.info("Column supplier_data already exists")
+                            return JSONResponse({
+                                "ok": True,
+                                "message": "Column supplier_data already exists"
+                            })
+                else:
+                    # SQLite - column already in schema
+                    return JSONResponse({
+                        "ok": True,
+                        "message": "SQLite - column in schema"
+                    })
+                    
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error in migration: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 if __name__ == "__main__":
