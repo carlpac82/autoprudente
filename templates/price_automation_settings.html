@@ -4231,22 +4231,29 @@
                 2000
             );
             
-            // Save to database in background (non-blocking)
+            // Save to database in background (non-blocking) BUT with error notification
             fetch('/api/price-automation/rules/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(rules)
             })
-            .then(r => r.json())
+            .then(r => {
+                console.log(`📡 Backend response: ${r.status} ${r.statusText}`);
+                if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                return r.json();
+            })
             .then(data => {
                 if (data.ok) {
                     console.log('✅ Strategies saved to database');
+                    showNotification(`✅ Copied and saved to database (${copiedCount} combinations)`, 'success');
                 } else {
                     console.error('❌ Error saving to database:', data.error);
+                    showNotification(`❌ Error saving to database: ${data.error}`, 'error');
                 }
             })
             .catch(e => {
                 console.error('❌ Network error saving:', e);
+                showNotification(`❌ Network error: ${e.message}`, 'error');
             });
             
             // If current day is one of the target days, rebuild to show new strategies
