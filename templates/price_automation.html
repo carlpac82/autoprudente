@@ -5327,9 +5327,17 @@
             for (const grupo in automatedPricesByGroup) {
                 pricesData[grupo] = {};
                 for (const day of dias) {
-                    if (automatedPricesByGroup[grupo][day] && automatedPricesByGroup[grupo][day].automated) {
-                        pricesData[grupo][day] = automatedPricesByGroup[grupo][day].automated;
-                        priceCount++;
+                    const dayData = automatedPricesByGroup[grupo][day];
+                    if (dayData) {
+                        // Support both structures:
+                        // 1. Direct number: automatedPricesByGroup[grupo][day] = 25.50
+                        // 2. Object with .automated: automatedPricesByGroup[grupo][day] = { automated: 25.50 }
+                        const price = typeof dayData === 'number' ? dayData : dayData.automated;
+                        
+                        if (price && price > 0) {
+                            pricesData[grupo][day] = price;
+                            priceCount++;
+                        }
                     }
                 }
             }
