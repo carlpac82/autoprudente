@@ -16706,10 +16706,13 @@ def _ensure_recent_searches_table():
             conn = _db_connect()
             try:
                 # Check if using PostgreSQL or SQLite
-                import psycopg2
-                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
                 
-                logging.info(f"🔍 Database type detected: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                logging.info(f"🔍 Database type detected: {'PostgreSQL' if is_postgres else 'SQLite'} (conn type: {type(conn).__name__})")
                 
                 if is_postgres:
                     # PostgreSQL syntax
@@ -16761,6 +16764,8 @@ def _ensure_recent_searches_table():
                 conn.close()
     except Exception as e:
         logging.error(f"⚠️ Error creating recent_searches table: {e}")
+        import traceback
+        traceback.print_exc()
 
 def _ensure_missing_columns():
     """Add missing columns to existing tables for PostgreSQL compatibility"""
@@ -16893,66 +16898,76 @@ def _ensure_missing_tables():
                 logging.info(f"🔍 Checking missing tables/columns ({'PostgreSQL' if is_postgres else 'SQLite'})")
                 
                 if is_postgres:
-                    cursor = conn.cursor()
-                    
                     # 1. Ensure suppliers table exists
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS suppliers (
-                            id SERIAL PRIMARY KEY,
-                            name TEXT NOT NULL UNIQUE,
-                            logo_path TEXT,
-                            active INTEGER DEFAULT 1,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    logging.info("✅ suppliers table created/verified")
+                    try:
+                        conn.execute("""
+                            CREATE TABLE IF NOT EXISTS suppliers (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL UNIQUE,
+                                logo_path TEXT,
+                                active INTEGER DEFAULT 1,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        logging.info("✅ suppliers table created/verified")
+                    except Exception as e:
+                        logging.warning(f"⚠️ suppliers table: {e}")
                     
                     # 2. Ensure ai_learning_data has location column
-                    cursor.execute("""
-                        DO $$ 
-                        BEGIN
-                            IF NOT EXISTS (
-                                SELECT 1 FROM information_schema.columns 
-                                WHERE table_name='ai_learning_data' AND column_name='location'
-                            ) THEN
-                                ALTER TABLE ai_learning_data ADD COLUMN location TEXT;
-                            END IF;
-                        END $$;
-                    """)
-                    logging.info("✅ ai_learning_data.location column ensured")
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='ai_learning_data' AND column_name='location'
+                                ) THEN
+                                    ALTER TABLE ai_learning_data ADD COLUMN location TEXT;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ ai_learning_data.location column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ ai_learning_data.location: {e}")
                     
                     # 3. Ensure automated_price_rules has config column
-                    cursor.execute("""
-                        DO $$ 
-                        BEGIN
-                            IF NOT EXISTS (
-                                SELECT 1 FROM information_schema.columns 
-                                WHERE table_name='automated_price_rules' AND column_name='config'
-                            ) THEN
-                                ALTER TABLE automated_price_rules ADD COLUMN config TEXT;
-                            END IF;
-                        END $$;
-                    """)
-                    logging.info("✅ automated_price_rules.config column ensured")
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_price_rules' AND column_name='config'
+                                ) THEN
+                                    ALTER TABLE automated_price_rules ADD COLUMN config TEXT;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_price_rules.config column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_price_rules.config: {e}")
                     
                     # 4. Ensure price_snapshots exists with price_num (should already exist from init_db)
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS price_snapshots (
-                            id SERIAL PRIMARY KEY,
-                            ts TIMESTAMP NOT NULL,
-                            location TEXT NOT NULL,
-                            pickup_date TEXT,
-                            pickup_time TEXT,
-                            days INTEGER,
-                            supplier TEXT,
-                            car TEXT,
-                            price_text TEXT,
-                            price_num REAL,
-                            currency TEXT,
-                            link TEXT
-                        )
-                    """)
-                    logging.info("✅ price_snapshots table ensured")
+                    try:
+                        conn.execute("""
+                            CREATE TABLE IF NOT EXISTS price_snapshots (
+                                id SERIAL PRIMARY KEY,
+                                ts TIMESTAMP NOT NULL,
+                                location TEXT NOT NULL,
+                                pickup_date TEXT,
+                                pickup_time TEXT,
+                                days INTEGER,
+                                supplier TEXT,
+                                car TEXT,
+                                price_text TEXT,
+                                price_num REAL,
+                                currency TEXT,
+                                link TEXT
+                            )
+                        """)
+                        logging.info("✅ price_snapshots table ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ price_snapshots: {e}")
                     
                     conn.commit()
                 else:
@@ -16961,8 +16976,6 @@ def _ensure_missing_tables():
                 
                 logging.info(f"✅ All missing tables/columns verified")
             finally:
-                if is_postgres and 'cursor' in locals():
-                    cursor.close()
                 conn.close()
     except Exception as e:
         logging.error(f"⚠️ Error ensuring missing tables: {e}")
