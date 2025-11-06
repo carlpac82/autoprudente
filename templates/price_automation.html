@@ -2672,6 +2672,7 @@
         // ===== HISTÓRICO =====
         
         function switchTab(tab) {
+            console.log('[TAB] Switching to:', tab);
             const tabCurrent = document.getElementById('tabCurrent');
             const tabAutomated = document.getElementById('tabAutomated');
             const tabVans = document.getElementById('tabVans');
@@ -2695,14 +2696,14 @@
             if (tab === 'current') {
                 tabCurrent.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentCurrent.classList.remove('hidden');
-                setTimeout(() => initDayChipsCurrent(), 100); // Initialize day chips for current prices
+                console.log('[TAB] Current prices tab activated, initializing chips...');
+                initDayChipsCurrent(); // Initialize day chips for current prices - IMMEDIATE
             } else if (tab === 'automated') {
                 tabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentAutomated.classList.remove('hidden');
-                setTimeout(() => {
-                    initDayChipsAuto(); // Initialize day selection chips
-                    initTableAuto(); // Initialize automated table
-                }, 100);
+                console.log('[TAB] Automated prices tab activated, initializing chips...');
+                initDayChipsAuto(); // Initialize day selection chips - IMMEDIATE
+                initTableAuto(); // Initialize automated table
             } else if (tab === 'vans') {
                 tabVans.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentVans.classList.remove('hidden');
@@ -4512,8 +4513,12 @@
         // Initialize day chips
         function initDayChipsAuto() {
             const container = document.getElementById('dayChipsAuto');
-            if (!container) return;
+            if (!container) {
+                console.warn('[CHIPS] Container dayChipsAuto not found!');
+                return;
+            }
             
+            console.log('[CHIPS] Initializing Automated Prices chips:', selectedDaysAuto.length, 'selected');
             container.innerHTML = '';
             availableDays.forEach(day => {
                 const isSelected = selectedDaysAuto.includes(day);
@@ -4561,8 +4566,12 @@
         // Initialize day chips for Current Prices
         function initDayChipsCurrent() {
             const container = document.getElementById('dayChipsCurrent');
-            if (!container) return;
+            if (!container) {
+                console.warn('[CHIPS] Container dayChipsCurrent not found!');
+                return;
+            }
             
+            console.log('[CHIPS] Initializing Current Prices chips:', selectedDaysCurrent.length, 'selected');
             container.innerHTML = '';
             availableDays.forEach(day => {
                 const isSelected = selectedDaysCurrent.includes(day);
@@ -7691,7 +7700,7 @@ Continue?`);
         document.getElementById('pickupDateAuto').valueAsDate = new Date();
         initTable();
         
-        // Abrir tab Automated Prices por padrão
+        // Abrir tab Automated Prices por padrão (isso já inicializa os chips)
         switchTab('automated');
         
         // Replace remaining "Auto" and "Real" text headers with icons
@@ -7711,12 +7720,6 @@ Continue?`);
                     th.title = 'Real (Manual)';
                 }
             });
-            
-            // Initialize day chips on page load
-            setTimeout(() => {
-                initDayChipsCurrent();
-                initDayChipsAuto();
-            }, 200);
         }, 100);
     </script>
 </body>
