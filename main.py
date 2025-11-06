@@ -588,7 +588,12 @@ CAR_CODE_RX = re.compile(r"car_([A-Za-z0-9]+)\.jpg", re.I)
 OBJ_RX = re.compile(r"\{[^{}]*\"priceStr\"\s*:\s*\"[^\"]+\"[^{}]*\"id\"\s*:\s*\"[^\"]+\"[^{}]*\}", re.S)
 DATAMAP_RX = re.compile(r"var\s+dataMap\s*=\s*(\[.*?\]);", re.S)
 
-app = FastAPI(title="Rental Price Tracker")
+# Aumentar limite de payload para permitir dados completos (284 carros × ~2KB = ~568KB)
+app = FastAPI(
+    title="Rental Price Tracker",
+    # Aumentar limite de upload para 10MB (dados completos de pesquisas)
+    # Default é 1MB - insuficiente para 284 carros completos
+)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
@@ -17182,12 +17187,15 @@ def _ensure_missing_tables():
 
 @app.post("/api/recent-searches/save")
 async def save_recent_searches(request: Request):
-    """Save recent searches from homepage to PostgreSQL"""
+    """Save recent searches with COMPLETE car data to PostgreSQL"""
     require_auth(request)
     try:
+        # Aumentar limite de payload para dados grandes (284 carros completos)
         data = await request.json()
         searches = data.get('searches', [])
         username = request.session.get("username", "admin")
+        
+        logging.info(f"[RECENT-SEARCHES] Saving {len(searches)} searches for user {username}")
         
         with _db_lock:
             conn = _db_connect()
@@ -17209,8 +17217,13 @@ async def save_recent_searches(request: Request):
                 # Clear old searches for this user (keep max 3)
                 conn.execute("DELETE FROM recent_searches WHERE user = ?", (username,))
                 
-                # Insert new searches
-                for search in searches[:3]:  # Max 3 searches
+                # Insert new searches with COMPLETE data
+                for idx, search in enumerate(searches[:3]):  # Max 3 searches
+                    results = search.get('results', [])
+                    results_json = json.dumps(results)
+                    
+                    logging.info(f"[RECENT-SEARCHES] Search {idx+1}: {search.get('location')} - {len(results)} cars - {len(results_json)} bytes")
+                    
                     conn.execute("""
                         INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
                         VALUES (?, ?, ?, ?, ?, ?)
@@ -17218,14 +17231,15 @@ async def save_recent_searches(request: Request):
                         search.get('location'),
                         search.get('startDate'),
                         search.get('days'),
-                        json.dumps(search.get('results', [])),
+                        results_json,  # JSON completo com todos os dados
                         search.get('timestamp'),
                         username
                     ))
                 
                 conn.commit()
+                logging.info(f"✅ [RECENT-SEARCHES] Saved {len(searches)} searches successfully")
                 
-                return _no_store_json({"ok": True, "message": "Recent searches saved"})
+                return _no_store_json({"ok": True, "message": f"Recent searches saved ({len(searches)} searches)"})
             finally:
                 conn.close()
                 

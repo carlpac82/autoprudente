@@ -3856,15 +3856,7 @@
                             if (data.items && data.items.length > 0) {
                                 console.log(`${day} days - ${data.items.length} cars found`);
                                 
-                                // Save recent search with OPTIMIZED data (only essential fields)
-                                const optimizedResults = data.items.map(car => ({
-                                    car: car.car,
-                                    group: car.group,
-                                    supplier: car.supplier,
-                                    price_num: car.price_num
-                                    // Remove campos grandes: photo_url, extras, etc
-                                }));
-                                
+                                // Save recent search with COMPLETE data (all car details)
                                 fetch('/api/recent-searches/save', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -3874,12 +3866,18 @@
                                             location: currentLocation,
                                             startDate: searchDateStr,
                                             days: day,
-                                            results: optimizedResults, // OPTIMIZED: só campos essenciais
+                                            results: data.items, // COMPLETE: todos os dados dos carros
                                             timestamp: new Date().toISOString()
                                         }]
                                     })
                                 })
-                                .then(() => console.log(`✅ Recent search saved (optimized ${data.items.length} → ${optimizedResults.length} cars): ${currentLocation}, ${searchDateStr}, ${day} days`))
+                                .then(response => {
+                                    if (response.ok) {
+                                        console.log(`✅ Recent search saved with ${data.items.length} complete cars: ${currentLocation}, ${searchDateStr}, ${day} days`);
+                                    } else {
+                                        console.error(`❌ Failed to save search: ${response.status}`);
+                                    }
+                                })
                                 .catch(e => console.warn('[RECENT] Failed to save search:', e));
                                 
                                 // Store ALL cars for Auto price calculations
