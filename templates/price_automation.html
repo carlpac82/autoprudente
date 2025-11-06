@@ -357,6 +357,21 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Seleção de Dias (Chips) -->
+            <div class="border-t pt-4 mb-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-medium text-gray-700">Dias a pesquisar:</span>
+                    <button onclick="toggleAllDaysCurrent()" class="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Select/Deselect All">
+                        <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="dayChipsCurrent" class="flex flex-wrap gap-2">
+                    <!-- Chips serão gerados por JavaScript -->
+                </div>
+            </div>
 
             <!-- Gestão de Colunas -->
             <div class="border-t pt-4 flex items-center justify-between">
@@ -2681,6 +2696,7 @@
             if (tab === 'current') {
                 tabCurrent.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentCurrent.classList.remove('hidden');
+                initDayChipsCurrent(); // Initialize day chips for current prices
             } else if (tab === 'automated') {
                 tabAutomated.className = 'px-4 py-2 border-b-2 border-[#009cb6] text-[#009cb6] font-semibold';
                 contentAutomated.classList.remove('hidden');
@@ -4534,6 +4550,32 @@
             }
             initDayChipsAuto();
             initTableAuto(); // Reinitialize table with new days
+        }
+        
+        // ========================================
+        // CURRENT PRICES DAY CHIPS
+        // ========================================
+        
+        // Initialize day chips for Current Prices
+        function initDayChipsCurrent() {
+            const container = document.getElementById('dayChipsCurrent');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            dias.forEach(day => {
+                const chip = document.createElement('button');
+                chip.className = 'px-3 py-1.5 rounded text-sm font-medium transition-all bg-[#009cb6] text-white shadow-sm hover:bg-[#007a8f]';
+                chip.textContent = `${day}`;
+                chip.title = `${day} ${day === 1 ? 'dia' : 'dias'}`;
+                container.appendChild(chip);
+            });
+        }
+        
+        // Toggle all days for Current Prices
+        function toggleAllDaysCurrent() {
+            // Current prices não tem seleção individual - mostra todos os dias
+            // Mas pode recarregar a tabela
+            initTable();
         }
         
         function initTableAuto() {
