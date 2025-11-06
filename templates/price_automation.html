@@ -61,36 +61,43 @@
             background: #4b5563; /* Ainda mais escuro no hover */
         }
         
-        /* Scrollbar específica para cards AUTO (fundo azul) - MAIS VISÍVEL */
+        /* Scrollbar específica para cards AUTO (fundo azul) - AZUL COR WEBSITE */
         .bg-blue-50 .scrollbar-thin,
-        [style*="background"] .scrollbar-thin {
-            scrollbar-color: #0284c7 #bfdbfe; /* Firefox - azul */
+        [style*="background"] .scrollbar-thin,
+        .scrollbar-thin {
+            scrollbar-color: #009cb6 #e0f2f5 !important; /* Firefox - azul website */
             overflow-y: scroll !important; /* Sempre visível */
         }
         
-        .bg-blue-50 .scrollbar-thin::-webkit-scrollbar {
-            width: 12px; /* Ainda mais largo nos cards azuis */
+        .bg-blue-50 .scrollbar-thin::-webkit-scrollbar,
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar,
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 14px !important; /* Bem largo para ser visível */
             display: block !important;
+            background: transparent;
         }
         
         .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-track,
-        [style*="background"] .scrollbar-thin::-webkit-scrollbar-track {
-            background: #bfdbfe; /* Azul claro - track BEM visível */
-            border: 1px solid #93c5fd; /* Borda azul no track */
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar-track,
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: #e0f2f5 !important; /* Azul claro (website) - track BEM visível */
+            border: 2px solid #b3dde6 !important; /* Borda azul clara no track */
             border-radius: 10px;
         }
         
         .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-thumb,
-        [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #0284c7; /* Azul forte - BEM visível */
-            border: 2px solid #bfdbfe;
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb,
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #009cb6 !important; /* Azul website - BEM visível */
+            border: 3px solid #e0f2f5 !important;
             border-radius: 10px;
-            min-height: 40px;
+            min-height: 50px !important;
         }
         
         .bg-blue-50 .scrollbar-thin::-webkit-scrollbar-thumb:hover,
-        [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: #0369a1; /* Azul escuro no hover */
+        [style*="background"] .scrollbar-thin::-webkit-scrollbar-thumb:hover,
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #007a8f !important; /* Azul escuro website no hover */
         }
         
         /* PRICE SLIDER CUSTOMIZATION */
@@ -3434,8 +3441,9 @@
                 
                 // Add all groups for this day
                 grupos.forEach(grupo => {
-                    const isGlobalLowest = (grupo === globalLowestGroup && day === globalLowestDay);
-                    const card = createComparisonCard(grupo, day, allCarsByDay, automatedPricesByGroup, isGlobalLowest);
+                    // Mark as lowest if it's the lowest for THIS DAY (not global)
+                    const isLowestForDay = (grupo === dayLowestGroup);
+                    const card = createComparisonCard(grupo, day, allCarsByDay, automatedPricesByGroup, isLowestForDay);
                     if (card) cardsGrid.appendChild(card);
                 });
                 
