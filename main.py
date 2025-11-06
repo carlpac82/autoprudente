@@ -18234,9 +18234,26 @@ async def update_google_profile(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # Update google_id and profile picture URL
+                # Detectar tipo de BD
+                is_postgres = False
+                conn_type = type(conn).__name__
+                
+                if 'psycopg' in conn_type.lower() or conn_type == 'connection':
+                    is_postgres = True
+                elif os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                
+                placeholder = "%s" if is_postgres else "?"
+                
+                # First, remove google_id from any other user (to avoid duplicate constraint)
                 conn.execute(
-                    "UPDATE users SET google_id = ?, profile_picture_path = ? WHERE username = ?",
+                    f"UPDATE users SET google_id = NULL WHERE google_id = {placeholder} AND username != {placeholder}",
+                    (google_id, username)
+                )
+                
+                # Then update current user with google_id and profile picture
+                conn.execute(
+                    f"UPDATE users SET google_id = {placeholder}, profile_picture_path = {placeholder} WHERE username = {placeholder}",
                     (google_id, picture_url, username)
                 )
                 conn.commit()
