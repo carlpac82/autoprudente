@@ -310,7 +310,8 @@
             
             await page.render({ canvasContext: ctx, viewport: viewport }).promise;
             pdfImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            redrawMappedBoxes();
+            console.log('[MAPPER] Page rendered, redrawing boxes');
+            redrawCanvas();  // ✅ Usar redrawCanvas em vez de redrawMappedBoxes
             document.getElementById('canvasInfo').textContent = `Arrasta para criar caixas • Escala: ${scale}`;
         }
 
@@ -418,13 +419,12 @@
                 coords.x = (mouseX - dragOffsetX) / scale;
                 coords.y = (mouseY - dragOffsetY) / scale;
                 
-                ctx.putImageData(pdfImageData, 0, 0);
-                redrawMappedBoxes();
+                redrawCanvas();  // ✅ Usar redrawCanvas
             } else if (isDrawing) {
                 // Desenhar nova caixa
-                ctx.putImageData(pdfImageData, 0, 0);
-                redrawMappedBoxes();
+                redrawCanvas();  // ✅ Limpa canvas + redesenha TODAS as caixas
                 
+                // Desenha a nova caixa sendo desenhada
                 ctx.strokeStyle = '#009cb6';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(startX, startY, mouseX - startX, mouseY - startY);
@@ -768,7 +768,7 @@
                     console.log('[MAPPER] Loaded coordinates:', fieldCoordinates);
                     updateMappedList();
                     updateProgress();
-                    redrawMappedBoxes();
+                    redrawCanvas();  // ✅ Usar redrawCanvas
                 } else {
                     console.log('[MAPPER] No existing coordinates found');
                 }
@@ -1017,6 +1017,11 @@
         }
 
         function redrawCanvas() {
+            if (!pdfImageData) {
+                console.warn('[MAPPER] pdfImageData not available, skipping redraw');
+                return;
+            }
+            console.log('[MAPPER] Redrawing canvas with', Object.keys(fieldCoordinates).length, 'mapped fields');
             ctx.putImageData(pdfImageData, 0, 0);
             redrawMappedBoxes();
         }
