@@ -4297,11 +4297,12 @@
             
             const groupCars = cars.filter(item => {
                 const carGroup = item.group || extractGroup(item.car);
-                const supplier = (item.supplier || '').toLowerCase();
+                const supplier = (item.supplier || '').toLowerCase().replace(/\s+/g, ''); // Remove espaços também
                 
                 // Exclude configured suppliers from calculations (ESPECIALLY AUTO PRUDENTE)
                 for (const excluded of excludedSuppliers) {
-                    if (supplier.includes(excluded)) {
+                    const excludedNormalized = excluded.toLowerCase().replace(/\s+/g, '');
+                    if (supplier.includes(excludedNormalized)) {
                         console.log(`⏭️ EXCLUDING ${excluded.toUpperCase()} car from automated price calculation: ${item.car} (${item.price_num}€)`);
                         return false;
                     }
