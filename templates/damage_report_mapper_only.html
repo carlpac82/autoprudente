@@ -732,7 +732,9 @@
         function redrawMappedBoxes() {
             let boxesDrawn = 0;
             for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
-                if (coords.page === currentPage) {
+                // FIX: Garantir que page existe, default = 1
+                const fieldPage = coords.page || 1;
+                if (fieldPage === currentPage) {
                     const isSelected = selectedField === fieldId;
                     
                     // Begin new path for each box to avoid state issues
@@ -776,7 +778,15 @@
                 }
             }
             if (boxesDrawn === 0 && Object.keys(fieldCoordinates).length > 0) {
-                console.warn(`[MAPPER] No boxes drawn on page ${currentPage}, but ${Object.keys(fieldCoordinates).length} fields exist`);
+                // Log detalhado para debug
+                const pageDistribution = {};
+                for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                    const p = coords.page || 1;
+                    pageDistribution[p] = (pageDistribution[p] || 0) + 1;
+                }
+                console.warn(`[MAPPER] No boxes drawn on page ${currentPage}`);
+                console.warn(`[MAPPER] Field distribution:`, pageDistribution);
+                console.warn(`[MAPPER] Example field:`, Object.values(fieldCoordinates)[0]);
             }
         }
 
@@ -896,6 +906,18 @@
                 if (data.ok && data.coordinates) {
                     fieldCoordinates = data.coordinates;
                     console.log('[MAPPER] Loaded coordinates:', fieldCoordinates);
+                    
+                    // DEBUG: Log page distribution
+                    const pageCount = {};
+                    for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                        const p = coords.page || 'UNDEFINED';
+                        pageCount[p] = (pageCount[p] || 0) + 1;
+                        if (!coords.page) {
+                            console.warn(`[MAPPER] Field ${fieldId} missing page property!`, coords);
+                        }
+                    }
+                    console.log('[MAPPER] Fields per page:', pageCount);
+                    
                     updateMappedList();
                     updateProgress();
                     await redrawCanvas();  // ✅ Usar redrawCanvas
@@ -1313,7 +1335,15 @@
             };
         }
 
+        let isRedrawing = false; // Flag para prevenir loop infinito
+        
         async function redrawCanvas() {
+            // Prevenir loop infinito de redraws
+            if (isRedrawing) {
+                console.warn('[MAPPER] Redraw already in progress, skipping...');
+                return;
+            }
+            
             if (!pdfImageData) {
                 console.warn('[MAPPER] pdfImageData not available, skipping redraw');
                 return;
@@ -1327,11 +1357,18 @@
                 return; // renderPage already calls redrawCanvas
             }
             
+            isRedrawing = true;
             try {
-                console.log('[MAPPER] Redrawing canvas with', Object.keys(fieldCoordinates).length, 'mapped fields');
-                
                 // Clear and restore PDF image
-                ctx.putImageData(pdfImageData, 0, 0);
+                try {
+                    ctx.putImageData(pdfImageData, 0, 0);
+                } catch (e) {
+                    console.error('[MAPPER] putImageData failed:', e);
+                    // Try to re-render page if putImageData fails
+                    isRedrawing = false;
+                    await renderPage(currentPage);
+                    return;
+                }
                 
                 // Reset context state to ensure boxes are visible
                 ctx.globalCompositeOperation = 'source-over';
@@ -1341,6 +1378,8 @@
                 redrawMappedBoxes();
             } catch (error) {
                 console.error('[MAPPER] Error in redrawCanvas:', error);
+            } finally {
+                isRedrawing = false;
             }
         }
 
