@@ -610,9 +610,13 @@
         }
 
         function redrawMappedBoxes() {
+            let boxesDrawn = 0;
             for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
                 if (coords.page === currentPage) {
                     const isSelected = selectedField === fieldId;
+                    
+                    // Begin new path for each box to avoid state issues
+                    ctx.beginPath();
                     
                     // Desenhar caixa
                     ctx.strokeStyle = isSelected ? '#f59e0b' : '#10b981';
@@ -623,6 +627,9 @@
                         coords.width * scale,
                         coords.height * scale
                     );
+                    
+                    ctx.closePath();
+                    boxesDrawn++;
                     
                     // Se selecionada e em modo edição, desenhar handles
                     if (isSelected && isEditMode) {
@@ -647,6 +654,9 @@
                         ctx.fillRect(x + w - handleSize/2, y + h/2 - handleSize/2, handleSize, handleSize); // right
                     }
                 }
+            }
+            if (boxesDrawn === 0 && Object.keys(fieldCoordinates).length > 0) {
+                console.warn(`[MAPPER] No boxes drawn on page ${currentPage}, but ${Object.keys(fieldCoordinates).length} fields exist`);
             }
         }
 
@@ -1030,7 +1040,15 @@
             
             try {
                 console.log('[MAPPER] Redrawing canvas with', Object.keys(fieldCoordinates).length, 'mapped fields');
+                
+                // Clear and restore PDF image
                 ctx.putImageData(pdfImageData, 0, 0);
+                
+                // Reset context state to ensure boxes are visible
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = 1.0;
+                
+                // Redraw all mapped boxes
                 redrawMappedBoxes();
             } catch (error) {
                 console.error('[MAPPER] Error in redrawCanvas:', error);
