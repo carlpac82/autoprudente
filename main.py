@@ -20003,12 +20003,12 @@ def run_daily_report_search():
     try:
         logging.info("🔍 Starting daily report search (2h before email)...")
         
-        # Load settings to get search location
+        # Load settings to get search location (CORRIGIDO - tabela certa)
         with _db_lock:
             conn = _db_connect()
             try:
                 cursor = conn.execute(
-                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
                 )
                 row = cursor.fetchone()
                 if not row or not row[0]:
@@ -20044,12 +20044,12 @@ def run_weekly_report_search():
     try:
         logging.info("🔍 Starting weekly report search for next 3 months (2h before email)...")
         
-        # Load settings
+        # Load settings (CORRIGIDO - tabela certa)
         with _db_lock:
             conn = _db_connect()
             try:
                 cursor = conn.execute(
-                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
                 )
                 row = cursor.fetchone()
                 if not row or not row[0]:
@@ -20084,12 +20084,12 @@ def send_automatic_daily_report():
     try:
         logging.info("🔄 Starting automatic daily report...")
         
-        # Load settings from database
+        # Load settings from database (CORRIGIDO - tabela certa)
         with _db_lock:
             conn = _db_connect()
             try:
                 cursor = conn.execute(
-                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
                 )
                 row = cursor.fetchone()
                 if not row or not row[0]:
@@ -20353,12 +20353,12 @@ def send_automatic_weekly_report():
     try:
         logging.info("🔄 Starting automatic weekly report...")
         
-        # Load settings from database
+        # Load settings from database (CORRIGIDO - tabela certa)
         with _db_lock:
             conn = _db_connect()
             try:
                 cursor = conn.execute(
-                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
                 )
                 row = cursor.fetchone()
                 if not row or not row[0]:
