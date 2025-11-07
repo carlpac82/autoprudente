@@ -15865,15 +15865,20 @@ async def save_damage_report_coordinates(request: Request):
         logging.error(f"Error saving coordinates: {e}")
         return {"ok": False, "error": str(e)}
 
-def _get_field_type(field_id):
-    """Determinar tipo do campo pelo ID"""
-    if 'description' in field_id:
-        return 'textarea'
-    elif 'diagram' in field_id:
+def _detect_field_type(field_id: str) -> str:
+    """
+    Detecta o tipo de campo baseado no field_id
+    Retorna: 'text', 'image', 'signature', 'table', 'images'
+    """
+    field_id_lower = field_id.lower()
+    
+    if 'signature' in field_id_lower or 'sign' in field_id_lower:
+        return 'signature'
+    elif 'photo' in field_id_lower or 'image' in field_id_lower or 'croqui' in field_id_lower:
         return 'image'
-    elif 'repair' in field_id or 'table' in field_id:
+    elif 'repair' in field_id_lower or 'table' in field_id_lower:
         return 'table'
-    elif 'images' in field_id:
+    elif 'images' in field_id_lower:
         return 'images'
     else:
         return 'text'
@@ -15881,14 +15886,19 @@ def _get_field_type(field_id):
 def _fill_template_pdf_with_data(report_data: dict) -> bytes:
     """
     Preenche o template PDF ativo com dados usando coordenadas mapeadas
+    Suporta: texto, imagens, tabelas, assinaturas
     Retorna PDF preenchido como bytes
     """
     try:
         from PyPDF2 import PdfReader, PdfWriter
         from reportlab.pdfgen import canvas as rl_canvas
         from reportlab.lib.pagesizes import A4
+        from reportlab.lib.colors import black, grey
+        from reportlab.lib.utils import ImageReader
         from io import BytesIO
+        from PIL import Image
         import base64
+        import json
         
         # 1. Carregar template ativo da BD
         with _db_lock:
@@ -15988,10 +15998,130 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 # Converter coordenadas (PDF usa origem no canto inferior esquerdo)
                 x = coords['x']
                 y = page_height - coords['y'] - coords['height']
+                width = coords['width']
+                height = coords['height']
                 
-                # Desenhar texto
-                can.setFillColorRGB(0, 0, 0)
-                can.drawString(x + 2, y + 4, str(value))
+                # Detectar tipo de campo
+                field_type = _detect_field_type(field_id)
+                
+                if field_type == 'image' or field_type == 'signature':
+                    # IMAGEM ou ASSINATURA
+                    try:
+                        # Decode base64 image
+                        if isinstance(value, str) and ('data:image' in value or value.startswith('/9j')):
+                            # Remove data:image prefix if present
+                            img_data = value.split(',')[1] if ',' in value else value
+                            img_bytes = base64.b64decode(img_data)
+                            
+                            # Load image with PIL
+                            img = Image.open(BytesIO(img_bytes))
+                            
+                            # Convert to RGB if needed
+                            if img.mode in ('RGBA', 'LA', 'P'):
+                                background = Image.new('RGB', img.size, (255, 255, 255))
+                                if img.mode == 'P':
+                                    img = img.convert('RGBA')
+                                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                                img = background
+                            
+                            # Save to BytesIO for ReportLab
+                            img_buffer = BytesIO()
+                            img.save(img_buffer, format='JPEG', quality=85)
+                            img_buffer.seek(0)
+                            
+                            # Draw image on canvas
+                            can.drawImage(
+                                ImageReader(img_buffer),
+                                x, y,
+                                width=width,
+                                height=height,
+                                preserveAspectRatio=True,
+                                mask='auto'
+                            )
+                            logging.info(f"✅ Drew image for {field_id}")
+                    except Exception as e:
+                        logging.error(f"Error drawing image {field_id}: {e}")
+                        # Fallback: draw placeholder
+                        can.setStrokeColor(grey)
+                        can.setFillColor(grey)
+                        can.rect(x, y, width, height, stroke=1, fill=0)
+                        can.setFont("Helvetica", 6)
+                        can.drawString(x + 2, y + height/2, "[Image]")
+                
+                elif field_type == 'table' or 'repair' in field_id:
+                    # TABELA DE REPARAÇÕES
+                    try:
+                        # Parse table data (JSON array)
+                        if isinstance(value, str):
+                            table_data = json.loads(value) if value.startswith('[') else []
+                        else:
+                            table_data = value if isinstance(value, list) else []
+                        
+                        if table_data:
+                            # Draw table grid
+                            can.setStrokeColor(black)
+                            can.setLineWidth(0.5)
+                            
+                            # Calculate row height
+                            num_rows = min(len(table_data), 10)  # Max 10 rows
+                            row_height = height / (num_rows + 1)  # +1 for header
+                            
+                            # Draw horizontal lines
+                            for i in range(num_rows + 2):
+                                line_y = y + (i * row_height)
+                                can.line(x, line_y, x + width, line_y)
+                            
+                            # Draw vertical lines (4 columns: desc, qty, price, total)
+                            col_widths = [width * 0.4, width * 0.2, width * 0.2, width * 0.2]
+                            col_x = x
+                            for col_width in col_widths:
+                                can.line(col_x, y, col_x, y + height)
+                                col_x += col_width
+                            can.line(col_x, y, col_x, y + height)  # Last line
+                            
+                            # Draw header
+                            can.setFont("Helvetica-Bold", 7)
+                            can.drawString(x + 2, y + height - row_height + 4, "Descrição")
+                            can.drawString(x + col_widths[0] + 2, y + height - row_height + 4, "Qtd")
+                            can.drawString(x + col_widths[0] + col_widths[1] + 2, y + height - row_height + 4, "Preço")
+                            can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, y + height - row_height + 4, "Total")
+                            
+                            # Draw rows
+                            can.setFont("Helvetica", 6)
+                            for i, row in enumerate(table_data[:10]):
+                                row_y = y + height - ((i + 2) * row_height) + 4
+                                can.drawString(x + 2, row_y, str(row.get('description', ''))[:30])
+                                can.drawString(x + col_widths[0] + 2, row_y, str(row.get('qty', '')))
+                                can.drawString(x + col_widths[0] + col_widths[1] + 2, row_y, str(row.get('price', '')))
+                                can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, row_y, str(row.get('total', '')))
+                            
+                            logging.info(f"✅ Drew table for {field_id} with {len(table_data)} rows")
+                    except Exception as e:
+                        logging.error(f"Error drawing table {field_id}: {e}")
+                        # Fallback: draw text
+                        can.setFont("Helvetica", 8)
+                        can.setFillColor(black)
+                        can.drawString(x + 2, y + 4, str(value)[:50])
+                
+                else:
+                    # TEXTO SIMPLES
+                    can.setFillColor(black)
+                    can.setFont("Helvetica", 8)
+                    
+                    # Handle multiline text for textarea fields
+                    if 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
+                        # Multiline text
+                        lines = str(value).split('\n')
+                        line_height = 10
+                        current_y = y + height - line_height
+                        
+                        for line in lines[:int(height / line_height)]:
+                            if current_y > y:
+                                can.drawString(x + 2, current_y, line[:int(width / 5)])
+                                current_y -= line_height
+                    else:
+                        # Single line text
+                        can.drawString(x + 2, y + 4, str(value)[:int(width / 5)])
             
             can.save()
             
@@ -16056,7 +16186,22 @@ async def preview_damage_report_pdf(request: Request):
             'fuel_level_return': body.get('fuelReturn', ''),
             'total_repair_cost': body.get('totalCost', ''),
             'inspector_name': body.get('inspectorName', ''),
-            'inspection_date': body.get('inspectionDate', '')
+            'inspection_date': body.get('inspectionDate', ''),
+            # Campos avançados: imagens, tabelas, assinaturas
+            'damage_description': body.get('damageDescription', ''),
+            'vehicle_diagram': body.get('vehicleDiagram', ''),  # Croqui base64
+            'damage_photo_1': body.get('damagePhoto1', ''),
+            'damage_photo_2': body.get('damagePhoto2', ''),
+            'damage_photo_3': body.get('damagePhoto3', ''),
+            'damage_photo_4': body.get('damagePhoto4', ''),
+            'damage_photo_5': body.get('damagePhoto5', ''),
+            'damage_photo_6': body.get('damagePhoto6', ''),
+            'damage_photo_7': body.get('damagePhoto7', ''),
+            'damage_photo_8': body.get('damagePhoto8', ''),
+            'damage_photo_9': body.get('damagePhoto9', ''),
+            'repair_items': body.get('repairItems', []),  # Tabela de reparações (JSON array)
+            'signature_inspector': body.get('signatureInspector', ''),  # Assinatura base64
+            'signature_client': body.get('signatureClient', '')  # Assinatura base64
         }
         
         # Usar função de overlay para preencher template
@@ -21237,9 +21382,19 @@ try:
     )
     log_to_db("INFO", "✅ Daily report 12:40 scheduler configured", "main", "scheduler")
     
+    # ⚡ TESTE às 17:00 - Email com pesquisas do dia
+    scheduler.add_job(
+        send_automatic_daily_report,
+        CronTrigger(hour=17, minute=0),
+        id='test_17h00',
+        name='TEST Email 17:00',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ TEST: Email agendado para 17:00", "main", "scheduler")
+    
     # Start scheduler
     scheduler.start()
-    log_to_db("INFO", "🚀 Scheduler started successfully with 8 jobs (backup + search + reports + 4 custom times)", "main", "scheduler")
+    log_to_db("INFO", "🚀 Scheduler started successfully with 9 jobs (backup + search + reports + 5 custom times)", "main", "scheduler")
     
     # Print all configured jobs with next run times
     print("\n" + "=" * 80)
