@@ -18196,18 +18196,24 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
                 with _db_lock:
                     conn = _db_connect()
                     try:
-                        conn.execute(
-                            """
+                        # Detectar PostgreSQL vs SQLite
+                        is_postgres = hasattr(conn, 'cursor')
+                        placeholder = "%s" if is_postgres else "?"
+                        
+                        query = f"""
                             INSERT INTO oauth_tokens 
                             (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                             ON CONFLICT(provider, user_email) 
                             DO UPDATE SET 
                                 access_token = excluded.access_token,
                                 refresh_token = excluded.refresh_token,
                                 expires_at = excluded.expires_at,
                                 updated_at = CURRENT_TIMESTAMP
-                            """,
+                        """
+                        
+                        conn.execute(
+                            query,
                             ('gmail', user_email, access_token, token_data.get('refresh_token', ''), 
                              expires_at, google_id, user_name, user_picture)
                         )
@@ -18311,11 +18317,14 @@ async def save_oauth_token(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                conn.execute(
-                    """
+                # Detectar PostgreSQL vs SQLite
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
+                query = f"""
                     INSERT INTO oauth_tokens 
                     (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
                     ON CONFLICT (provider, user_email) DO UPDATE SET
                         access_token = EXCLUDED.access_token,
                         refresh_token = EXCLUDED.refresh_token,
@@ -18324,7 +18333,10 @@ async def save_oauth_token(request: Request):
                         user_name = EXCLUDED.user_name,
                         user_picture = EXCLUDED.user_picture,
                         updated_at = CURRENT_TIMESTAMP
-                    """,
+                """
+                
+                conn.execute(
+                    query,
                     (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
                 )
                 conn.commit()
@@ -18347,11 +18359,15 @@ async def load_oauth_token(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detectar PostgreSQL vs SQLite
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
                 cursor = conn.execute(
-                    """
+                    f"""
                     SELECT user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture
                     FROM oauth_tokens
-                    WHERE provider = ?
+                    WHERE provider = {placeholder}
                     ORDER BY updated_at DESC
                     LIMIT 1
                     """,
