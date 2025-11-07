@@ -20458,55 +20458,55 @@ def run_weekly_report_search():
                             timeout=180,
                             headers={"X-Internal-Request": "scheduler-weekly"}
                         )
-                    
-                    if response.ok:
-                        result = response.json()
-                        if result.get('ok'):
-                            items = result.get('items', [])
-                            logging.info(f"✅ Weekly search #{month_offset} for {location} completed: {len(items)} cars")
-                            
-                            # Salvar em recent_searches
-                            with _db_lock:
-                                conn = _db_connect()
-                                try:
-                                    results_json = json.dumps(items)
-                                    
-                                    # Detect PostgreSQL correctly
-                                    try:
-                                        import psycopg2
-                                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
-                                    except:
-                                        is_postgres = False
-                                    
-                                    if is_postgres:
-                                        conn.execute(
-                                            """
-                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
-                                            VALUES (%s, %s, %s, %s, %s, %s)
-                                            """,
-                                            (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                        )
-                                        conn.commit()
-                                    else:
-                                        conn.execute(
-                                            """
-                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
-                                            VALUES (?, ?, ?, ?, ?, ?)
-                                            """,
-                                            (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                        )
-                                        conn.commit()
-                                    
-                                    logging.info(f"✅ Weekly search #{month_offset} for {location} saved to recent_searches")
-                                finally:
-                                    conn.close()
-                        else:
-                            logging.warning(f"⚠️ Weekly search #{month_offset} for {location} API error: {result.get('error')}")
-                    else:
-                        logging.error(f"❌ Weekly search #{month_offset} for {location} failed: HTTP {response.status_code}")
                         
-                except Exception as search_error:
-                    logging.error(f"❌ Failed weekly search #{month_offset} for {location}: {str(search_error)}")
+                        if response.ok:
+                            result = response.json()
+                            if result.get('ok'):
+                                items = result.get('items', [])
+                                logging.info(f"✅ Weekly search #{month_offset} for {location} completed: {len(items)} cars")
+                                
+                                # Salvar em recent_searches
+                                with _db_lock:
+                                    conn = _db_connect()
+                                    try:
+                                        results_json = json.dumps(items)
+                                        
+                                        # Detect PostgreSQL correctly
+                                        try:
+                                            import psycopg2
+                                            is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                                        except:
+                                            is_postgres = False
+                                        
+                                        if is_postgres:
+                                            conn.execute(
+                                                """
+                                                INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
+                                                VALUES (%s, %s, %s, %s, %s, %s)
+                                                """,
+                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                            )
+                                            conn.commit()
+                                        else:
+                                            conn.execute(
+                                                """
+                                                INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
+                                                VALUES (?, ?, ?, ?, ?, ?)
+                                                """,
+                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                            )
+                                            conn.commit()
+                                        
+                                        logging.info(f"✅ Weekly search #{month_offset} for {location} saved to recent_searches")
+                                    finally:
+                                        conn.close()
+                            else:
+                                logging.warning(f"⚠️ Weekly search #{month_offset} for {location} API error: {result.get('error')}")
+                        else:
+                            logging.error(f"❌ Weekly search #{month_offset} for {location} failed: HTTP {response.status_code}")
+                            
+                    except Exception as search_error:
+                        logging.error(f"❌ Failed weekly search #{month_offset} for {location}: {str(search_error)}")
                 
                 # Delay entre locations (exceto após o último local do último mês)
                 if loc_idx < len(locations) or month_offset < 3:
