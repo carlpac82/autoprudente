@@ -14314,54 +14314,6 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             fields_from_mapping['vehicleBrand'] = parts[0].strip()
                             fields_from_mapping['vehicleModel'] = parts[1].strip()
                     
-                    # Calcular país automaticamente baseado no código postal
-                    postal_code = fields_from_mapping.get('postalCode') or (fields_from_mapping.get('postalCodeCity', '').split(' / ')[0] if ' / ' in fields_from_mapping.get('postalCodeCity', '') else None)
-                    
-                    if postal_code:
-                        # Detectar país pelo código postal
-                        country_detected = None
-                        
-                        # Portugal: 1000-001, 4000-123
-                        if re.match(r'^\d{4}-\d{3}$', postal_code):
-                            if postal_code[0] in '123456789':
-                                country_detected = 'PORTUGAL'
-                            else:
-                                country_detected = 'ESPANHA'
-                        # Espanha: 01234, 28001
-                        elif re.match(r'^0\d{4}$', postal_code):
-                            country_detected = 'ESPANHA'
-                        # Reino Unido: SW1A 1AA, W1A 0AX
-                        elif re.match(r'^[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}$', postal_code):
-                            country_detected = 'UNITED KINGDOM'
-                        # USA: 12345, 12345-6789
-                        elif re.match(r'^\d{5}(?:-\d{4})?$', postal_code):
-                            country_detected = 'USA'
-                        # França: 75001, 75016
-                        elif re.match(r'^\d{5}$', postal_code) and postal_code[0:2] in ['75', '69', '13', '31', '44']:
-                            country_detected = 'FRANCE'
-                        # Alemanha: 10115, 80331
-                        elif re.match(r'^\d{5}$', postal_code) and postal_code[0:2] in ['10', '20', '30', '40', '50', '60', '70', '80', '90']:
-                            country_detected = 'GERMANY'
-                        # Itália: 00100, 20100
-                        elif re.match(r'^\d{5}$', postal_code) and postal_code[0:2] in ['00', '20', '10', '50', '40']:
-                            country_detected = 'ITALY'
-                        # Holanda: 1012 AB, 1012AB
-                        elif re.match(r'^\d{4}\s?[A-Z]{2}$', postal_code):
-                            country_detected = 'NETHERLANDS'
-                        # Bélgica: 1000, 2000
-                        elif re.match(r'^[1-9]\d{3}$', postal_code):
-                            country_detected = 'BELGIUM'
-                        # Suíça: 8001, 1200
-                        elif re.match(r'^\d{4}$', postal_code):
-                            country_detected = 'SWITZERLAND'
-                        # Canadá: K1A 0B1
-                        elif re.match(r'^[A-Z]\d[A-Z]\s?\d[A-Z]\d$', postal_code):
-                            country_detected = 'CANADA'
-                        
-                        if country_detected:
-                            fields_from_mapping['country'] = country_detected
-                            logging.info(f"   🌍 País detectado automaticamente: {country_detected}")
-                    
                     return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
         
         except Exception as e:
@@ -14423,8 +14375,53 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         if plate_match:
             fields['vehiclePlate'] = plate_match.group(1).replace(' ', '')
         
-        # ❌ MARCA E MODELO - NÃO EXTRAIR POR OCR/REGEX
-        # Estes campos SÓ vêm das coordenadas mapeadas do RA
+        # Modelo e Marca do veículo (antes da matrícula)
+        # Padrão: ...EMAIL.COMMODELO MATRÍCULA
+        # Exemplo: FABIOCORDEIRO1997@HOTMAIL.COMPEUGEOT 308 SW AUT. B H - 4 9 - O S
+        
+        # Lista de marcas conhecidas
+        known_brands = ['PEUGEOT', 'RENAULT', 'CITROEN', 'VOLKSWAGEN', 'VW', 'FORD', 'OPEL', 
+                       'SEAT', 'FIAT', 'TOYOTA', 'NISSAN', 'HYUNDAI', 'KIA', 'BMW', 'MERCEDES',
+                       'AUDI', 'SKODA', 'MAZDA', 'HONDA', 'SUZUKI', 'DACIA', 'VOLVO']
+        
+        # Procurar por: EMAIL seguido de MARCA MODELO seguido de MATRÍCULA
+        vehicle_match = re.search(r'@[A-Z0-9.-]+\.COM\s*([A-Z][A-Z0-9\s.]+?)\s+[A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2}', text)
+        if vehicle_match:
+            vehicle_full = vehicle_match.group(1).strip()
+            
+            # Tentar separar marca e modelo
+            brand_found = None
+            for brand in known_brands:
+                if vehicle_full.startswith(brand):
+                    brand_found = brand
+                    model = vehicle_full[len(brand):].strip()
+                    fields['vehicleBrand'] = brand_found
+                    fields['vehicleModel'] = model
+                    break
+            
+            # Se não encontrou marca, colocar tudo no modelo
+            if not brand_found:
+                fields['vehicleBrand'] = ''
+                fields['vehicleModel'] = vehicle_full
+        else:
+            # Fallback: procurar modelo antes da matrícula (sem email)
+            vehicle_match2 = re.search(r'([A-Z][A-Z0-9\s.]+?)\s+[A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2}', text)
+            if vehicle_match2:
+                vehicle_full = vehicle_match2.group(1).strip()
+                
+                # Tentar separar marca e modelo
+                brand_found = None
+                for brand in known_brands:
+                    if vehicle_full.startswith(brand):
+                        brand_found = brand
+                        model = vehicle_full[len(brand):].strip()
+                        fields['vehicleBrand'] = brand_found
+                        fields['vehicleModel'] = model
+                        break
+                
+                if not brand_found:
+                    fields['vehicleBrand'] = ''
+                    fields['vehicleModel'] = vehicle_full
         
         # Endereço - várias tentativas
         # Tentativa 1: com palavras-chave
@@ -14440,8 +14437,88 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 if '@' not in addr and not re.match(r'^[A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+$', addr):
                     fields['address'] = addr
         
-        # ❌ CÓDIGO POSTAL E CIDADE - NÃO EXTRAIR POR OCR/REGEX
-        # Estes campos SÓ vêm das coordenadas mapeadas do RA
+        # Código Postal e Cidade - AUTO-DETECÇÃO MUNDIAL
+        # Suporta: PT, ES, UK, USA, FR, DE, IT, NL, BE, etc.
+        
+        postal_code = None
+        country_detected = None
+        
+        # PADRÕES DE CÓDIGO POSTAL POR PAÍS
+        postal_patterns = [
+            # Portugal: 1000-001, 4000-123
+            (r'\b(\d{4}-\d{3})\b', lambda cp: 'PORTUGAL' if cp[0] in '123456789' else 'ESPANHA'),
+            # Espanha: 01234, 28001
+            (r'\b(0\d{4})\b', lambda cp: 'ESPANHA'),
+            # Reino Unido: SW1A 1AA, W1A 0AX, EC1A 1BB
+            (r'\b([A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2})\b', lambda cp: 'UNITED KINGDOM'),
+            # USA: 12345, 12345-6789
+            (r'\b(\d{5}(?:-\d{4})?)\b', lambda cp: 'USA'),
+            # França: 75001, 75016
+            (r'\b(\d{5})\b', lambda cp: 'FRANCE'),
+            # Alemanha: 10115, 80331
+            (r'\b(\d{5})\b', lambda cp: 'GERMANY'),
+            # Itália: 00100, 20100
+            (r'\b(\d{5})\b', lambda cp: 'ITALY'),
+            # Holanda: 1012 AB, 1012AB
+            (r'\b(\d{4}\s?[A-Z]{2})\b', lambda cp: 'NETHERLANDS'),
+            # Bélgica: 1000, 2000
+            (r'\b([1-9]\d{3})\b', lambda cp: 'BELGIUM'),
+            # Suíça: 8001, 1200
+            (r'\b(\d{4})\b', lambda cp: 'SWITZERLAND'),
+            # Canadá: K1A 0B1, H2X 1Y7
+            (r'\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b', lambda cp: 'CANADA'),
+        ]
+        
+        # Tentar detectar código postal
+        for pattern, country_func in postal_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                postal_code = match.group(1).upper()
+                country_detected = country_func(postal_code)
+                fields['postalCode'] = postal_code
+                fields['country'] = country_detected
+                break
+        
+        # Se encontrou código postal, extrair cidade
+        if postal_code:
+            # CIDADE - extrair texto ANTES do código postal (mesma linha)
+            # Suporta: "LISBOA  1000-001", "London SW1A 1AA", "New York 10001"
+            city_pattern = r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-záéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ\s\-]{1,40}?)\s+' + re.escape(postal_code)
+            city_match = re.search(city_pattern, text, re.IGNORECASE)
+            
+            if city_match:
+                city = city_match.group(1).strip()
+                
+                # Limpar cidade (remover números soltos, não dígitos dentro do nome)
+                city = re.sub(r'\b\d+\b', '', city).strip()  # Remove números isolados
+                city = re.sub(r'\s+', ' ', city).strip()  # Normaliza espaços
+                
+                # Validar cidade (1-5 palavras, não vazia)
+                city_words = city.split()
+                if 1 <= len(city_words) <= 5 and city and len(city) >= 2:
+                    # Capitalizar primeira letra de cada palavra
+                    fields['city'] = ' '.join(word.capitalize() for word in city_words)
+            else:
+                # Fallback: procurar cidade em linha anterior ao CP
+                lines = text.split('\n')
+                for i, line in enumerate(lines):
+                    if postal_code in line and i > 0:
+                        prev_line = lines[i-1].strip()
+                        # Verificar se linha anterior parece cidade
+                        if re.match(r'^[A-Za-záéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ\s\-]{2,40}$', prev_line):
+                            fields['city'] = ' '.join(word.capitalize() for word in prev_line.split())
+                            break
+        
+        # FALLBACK GERAL: Se não encontrou, tentar padrão genérico
+        if not fields.get('postalCode'):
+            # Último recurso: qualquer combinação de letras/números que pareça CP
+            generic_match = re.search(r'([A-Z0-9\s\-]{4,10})', text, re.IGNORECASE)
+            if generic_match:
+                potential_cp = generic_match.group(1).strip().upper()
+                # Validar se parece código postal (não é só texto ou só números muito grandes)
+                if re.match(r'^[A-Z0-9\s\-]{4,10}$', potential_cp) and not re.match(r'^\d{6,}$', potential_cp):
+                    fields['postalCode'] = potential_cp
+                    fields['country'] = 'UNKNOWN'  # Não conseguimos detectar o país
         
         # Datas (formato: DD - MM - YYYY)
         date_pattern = r'(\d{2}\s*-\s*\d{2}\s*-\s*\d{4})'
@@ -14467,15 +14544,81 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             fields['pickupTime'] = times[0].replace(' ', '')
             fields['returnTime'] = times[1].replace(' ', '')
         
-        # ❌ LOCAIS DE LEVANTAMENTO E DEVOLUÇÃO - NÃO EXTRAIR POR OCR/REGEX
-        # Estes campos SÓ vêm das coordenadas mapeadas do RA
+        # Locais de entrega e devolução
+        # Procurar por padrões específicos no contrato:
+        # "Local de Entrega / Delivery Place" seguido do local
+        # "Local de Recolha / Return Place" seguido do local
+        
+        # Método 1: Procurar por texto explícito
+        pickup_location = ''
+        return_location = ''
+        
+        # Procurar "Local de Entrega" ou "Delivery Place"
+        pickup_match = re.search(r'Local de Entrega[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        if not pickup_match:
+            pickup_match = re.search(r'Delivery Place[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        
+        if pickup_match:
+            pickup_location = pickup_match.group(1).strip()
+        
+        # Procurar "Local de Recolha" ou "Return Place"
+        return_match = re.search(r'Local de Recolha[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        if not return_match:
+            return_match = re.search(r'Return Place[^\n]*\n([A-Z][A-Z\s]+)', text, re.IGNORECASE)
+        
+        if return_match:
+            return_location = return_match.group(1).strip()
+        
+        # Se não encontrou pelos headers, usar método alternativo
+        # Procurar locais antes das datas de rental
+        if not pickup_location or not return_location:
+            lines = text.split('\n')
+            locations_found = []
+            
+            for i, line in enumerate(lines):
+                # Se a linha contém uma data no formato DD - MM - YYYY
+                if re.match(r'\d{2}\s*-\s*\d{2}\s*-\s*\d{4}', line.strip()):
+                    # A linha anterior pode ser o local
+                    if i > 0:
+                        prev_line = lines[i-1].strip()
+                        # Remover números e caracteres especiais do início
+                        prev_line = re.sub(r'^[\d\s:]+', '', prev_line)
+                        
+                        # Se tem texto significativo (mais de 5 caracteres) e está em maiúsculas
+                        if len(prev_line) > 5 and prev_line.isupper():
+                            locations_found.append(prev_line)
+            
+            if len(locations_found) >= 2:
+                if not pickup_location:
+                    pickup_location = locations_found[0]
+                if not return_location:
+                    return_location = locations_found[1]
+            elif len(locations_found) == 1:
+                if not pickup_location:
+                    pickup_location = locations_found[0]
+                if not return_location:
+                    return_location = locations_found[0]
+        
+        fields['pickupLocation'] = pickup_location
+        fields['returnLocation'] = return_location
         
         # Quilometragem (se existir no RA)
         mileage_match = re.search(r'(\d{1,3}(?:\s?\d{3})*)\s*KM', text, re.IGNORECASE)
         if mileage_match:
             fields['mileage'] = mileage_match.group(1).replace(' ', '')
         
-        # ❌ NÃO combinar campos que não foram extraídos
+        # COMBINAR CAMPOS para Damage Report
+        # Código Postal / Cidade
+        if fields.get('postalCode') or fields.get('city'):
+            postal_code_city = ' / '.join(filter(None, [fields.get('postalCode'), fields.get('city')]))
+            if postal_code_city:
+                fields['postalCodeCity'] = postal_code_city
+        
+        # Marca / Modelo
+        if fields.get('vehicleBrand') or fields.get('vehicleModel'):
+            brand_model = ' / '.join(filter(None, [fields.get('vehicleBrand'), fields.get('vehicleModel')]))
+            if brand_model:
+                fields['vehicleBrandModel'] = brand_model
         
         # Log para debug
         logging.info(f"=== CAMPOS EXTRAÍDOS (OCR/REGEX) ===")
