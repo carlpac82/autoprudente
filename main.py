@@ -14343,13 +14343,16 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 if '@' not in addr and not re.match(r'^[A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+$', addr):
                     fields['address'] = addr
         
-        # Código Postal - procurar primeiro
+        # Código Postal e Cidade - AUTO-DETECÇÃO INTELIGENTE
+        # Suporta formatos: "LISBOA 1000-001", "Porto  4000-123", "FARO1234-567"
+        
+        # Procurar código postal primeiro (formato PT: XXXX-XXX)
         postal_match = re.search(r'(\d{4}-\d{3})', text)
         if postal_match:
             fields['postalCode'] = postal_match.group(1)
-            
-            # Calcular país pelo código postal
             postal_code = postal_match.group(1)
+            
+            # Auto-detectar país pelo código postal
             if postal_code.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9')):
                 fields['country'] = 'PORTUGAL'
             elif postal_code.startswith('0'):
@@ -14357,27 +14360,48 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             else:
                 fields['country'] = 'PORTUGAL'  # Default
             
-            # Cidade - procurar antes do código postal
-            city_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{2,30}?)\s+' + re.escape(postal_code), text)
+            # CIDADE - extrair texto ANTES do código postal (mesma linha)
+            # Procura: [Cidade com espaços] [espaços/tabs] [código postal]
+            # Suporta: "LISBOA  1000-001", "Porto    4000-123", "FARO1234-567"
+            city_pattern = r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-záéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ\s\-]{1,40}?)\s*' + re.escape(postal_code)
+            city_match = re.search(city_pattern, text)
+            
             if city_match:
                 city = city_match.group(1).strip()
-                # Verificar se não é parte do endereço
-                if len(city.split()) <= 3:  # Cidades geralmente têm 1-3 palavras
-                    fields['city'] = city
-        else:
-            # Fallback: procurar cidade e código postal juntos
-            city_postal_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+)\s+(\d{4}-\d{3})', text)
-            if city_postal_match:
-                fields['city'] = city_postal_match.group(1).strip()
-                fields['postalCode'] = city_postal_match.group(2)
                 
+                # Limpar cidade (remover números, caracteres extra)
+                city = re.sub(r'\d+', '', city).strip()  # Remove números soltos
+                city = re.sub(r'\s+', ' ', city).strip()  # Normaliza espaços
+                
+                # Validar cidade (1-5 palavras, não vazia)
+                city_words = city.split()
+                if 1 <= len(city_words) <= 5 and city:
+                    # Capitalizar corretamente (LISBOA → Lisboa, SANTO TIRSO → Santo Tirso)
+                    fields['city'] = ' '.join(word.capitalize() for word in city_words)
+        
+        # FALLBACK: Se não encontrou código postal, tentar extrair cidade e CP juntos
+        if not fields.get('postalCode'):
+            # Formato alternativo: "[Cidade] [CP]" ou "[Cidade][CP]"
+            city_postal_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-záéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ\s\-]{2,40}?)\s*(\d{4}-\d{3})', text)
+            if city_postal_match:
+                city_raw = city_postal_match.group(1).strip()
                 postal_code = city_postal_match.group(2)
-                if postal_code.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9')):
-                    fields['country'] = 'PORTUGAL'
-                elif postal_code.startswith('0'):
-                    fields['country'] = 'ESPANHA'
-                else:
-                    fields['country'] = 'PORTUGAL'
+                
+                # Limpar e validar cidade
+                city_clean = re.sub(r'\d+', '', city_raw).strip()
+                city_clean = re.sub(r'\s+', ' ', city_clean).strip()
+                
+                if city_clean and len(city_clean.split()) <= 5:
+                    fields['city'] = ' '.join(word.capitalize() for word in city_clean.split())
+                    fields['postalCode'] = postal_code
+                    
+                    # Auto-detectar país
+                    if postal_code.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9')):
+                        fields['country'] = 'PORTUGAL'
+                    elif postal_code.startswith('0'):
+                        fields['country'] = 'ESPANHA'
+                    else:
+                        fields['country'] = 'PORTUGAL'
         
         # Datas (formato: DD - MM - YYYY)
         date_pattern = r'(\d{2}\s*-\s*\d{2}\s*-\s*\d{4})'
