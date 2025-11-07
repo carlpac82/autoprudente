@@ -508,7 +508,7 @@
             updateMappedList();
             currentFieldIndex++;
             updateCurrentField();
-            redrawMappedBoxes();
+            redrawCanvas();  // ✅ Limpa canvas + redesenha TODAS as caixas
             
             // AUTO-SAVE after mapping (silent)
             autoSaveCoordinates();
