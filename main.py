@@ -10525,6 +10525,83 @@ async def upload_damage_report_template(request: Request):
         logging.error(f"Error uploading template: {e}")
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/damage-reports/get-active-template")
+async def get_active_damage_report_template(request: Request):
+    """Obter o template PDF ativo para o mapeador"""
+    require_auth(request)
+    
+    try:
+        from starlette.responses import Response
+        
+        # Garantir tabelas existem
+        _ensure_damage_report_tables()
+        
+        # Buscar template ativo da BD
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Detectar PostgreSQL vs SQLite
+                is_postgres = False
+                if hasattr(conn, 'cursor'):
+                    is_postgres = True
+                
+                if is_postgres:
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT file_data, filename 
+                        FROM damage_report_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT file_data, filename 
+                        FROM damage_report_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                
+                if not row or not row[0]:
+                    # Fallback para arquivo físico se não houver template na BD
+                    try:
+                        with open('Damage Report.pdf', 'rb') as f:
+                            pdf_data = f.read()
+                        logging.info("📄 Serving template from file (no active template in DB)")
+                        return Response(content=pdf_data, media_type="application/pdf")
+                    except FileNotFoundError:
+                        return Response(
+                            content=b"No template available",
+                            status_code=404,
+                            media_type="text/plain"
+                        )
+                
+                pdf_data = row[0]
+                filename = row[1] if len(row) > 1 else "template.pdf"
+                
+                logging.info(f"📄 Serving active template: {filename}")
+                
+                return Response(
+                    content=pdf_data,
+                    media_type="application/pdf",
+                    headers={
+                        "Content-Disposition": f'inline; filename="{filename}"'
+                    }
+                )
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting active template: {e}")
+        return Response(
+            content=str(e).encode(),
+            status_code=500,
+            media_type="text/plain"
+        )
+
 @app.get("/api/damage-reports/get-coordinates")
 async def get_damage_report_coordinates(request: Request):
     """Obter coordenadas dos campos do PDF"""

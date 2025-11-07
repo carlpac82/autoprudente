@@ -364,9 +364,19 @@
             canvas = document.getElementById('pdfCanvas');
             ctx = canvas.getContext('2d');
             
-            const response = await fetch('/static/damage_report_with_grid.pdf');
+            // Carregar template ativo da base de dados (não arquivo fixo)
+            const response = await fetch('/api/damage-reports/get-active-template');
+            
+            if (!response.ok) {
+                console.error('[MAPPER] Failed to load template:', response.status);
+                alert('Erro ao carregar template PDF. Por favor, faça upload de um template primeiro.');
+                return;
+            }
+            
             const arrayBuffer = await response.arrayBuffer();
             pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            console.log('[MAPPER] Template PDF loaded from database');
             
             await renderPage(currentPage);
             
