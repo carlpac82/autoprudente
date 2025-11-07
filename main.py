@@ -15865,10 +15865,143 @@ async def save_damage_report_coordinates(request: Request):
         logging.error(f"Error saving coordinates: {e}")
         return {"ok": False, "error": str(e)}
 
+def _validate_image_data(image_data: str) -> bool:
+    """Valida se dados de imagem são válidos"""
+    try:
+        if not image_data:
+            return False
+        
+        # Remove prefix if present
+        img_data = image_data.split(',')[1] if ',' in image_data else image_data
+        
+        # Try to decode
+        img_bytes = base64.b64decode(img_data)
+        
+        # Try to open with PIL
+        from PIL import Image
+        from io import BytesIO
+        img = Image.open(BytesIO(img_bytes))
+        
+        # Check minimum size
+        if img.width < 10 or img.height < 10:
+            return False
+        
+        return True
+    except:
+        return False
+
+def _validate_table_data(table_data) -> bool:
+    """Valida estrutura da tabela de reparações"""
+    try:
+        if not table_data:
+            return False
+        
+        if isinstance(table_data, str):
+            import json
+            table_data = json.loads(table_data)
+        
+        if not isinstance(table_data, list):
+            return False
+        
+        # Check each row has required fields
+        for row in table_data:
+            if not isinstance(row, dict):
+                return False
+            # Must have at least 'description'
+            if 'description' not in row:
+                return False
+        
+        return True
+    except:
+        return False
+
+def _format_currency(value) -> str:
+    """Formata valor como moeda portuguesa (€ 120,00)"""
+    try:
+        # Convert to float
+        if isinstance(value, str):
+            value = float(value.replace(',', '.').replace('€', '').strip())
+        
+        # Format with thousands separator and 2 decimals
+        return f"€ {value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except:
+        return str(value)
+
+def _format_date(value) -> str:
+    """Formata data como dd/mm/yyyy"""
+    try:
+        from datetime import datetime
+        
+        if not value:
+            return ''
+        
+        # Try to parse various formats
+        for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d']:
+            try:
+                dt = datetime.strptime(str(value), fmt)
+                return dt.strftime('%d/%m/%Y')
+            except:
+                continue
+        
+        return str(value)
+    except:
+        return str(value)
+
+def _format_number(value) -> str:
+    """Formata número com separadores de milhar"""
+    try:
+        if isinstance(value, str):
+            value = float(value.replace(',', '.').strip())
+        
+        # Format with thousands separator
+        return f"{value:,.0f}".replace(',', '.')
+    except:
+        return str(value)
+
+def _get_field_style(field_id: str) -> dict:
+    """
+    Retorna estilo customizado para o campo
+    Retorna: {'font': str, 'size': int, 'color': tuple, 'bold': bool, 'italic': bool}
+    """
+    field_id_lower = field_id.lower()
+    
+    # Default style
+    style = {
+        'font': 'Helvetica',
+        'size': 8,
+        'color': (0, 0, 0),  # RGB black
+        'bold': False,
+        'italic': False
+    }
+    
+    # Headers and important fields - bold and larger
+    if any(word in field_id_lower for word in ['dr_number', 'contract_number', 'total']):
+        style['bold'] = True
+        style['size'] = 10
+    
+    # Titles - bold
+    elif any(word in field_id_lower for word in ['name', 'plate']):
+        style['bold'] = True
+        style['size'] = 9
+    
+    # Dates - italic
+    elif any(word in field_id_lower for word in ['date', 'time']):
+        style['italic'] = True
+    
+    # Small fields
+    elif any(word in field_id_lower for word in ['email', 'phone', 'postal']):
+        style['size'] = 7
+    
+    # Descriptions - smaller for multiline
+    elif any(word in field_id_lower for word in ['description', 'notes']):
+        style['size'] = 7
+    
+    return style
+
 def _detect_field_type(field_id: str) -> str:
     """
     Detecta o tipo de campo baseado no field_id
-    Retorna: 'text', 'image', 'signature', 'table', 'images'
+    Retorna: 'text', 'image', 'signature', 'table', 'images', 'currency', 'date', 'number'
     """
     field_id_lower = field_id.lower()
     
@@ -15880,6 +16013,12 @@ def _detect_field_type(field_id: str) -> str:
         return 'table'
     elif 'images' in field_id_lower:
         return 'images'
+    elif any(word in field_id_lower for word in ['cost', 'price', 'total', 'subtotal']):
+        return 'currency'
+    elif 'date' in field_id_lower:
+        return 'date'
+    elif any(word in field_id_lower for word in ['km', 'quantity', 'qty', 'number']) and 'contract' not in field_id_lower:
+        return 'number'
     else:
         return 'text'
 
@@ -15973,6 +16112,12 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
         output_pdf = PdfWriter()
         
         # 4. Para cada página do template
+        # SUPORTE A MÚLTIPLAS PÁGINAS:
+        # - Cada campo tem coords['page'] (1-indexed)
+        # - Loop processa todas as páginas do template
+        # - Campos são renderizados apenas na página correta
+        # - Tabelas grandes podem span múltiplas páginas (mapeando campo por página)
+        # - Grid de fotos pode ser distribuído em várias páginas
         num_pages = len(template_pdf.pages)
         
         for page_num in range(num_pages):
@@ -15987,6 +16132,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
             
             # Preencher campos desta página
             for field_id, coords in coordinates.items():
+                # MULTI-PAGE FILTER: Skip se campo não pertence a esta página
                 if coords['page'] != (page_num + 1):
                     continue
                 
@@ -16006,6 +16152,16 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 
                 if field_type == 'image' or field_type == 'signature':
                     # IMAGEM ou ASSINATURA
+                    # VALIDAÇÃO
+                    if not _validate_image_data(value):
+                        logging.warning(f"Invalid image data for {field_id}, drawing placeholder")
+                        can.setStrokeColor(grey)
+                        can.setFillColor(grey)
+                        can.rect(x, y, width, height, stroke=1, fill=0)
+                        can.setFont("Helvetica", 6)
+                        can.drawString(x + 2, y + height/2, "[Invalid Image]")
+                        continue
+                    
                     try:
                         # Decode base64 image
                         if isinstance(value, str) and ('data:image' in value or value.startswith('/9j')):
@@ -16050,6 +16206,14 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 
                 elif field_type == 'table' or 'repair' in field_id:
                     # TABELA DE REPARAÇÕES
+                    # VALIDAÇÃO
+                    if not _validate_table_data(value):
+                        logging.warning(f"Invalid table data for {field_id}, drawing placeholder")
+                        can.setFont("Helvetica", 7)
+                        can.setFillColor(black)
+                        can.drawString(x + 2, y + 4, "[Invalid Table Data]")
+                        continue
+                    
                     try:
                         # Parse table data (JSON array)
                         if isinstance(value, str):
@@ -16086,14 +16250,25 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             can.drawString(x + col_widths[0] + col_widths[1] + 2, y + height - row_height + 4, "Preço")
                             can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, y + height - row_height + 4, "Total")
                             
-                            # Draw rows
+                            # Draw rows with FORMATTING
                             can.setFont("Helvetica", 6)
                             for i, row in enumerate(table_data[:10]):
                                 row_y = y + height - ((i + 2) * row_height) + 4
+                                
+                                # Description (truncated)
                                 can.drawString(x + 2, row_y, str(row.get('description', ''))[:30])
-                                can.drawString(x + col_widths[0] + 2, row_y, str(row.get('qty', '')))
-                                can.drawString(x + col_widths[0] + col_widths[1] + 2, row_y, str(row.get('price', '')))
-                                can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, row_y, str(row.get('total', '')))
+                                
+                                # Quantity (number)
+                                qty_formatted = _format_number(row.get('qty', '')) if row.get('qty') else ''
+                                can.drawString(x + col_widths[0] + 2, row_y, qty_formatted)
+                                
+                                # Price (currency)
+                                price_formatted = _format_currency(row.get('price', '')) if row.get('price') else ''
+                                can.drawString(x + col_widths[0] + col_widths[1] + 2, row_y, price_formatted)
+                                
+                                # Total (currency)
+                                total_formatted = _format_currency(row.get('total', '')) if row.get('total') else ''
+                                can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, row_y, total_formatted)
                             
                             logging.info(f"✅ Drew table for {field_id} with {len(table_data)} rows")
                     except Exception as e:
@@ -16103,16 +16278,60 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         can.setFillColor(black)
                         can.drawString(x + 2, y + 4, str(value)[:50])
                 
+                elif field_type == 'currency':
+                    # MOEDA FORMATADA
+                    formatted_value = _format_currency(value)
+                    style = _get_field_style(field_id)
+                    
+                    # Apply style
+                    font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
+                    font_name = f"{font_name}-Oblique" if style['italic'] and not style['bold'] else font_name
+                    can.setFont(font_name, style['size'])
+                    can.setFillColorRGB(*style['color'])
+                    
+                    can.drawString(x + 2, y + 4, formatted_value)
+                
+                elif field_type == 'date':
+                    # DATA FORMATADA
+                    formatted_value = _format_date(value)
+                    style = _get_field_style(field_id)
+                    
+                    # Apply style
+                    font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
+                    font_name = f"{font_name}-Oblique" if style['italic'] and not style['bold'] else font_name
+                    can.setFont(font_name, style['size'])
+                    can.setFillColorRGB(*style['color'])
+                    
+                    can.drawString(x + 2, y + 4, formatted_value)
+                
+                elif field_type == 'number':
+                    # NÚMERO FORMATADO
+                    formatted_value = _format_number(value)
+                    style = _get_field_style(field_id)
+                    
+                    # Apply style
+                    font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
+                    font_name = f"{font_name}-Oblique" if style['italic'] and not style['bold'] else font_name
+                    can.setFont(font_name, style['size'])
+                    can.setFillColorRGB(*style['color'])
+                    
+                    can.drawString(x + 2, y + 4, formatted_value)
+                
                 else:
-                    # TEXTO SIMPLES
-                    can.setFillColor(black)
-                    can.setFont("Helvetica", 8)
+                    # TEXTO SIMPLES COM ESTILO
+                    style = _get_field_style(field_id)
+                    
+                    # Apply style
+                    font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
+                    font_name = f"{font_name}-Oblique" if style['italic'] and not style['bold'] else font_name
+                    can.setFont(font_name, style['size'])
+                    can.setFillColorRGB(*style['color'])
                     
                     # Handle multiline text for textarea fields
                     if 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text
                         lines = str(value).split('\n')
-                        line_height = 10
+                        line_height = style['size'] + 2  # Dynamic line height based on font size
                         current_y = y + height - line_height
                         
                         for line in lines[:int(height / line_height)]:
@@ -16136,7 +16355,10 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
         output_pdf.write(output_buffer)
         output_buffer.seek(0)
         
-        logging.info(f"✅ PDF filled with {len(coordinates)} mapped fields")
+        logging.info(f"✅ PDF filled successfully:")
+        logging.info(f"   - {len(coordinates)} total mapped fields")
+        logging.info(f"   - {num_pages} page(s) in template")
+        logging.info(f"   - Multi-page support: ACTIVE")
         return output_buffer.read()
         
     except Exception as e:
@@ -16147,6 +16369,69 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 return f.read()
         except:
             raise
+
+@app.post("/api/damage-reports/validate")
+async def validate_damage_report_data(request: Request):
+    """Valida dados do Damage Report antes de gerar PDF"""
+    require_auth(request)
+    
+    try:
+        body = await request.json()
+        
+        validation_results = {
+            'ok': True,
+            'errors': [],
+            'warnings': [],
+            'field_count': 0
+        }
+        
+        # Check required fields
+        required_fields = ['drNumber', 'clientName', 'vehiclePlate']
+        for field in required_fields:
+            if not body.get(field):
+                validation_results['errors'].append(f"Campo obrigatório vazio: {field}")
+                validation_results['ok'] = False
+        
+        # Validate images
+        image_fields = ['vehicleDiagram', 'damagePhoto1', 'damagePhoto2', 'damagePhoto3',
+                       'damagePhoto4', 'damagePhoto5', 'damagePhoto6', 'damagePhoto7',
+                       'damagePhoto8', 'damagePhoto9', 'signatureInspector', 'signatureClient']
+        
+        for field in image_fields:
+            if body.get(field):
+                validation_results['field_count'] += 1
+                if not _validate_image_data(body[field]):
+                    validation_results['warnings'].append(f"Imagem inválida: {field}")
+        
+        # Validate repair items table
+        if body.get('repairItems'):
+            validation_results['field_count'] += 1
+            if not _validate_table_data(body['repairItems']):
+                validation_results['warnings'].append("Tabela de reparações com formato inválido")
+        
+        # Validate dates
+        date_fields = ['pickupDate', 'returnDate', 'inspectionDate']
+        for field in date_fields:
+            if body.get(field):
+                formatted = _format_date(body[field])
+                if formatted == str(body[field]):
+                    validation_results['warnings'].append(f"Data com formato não reconhecido: {field}")
+        
+        # Count non-empty fields
+        for key, value in body.items():
+            if value and key not in image_fields:
+                validation_results['field_count'] += 1
+        
+        return validation_results
+        
+    except Exception as e:
+        logging.error(f"Error validating damage report: {e}")
+        return {
+            'ok': False,
+            'errors': [str(e)],
+            'warnings': [],
+            'field_count': 0
+        }
 
 @app.post("/api/damage-reports/preview-pdf")
 async def preview_damage_report_pdf(request: Request):
