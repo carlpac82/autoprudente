@@ -733,6 +733,82 @@ def _ensure_damage_reports_tables():
         import traceback
         traceback.print_exc()
 
+def _ensure_rental_agreement_tables():
+    """Criar tabelas de Rental Agreement no PostgreSQL"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if not is_postgres:
+                    print("   ⚠️  SQLite detected, skipping RA tables", flush=True)
+                    return
+                
+                print("   🔧 Creating PostgreSQL RA tables...", flush=True)
+                with conn.cursor() as cur:
+                    # Tabela de templates do RA
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS rental_agreement_templates (
+                            id SERIAL PRIMARY KEY,
+                            version INTEGER NOT NULL,
+                            filename TEXT NOT NULL,
+                            file_data BYTEA NOT NULL,
+                            num_pages INTEGER,
+                            uploaded_by TEXT,
+                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            is_active INTEGER DEFAULT 0,
+                            notes TEXT
+                        )
+                    """)
+                    
+                    # Tabela de coordenadas do RA
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS rental_agreement_coordinates (
+                            id SERIAL PRIMARY KEY,
+                            field_id TEXT NOT NULL,
+                            x REAL NOT NULL,
+                            y REAL NOT NULL,
+                            width REAL NOT NULL,
+                            height REAL NOT NULL,
+                            page INTEGER DEFAULT 1,
+                            field_type TEXT,
+                            template_version INTEGER DEFAULT 1,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    # Tabela de histórico de mapeamentos do RA
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS rental_agreement_mapping_history (
+                            id SERIAL PRIMARY KEY,
+                            template_version INTEGER NOT NULL,
+                            field_id TEXT NOT NULL,
+                            x REAL NOT NULL,
+                            y REAL NOT NULL,
+                            width REAL NOT NULL,
+                            height REAL NOT NULL,
+                            page INTEGER DEFAULT 1,
+                            field_type TEXT,
+                            mapped_by TEXT,
+                            mapped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    cur.execute("CREATE INDEX IF NOT EXISTS idx_ra_field ON rental_agreement_coordinates(field_id)")
+                    
+                    print("   ✅ rental_agreement_templates", flush=True)
+                    print("   ✅ rental_agreement_coordinates", flush=True)
+                    print("   ✅ rental_agreement_mapping_history", flush=True)
+                    
+                conn.commit()
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"   ❌ Error creating RA tables: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and create default users on startup"""
@@ -789,7 +865,19 @@ async def startup_event():
         print(f"📋 Creating Damage Reports tables...", flush=True)
         _ensure_damage_reports_tables()
         print(f"✅ Damage Reports tables ready", flush=True)
-        
+    except Exception as e:
+        print(f"   ❌ Error with DR tables: {e}", flush=True)
+    
+    # Create Rental Agreement tables
+    try:
+        print(f"📋 Creating Rental Agreement tables...", flush=True)
+        _ensure_rental_agreement_tables()
+        print(f"✅ Rental Agreement tables ready", flush=True)
+    except Exception as e:
+        print(f"   ❌ Error with RA tables: {e}", flush=True)
+    
+    # Migrations
+    try:
         # Migration: Add vehicle_damage_image column
         try:
             if USE_POSTGRES:
@@ -16757,6 +16845,277 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================
+# RENTAL AGREEMENT - Templates and Coordinates
+# ============================================================
+
+@app.post("/api/rental-agreements/upload-template")
+async def upload_rental_agreement_template(request: Request, file: UploadFile = File(...)):
+    """Upload do template de Rental Agreement (PDF)"""
+    require_auth(request)
+    
+    try:
+        from PyPDF2 import PdfReader
+        from io import BytesIO
+        from datetime import datetime
+        
+        contents = await file.read()
+        filename = file.filename
+        
+        # Verificar se é PDF válido e contar páginas
+        try:
+            pdf_reader = PdfReader(BytesIO(contents))
+            num_pages = len(pdf_reader.pages)
+        except Exception as e:
+            return {"ok": False, "error": f"PDF inválido: {str(e)}"}
+        
+        username = request.session.get('username', 'admin')
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                # Obter próxima versão
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COALESCE(MAX(version), 0) + 1 FROM rental_agreement_templates")
+                        version = cur.fetchone()[0]
+                else:
+                    cursor = conn.execute("SELECT COALESCE(MAX(version), 0) + 1 FROM rental_agreement_templates")
+                    version = cursor.fetchone()[0]
+                
+                # Desativar templates antigos
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("UPDATE rental_agreement_templates SET is_active = 0")
+                else:
+                    conn.execute("UPDATE rental_agreement_templates SET is_active = 0")
+                
+                # Inserir novo template
+                notes = f"Rental Agreement v{version}"
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO rental_agreement_templates 
+                            (version, filename, file_data, num_pages, uploaded_by, uploaded_at, is_active, notes)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (version, filename, contents, num_pages, username, datetime.now(), 1, notes))
+                else:
+                    conn.execute("""
+                        INSERT INTO rental_agreement_templates 
+                        (version, filename, file_data, num_pages, uploaded_by, uploaded_at, is_active, notes)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (version, filename, contents, num_pages, username, datetime.now().isoformat(), 1, notes))
+                
+                conn.commit()
+                
+                logging.info(f"✅ RA Template uploaded: v{version}, {num_pages} páginas")
+                
+                return {
+                    "ok": True,
+                    "message": "Template RA carregado com sucesso",
+                    "version": version,
+                    "num_pages": num_pages,
+                    "filename": filename
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error uploading RA template: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/rental-agreements/get-coordinates")
+async def get_rental_agreement_coordinates(request: Request):
+    """Obter coordenadas dos campos do RA"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT field_id, x, y, width, height, page, field_type, template_version
+                            FROM rental_agreement_coordinates
+                            ORDER BY field_id
+                        """)
+                        rows = cur.fetchall()
+                else:
+                    cursor = conn.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM rental_agreement_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                
+                coordinates = {}
+                template_version = 1
+                for row in rows:
+                    field_id = row[0]
+                    coordinates[field_id] = {
+                        'x': row[1],
+                        'y': row[2],
+                        'width': row[3],
+                        'height': row[4],
+                        'page': row[5] if row[5] else 1
+                    }
+                    template_version = row[7] if row[7] else 1
+                
+                logging.info(f"📊 GET RA Coordinates: {len(coordinates)} fields")
+                return {"ok": True, "coordinates": coordinates, "version": template_version}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting RA coordinates: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/rental-agreements/save-coordinates")
+async def save_rental_agreement_coordinates(request: Request):
+    """Guardar coordenadas dos campos do RA"""
+    require_auth(request)
+    
+    try:
+        import json
+        from datetime import datetime
+        
+        data = await request.json()
+        coordinates = data.get('coordinates', data)
+        
+        username = request.session.get('username', 'system')
+        
+        # Obter versão ativa do template
+        template_version = 1
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT version FROM rental_agreement_templates 
+                            WHERE is_active = 1 
+                            ORDER BY version DESC LIMIT 1
+                        """)
+                        row = cur.fetchone()
+                else:
+                    cursor = conn.execute("""
+                        SELECT version FROM rental_agreement_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                
+                if row:
+                    template_version = row[0]
+            finally:
+                conn.close()
+        
+        # Guardar coordenadas
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("DELETE FROM rental_agreement_coordinates")
+                        
+                        logging.info(f"💾 SAVE RA Coordinates: Salvando {len(coordinates)} campos")
+                        
+                        for field_id, coord in coordinates.items():
+                            field_type = _detect_field_type(field_id)
+                            
+                            cursor.execute("""
+                                INSERT INTO rental_agreement_coordinates 
+                                (field_id, x, y, width, height, page, field_type, template_version, updated_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (
+                                field_id,
+                                coord['x'],
+                                coord['y'],
+                                coord['width'],
+                                coord['height'],
+                                coord.get('page', 1),
+                                field_type,
+                                template_version,
+                                datetime.now().isoformat()
+                            ))
+                            
+                            cursor.execute("""
+                                INSERT INTO rental_agreement_mapping_history 
+                                (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (
+                                template_version,
+                                field_id,
+                                coord['x'],
+                                coord['y'],
+                                coord['width'],
+                                coord['height'],
+                                coord.get('page', 1),
+                                field_type,
+                                username,
+                                datetime.now().isoformat()
+                            ))
+                else:
+                    conn.execute("DELETE FROM rental_agreement_coordinates")
+                    
+                    logging.info(f"💾 SAVE RA Coordinates: Salvando {len(coordinates)} campos")
+                    
+                    for field_id, coord in coordinates.items():
+                        field_type = _detect_field_type(field_id)
+                        
+                        conn.execute("""
+                            INSERT INTO rental_agreement_coordinates 
+                            (field_id, x, y, width, height, page, field_type, template_version, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            field_id,
+                            coord['x'],
+                            coord['y'],
+                            coord['width'],
+                            coord['height'],
+                            coord.get('page', 1),
+                            field_type,
+                            template_version,
+                            datetime.now().isoformat()
+                        ))
+                        
+                        conn.execute("""
+                            INSERT INTO rental_agreement_mapping_history 
+                            (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            template_version,
+                            field_id,
+                            coord['x'],
+                            coord['y'],
+                            coord['width'],
+                            coord['height'],
+                            coord.get('page', 1),
+                            field_type,
+                            username,
+                            datetime.now().isoformat()
+                        ))
+                
+                conn.commit()
+                logging.info(f"✅ SAVE RA: {len(coordinates)} coordenadas guardadas na BD (versão {template_version})")
+            finally:
+                conn.close()
+        
+        return {"ok": True, "count": len(coordinates), "version": template_version}
+    except Exception as e:
+        logging.error(f"Error saving RA coordinates: {e}")
+        return {"ok": False, "error": str(e)}
 
 # ============================================================
 # EXPORT HISTORY - Way2Rentals, Abbycar, etc.
