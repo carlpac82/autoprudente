@@ -14280,24 +14280,28 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         pdf_file = BytesIO(contents)
         
         # MÉTODO 1: Tentar usar coordenadas mapeadas (se existirem)
+        # TEMPORARIAMENTE DESATIVADO - usar apenas OCR/regex até calibrar coordenadas
         fields_from_mapping = {}
+        coords_rows = []  # ⚠️ DESATIVADO
+        
         try:
             import fitz  # PyMuPDF
             
             # Carregar coordenadas mapeadas do RA
-            with _db_lock:
-                conn = _db_connect()
-                is_postgres = hasattr(conn, 'cursor')
-                
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
-                        coords_rows = cur.fetchall()
-                else:
-                    cursor = conn.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
-                    coords_rows = cursor.fetchall()
+            # ⚠️ COMENTADO TEMPORARIAMENTE
+            # with _db_lock:
+            #     conn = _db_connect()
+            #     is_postgres = hasattr(conn, 'cursor')
+            #     
+            #     if is_postgres:
+            #         with conn.cursor() as cur:
+            #             cur.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
+            #             coords_rows = cur.fetchall()
+            #     else:
+            #         cursor = conn.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
+            #         coords_rows = cursor.fetchall()
             
-            if coords_rows:
+            if False and coords_rows:  # ⚠️ FORÇAR False
                 logging.info(f"📍 Found {len(coords_rows)} mapped RA coordinates, extracting...")
                 
                 # Abrir PDF com PyMuPDF
