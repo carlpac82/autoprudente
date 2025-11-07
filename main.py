@@ -2218,7 +2218,8 @@ def init_db():
                   strategy_details TEXT,
                   min_price_applied REAL,
                   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                  created_by TEXT
+                  created_by TEXT,
+                  source TEXT DEFAULT 'manual'
                 )
                 """
             )
@@ -11259,7 +11260,7 @@ async def load_automated_prices_history(request: Request):
                 query = """
                     SELECT id, location, grupo, dias, pickup_date, 
                            auto_price, real_price, strategy_used, strategy_details,
-                           min_price_applied, created_at, created_by
+                           min_price_applied, created_at, created_by, source
                     FROM automated_prices_history
                     WHERE 1=1
                 """
@@ -11298,7 +11299,8 @@ async def load_automated_prices_history(request: Request):
                         "strategy_details": strategy_details,
                         "min_price_applied": row[9],
                         "created_at": row[10],
-                        "created_by": row[11]
+                        "created_by": row[11],
+                        "source": row[12] if len(row) > 12 else 'manual'
                     })
                 
                 return JSONResponse({"ok": True, "history": history})
