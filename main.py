@@ -18962,6 +18962,121 @@ async def get_scheduler_jobs(request: Request):
         logging.error(f"Get scheduler jobs error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# ============================================================
+# RENDER CRON JOB ENDPOINTS (FREE!)
+# ============================================================
+
+def verify_cron_secret(request: Request) -> bool:
+    """Verify X-Cron-Secret header matches CRON_SECRET_KEY"""
+    cron_secret = request.headers.get('X-Cron-Secret', '')
+    expected_secret = os.environ.get('CRON_SECRET_KEY', '')
+    
+    if not expected_secret:
+        logging.warning("⚠️ CRON_SECRET_KEY not set in environment")
+        return False
+    
+    return cron_secret == expected_secret
+
+@app.post("/api/cron/backup")
+async def cron_backup(request: Request):
+    """Triggered by Render Cron Job - Daily backup at 3 AM"""
+    if not verify_cron_secret(request):
+        logging.error("❌ Unauthorized cron job attempt - invalid secret")
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    
+    print("\n" + "="*80)
+    print("🔄 CRON JOB: Daily Backup")
+    print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*80 + "\n")
+    
+    # Run backup in background thread
+    import threading
+    thread = threading.Thread(target=create_automatic_backup)
+    thread.daemon = True
+    thread.start()
+    
+    return JSONResponse({"ok": True, "message": "Backup started"})
+
+@app.post("/api/cron/daily-search")
+async def cron_daily_search(request: Request):
+    """Triggered by Render Cron Job - Daily report search at 7 AM"""
+    if not verify_cron_secret(request):
+        logging.error("❌ Unauthorized cron job attempt - invalid secret")
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    
+    print("\n" + "="*80)
+    print("🔄 CRON JOB: Daily Report Search")
+    print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*80 + "\n")
+    
+    # Run search in background thread
+    import threading
+    thread = threading.Thread(target=run_daily_report_search)
+    thread.daemon = True
+    thread.start()
+    
+    return JSONResponse({"ok": True, "message": "Daily search started"})
+
+@app.post("/api/cron/daily-report")
+async def cron_daily_report(request: Request):
+    """Triggered by Render Cron Job - Daily report email at 9 AM"""
+    if not verify_cron_secret(request):
+        logging.error("❌ Unauthorized cron job attempt - invalid secret")
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    
+    print("\n" + "="*80)
+    print("🔄 CRON JOB: Daily Report Email")
+    print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*80 + "\n")
+    
+    # Run report in background thread
+    import threading
+    thread = threading.Thread(target=send_automatic_daily_report)
+    thread.daemon = True
+    thread.start()
+    
+    return JSONResponse({"ok": True, "message": "Daily report started"})
+
+@app.post("/api/cron/weekly-search")
+async def cron_weekly_search(request: Request):
+    """Triggered by Render Cron Job - Weekly report search on Monday at 7 AM"""
+    if not verify_cron_secret(request):
+        logging.error("❌ Unauthorized cron job attempt - invalid secret")
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    
+    print("\n" + "="*80)
+    print("🔄 CRON JOB: Weekly Report Search")
+    print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*80 + "\n")
+    
+    # Run search in background thread
+    import threading
+    thread = threading.Thread(target=run_weekly_report_search)
+    thread.daemon = True
+    thread.start()
+    
+    return JSONResponse({"ok": True, "message": "Weekly search started"})
+
+@app.post("/api/cron/weekly-report")
+async def cron_weekly_report(request: Request):
+    """Triggered by Render Cron Job - Weekly report email on Monday at 9 AM"""
+    if not verify_cron_secret(request):
+        logging.error("❌ Unauthorized cron job attempt - invalid secret")
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    
+    print("\n" + "="*80)
+    print("🔄 CRON JOB: Weekly Report Email")
+    print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*80 + "\n")
+    
+    # Run report in background thread
+    import threading
+    thread = threading.Thread(target=send_automatic_weekly_report)
+    thread.daemon = True
+    thread.start()
+    
+    return JSONResponse({"ok": True, "message": "Weekly report started"})
+
 @app.post("/api/backup/create")
 async def create_backup(request: Request):
     """Create system backup"""
@@ -20862,25 +20977,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 9:20 AM TODAY
+    # Test search at 9:40 AM TODAY
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=9, minute=20),
+        CronTrigger(hour=9, minute=40),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 9:20 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 9:40 AM)", "main", "scheduler")
     
-    # Test report at 9:40 AM TODAY
+    # Test report at 10:10 AM TODAY
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=9, minute=40),
+        CronTrigger(hour=10, minute=10),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 9:40 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 10:10 AM)", "main", "scheduler")
     
     # Start scheduler
     scheduler.start()
