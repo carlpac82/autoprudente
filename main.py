@@ -20987,25 +20987,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 9:40 AM TODAY
+    # Test search at 9:50 AM TODAY
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=9, minute=40),
+        CronTrigger(hour=9, minute=50),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 9:40 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 9:50 AM)", "main", "scheduler")
     
-    # Test report at 10:10 AM TODAY
+    # Test report at 10:20 AM TODAY
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=10, minute=10),
+        CronTrigger(hour=10, minute=20),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 10:10 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 10:20 AM)", "main", "scheduler")
     
     # Start scheduler
     scheduler.start()
