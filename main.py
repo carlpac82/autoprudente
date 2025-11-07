@@ -20015,14 +20015,17 @@ def run_daily_report_search():
             finally:
                 conn.close()
         
-        # Get current date + 1 month (para ter dados disponíveis)
+        # Get current month + random 2-4 days from today
         from datetime import datetime, timedelta
+        import random
+        
         today = datetime.now()
-        search_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+        days_ahead = random.randint(2, 4)  # Random 2-4 days
+        search_date = (today + timedelta(days=days_ahead)).strftime('%Y-%m-%d')
         days = 3  # Standard search: 3 days
         location = "Aeroporto de Faro"  # Default location
         
-        logging.info(f"📍 Automated search scheduled: {location} | Date: {search_date} | Days: {days}")
+        logging.info(f"📍 Automated search scheduled: {location} | Date: {search_date} (+{days_ahead} dias) | Duration: {days} dias")
         logging.info("ℹ️ Search will use existing recent_searches data from manual searches")
         logging.info("💡 Para pesquisas automáticas completas, executar pesquisa manual antes das 07:00")
         
