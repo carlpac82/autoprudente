@@ -14313,8 +14313,14 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         if page_num < len(pdf_doc):
                             pdf_page = pdf_doc[page_num]
                             
+                            # CONVERTER coordenadas: Canvas usa origem no TOPO, PDF usa origem no FUNDO
+                            page_height = pdf_page.rect.height
+                            pdf_y = page_height - y - height  # Inverter Y
+                            
+                            logging.info(f"   📏 Convertendo coords: canvas_y={y} → pdf_y={pdf_y} (page_height={page_height})")
+                            
                             # MÉTODO 1: Extrair texto da área mapeada com PyMuPDF
-                            rect = fitz.Rect(x, y, x + width, y + height)
+                            rect = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
                             text_extracted = pdf_page.get_text("text", clip=rect).strip()
                             
                             # MÉTODO 2: Se não extraiu texto, tentar OCR
