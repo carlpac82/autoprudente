@@ -15775,7 +15775,7 @@ async def save_damage_report_coordinates(request: Request):
                 
                 # Inserir novas coordenadas
                 for field_id, coord in coordinates.items():
-                    field_type = _get_field_type(field_id)
+                    field_type = _detect_field_type(field_id)
                     
                     # Inserir em coordenadas atuais
                     if hasattr(conn, 'cursor'):
