@@ -1184,11 +1184,19 @@ class PostgreSQLConnectionWrapper:
             else:
                 self._cursor.execute(query)
         except Exception as e:
-            # Log the error with query and params for debugging
+            # Log the error with query and params summary (not full content)
             import logging
             logging.error(f"PostgreSQL execute error: {e}")
             logging.error(f"Query: {query}")
-            logging.error(f"Params: {params}")
+            if params:
+                # Show only summary to avoid flooding logs with data
+                param_summary = []
+                for p in params:
+                    if isinstance(p, str) and len(p) > 100:
+                        param_summary.append(f"<string:{len(p)} chars>")
+                    else:
+                        param_summary.append(repr(p)[:50])
+                logging.error(f"Params summary: {param_summary}")
             raise
         return self._cursor
     
@@ -17376,7 +17384,11 @@ async def save_recent_searches(request: Request):
             conn = _db_connect()
             try:
                 # Ensure table exists (compatible with both PostgreSQL and SQLite)
-                is_postgres = hasattr(conn, 'cursor')
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
                 
                 if is_postgres:
                     conn.execute("""
@@ -20322,7 +20334,10 @@ def run_daily_report_search():
                             result = response.json()
                             if result.get('ok'):
                                 items = result.get('items', [])
-                                logging.info(f"✅ Search completed: {len(items)} cars")
+                                # Contar carros com fotos
+                                with_photos = sum(1 for car in items if car.get('photo') and 'loading-car' not in car.get('photo', ''))
+                                photo_pct = (with_photos / len(items) * 100) if items else 0
+                                logging.info(f"✅ {location} ({days}d): {len(items)} carros | Fotos: {with_photos}/{len(items)} ({photo_pct:.1f}%)")
                                 
                                 # Salvar resultados
                                 with _db_lock:
@@ -20447,7 +20462,9 @@ def run_weekly_report_search():
                                 result = response.json()
                                 if result.get('ok'):
                                     items = result.get('items', [])
-                                    logging.info(f"✅ Weekly search completed: {len(items)} cars")
+                                    with_photos = sum(1 for car in items if car.get('photo') and 'loading-car' not in car.get('photo', ''))
+                                    photo_pct = (with_photos / len(items) * 100) if items else 0
+                                    logging.info(f"✅ Weekly M{month_offset} {location} ({days}d): {len(items)} carros | Fotos: {with_photos}/{len(items)} ({photo_pct:.1f}%)")
                                     
                                     with _db_lock:
                                         conn = _db_connect()
