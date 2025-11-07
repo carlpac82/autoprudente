@@ -2880,11 +2880,11 @@
         }
       }
       
-      // Variáveis globais para controle de pesquisas recentes
-      let compareMode = false;
-      let selectedForCompare = [];
-      let currentFilter = 'all';
-      let currentSort = 'date';
+      // PREVIEW DESATIVADO - Variáveis globais comentadas
+      // let compareMode = false;
+      // let selectedForCompare = [];
+      // let currentFilter = 'all';
+      // let currentSort = 'date';
       
       // Função auxiliar para obter imagem REAL do carro (do CarJet)
       function getCarImage(car) {
@@ -2899,8 +2899,9 @@
         return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"%3E%3Crect width="300" height="200" fill="%23f0f9fb"/%3E%3Cpath d="M100 90 L70 90 L70 75 C70 70 72 67 75 65 L95 65 L95 50 L205 50 L205 65 L225 65 C228 67 230 70 230 75 L230 90 L200 90" fill="%23009cb6" opacity="0.3"/%3E%3Ccircle cx="80" cy="90" r="8" fill="%23cbd5e1"/%3E%3Ccircle cx="220" cy="90" r="8" fill="%23cbd5e1"/%3E%3C/svg%3E';
       }
       
-      // Função para criar card de pesquisa recente
+      // PREVIEW DESATIVADO - Função desativada
       function createSearchPreviewCard(search, index) {
+        return null; // DISABLED
         const card = document.createElement('div');
         card.className = 'bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-[#009cb6] hover:shadow-lg transition-all';
         card.dataset.searchIndex = index;
@@ -3152,8 +3153,9 @@
         return;
       }
       
-      // Função para filtrar e ordenar pesquisas
+      // PREVIEW DESATIVADO - Função desativada
       function getFilteredAndSortedSearches() {
+        return []; // DISABLED
         let searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         
         // Aplicar filtro
@@ -3241,8 +3243,9 @@
         }
       }
       
-      // Função para mostrar comparação de pesquisas
+      // PREVIEW DESATIVADO - Função desativada
       function showComparison() {
+        return; // DISABLED
         const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         const search1 = searches[selectedForCompare[0]];
         const search2 = searches[selectedForCompare[1]];
