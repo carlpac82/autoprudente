@@ -42,8 +42,10 @@ services:
         value: "3.12"
       - key: CARJET_PRICE_OFFSET_EUR
         value: "0"
-      - key: CRON_SECRET_KEY
-        generateValue: true  # Secret key to authenticate cron job requests
+      # NOTE: CRON_SECRET_KEY will use SECRET_KEY as fallback if not set
+      # Uncomment below to generate a separate key (optional):
+      # - key: CRON_SECRET_KEY
+      #   generateValue: true
 
   # ========================================================
   # CRON JOBS (100% FREE!) - Backup for APScheduler
@@ -56,9 +58,9 @@ services:
     name: daily-backup
     env: docker
     schedule: "0 2 * * *"  # 2:00 AM UTC = 3:00 AM Lisboa (winter)
-    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/backup', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/backup', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
     envVars:
-      - key: CRON_SECRET_KEY
+      - key: SECRET_KEY
         sync: false
   
   # Daily report search at 7 AM Lisboa (6 AM UTC winter / 7 AM UTC summer)
@@ -66,9 +68,9 @@ services:
     name: daily-report-search
     env: docker
     schedule: "0 6 * * *"  # 6:00 AM UTC = 7:00 AM Lisboa (winter)
-    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-search', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-search', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
     envVars:
-      - key: CRON_SECRET_KEY
+      - key: SECRET_KEY
         sync: false
   
   # Daily report email at 9 AM Lisboa (8 AM UTC winter / 9 AM UTC summer)
@@ -76,9 +78,9 @@ services:
     name: daily-report-email
     env: docker
     schedule: "0 8 * * *"  # 8:00 AM UTC = 9:00 AM Lisboa (winter)
-    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-report', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-report', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
     envVars:
-      - key: CRON_SECRET_KEY
+      - key: SECRET_KEY
         sync: false
   
   # Weekly report search on Monday at 7 AM Lisboa (6 AM UTC winter)
@@ -86,9 +88,9 @@ services:
     name: weekly-report-search
     env: docker
     schedule: "0 6 * * 1"  # Monday 6:00 AM UTC = 7:00 AM Lisboa (winter)
-    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-search', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-search', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
     envVars:
-      - key: CRON_SECRET_KEY
+      - key: SECRET_KEY
         sync: false
   
   # Weekly report email on Monday at 9 AM Lisboa (8 AM UTC winter)
@@ -96,7 +98,7 @@ services:
     name: weekly-report-email
     env: docker
     schedule: "0 8 * * 1"  # Monday 8:00 AM UTC = 9:00 AM Lisboa (winter)
-    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-report', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+    dockerCommand: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-report', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
     envVars:
-      - key: CRON_SECRET_KEY
+      - key: SECRET_KEY
         sync: false

@@ -49,11 +49,11 @@ Para cada job abaixo, clica **"New" → "Cron Job"** e preenche:
 #### **1. Daily Backup**
 ```
 Name: daily-backup
-Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/backup', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/backup', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
 Schedule: 0 2 * * *
 Docker: Same as rental-price-tracker
 Environment Variables:
-  - CRON_SECRET_KEY: [usar o mesmo valor do web service]
+  - SECRET_KEY: [usar o mesmo valor do web service]
 ```
 
 ---
@@ -61,11 +61,11 @@ Environment Variables:
 #### **2. Daily Report Search**
 ```
 Name: daily-report-search
-Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-search', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-search', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
 Schedule: 0 6 * * *
 Docker: Same as rental-price-tracker
 Environment Variables:
-  - CRON_SECRET_KEY: [usar o mesmo valor do web service]
+  - SECRET_KEY: [usar o mesmo valor do web service]
 ```
 
 ---
@@ -73,11 +73,11 @@ Environment Variables:
 #### **3. Daily Report Email**
 ```
 Name: daily-report-email
-Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-report', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/daily-report', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
 Schedule: 0 8 * * *
 Docker: Same as rental-price-tracker
 Environment Variables:
-  - CRON_SECRET_KEY: [usar o mesmo valor do web service]
+  - SECRET_KEY: [usar o mesmo valor do web service]
 ```
 
 ---
@@ -85,11 +85,11 @@ Environment Variables:
 #### **4. Weekly Report Search**
 ```
 Name: weekly-report-search
-Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-search', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-search', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
 Schedule: 0 6 * * 1
 Docker: Same as rental-price-tracker
 Environment Variables:
-  - CRON_SECRET_KEY: [usar o mesmo valor do web service]
+  - SECRET_KEY: [usar o mesmo valor do web service]
 ```
 
 ---
@@ -97,22 +97,26 @@ Environment Variables:
 #### **5. Weekly Report Email**
 ```
 Name: weekly-report-email
-Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-report', headers={'X-Cron-Secret': os.environ['CRON_SECRET_KEY']})"
+Command: python3 -c "import requests; import os; requests.post('https://rental-price-tracker.onrender.com/api/cron/weekly-report', headers={'X-Cron-Secret': os.environ['SECRET_KEY']})"
 Schedule: 0 8 * * 1
 Docker: Same as rental-price-tracker
 Environment Variables:
-  - CRON_SECRET_KEY: [usar o mesmo valor do web service]
+  - SECRET_KEY: [usar o mesmo valor do web service]
 ```
 
 ---
 
-## 🔐 ONDE ENCONTRAR O CRON_SECRET_KEY?
+## 🔐 ONDE ENCONTRAR A SECRET KEY?
+
+**IMPORTANTE:** Usa o `SECRET_KEY` que já existe no teu environment!
 
 1. Vai ao teu serviço web **rental-price-tracker**
 2. Clica em **"Environment"**
-3. Procura por **`CRON_SECRET_KEY`**
-4. Copia o valor (foi gerado automaticamente)
+3. Procura por **`SECRET_KEY`**
+4. Copia o valor (já foi gerado automaticamente no setup inicial)
 5. Usa esse mesmo valor em **TODOS** os cron jobs
+
+**Nota:** O sistema aceita tanto `CRON_SECRET_KEY` (se configurares uma chave separada) como `SECRET_KEY` (fallback). Por simplicidade, usa o `SECRET_KEY` que já tens!
 
 ---
 
@@ -134,8 +138,9 @@ Procura por:
 
 ### **Opção 3: Testar Manualmente**
 ```bash
+# Copia o valor de SECRET_KEY do teu Render Dashboard
 curl -X POST https://rental-price-tracker.onrender.com/api/cron/daily-search \
-  -H "X-Cron-Secret: SEU_CRON_SECRET_KEY_AQUI"
+  -H "X-Cron-Secret: SEU_SECRET_KEY_AQUI"
 ```
 
 ---

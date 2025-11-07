@@ -18967,15 +18967,25 @@ async def get_scheduler_jobs(request: Request):
 # ============================================================
 
 def verify_cron_secret(request: Request) -> bool:
-    """Verify X-Cron-Secret header matches CRON_SECRET_KEY"""
+    """Verify X-Cron-Secret header matches CRON_SECRET_KEY or SECRET_KEY (fallback)"""
     cron_secret = request.headers.get('X-Cron-Secret', '')
-    expected_secret = os.environ.get('CRON_SECRET_KEY', '')
+    
+    # Try CRON_SECRET_KEY first, fallback to SECRET_KEY (já existe no environment)
+    expected_secret = os.environ.get('CRON_SECRET_KEY') or os.environ.get('SECRET_KEY', '')
     
     if not expected_secret:
-        logging.warning("⚠️ CRON_SECRET_KEY not set in environment")
+        logging.warning("⚠️ Neither CRON_SECRET_KEY nor SECRET_KEY found in environment")
         return False
     
-    return cron_secret == expected_secret
+    if not cron_secret:
+        logging.warning("⚠️ No X-Cron-Secret header provided in request")
+        return False
+    
+    is_valid = cron_secret == expected_secret
+    if not is_valid:
+        logging.error(f"❌ Invalid cron secret provided (expected starts with: {expected_secret[:8]}...)")
+    
+    return is_valid
 
 @app.post("/api/cron/backup")
 async def cron_backup(request: Request):
