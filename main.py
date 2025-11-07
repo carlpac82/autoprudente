@@ -19624,26 +19624,283 @@ def cleanup_old_backups(backup_dir: Path, keep_last: int = 7):
     except Exception as e:
         log_to_db("ERROR", f"Cleanup old backups failed: {str(e)}", "main", "cleanup_old_backups")
 
-# Iniciar scheduler de backups automáticos
+# ============================================================
+# AUTOMATED REPORTS FUNCTIONS
+# ============================================================
+
+def send_automatic_daily_report():
+    """Send daily report automatically based on saved settings"""
+    try:
+        logging.info("🔄 Starting automatic daily report...")
+        
+        # Load settings from database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                )
+                row = cursor.fetchone()
+                if not row or not row[0]:
+                    logging.warning("⚠️ No automated reports settings found - skipping daily report")
+                    return
+                
+                settings = json.loads(row[0])
+                if not settings.get('dailyEnabled'):
+                    logging.info("ℹ️ Daily reports are disabled - skipping")
+                    return
+                
+                recipients = settings.get('recipients', [])
+                if not recipients:
+                    logging.warning("⚠️ No recipients configured - skipping daily report")
+                    return
+                
+                logging.info(f"📧 Sending daily report to {len(recipients)} recipient(s)")
+            finally:
+                conn.close()
+        
+        # Get OAuth token
+        access_token = None
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
+                if row:
+                    access_token = row[0]
+            finally:
+                conn.close()
+        
+        if not access_token:
+            logging.error("❌ No Gmail token found - cannot send daily report")
+            return
+        
+        # Send email (same logic as test endpoint)
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from datetime import datetime
+        import base64
+        
+        credentials = Credentials(token=access_token)
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        sent_count = 0
+        for recipient in recipients:
+            try:
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"><title>Relatório Diário</title></head>
+                <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+                        <tr><td align="center">
+                            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
+                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📊 Relatório Diário de Preços</h1>
+                                    <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">{datetime.now().strftime('%d/%m/%Y')}</p>
+                                </td></tr>
+                                <tr><td style="padding: 30px 20px; text-align: center;">
+                                    <h2 style="color: #009cb6; margin: 0 0 20px 0;">✅ Relatório Automático Enviado</h2>
+                                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Este é o relatório diário automático do sistema de monitorização de preços.
+                                    </p>
+                                </td></tr>
+                                <tr><td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                        Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
+                                    </p>
+                                </td></tr>
+                            </table>
+                        </td></tr>
+                    </table>
+                </body>
+                </html>
+                """
+                
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'📊 Relatório Diário - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'
+                message.attach(MIMEText(html_content, 'html'))
+                
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+                service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+                
+                sent_count += 1
+                logging.info(f"✅ Daily report sent to {recipient}")
+            except Exception as e:
+                logging.error(f"❌ Failed to send daily report to {recipient}: {str(e)}")
+        
+        logging.info(f"🎉 Daily report completed: {sent_count}/{len(recipients)} sent successfully")
+        
+    except Exception as e:
+        logging.error(f"❌ Automatic daily report failed: {str(e)}")
+
+def send_automatic_weekly_report():
+    """Send weekly report automatically based on saved settings"""
+    try:
+        logging.info("🔄 Starting automatic weekly report...")
+        
+        # Load settings from database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                )
+                row = cursor.fetchone()
+                if not row or not row[0]:
+                    logging.warning("⚠️ No automated reports settings found - skipping weekly report")
+                    return
+                
+                settings = json.loads(row[0])
+                if not settings.get('weeklyEnabled'):
+                    logging.info("ℹ️ Weekly reports are disabled - skipping")
+                    return
+                
+                recipients = settings.get('recipients', [])
+                if not recipients:
+                    logging.warning("⚠️ No recipients configured - skipping weekly report")
+                    return
+                
+                logging.info(f"📧 Sending weekly report to {len(recipients)} recipient(s)")
+            finally:
+                conn.close()
+        
+        # Get OAuth token
+        access_token = None
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
+                if row:
+                    access_token = row[0]
+            finally:
+                conn.close()
+        
+        if not access_token:
+            logging.error("❌ No Gmail token found - cannot send weekly report")
+            return
+        
+        # Send email
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from datetime import datetime
+        import base64
+        
+        credentials = Credentials(token=access_token)
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        sent_count = 0
+        for recipient in recipients:
+            try:
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"><title>Relatório Semanal</title></head>
+                <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+                        <tr><td align="center">
+                            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
+                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📊 Relatório Semanal</h1>
+                                    <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">Semana {datetime.now().strftime('%W/%Y')}</p>
+                                </td></tr>
+                                <tr><td style="padding: 30px 20px; text-align: center;">
+                                    <h2 style="color: #009cb6; margin: 0 0 20px 0;">✅ Relatório Semanal Automático</h2>
+                                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Resumo semanal do sistema de monitorização de preços.
+                                    </p>
+                                </td></tr>
+                                <tr><td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                        Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
+                                    </p>
+                                </td></tr>
+                            </table>
+                        </td></tr>
+                    </table>
+                </body>
+                </html>
+                """
+                
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'📊 Relatório Semanal - Auto Prudente (Semana {datetime.now().strftime("%W/%Y")})'
+                message.attach(MIMEText(html_content, 'html'))
+                
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+                service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+                
+                sent_count += 1
+                logging.info(f"✅ Weekly report sent to {recipient}")
+            except Exception as e:
+                logging.error(f"❌ Failed to send weekly report to {recipient}: {str(e)}")
+        
+        logging.info(f"🎉 Weekly report completed: {sent_count}/{len(recipients)} sent successfully")
+        
+    except Exception as e:
+        logging.error(f"❌ Automatic weekly report failed: {str(e)}")
+
+# ============================================================
+# SCHEDULERS - BACKUPS & REPORTS
+# ============================================================
+
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
     
-    backup_scheduler = BackgroundScheduler()
-    # Backup diário às 3 AM
-    backup_scheduler.add_job(
+    # Create single scheduler for all jobs
+    scheduler = BackgroundScheduler()
+    
+    # === BACKUP JOB ===
+    # Daily backup at 3 AM
+    scheduler.add_job(
         create_automatic_backup,
         CronTrigger(hour=3, minute=0),
         id='daily_backup',
         name='Daily Automatic Backup',
         replace_existing=True
     )
-    backup_scheduler.start()
-    log_to_db("INFO", "Automatic backup scheduler started (daily at 3 AM)", "main", "scheduler")
+    log_to_db("INFO", "✅ Backup scheduler configured (daily at 3 AM)", "main", "scheduler")
+    
+    # === REPORTS JOBS ===
+    # Daily report at 9 AM (default time)
+    scheduler.add_job(
+        send_automatic_daily_report,
+        CronTrigger(hour=9, minute=0),
+        id='daily_report',
+        name='Daily Automatic Report',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Daily report scheduler configured (daily at 9 AM)", "main", "scheduler")
+    
+    # Weekly report on Monday at 9 AM (default time)
+    scheduler.add_job(
+        send_automatic_weekly_report,
+        CronTrigger(day_of_week='mon', hour=9, minute=0),
+        id='weekly_report',
+        name='Weekly Automatic Report',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
+    
+    # Start scheduler
+    scheduler.start()
+    log_to_db("INFO", "🚀 Scheduler started successfully with 3 jobs (backup + daily report + weekly report)", "main", "scheduler")
+    
 except ImportError:
-    log_to_db("WARNING", "APScheduler not installed - automatic backups disabled", "main", "scheduler")
+    log_to_db("WARNING", "APScheduler not installed - automatic backups and reports disabled", "main", "scheduler")
 except Exception as e:
-    log_to_db("ERROR", f"Failed to start backup scheduler: {str(e)}", "main", "scheduler")
+    log_to_db("ERROR", f"Failed to start scheduler: {str(e)}", "main", "scheduler")
 
 # ============================================================
 # EMAIL QUEUE SYSTEM
