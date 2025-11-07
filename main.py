@@ -20237,6 +20237,9 @@ def generate_daily_report_html(search_data):
 
 def run_daily_report_search():
     """Run automated search 2 hours before daily report (stores results for comparison)"""
+    from datetime import datetime, timedelta
+    import random
+    
     try:
         print("\n" + "="*80)
         print("🔍 DAILY REPORT SEARCH STARTED")
@@ -20262,10 +20265,6 @@ def run_daily_report_search():
                     return
             finally:
                 conn.close()
-        
-        # Get current month + random 2-4 days from today
-        from datetime import datetime, timedelta
-        import random
         
         today = datetime.now()
         days_ahead = random.randint(2, 4)  # Random 2-4 days
@@ -20346,6 +20345,9 @@ def run_daily_report_search():
 
 def run_weekly_report_search():
     """Run automated search for next 3 months (2h before weekly report)"""
+    from datetime import datetime, timedelta
+    import random
+    
     try:
         print("\n" + "="*80)
         print("🔍 WEEKLY REPORT SEARCH STARTED")
@@ -20457,6 +20459,8 @@ def run_weekly_report_search():
 
 def send_automatic_daily_report():
     """Send daily report automatically based on saved settings"""
+    from datetime import datetime, timedelta
+    
     try:
         print("\n" + "="*80)
         print("📧 DAILY REPORT EMAIL STARTED")
@@ -20717,6 +20721,8 @@ def generate_weekly_report_html(months_data):
 
 def send_automatic_weekly_report():
     """Send weekly report automatically based on saved settings"""
+    from datetime import datetime, timedelta
+    
     try:
         print("\n" + "="*80)
         print("📧 WEEKLY REPORT EMAIL STARTED")
