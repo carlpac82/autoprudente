@@ -14314,6 +14314,54 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             fields_from_mapping['vehicleBrand'] = parts[0].strip()
                             fields_from_mapping['vehicleModel'] = parts[1].strip()
                     
+                    # Calcular país automaticamente baseado no código postal
+                    postal_code = fields_from_mapping.get('postalCode') or (fields_from_mapping.get('postalCodeCity', '').split(' / ')[0] if ' / ' in fields_from_mapping.get('postalCodeCity', '') else None)
+                    
+                    if postal_code and not fields_from_mapping.get('country'):
+                        # Detectar país pelo código postal
+                        country_detected = None
+                        
+                        # Portugal: 1000-001, 4000-123
+                        if re.match(r'^\d{4}-\d{3}$', postal_code):
+                            if postal_code[0] in '123456789':
+                                country_detected = 'PORTUGAL'
+                            else:
+                                country_detected = 'ESPANHA'
+                        # Espanha: 01234, 28001
+                        elif re.match(r'^0\d{4}$', postal_code):
+                            country_detected = 'ESPANHA'
+                        # Reino Unido: SW1A 1AA, W1A 0AX
+                        elif re.match(r'^[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}$', postal_code):
+                            country_detected = 'UNITED KINGDOM'
+                        # USA: 12345, 12345-6789
+                        elif re.match(r'^\d{5}(?:-\d{4})?$', postal_code):
+                            country_detected = 'USA'
+                        # França: 75001, 69000, 13000, 31000
+                        elif re.match(r'^\d{5}$', postal_code) and postal_code[0:2] in ['75', '69', '13', '31', '44', '33', '34', '35', '06', '76']:
+                            country_detected = 'FRANCE'
+                        # Alemanha: 10115, 80331
+                        elif re.match(r'^\d{5}$', postal_code) and postal_code[0:2] in ['10', '20', '30', '40', '50', '60', '70', '80', '90', '01', '02', '03', '04', '14', '15']:
+                            country_detected = 'GERMANY'
+                        # Itália: 00100, 20100
+                        elif re.match(r'^\d{5}$', postal_code) and postal_code[0:2] in ['00', '20', '10', '50', '40', '16', '70', '80', '90']:
+                            country_detected = 'ITALY'
+                        # Holanda: 1012 AB, 1012AB
+                        elif re.match(r'^\d{4}\s?[A-Z]{2}$', postal_code):
+                            country_detected = 'NETHERLANDS'
+                        # Bélgica: 1000, 2000
+                        elif re.match(r'^[1-9]\d{3}$', postal_code):
+                            country_detected = 'BELGIUM'
+                        # Suíça: 8001, 1200
+                        elif re.match(r'^\d{4}$', postal_code) and postal_code[0] in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
+                            country_detected = 'SWITZERLAND'
+                        # Canadá: K1A 0B1
+                        elif re.match(r'^[A-Z]\d[A-Z]\s?\d[A-Z]\d$', postal_code):
+                            country_detected = 'CANADA'
+                        
+                        if country_detected:
+                            fields_from_mapping['country'] = country_detected
+                            logging.info(f"   🌍 País detectado automaticamente: {country_detected} (de código postal: {postal_code})")
+                    
                     return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
         
         except Exception as e:
