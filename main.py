@@ -19474,6 +19474,47 @@ async def test_email_oauth(request: Request):
         logging.error(f"Test email error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/reports/daily/preview")
+async def preview_daily_report(request: Request):
+    """Preview daily report HTML (for testing)"""
+    require_auth(request)
+    
+    try:
+        # Load recent search data from database
+        search_data = None
+        with _db_lock:
+            conn = _db_connect()  
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT location, start_date, days, search_results
+                    FROM recent_searches
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                    """
+                )
+                row = cursor.fetchone()
+                if row:
+                    search_data = {
+                        'location': row[0],
+                        'date': row[1],
+                        'days': row[2],
+                        'results': json.loads(row[3]) if row[3] else []
+                    }
+            finally:
+                conn.close()
+        
+        # Generate HTML report
+        html_content = generate_daily_report_html(search_data)
+        
+        # Return HTML directly for preview
+        from starlette.responses import HTMLResponse
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        logging.error(f"Preview daily report error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/oauth/outlook/authorize")
 async def oauth_outlook_authorize(request: Request):
     """Initiate Outlook OAuth2 flow"""
