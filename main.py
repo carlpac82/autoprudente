@@ -14218,7 +14218,7 @@ async def upload_damage_report_template(request: Request, file: UploadFile = Fil
 
 @app.post("/api/damage-reports/extract-from-ra")
 async def extract_from_rental_agreement(request: Request, file: UploadFile = File(...)):
-    """Extrai campos do Rental Agreement PDF"""
+    """Extrai campos do Rental Agreement PDF - Usa coordenadas mapeadas se disponíveis"""
     require_auth(request)
     
     try:
@@ -14228,6 +14228,100 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         
         contents = await file.read()
         pdf_file = BytesIO(contents)
+        
+        # MÉTODO 1: Tentar usar coordenadas mapeadas (se existirem)
+        fields_from_mapping = {}
+        try:
+            import fitz  # PyMuPDF
+            
+            # Carregar coordenadas mapeadas do RA
+            with _db_lock:
+                conn = _db_connect()
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
+                        coords_rows = cur.fetchall()
+                else:
+                    cursor = conn.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
+                    coords_rows = cursor.fetchall()
+            
+            if coords_rows:
+                logging.info(f"📍 Found {len(coords_rows)} mapped RA coordinates, extracting...")
+                
+                # Abrir PDF com PyMuPDF
+                pdf_doc = fitz.open(stream=contents, filetype="pdf")
+                
+                for row in coords_rows:
+                    field_id, x, y, width, height, page = row[0], row[1], row[2], row[3], row[4], row[5]
+                    
+                    try:
+                        # Ajustar para índice 0-based
+                        page_num = int(page) - 1 if page else 0
+                        
+                        if page_num < len(pdf_doc):
+                            pdf_page = pdf_doc[page_num]
+                            
+                            # Extrair texto da área mapeada
+                            rect = fitz.Rect(x, y, x + width, y + height)
+                            text_extracted = pdf_page.get_text("text", clip=rect).strip()
+                            
+                            if text_extracted:
+                                fields_from_mapping[field_id] = text_extracted
+                                logging.info(f"   ✅ {field_id}: {text_extracted[:50]}")
+                    except Exception as e:
+                        logging.warning(f"   ⚠️  Error extracting {field_id}: {e}")
+                        continue
+                
+                pdf_doc.close()
+                
+                # Se extraiu campos usando coordenadas, combinar e retornar
+                if fields_from_mapping:
+                    logging.info(f"✅ Extracted {len(fields_from_mapping)} fields using mapped coordinates")
+                    
+                    # Combinar campos para Damage Report
+                    if fields_from_mapping.get('postalCode') or fields_from_mapping.get('city'):
+                        postal_code_city = ' / '.join(filter(None, [
+                            fields_from_mapping.get('postalCode'),
+                            fields_from_mapping.get('city')
+                        ]))
+                        if postal_code_city:
+                            fields_from_mapping['postalCodeCity'] = postal_code_city
+                    
+                    if fields_from_mapping.get('vehicleBrand') or fields_from_mapping.get('vehicleModel'):
+                        brand_model = ' / '.join(filter(None, [
+                            fields_from_mapping.get('vehicleBrand'),
+                            fields_from_mapping.get('vehicleModel')
+                        ]))
+                        if brand_model:
+                            fields_from_mapping['vehicleBrandModel'] = brand_model
+                    
+                    # IMPORTANTE: Também verificar campo combinado já mapeado
+                    if fields_from_mapping.get('postalCodeCity') and not fields_from_mapping.get('postalCode'):
+                        # Se mapeou o campo combinado, dividir
+                        pcc = fields_from_mapping.get('postalCodeCity', '')
+                        if ' / ' in pcc:
+                            parts = pcc.split(' / ', 1)
+                            fields_from_mapping['postalCode'] = parts[0].strip()
+                            fields_from_mapping['city'] = parts[1].strip()
+                    
+                    if fields_from_mapping.get('vehicleBrandModel') and not fields_from_mapping.get('vehicleBrand'):
+                        # Se mapeou o campo combinado, dividir
+                        vbm = fields_from_mapping.get('vehicleBrandModel', '')
+                        if ' / ' in vbm:
+                            parts = vbm.split(' / ', 1)
+                            fields_from_mapping['vehicleBrand'] = parts[0].strip()
+                            fields_from_mapping['vehicleModel'] = parts[1].strip()
+                    
+                    return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
+        
+        except Exception as e:
+            logging.warning(f"⚠️  Could not extract using mapped coordinates: {e}")
+            # Continuar para método fallback (OCR/regex)
+        
+        # MÉTODO 2: Fallback - Extração por OCR/regex (código original)
+        logging.info("📄 Using OCR/regex extraction (fallback)")
         reader = PyPDF2.PdfReader(pdf_file)
         
         text = ""
@@ -14527,11 +14621,11 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 fields['vehicleBrandModel'] = brand_model
         
         # Log para debug
-        logging.info(f"=== CAMPOS EXTRAÍDOS ===")
+        logging.info(f"=== CAMPOS EXTRAÍDOS (OCR/REGEX) ===")
         for key, value in fields.items():
             logging.info(f"{key}: {value}")
         
-        return {"ok": True, "fields": fields}
+        return {"ok": True, "fields": fields, "method": "ocr_regex"}
         
     except Exception as e:
         logging.error(f"Error extracting RA fields: {e}")
