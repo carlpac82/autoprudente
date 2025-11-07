@@ -10,7 +10,20 @@ A simple, password-protected web app to fetch and display rental prices from a t
    # edit .env to set APP_PASSWORD, SECRET_KEY, TARGET_URL
    ```
 
-2. Create venv and install deps:
+2. Install Tesseract OCR (required for PDF field extraction):
+   ```bash
+   # macOS
+   brew install tesseract tesseract-lang
+   
+   # Ubuntu/Debian
+   sudo apt-get update
+   sudo apt-get install -y tesseract-ocr tesseract-ocr-por tesseract-ocr-eng
+   
+   # Windows
+   # Download installer from: https://github.com/UB-Mannheim/tesseract/wiki
+   ```
+
+3. Create venv and install deps:
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
@@ -18,12 +31,12 @@ A simple, password-protected web app to fetch and display rental prices from a t
    pip install -r requirements.txt
    ```
 
-3. Run server:
+4. Run server:
    ```bash
    uvicorn main:app --reload --port 8000
    ```
 
-4. Visit:
+5. Visit:
    - Login: http://localhost:8000/login
    - Dashboard: http://localhost:8000/
 
