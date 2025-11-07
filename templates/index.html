@@ -565,76 +565,7 @@
           </div>
         </form>
         
-        <!-- Recent Searches Preview -->
-        <div id="recentSearchesPreview" class="mt-6 hidden">
-          <!-- Header com filtros e ordenação -->
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <svg class="w-5 h-5 text-[#f4ad0f]" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-              </svg>
-              <span>Últimas Pesquisas</span>
-            </h3>
-            
-            <div class="flex flex-wrap items-center gap-3">
-              <!-- Filtro por local -->
-              <div class="flex items-center gap-2">
-                <button onclick="filterByLocation('all')" id="filterAll" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors">
-                  Todos
-                </button>
-                <button onclick="filterByLocation('Aeroporto de Faro')" id="filterFaro" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                  Faro
-                </button>
-                <button onclick="filterByLocation('Albufeira')" id="filterAlbufeira" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                  Albufeira
-                </button>
-              </div>
-              
-              <!-- Separador -->
-              <div class="h-6 w-px bg-gray-300"></div>
-              
-              <!-- Ordenação -->
-              <select onchange="sortSearches(this.value)" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 focus:border-[#009cb6] focus:ring-1 focus:ring-[#009cb6]">
-                <option value="date">Mais recentes</option>
-                <option value="price-asc">Preço menor</option>
-                <option value="price-desc">Preço maior</option>
-                <option value="location">Por local</option>
-              </select>
-              
-              <!-- Separador -->
-              <div class="h-6 w-px bg-gray-300"></div>
-              
-              <!-- Comparar -->
-              <button onclick="toggleCompareMode()" id="btnCompare" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-[#009cb6] hover:text-white transition-colors flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
-                <span>Comparar</span>
-              </button>
-              
-              <!-- Limpar -->
-              <button onclick="clearRecentSearches()" class="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-colors">
-                Limpar
-              </button>
-            </div>
-          </div>
-          
-          <!-- Modo comparação -->
-          <div id="compareMessage" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            Selecione 2 pesquisas para comparar lado-a-lado
-          </div>
-          
-          <!-- Área de comparação -->
-          <div id="compareArea" class="hidden mb-4 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <!-- Comparação será inserida aqui -->
-          </div>
-          
-          <!-- Grid de cards -->
-          <div id="recentSearchesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Cards will be inserted here -->
-          </div>
-        </div>
+        <!-- Recent Searches Preview - REMOVED (was not working properly) -->
         
         <div id="results" class="mt-4"></div>
       </section>
@@ -1098,8 +1029,9 @@
         `;
       }
       
-      // Preview cards pequenos (APENAS para homepage "Últimas Pesquisas")
+      // PREVIEW REMOVIDO - Função desativada completamente
       function renderCategoryPreview(items) {
+        return ''; // DISABLED
         const { groups, map } = groupByCategory(items);
         const toNum = (p) => {
           if (typeof p === 'number' && isFinite(p)) return p;
@@ -2802,13 +2734,15 @@
       // RECENT SEARCHES PREVIEW SYSTEM
       // ========================================
       
-      const RECENT_SEARCHES_KEY = 'recentSearches';
-      const MAX_RECENT_SEARCHES = 3;
+      // PREVIEW REMOVIDO - Variáveis desativadas
+      // const RECENT_SEARCHES_KEY = 'recentSearches';
+      // const MAX_RECENT_SEARCHES = 3;
       
-      // Guardar pesquisa no localStorage E servidor
+      // PREVIEW REMOVIDO - Função desativada completamente
       async function saveRecentSearch(searchData) {
+        return; // DISABLED
         try {
-          let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+          let searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
           
           // Adicionar timestamp
           searchData.timestamp = new Date().toISOString();
@@ -2842,16 +2776,17 @@
             console.warn('[RECENT] Server save failed, using localStorage only:', serverError);
           }
           
-          // Atualizar preview
-          loadRecentSearches();
+          // PREVIEW DESATIVADO - loadRecentSearches() removido
+          // loadRecentSearches();
         } catch (e) {
           console.error('[RECENT] Error saving search:', e);
         }
       }
       
-      // Carregar pesquisas recentes (do servidor primeiro, localStorage como fallback)
+      // PREVIEW DESATIVADO - Função mantida apenas para compatibilidade
       async function loadRecentSearches() {
-        console.log('[RECENT] ===== loadRecentSearches() called =====');
+        console.log('[RECENT] Preview disabled - function kept for compatibility');
+        return; // EXIT EARLY - Preview removido
         try {
           let searches = [];
           
@@ -2945,11 +2880,11 @@
         }
       }
       
-      // Estado global para comparação
-      let compareMode = false;
-      let selectedForCompare = [];
-      let currentFilter = 'all';
-      let currentSort = 'date';
+      // PREVIEW REMOVIDO - Variáveis globais desativadas
+      // let compareMode = false;
+      // let selectedForCompare = [];
+      // let currentFilter = 'all';
+      // let currentSort = 'date';
       
       // Função auxiliar para obter imagem REAL do carro (do CarJet)
       function getCarImage(car) {
@@ -2964,8 +2899,9 @@
         return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"%3E%3Crect width="300" height="200" fill="%23f0f9fb"/%3E%3Cpath d="M100 90 L70 90 L70 75 C70 70 72 67 75 65 L95 65 L95 50 L205 50 L205 65 L225 65 C228 67 230 70 230 75 L230 90 L200 90" fill="%23009cb6" opacity="0.3"/%3E%3Ccircle cx="80" cy="90" r="8" fill="%23cbd5e1"/%3E%3Ccircle cx="220" cy="90" r="8" fill="%23cbd5e1"/%3E%3C/svg%3E';
       }
       
-      // Criar card de preview
+      // PREVIEW REMOVIDO - Função desativada completamente
       function createSearchPreviewCard(search, index) {
+        return null; // DISABLED
         const card = document.createElement('div');
         card.className = 'bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-[#009cb6] hover:shadow-lg transition-all';
         card.dataset.searchIndex = index;
@@ -3182,12 +3118,9 @@
       }
       
       // Limpar pesquisas recentes
+      // PREVIEW REMOVIDO - Função desativada
       function clearRecentSearches() {
-        if (confirm('Limpar todas as pesquisas recentes?')) {
-          localStorage.removeItem(RECENT_SEARCHES_KEY);
-          document.getElementById('recentSearchesPreview').classList.add('hidden');
-          showNotification('Histórico de pesquisas limpo', 'success');
-        }
+        return; // DISABLED
       }
       
       // ========================================
@@ -3208,17 +3141,21 @@
           ? 'px-3 py-1.5 text-xs font-medium rounded-lg bg-[#009cb6] text-white transition-colors'
           : 'px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
         
-        // Recarregar com filtro
-        loadRecentSearches();
+        // PREVIEW DESATIVADO - loadRecentSearches() removido
+        // loadRecentSearches();
       }
       
+      // PREVIEW DESATIVADO
       function sortSearches(sortBy) {
-        currentSort = sortBy;
-        loadRecentSearches();
+        // currentSort = sortBy;
+        // loadRecentSearches();
+        return;
       }
       
+      // PREVIEW REMOVIDO - Função desativada
       function getFilteredAndSortedSearches() {
-        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        return []; // DISABLED
+        let searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         
         // Aplicar filtro
         if (currentFilter !== 'all') {
@@ -3260,7 +3197,9 @@
       // MODO COMPARAÇÃO
       // ========================================
       
+      // PREVIEW REMOVIDO - Função desativada
       function toggleCompareMode() {
+        return; // DISABLED
         compareMode = !compareMode;
         selectedForCompare = [];
         
@@ -3278,10 +3217,13 @@
           area.classList.add('hidden');
         }
         
-        loadRecentSearches();
+        // PREVIEW DESATIVADO - loadRecentSearches() removido
+        // loadRecentSearches();
       }
       
+      // PREVIEW REMOVIDO - Função desativada
       function toggleCompareSelection(index) {
+        return; // DISABLED
         if (selectedForCompare.includes(index)) {
           selectedForCompare = selectedForCompare.filter(i => i !== index);
         } else {
@@ -3300,8 +3242,10 @@
         }
       }
       
+      // PREVIEW REMOVIDO - Função desativada
       function showComparison() {
-        const searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        return; // DISABLED
+        const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         const search1 = searches[selectedForCompare[0]];
         const search2 = searches[selectedForCompare[1]];
         
@@ -3372,17 +3316,9 @@
                 results: results.slice(0, 50) // Guardar apenas top 50 para não sobrecarregar
               });
               
-              // NOVO: Carregar preview automaticamente após guardar pesquisa
-              console.log('[PREVIEW] Auto-loading preview after search...');
-              await loadRecentSearches();
-              
-              // Scroll suave até ao preview
-              setTimeout(() => {
-                const previewContainer = document.getElementById('recentSearchesPreview');
-                if (previewContainer && !previewContainer.classList.contains('hidden')) {
-                  previewContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }, 300);
+              // PREVIEW DESATIVADO - código removido
+              // console.log('[PREVIEW] Auto-loading preview after search...');
+              // await loadRecentSearches();
             }
           }, 2000);
         });
@@ -3405,18 +3341,19 @@
               
               // Se há nova pesquisa (timestamp diferente)
               if (lastSearchTimestamp && latestTimestamp !== lastSearchTimestamp) {
-                console.log('🔄 NEW SEARCH DETECTED! Auto-updating preview...');
+                // PREVIEW DESATIVADO
+                // console.log('🔄 NEW SEARCH DETECTED! Auto-updating preview...');
                 lastSearchTimestamp = latestTimestamp;
-                await loadRecentSearches();
+                // await loadRecentSearches();
                 
-                // Mostrar notificação visual
-                const container = document.getElementById('recentSearchesContainer');
-                if (container) {
-                  container.classList.add('ring-2', 'ring-[#f4ad0f]', 'ring-opacity-50');
-                  setTimeout(() => {
-                    container.classList.remove('ring-2', 'ring-[#f4ad0f]', 'ring-opacity-50');
-                  }, 2000);
-                }
+                // PREVIEW REMOVIDO - Código de notificação visual desativado
+                // const container = document.getElementById('recentSearchesContainer');
+                // if (container) {
+                //   container.classList.add('ring-2', 'ring-[#f4ad0f]', 'ring-opacity-50');
+                //   setTimeout(() => {
+                //     container.classList.remove('ring-2', 'ring-[#f4ad0f]', 'ring-opacity-50');
+                //   }, 2000);
+                // }
               } else if (!lastSearchTimestamp) {
                 // Primeira vez - guardar timestamp
                 lastSearchTimestamp = latestTimestamp;
@@ -3447,24 +3384,24 @@
         }
       }
       
-      // Carregar pesquisas ao iniciar página
-      document.addEventListener('DOMContentLoaded', function() {
-        loadRecentSearches();
-        startAutoUpdate(); // Iniciar auto-update
-      });
+      // PREVIEW DESATIVADO - código comentado
+      // document.addEventListener('DOMContentLoaded', function() {
+      //   loadRecentSearches();
+      //   startAutoUpdate();
+      // });
       
-      // Tentar carregar agora também
-      setTimeout(loadRecentSearches, 500);
+      // PREVIEW DESATIVADO - loadRecentSearches() removido
+      // setTimeout(loadRecentSearches, 500);
       
-      // Parar auto-update quando utilizador sai da página
-      document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-          stopAutoUpdate();
-        } else {
-          loadRecentSearches();
-          startAutoUpdate();
-        }
-      });
+      // PREVIEW DESATIVADO - código comentado
+      // document.addEventListener('visibilitychange', function() {
+      //   if (document.hidden) {
+      //     stopAutoUpdate();
+      //   } else {
+      //     loadRecentSearches();
+      //     startAutoUpdate();
+      //   }
+      // });
     </script>
   </body>
 </html>

@@ -2721,33 +2721,73 @@ def send_notification(rule_id: int, notification_type: str, recipient: str, subj
                 conn.close()
         log_to_db("ERROR", f"Failed to send notification: {str(e)}", "main", "send_notification")
 
+def _get_gmail_credentials():
+    """Load complete Gmail OAuth credentials from database with refresh capability"""
+    from google.oauth2.credentials import Credentials
+    
+    # Load token from database
+    access_token = None
+    refresh_token = None
+    
+    with _db_lock:
+        conn = _db_connect()
+        try:
+            cursor = conn.execute(
+                "SELECT access_token, refresh_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+            )
+            row = cursor.fetchone()
+            if row:
+                access_token = row[0]
+                refresh_token = row[1] if len(row) > 1 else None
+                logging.info("✅ OAuth tokens loaded from database")
+        finally:
+            conn.close()
+    
+    if not access_token:
+        logging.error("❌ No OAuth access token found in database")
+        return None
+    
+    # CRITICAL: Check if refresh_token exists
+    if not refresh_token or refresh_token.strip() == '':
+        logging.error("❌ No refresh_token found in database - USER MUST RECONNECT GMAIL")
+        logging.error("   → Go to Admin Settings → Email → Click 'Connect Gmail' again")
+        return None
+    
+    # Load OAuth client credentials from environment
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+    
+    if not client_id or not client_secret:
+        logging.error("❌ GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not configured")
+        return None
+    
+    # Create complete credentials object with refresh capability
+    credentials = Credentials(
+        token=access_token,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=['https://www.googleapis.com/auth/gmail.send']
+    )
+    
+    logging.info("✅ Complete Gmail credentials created with refresh capability")
+    return credentials
+
 def _send_notification_email(to_email: str, subject: str, message: str):
     """Enviar email de notificação via Gmail OAuth"""
     try:
         from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
         import base64
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
         
-        # Buscar token OAuth da BD
-        access_token = None
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute(
-                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                )
-                row = cursor.fetchone()
-                if row:
-                    access_token = row[0]
-                    logging.info("✅ Token loaded from database for notification email")
-            finally:
-                conn.close()
+        # Get complete Gmail credentials
+        credentials = _get_gmail_credentials()
         
-        if not access_token:
-            # Fallback para SMTP se não houver token OAuth
-            logging.warning("⚠️ No OAuth token found, trying SMTP fallback")
+        if not credentials:
+            # Fallback para SMTP se não houver credenciais OAuth
+            logging.warning("⚠️ No OAuth credentials available, trying SMTP fallback")
             _send_notification_email_smtp(to_email, subject, message)
             return
         
@@ -2788,8 +2828,7 @@ def _send_notification_email(to_email: str, subject: str, message: str):
         
         email_message.attach(html_part)
         
-        # Enviar via Gmail API
-        credentials = Credentials(token=access_token)
+        # Enviar via Gmail API (credentials já carregadas com refresh capability)
         service = build('gmail', 'v1', credentials=credentials)
         
         raw_message = base64.urlsafe_b64encode(email_message.as_bytes()).decode()
@@ -10740,22 +10779,26 @@ async def save_price_automation_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detect PostgreSQL vs SQLite
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
                 # Salvar cada configuração
                 for key, value in data.items():
                     value_json = json.dumps(value)
                     logging.debug(f"  - {key}: {value_json[:100]}...")
-                    conn.execute(
-                        """
+                    
+                    query = f"""
                         INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
-                        VALUES (?, ?, 'json', CURRENT_TIMESTAMP)
+                        VALUES ({placeholder}, {placeholder}, 'json', CURRENT_TIMESTAMP)
                         ON CONFLICT (setting_key) DO UPDATE SET
                             setting_value = EXCLUDED.setting_value,
                             updated_at = CURRENT_TIMESTAMP
-                        """,
-                        (key, value_json)
-                    )
+                    """
+                    
+                    conn.execute(query, (key, value_json))
                 conn.commit()
-                logging.info("✅ Price automation settings saved successfully to database")
+                logging.info(f"✅ Price automation settings saved to database (placeholder: {placeholder})")
                 return JSONResponse({"ok": True, "message": "Settings saved successfully"})
             except Exception as db_err:
                 logging.error(f"❌ Database error saving settings: {str(db_err)}")
@@ -17741,7 +17784,12 @@ async def save_custom_days(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                con.execute("INSERT INTO custom_days (days_array) VALUES (?)", (json.dumps(days),))
+                # Detect PostgreSQL vs SQLite
+                is_postgres = hasattr(con, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
+                query = f"INSERT INTO custom_days (days_array) VALUES ({placeholder})"
+                con.execute(query, (json.dumps(days),))
                 con.commit()
                 return _no_store_json({"ok": True, "message": "Custom days saved successfully"})
             finally:
@@ -17901,23 +17949,26 @@ async def sync_all_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detect PostgreSQL vs SQLite
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
                 for key, value in data.items():
                     # Store as JSON string
                     value_str = value if isinstance(value, str) else json.dumps(value)
                     
-                    conn.execute(
-                        """
+                    query = f"""
                         INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
-                        VALUES (?, ?, 'json', CURRENT_TIMESTAMP)
+                        VALUES ({placeholder}, {placeholder}, 'json', CURRENT_TIMESTAMP)
                         ON CONFLICT (setting_key) DO UPDATE SET
                             setting_value = EXCLUDED.setting_value,
                             updated_at = CURRENT_TIMESTAMP
-                        """,
-                        (key, value_str)
-                    )
+                    """
+                    
+                    conn.execute(query, (key, value_str))
                 
                 conn.commit()
-                logging.info(f"✅ Synced {len(data)} settings to database")
+                logging.info(f"✅ Synced {len(data)} settings to database (placeholder: {placeholder})")
                 return JSONResponse({"ok": True, "synced": len(data)})
             finally:
                 conn.close()
@@ -17966,22 +18017,24 @@ async def save_automated_reports_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detect PostgreSQL vs SQLite
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
                 # Save as JSON
                 settings_json = json.dumps(data)
                 
-                conn.execute(
-                    """
+                query = f"""
                     INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
-                    VALUES ('automatedReportsSettings', ?, 'json', CURRENT_TIMESTAMP)
+                    VALUES ('automatedReportsSettings', {placeholder}, 'json', CURRENT_TIMESTAMP)
                     ON CONFLICT (setting_key) DO UPDATE SET
                         setting_value = EXCLUDED.setting_value,
                         updated_at = CURRENT_TIMESTAMP
-                    """,
-                    (settings_json,)
-                )
+                """
                 
+                conn.execute(query, (settings_json,))
                 conn.commit()
-                logging.info(f"✅ Saved automated reports settings to database")
+                logging.info(f"✅ Saved automated reports settings to PostgreSQL (placeholder: {placeholder})")
                 return JSONResponse({"ok": True, "message": "Settings saved successfully"})
             finally:
                 conn.close()
@@ -18200,6 +18253,8 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
             # Save token to database IMMEDIATELY
             try:
                 expires_at = int(time.time()) + token_data.get('expires_in', 3600)
+                refresh_token_new = token_data.get('refresh_token')
+                
                 with _db_lock:
                     conn = _db_connect()
                     try:
@@ -18207,25 +18262,53 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
                         is_postgres = hasattr(conn, 'cursor')
                         placeholder = "%s" if is_postgres else "?"
                         
-                        query = f"""
-                            INSERT INTO oauth_tokens 
-                            (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
-                            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                            ON CONFLICT(provider, user_email) 
-                            DO UPDATE SET 
-                                access_token = excluded.access_token,
-                                refresh_token = excluded.refresh_token,
-                                expires_at = excluded.expires_at,
-                                updated_at = CURRENT_TIMESTAMP
-                        """
+                        # Se há um novo refresh_token, atualizar tudo
+                        # Se NÃO há refresh_token (reconexão), manter o antigo
+                        if refresh_token_new:
+                            query = f"""
+                                INSERT INTO oauth_tokens 
+                                (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
+                                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                                ON CONFLICT(provider, user_email) 
+                                DO UPDATE SET 
+                                    access_token = excluded.access_token,
+                                    refresh_token = excluded.refresh_token,
+                                    expires_at = excluded.expires_at,
+                                    google_id = excluded.google_id,
+                                    user_name = excluded.user_name,
+                                    user_picture = excluded.user_picture,
+                                    updated_at = CURRENT_TIMESTAMP
+                            """
+                            
+                            conn.execute(
+                                query,
+                                ('gmail', user_email, access_token, refresh_token_new, 
+                                 expires_at, google_id, user_name, user_picture)
+                            )
+                            logging.info(f"✅ Token saved with NEW refresh_token for {user_email}")
+                        else:
+                            # Atualizar apenas access_token e expires_at, MANTER refresh_token existente
+                            query = f"""
+                                INSERT INTO oauth_tokens 
+                                (provider, user_email, access_token, refresh_token, expires_at, google_id, user_name, user_picture)
+                                VALUES ({placeholder}, {placeholder}, {placeholder}, '', {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                                ON CONFLICT(provider, user_email) 
+                                DO UPDATE SET 
+                                    access_token = excluded.access_token,
+                                    expires_at = excluded.expires_at,
+                                    google_id = excluded.google_id,
+                                    user_name = excluded.user_name,
+                                    user_picture = excluded.user_picture,
+                                    updated_at = CURRENT_TIMESTAMP
+                            """
+                            
+                            conn.execute(
+                                query,
+                                ('gmail', user_email, access_token, expires_at, google_id, user_name, user_picture)
+                            )
+                            logging.info(f"✅ Token updated WITHOUT changing refresh_token for {user_email}")
                         
-                        conn.execute(
-                            query,
-                            ('gmail', user_email, access_token, token_data.get('refresh_token', ''), 
-                             expires_at, google_id, user_name, user_picture)
-                        )
                         conn.commit()
-                        logging.info(f"✅ Token saved to database for {user_email}")
                     finally:
                         conn.close()
             except Exception as e:
@@ -18477,17 +18560,20 @@ async def save_email_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detect PostgreSQL vs SQLite
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                
                 # Save to user_settings table
-                conn.execute(
-                    """
+                query = f"""
                     INSERT INTO user_settings (user_key, setting_key, setting_value, updated_at)
-                    VALUES (?, 'email_settings', ?, CURRENT_TIMESTAMP)
+                    VALUES ({placeholder}, 'email_settings', {placeholder}, CURRENT_TIMESTAMP)
                     ON CONFLICT (user_key, setting_key) DO UPDATE SET
                         setting_value = EXCLUDED.setting_value,
                         updated_at = CURRENT_TIMESTAMP
-                    """,
-                    (username, settings_json)
-                )
+                """
+                
+                conn.execute(query, (username, settings_json))
                 conn.commit()
                 logging.info(f"✅ Email settings saved to database for user {username}")
                 return JSONResponse({"ok": True, "message": "Settings saved successfully"})
@@ -18544,31 +18630,10 @@ async def test_daily_report(request: Request):
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime
         
-        # Get request data
-        data = await request.json()
-        access_token = data.get('accessToken')
+        # Get complete Gmail credentials
+        credentials = _get_gmail_credentials()
         
-        # Se não veio no request, buscar da BD
-        if not access_token:
-            with _db_lock:
-                conn = _db_connect()
-                try:
-                    cursor = conn.execute(
-                        """
-                        SELECT access_token FROM oauth_tokens
-                        WHERE provider = 'gmail'
-                        ORDER BY updated_at DESC
-                        LIMIT 1
-                        """
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        access_token = row[0]
-                        logging.info("✅ Token loaded from database")
-                finally:
-                    conn.close()
-        
-        if not access_token:
+        if not credentials:
             return JSONResponse({
                 "ok": False,
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
@@ -18580,10 +18645,7 @@ async def test_daily_report(request: Request):
         username = request.session.get('username')
         logging.info(f"Test daily report requested by {username} for {len(report_recipients)} recipient(s)")
         
-        # Create credentials from access token
-        credentials = Credentials(token=access_token)
-        
-        # Build Gmail service
+        # Build Gmail service with complete credentials
         service = build('gmail', 'v1', credentials=credentials)
         
         # Create HTML email with sample data
@@ -18696,27 +18758,10 @@ async def test_alert_email(request: Request):
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime
         
-        # Buscar token da BD
-        access_token = None
-        try:
-            with _db_lock:
-                conn = _db_connect()
-                try:
-                    cursor = conn.execute(
-                        "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        access_token = row[0]
-                        logging.info("✅ Token loaded from database for test alert")
-                    else:
-                        logging.warning("⚠️ No token found in oauth_tokens table")
-                finally:
-                    conn.close()
-        except Exception as e:
-            logging.error(f"❌ Error loading token from DB: {str(e)}")
+        # Get complete Gmail credentials
+        credentials = _get_gmail_credentials()
         
-        if not access_token:
+        if not credentials:
             return JSONResponse({
                 "ok": False,
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
@@ -18725,8 +18770,7 @@ async def test_alert_email(request: Request):
         # Usar email de configuração como destinatário
         report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
-        # Create credentials and Gmail service
-        credentials = Credentials(token=access_token)
+        # Build Gmail service with complete credentials
         service = build('gmail', 'v1', credentials=credentials)
         
         # Send to each recipient
@@ -18816,6 +18860,106 @@ async def test_alert_email(request: Request):
         
     except Exception as e:
         logging.error(f"Test alert email error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/reports/run-now")
+async def run_report_now(request: Request):
+    """Execute search and email report IMMEDIATELY"""
+    require_auth(request)
+    
+    try:
+        username = request.session.get('username')
+        logging.info(f"⚡ IMMEDIATE REPORT RUN requested by {username}")
+        
+        # Step 1: Run search
+        logging.info("🔍 Step 1: Running search...")
+        try:
+            await run_daily_report_search()
+            logging.info("✅ Search completed")
+        except Exception as e:
+            logging.error(f"❌ Search failed: {str(e)}")
+            return JSONResponse({
+                "ok": False,
+                "error": f"Pesquisa falhou: {str(e)}"
+            }, status_code=500)
+        
+        # Step 2: Send email report
+        logging.info("📧 Step 2: Sending email...")
+        try:
+            await send_automatic_daily_report()
+            logging.info("✅ Email sent")
+        except Exception as e:
+            logging.error(f"❌ Email failed: {str(e)}")
+            return JSONResponse({
+                "ok": False,
+                "error": f"Email falhou: {str(e)}"
+            }, status_code=500)
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Pesquisa executada e email enviado com sucesso!"
+        })
+        
+    except Exception as e:
+        logging.error(f"Run report now error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/scheduler/jobs")
+async def get_scheduler_jobs(request: Request):
+    """Get list of active scheduler jobs"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        import pytz
+        
+        # Get scheduler instance
+        try:
+            from apscheduler.schedulers.background import BackgroundScheduler
+            # Scheduler is global, defined at startup
+            jobs_info = []
+            
+            if 'scheduler' in globals():
+                scheduler = globals()['scheduler']
+                jobs = scheduler.get_jobs()
+                
+                lisbon_tz = pytz.timezone('Europe/Lisbon')
+                
+                for job in jobs:
+                    next_run = job.next_run_time
+                    if next_run:
+                        # Convert to Lisbon timezone
+                        next_run_lisbon = next_run.astimezone(lisbon_tz)
+                        next_run_str = next_run_lisbon.strftime('%Y-%m-%d %H:%M:%S %Z')
+                    else:
+                        next_run_str = 'N/A'
+                    
+                    jobs_info.append({
+                        'id': job.id,
+                        'name': job.name,
+                        'next_run': next_run_str,
+                        'trigger': str(job.trigger)
+                    })
+                
+                return JSONResponse({
+                    "ok": True,
+                    "jobs_count": len(jobs_info),
+                    "jobs": jobs_info,
+                    "scheduler_running": scheduler.running,
+                    "current_time_lisbon": datetime.now(lisbon_tz).strftime('%Y-%m-%d %H:%M:%S %Z')
+                })
+            else:
+                return JSONResponse({
+                    "ok": False,
+                    "error": "Scheduler not initialized"
+                })
+        except Exception as e:
+            return JSONResponse({
+                "ok": False,
+                "error": f"Scheduler error: {str(e)}"
+            })
+    except Exception as e:
+        logging.error(f"Get scheduler jobs error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/backup/create")
@@ -19208,27 +19352,10 @@ async def test_weekly_report(request: Request):
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime
         
-        # Buscar token da BD
-        access_token = None
-        try:
-            with _db_lock:
-                conn = _db_connect()
-                try:
-                    cursor = conn.execute(
-                        "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        access_token = row[0]
-                        logging.info("✅ Token loaded from database for test weekly report")
-                    else:
-                        logging.warning("⚠️ No token found in oauth_tokens table")
-                finally:
-                    conn.close()
-        except Exception as e:
-            logging.error(f"❌ Error loading token from DB: {str(e)}")
+        # Get complete Gmail credentials
+        credentials = _get_gmail_credentials()
         
-        if not access_token:
+        if not credentials:
             return JSONResponse({
                 "ok": False,
                 "error": "Token OAuth não encontrado. Por favor, conecte sua conta Gmail primeiro."
@@ -19237,8 +19364,7 @@ async def test_weekly_report(request: Request):
         # Usar email de configuração como destinatário
         report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
-        # Create credentials and Gmail service
-        credentials = Credentials(token=access_token)
+        # Build Gmail service with complete credentials
         service = build('gmail', 'v1', credentials=credentials)
         
         # Send to each recipient
@@ -19363,25 +19489,12 @@ async def test_email_oauth(request: Request):
         data = await request.json()
         provider = data.get('provider')
         email = data.get('email')
-        access_token = data.get('accessToken')
         recipients = data.get('recipients', '')
         
-        # Se não veio token, buscar da BD
-        if not access_token:
-            with _db_lock:
-                conn = _db_connect()
-                try:
-                    cursor = conn.execute(
-                        "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        access_token = row[0]
-                        logging.info("✅ Token loaded from database for test email")
-                finally:
-                    conn.close()
+        # Get complete Gmail credentials
+        credentials = _get_gmail_credentials()
         
-        if not access_token:
+        if not credentials:
             return JSONResponse({"ok": False, "error": "Token OAuth não encontrado. Conecte Gmail primeiro."})
         
         # Parse recipients (one per line)
@@ -19390,8 +19503,7 @@ async def test_email_oauth(request: Request):
         if not recipient_list:
             return JSONResponse({"ok": False, "error": "Nenhum destinatário especificado"})
         
-        # Create credentials and Gmail service
-        credentials = Credentials(token=access_token)
+        # Build Gmail service with complete credentials
         service = build('gmail', 'v1', credentials=credentials)
         
         # Send to each recipient
@@ -20001,6 +20113,10 @@ def generate_daily_report_html(search_data):
 def run_daily_report_search():
     """Run automated search 2 hours before daily report (stores results for comparison)"""
     try:
+        print("\n" + "="*80)
+        print("🔍 DAILY REPORT SEARCH STARTED")
+        print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("="*80 + "\n")
         logging.info("🔍 Starting daily report search (2h before email)...")
         
         # Load settings to get search location (CORRIGIDO - tabela certa)
@@ -20106,6 +20222,10 @@ def run_daily_report_search():
 def run_weekly_report_search():
     """Run automated search for next 3 months (2h before weekly report)"""
     try:
+        print("\n" + "="*80)
+        print("🔍 WEEKLY REPORT SEARCH STARTED")
+        print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("="*80 + "\n")
         logging.info("🔍 Starting weekly report search for next 3 months (2h before email)...")
         
         # Load settings (CORRIGIDO - tabela certa)
@@ -20213,6 +20333,10 @@ def run_weekly_report_search():
 def send_automatic_daily_report():
     """Send daily report automatically based on saved settings"""
     try:
+        print("\n" + "="*80)
+        print("📧 DAILY REPORT EMAIL STARTED")
+        print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("="*80 + "\n")
         logging.info("🔄 Starting automatic daily report...")
         
         # Load settings from database (CORRIGIDO - tabela certa)
@@ -20241,31 +20365,18 @@ def send_automatic_daily_report():
             finally:
                 conn.close()
         
-        # Get OAuth token
-        access_token = None
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute(
-                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                )
-                row = cursor.fetchone()
-                if row:
-                    access_token = row[0]
-            finally:
-                conn.close()
-        
-        if not access_token:
-            logging.error("❌ No Gmail token found - cannot send daily report")
-            return
-        
-        # Get latest search data for report
+        # Get complete Gmail credentials
         from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime
         import base64
+        
+        credentials = _get_gmail_credentials()
+        
+        if not credentials:
+            logging.error("❌ No Gmail credentials found - cannot send daily report")
+            return
         
         # Load recent search data from database
         search_data = None
@@ -20292,7 +20403,7 @@ def send_automatic_daily_report():
             finally:
                 conn.close()
         
-        credentials = Credentials(token=access_token)
+        # Build Gmail service with complete credentials
         service = build('gmail', 'v1', credentials=credentials)
         
         sent_count = 0
@@ -20482,6 +20593,10 @@ def generate_weekly_report_html(months_data):
 def send_automatic_weekly_report():
     """Send weekly report automatically based on saved settings"""
     try:
+        print("\n" + "="*80)
+        print("📧 WEEKLY REPORT EMAIL STARTED")
+        print(f"⏰ Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("="*80 + "\n")
         logging.info("🔄 Starting automatic weekly report...")
         
         # Load settings from database (CORRIGIDO - tabela certa)
@@ -20510,31 +20625,18 @@ def send_automatic_weekly_report():
             finally:
                 conn.close()
         
-        # Get OAuth token
-        access_token = None
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                cursor = conn.execute(
-                    "SELECT access_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
-                )
-                row = cursor.fetchone()
-                if row:
-                    access_token = row[0]
-            finally:
-                conn.close()
-        
-        if not access_token:
-            logging.error("❌ No Gmail token found - cannot send weekly report")
-            return
-        
-        # Analyze NEXT 3 months (future dates)
+        # Get complete Gmail credentials
         from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime, timedelta
         import base64
+        
+        credentials = _get_gmail_credentials()
+        
+        if not credentials:
+            logging.error("❌ No Gmail credentials found - cannot send weekly report")
+            return
         
         months_to_analyze = settings.get('weeklyMonths', 3)  # Default: 3 months
         months_data = []
@@ -20662,7 +20764,7 @@ def send_automatic_weekly_report():
         # Generate HTML report
         html_content = generate_weekly_report_html(months_data)
         
-        credentials = Credentials(token=access_token)
+        # Build Gmail service with complete credentials (already loaded)
         service = build('gmail', 'v1', credentials=credentials)
         
         sent_count = 0
@@ -20690,12 +20792,23 @@ def send_automatic_weekly_report():
 # SCHEDULERS - BACKUPS & REPORTS
 # ============================================================
 
+# Global scheduler variable
+scheduler = None
+
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
+    import pytz
     
-    # Create single scheduler for all jobs
-    scheduler = BackgroundScheduler()
+    # Create single scheduler for all jobs with Portugal timezone
+    lisbon_tz = pytz.timezone('Europe/Lisbon')
+    scheduler = BackgroundScheduler(timezone=lisbon_tz)
+    
+    print("=" * 80)
+    print("🚀 INITIALIZING APSCHEDULER")
+    print(f"📍 Timezone: Europe/Lisbon (UTC+0/+1)")
+    print(f"⏰ Current Lisbon time: {datetime.now(lisbon_tz).strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 80)
     
     # === BACKUP JOB ===
     # Daily backup at 3 AM
@@ -20749,33 +20862,48 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 8:30 AM TODAY
+    # Test search at 9:20 AM TODAY
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=8, minute=30),
+        CronTrigger(hour=9, minute=20),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 8:30 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 9:20 AM)", "main", "scheduler")
     
-    # Test report at 9:00 AM TODAY
+    # Test report at 9:40 AM TODAY
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=9, minute=0),
+        CronTrigger(hour=9, minute=40),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 9:00 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 9:40 AM)", "main", "scheduler")
     
     # Start scheduler
     scheduler.start()
     log_to_db("INFO", "🚀 Scheduler started successfully with 6 jobs (backup + search + reports + 2 tests)", "main", "scheduler")
     
+    # Print all configured jobs with next run times
+    print("\n" + "=" * 80)
+    print("✅ SCHEDULER STARTED SUCCESSFULLY")
+    print("=" * 80)
+    print(f"Total jobs: {len(scheduler.get_jobs())}")
+    print("\nScheduled jobs:")
+    for job in scheduler.get_jobs():
+        next_run = job.next_run_time.astimezone(lisbon_tz).strftime('%Y-%m-%d %H:%M:%S') if job.next_run_time else 'N/A'
+        print(f"  • {job.name} ({job.id})")
+        print(f"    ⏰ Next run: {next_run}")
+        print(f"    🔄 Trigger: {job.trigger}")
+    print("=" * 80 + "\n")
+    
 except ImportError:
+    print("⚠️  WARNING: APScheduler not installed - automatic backups and reports disabled")
     log_to_db("WARNING", "APScheduler not installed - automatic backups and reports disabled", "main", "scheduler")
 except Exception as e:
+    print(f"❌ ERROR: Failed to start scheduler: {str(e)}")
     log_to_db("ERROR", f"Failed to start scheduler: {str(e)}", "main", "scheduler")
 
 # ============================================================
