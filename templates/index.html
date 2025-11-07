@@ -1029,9 +1029,8 @@
         `;
       }
       
-      // PREVIEW REMOVIDO - Função desativada completamente
+      // Preview cards showing cheapest car per category
       function renderCategoryPreview(items) {
-        return ''; // DISABLED
         const { groups, map } = groupByCategory(items);
         const toNum = (p) => {
           if (typeof p === 'number' && isFinite(p)) return p;
@@ -1985,8 +1984,9 @@
               <p class="text-sm">Session may have expired. Please try again.</p>
             <\/div>`);
           } else {
-            // NÃO mostrar preview cards nos resultados, apenas layout moderno
-            inner.push(renderModernResults(items));
+            inner.push(renderCategoryPreview(items));
+            inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
+            inner.push(renderCategoryBlocks(items));
             // Mostrar filtros de suppliers após resultados
             showSupplierFilters(items);
           }
