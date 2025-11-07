@@ -4,7 +4,7 @@
 # Usage: ./test_cron_now.sh [search|report|both]
 
 SECRET_KEY="6875bd76f0ec3cc9826c4bb9c3b450ef"
-BASE_URL="https://rental-price-tracker.onrender.com"
+BASE_URL="https://carrental-api-5f8q.onrender.com"
 
 echo "=========================================="
 echo "🧪 TESTE IMEDIATO DE CRON JOBS"
@@ -72,4 +72,6 @@ esac
 echo "=========================================="
 echo "Verifique os logs do Render para confirmar execução:"
 echo "https://dashboard.render.com/web/rental-price-tracker/logs"
+echo ""
+echo "URL da aplicação: https://carrental-api-5f8q.onrender.com"
 echo "=========================================="
