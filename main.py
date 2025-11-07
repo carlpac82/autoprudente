@@ -20976,11 +20976,11 @@ def send_automatic_daily_report():
         print("="*80 + "\n")
         logging.info("🔄 Starting automatic daily report...")
         
-        # Load settings from database (CORRIGIDO - tabela certa)
+        # Load settings from database
         with _db_lock:
             conn = _db_connect()
             try:
-                # DEBUG: Check if table exists
+                # Check automation settings (daily enabled, etc)
                 logging.info("[EMAIL-DEBUG] Checking price_automation_settings table...")
                 
                 cursor = conn.execute(
@@ -20988,25 +20988,39 @@ def send_automatic_daily_report():
                 )
                 row = cursor.fetchone()
                 
-                logging.info(f"[EMAIL-DEBUG] Query result: row={'EXISTS' if row else 'NULL'}, value={'EXISTS' if (row and row[0]) else 'EMPTY'}")
-                
                 if not row or not row[0]:
                     logging.warning("⚠️ No automated reports settings found in price_automation_settings")
                     logging.warning("⚠️ User needs to configure reports at: /admin/customization/automated-reports")
                     return
                 
-                settings = json.loads(row[0])
-                logging.info(f"[EMAIL-DEBUG] Settings loaded: dailyEnabled={settings.get('dailyEnabled')}, recipients={len(settings.get('recipients', []))}")
+                automation_settings = json.loads(row[0])
+                logging.info(f"[EMAIL-DEBUG] Automation settings: dailyEnabled={automation_settings.get('dailyEnabled')}")
                 
-                if not settings.get('dailyEnabled'):
+                if not automation_settings.get('dailyEnabled'):
                     logging.info("ℹ️ Daily reports are disabled - skipping")
                     return
                 
-                recipients = settings.get('recipients', [])
+                # Get recipients from user_settings (email_settings)
+                logging.info("[EMAIL-DEBUG] Checking user_settings for email recipients...")
+                cursor = conn.execute(
+                    "SELECT setting_value FROM user_settings WHERE setting_key = 'email_settings'"
+                )
+                email_row = cursor.fetchone()
+                
+                if not email_row or not email_row[0]:
+                    logging.warning("⚠️ No email settings found in user_settings")
+                    logging.warning("⚠️ Please configure at: /admin/customization/email")
+                    return
+                
+                email_settings = json.loads(email_row[0])
+                recipients_text = email_settings.get('recipients', '')
+                
+                # Parse recipients (one per line)
+                recipients = [email.strip() for email in recipients_text.split('\n') if email.strip()]
+                
                 if not recipients:
-                    logging.warning("⚠️ No recipients configured in settings")
-                    logging.warning("⚠️ Settings structure: " + str(list(settings.keys())))
-                    logging.warning("⚠️ Please configure at: /admin/customization/automated-reports")
+                    logging.warning("⚠️ No recipients configured in email settings")
+                    logging.warning("⚠️ Please add recipients at: /admin/customization/email")
                     return
                 
                 logging.info(f"📧 Sending daily report to {len(recipients)} recipient(s): {recipients}")
