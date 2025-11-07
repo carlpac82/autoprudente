@@ -582,12 +582,8 @@
                         <input type="text" id="address" name="address">
                     </div>
                     <div class="form-group">
-                        <label>Cidade</label>
-                        <input type="text" id="city" name="city">
-                    </div>
-                    <div class="form-group">
-                        <label>Código Postal</label>
-                        <input type="text" id="postalCode" name="postalCode">
+                        <label>Código Postal / Cidade</label>
+                        <input type="text" id="postalCodeCity" name="postalCodeCity" placeholder="1000-001 / Lisboa">
                     </div>
                     <div class="form-group">
                         <label>País</label>
@@ -611,12 +607,8 @@
                         <input type="text" id="vehiclePlate" name="vehiclePlate" required>
                     </div>
                     <div class="form-group">
-                        <label>Modelo *</label>
-                        <input type="text" id="vehicleModel" name="vehicleModel" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Marca</label>
-                        <input type="text" id="vehicleBrand" name="vehicleBrand">
+                        <label>Marca / Modelo *</label>
+                        <input type="text" id="vehicleBrandModel" name="vehicleBrandModel" placeholder="Volkswagen / Golf" required>
                     </div>
                 </div>
             </div>
@@ -2170,11 +2162,17 @@
                     if (r.client_email) document.getElementById('clientEmail').value = r.client_email;
                     if (r.client_phone) document.getElementById('clientPhone').value = r.client_phone;
                     if (r.client_address) document.getElementById('address').value = r.client_address;
-                    if (r.client_city) document.getElementById('city').value = r.client_city;
-                    if (r.client_postal_code) document.getElementById('postalCode').value = r.client_postal_code;
+                    // Combinar código postal e cidade
+                    if (r.client_postal_code || r.client_city) {
+                        const postalCodeCity = [r.client_postal_code, r.client_city].filter(x => x).join(' / ');
+                        document.getElementById('postalCodeCity').value = postalCodeCity;
+                    }
                     if (r.vehicle_plate) document.getElementById('vehiclePlate').value = r.vehicle_plate;
-                    if (r.vehicle_model) document.getElementById('vehicleModel').value = r.vehicle_model;
-                    if (r.vehicle_brand) document.getElementById('vehicleBrand').value = r.vehicle_brand;
+                    // Combinar marca e modelo
+                    if (r.vehicle_brand || r.vehicle_model) {
+                        const brandModel = [r.vehicle_brand, r.vehicle_model].filter(x => x).join(' / ');
+                        document.getElementById('vehicleBrandModel').value = brandModel;
+                    }
                     if (r.pickup_date) document.getElementById('pickupDate').value = r.pickup_date.split('T')[0];
                     if (r.return_date) document.getElementById('returnDate').value = r.return_date.split('T')[0];
                     if (r.pickup_location) document.getElementById('pickupLocation').value = r.pickup_location;
@@ -2272,12 +2270,14 @@
                     document.getElementById('clientEmail').value = report.client_email || '';
                     document.getElementById('clientPhone').value = report.client_phone || '';
                     document.getElementById('address').value = report.client_address || '';
-                    document.getElementById('city').value = report.client_city || '';
-                    document.getElementById('postalCode').value = report.client_postal_code || '';
+                    // Combinar código postal e cidade
+                    const postalCodeCity = [report.client_postal_code, report.client_city].filter(x => x).join(' / ');
+                    document.getElementById('postalCodeCity').value = postalCodeCity;
                     document.getElementById('country').value = report.client_country || '';
                     document.getElementById('vehiclePlate').value = report.vehicle_plate || '';
-                    document.getElementById('vehicleModel').value = report.vehicle_model || '';
-                    document.getElementById('vehicleBrand').value = report.vehicle_brand || '';
+                    // Combinar marca e modelo
+                    const brandModel = [report.vehicle_brand, report.vehicle_model].filter(x => x).join(' / ');
+                    document.getElementById('vehicleBrandModel').value = brandModel;
                     document.getElementById('pickupDate').value = report.pickup_date || '';
                     document.getElementById('pickupTime').value = report.pickup_time || '';
                     document.getElementById('pickupLocation').value = report.pickup_location || '';
@@ -2448,11 +2448,17 @@
                     if (fields.clientEmail) document.getElementById('clientEmail').value = fields.clientEmail.toLowerCase();
                     if (fields.clientPhone) document.getElementById('clientPhone').value = fields.clientPhone;
                     if (fields.vehiclePlate) document.getElementById('vehiclePlate').value = fields.vehiclePlate.toUpperCase();
-                    if (fields.vehicleModel) document.getElementById('vehicleModel').value = fields.vehicleModel.toUpperCase();
-                    if (fields.vehicleBrand) document.getElementById('vehicleBrand').value = fields.vehicleBrand.toUpperCase();
+                    // Combinar marca e modelo do RA
+                    if (fields.vehicleBrand || fields.vehicleModel) {
+                        const brandModel = [fields.vehicleBrand, fields.vehicleModel].filter(x => x).map(x => x.toUpperCase()).join(' / ');
+                        document.getElementById('vehicleBrandModel').value = brandModel;
+                    }
                     if (fields.address) document.getElementById('address').value = fields.address.toUpperCase();
-                    if (fields.city) document.getElementById('city').value = fields.city.toUpperCase();
-                    if (fields.postalCode) document.getElementById('postalCode').value = fields.postalCode;
+                    // Combinar código postal e cidade do RA
+                    if (fields.postalCode || fields.city) {
+                        const postalCodeCity = [fields.postalCode, fields.city?.toUpperCase()].filter(x => x).join(' / ');
+                        document.getElementById('postalCodeCity').value = postalCodeCity;
+                    }
                     if (fields.country) document.getElementById('country').value = fields.country.toUpperCase();
                     if (fields.pickupDate) {
                         const parts = fields.pickupDate.split('-');

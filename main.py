@@ -14601,6 +14601,27 @@ async def create_damage_report(request: Request):
                 
                 import datetime
                 
+                # Dividir campos combinados
+                # Código Postal / Cidade
+                postal_code_city = data.get('postalCodeCity', '')
+                if postal_code_city and ' / ' in postal_code_city:
+                    parts = postal_code_city.split(' / ', 1)
+                    data['postalCode'] = parts[0].strip()
+                    data['city'] = parts[1].strip()
+                else:
+                    data['postalCode'] = data.get('postalCode', postal_code_city)
+                    data['city'] = data.get('city', '')
+                
+                # Marca / Modelo
+                brand_model = data.get('vehicleBrandModel', '')
+                if brand_model and ' / ' in brand_model:
+                    parts = brand_model.split(' / ', 1)
+                    data['vehicleBrand'] = parts[0].strip()
+                    data['vehicleModel'] = parts[1].strip()
+                else:
+                    data['vehicleBrand'] = data.get('vehicleBrand', '')
+                    data['vehicleModel'] = data.get('vehicleModel', brand_model)
+                
                 # Verificar se é UPDATE (dr_number fornecido) ou CREATE (novo)
                 existing_dr_number = data.get('existingDRNumber')
                 
@@ -16643,6 +16664,27 @@ async def preview_damage_report_pdf(request: Request):
         # Receber dados do formulário
         body = await request.json()
         
+        # Dividir campos combinados
+        # Código Postal / Cidade
+        postal_code_city = body.get('postalCodeCity', '')
+        if postal_code_city and ' / ' in postal_code_city:
+            parts = postal_code_city.split(' / ', 1)
+            postal_code = parts[0].strip()
+            city = parts[1].strip()
+        else:
+            postal_code = body.get('postalCode', postal_code_city)
+            city = body.get('city', '')
+        
+        # Marca / Modelo
+        brand_model = body.get('vehicleBrandModel', '')
+        if brand_model and ' / ' in brand_model:
+            parts = brand_model.split(' / ', 1)
+            vehicle_brand = parts[0].strip()
+            vehicle_model = parts[1].strip()
+        else:
+            vehicle_brand = body.get('vehicleBrand', '')
+            vehicle_model = body.get('vehicleModel', brand_model)
+        
         # Mapear campos do frontend para IDs do mapeador (usando os mesmos nomes camelCase)
         report_data = {
             'dr_number': body.get('drNumber', ''),
@@ -16652,12 +16694,14 @@ async def preview_damage_report_pdf(request: Request):
             'clientEmail': body.get('clientEmail', ''),
             'clientPhone': body.get('clientPhone', ''),
             'address': body.get('address', ''),
-            'city': body.get('city', ''),
-            'postalCode': body.get('postalCode', ''),
+            'postalCodeCity': postal_code_city,  # Campo combinado
+            'city': city,  # Para compatibilidade com mapeamentos antigos
+            'postalCode': postal_code,  # Para compatibilidade com mapeamentos antigos
             'country': body.get('country', ''),
             'vehiclePlate': body.get('vehiclePlate', ''),
-            'vehicleBrand': body.get('vehicleBrand', ''),
-            'vehicleModel': body.get('vehicleModel', ''),
+            'vehicleBrandModel': brand_model,  # Campo combinado
+            'vehicleBrand': vehicle_brand,  # Para compatibilidade com mapeamentos antigos
+            'vehicleModel': vehicle_model,  # Para compatibilidade com mapeamentos antigos
             'vehicleColor': body.get('vehicleColor', ''),
             'vehicleKm': body.get('vehicleKm', ''),
             'pickupDate': body.get('pickupDate', ''),
