@@ -11934,6 +11934,55 @@ async def startup_vehicle_photos():
     _ensure_vehicle_name_overrides_table()
     _ensure_vehicle_images_table()
 
+@app.on_event("startup")
+async def startup_migrate_automated_reports():
+    """Migrate automated reports settings from user_settings to price_automation_settings"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Detect PostgreSQL vs SQLite
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
+                
+                # Check if old config exists in user_settings
+                old_cursor = conn.execute(
+                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports' LIMIT 1"
+                )
+                old_row = old_cursor.fetchone()
+                
+                if old_row and old_row[0]:
+                    # Check if new config already exists
+                    new_cursor = conn.execute(
+                        "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
+                    )
+                    new_row = new_cursor.fetchone()
+                    
+                    if not new_row:
+                        # Migrate old config to new location
+                        placeholder = "%s" if is_postgres else "?"
+                        insert_query = f"""
+                            INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                            VALUES ({placeholder}, {placeholder}, 'json', CURRENT_TIMESTAMP)
+                        """
+                        conn.execute(insert_query, ('automatedReportsSettings', old_row[0]))
+                        conn.commit()
+                        logging.info("✅ [STARTUP] Migrated automated reports settings from user_settings to price_automation_settings")
+                        print("✅ [STARTUP] Migrated automated reports settings successfully", flush=True)
+                    else:
+                        logging.debug("[STARTUP] Automated reports settings already migrated")
+                else:
+                    logging.debug("[STARTUP] No automated reports settings found in user_settings")
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ [STARTUP] Failed to migrate automated reports settings: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 @app.post("/api/vehicles/{vehicle_name}/photo/upload")
 async def upload_vehicle_photo(vehicle_name: str, request: Request, file: UploadFile = File(...)):
     """Upload de foto para um veículo"""
@@ -17456,6 +17505,35 @@ async def save_recent_searches(request: Request):
                     except Exception as e:
                         logging.debug(f"Source column migration: {e}")
                         pass  # Column already exists or error
+                
+                # Migrate automated reports settings from user_settings to price_automation_settings
+                try:
+                    # Check if old config exists in user_settings
+                    old_cursor = conn.execute(
+                        "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports' LIMIT 1"
+                    )
+                    old_row = old_cursor.fetchone()
+                    
+                    if old_row and old_row[0]:
+                        # Check if new config already exists
+                        new_cursor = conn.execute(
+                            "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
+                        )
+                        new_row = new_cursor.fetchone()
+                        
+                        if not new_row:
+                            # Migrate old config to new location
+                            placeholder = "%s" if is_postgres else "?"
+                            insert_query = f"""
+                                INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                                VALUES ({placeholder}, {placeholder}, 'json', CURRENT_TIMESTAMP)
+                            """
+                            conn.execute(insert_query, ('automatedReportsSettings', old_row[0]))
+                            conn.commit()
+                            logging.info("✅ Migrated automated reports settings from user_settings to price_automation_settings")
+                except Exception as e:
+                    logging.debug(f"Automated reports settings migration: {e}")
+                    pass  # Migration not needed or already done
                 
                 # Clear old searches for this user (keep max 3)
                 placeholder = "%s" if is_postgres else "?"
