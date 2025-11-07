@@ -649,6 +649,9 @@ def _ensure_damage_reports_tables():
                             pdf_data BYTEA,
                             pdf_filename TEXT,
                             is_protected INTEGER DEFAULT 0,
+                            is_deleted INTEGER DEFAULT 0,
+                            deleted_at TIMESTAMP,
+                            deleted_by TEXT,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             created_by TEXT,
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -712,7 +715,7 @@ def _ensure_damage_reports_tables():
                     
                     cur.execute("""
                         INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        VALUES (1, 2025, 40, 'DR')
+                        VALUES (1, 2025, 39, 'DR')
                         ON CONFLICT (id) DO NOTHING
                     """)
                     
@@ -12240,6 +12243,53 @@ async def startup_migrate_automated_reports():
         import traceback
         logging.error(traceback.format_exc())
 
+@app.on_event("startup")
+async def startup_update_dr_numbering():
+    """Atualizar configuração de numeração DR para DR40/2025"""
+    try:
+        from datetime import datetime
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                # Verificar se existe registo na tabela
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT current_number FROM damage_report_numbering WHERE id = 1")
+                        row = cur.fetchone()
+                else:
+                    cursor = conn.execute("SELECT current_number FROM damage_report_numbering WHERE id = 1")
+                    row = cursor.fetchone()
+                
+                if row and row[0] < 39:
+                    # Atualizar para 39 (próximo será DR40/2025)
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                UPDATE damage_report_numbering 
+                                SET current_number = 39, current_year = 2025, updated_at = %s
+                                WHERE id = 1
+                            """, (datetime.now().isoformat(),))
+                    else:
+                        conn.execute("""
+                            UPDATE damage_report_numbering 
+                            SET current_number = 39, current_year = 2025, updated_at = ?
+                            WHERE id = 1
+                        """, (datetime.now().isoformat(),))
+                    
+                    conn.commit()
+                    logging.info("✅ [STARTUP] DR numbering atualizado: próximo DR será DR40/2025")
+                    print("✅ [STARTUP] DR numbering configurado: próximo = DR40/2025", flush=True)
+                else:
+                    logging.debug("[STARTUP] DR numbering já está configurado corretamente")
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ [STARTUP] Erro ao atualizar DR numbering: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 @app.post("/api/vehicles/{vehicle_name}/photo/upload")
 async def upload_vehicle_photo(vehicle_name: str, request: Request, file: UploadFile = File(...)):
     """Upload de foto para um veículo"""
@@ -14728,6 +14778,10 @@ async def create_damage_report(request: Request):
                         status TEXT DEFAULT 'draft',
                         pdf_data BLOB,
                         pdf_filename TEXT,
+                        is_protected INTEGER DEFAULT 0,
+                        is_deleted INTEGER DEFAULT 0,
+                        deleted_at TIMESTAMP,
+                        deleted_by TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         created_by TEXT,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -14870,24 +14924,27 @@ async def create_damage_report(request: Request):
                     
                     return {"ok": True, "dr_number": existing_dr_number, "message": "Damage Report updated successfully"}
                 else:
-                    # CREATE - Criar novo DR
-                    year = datetime.datetime.now().year
+                    # CREATE - Criar novo DR ou reciclar número eliminado
+                    conn.close()  # Fechar conexão temporariamente
+                    dr_number = _get_next_dr_number()  # Busca número reciclado ou gera novo
+                    conn = _db_connect()  # Re-abrir conexão
                     
-                    # Contar DRs do ano atual (formato "DR XX/YYYY")
-                    if hasattr(conn, 'cursor'):
-                        # PostgreSQL
+                    # Verificar se é um número reciclado (já existe na tabela com is_deleted = 1)
+                    is_postgres = hasattr(conn, 'cursor')
+                    is_recycled = False
+                    
+                    if is_postgres:
                         with conn.cursor() as cur:
-                            cur.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE %s", (f"%/{year}",))
-                            count = cur.fetchone()[0] + 1
+                            cur.execute("SELECT id FROM damage_reports WHERE dr_number = %s AND is_deleted = 1", (dr_number,))
+                            is_recycled = cur.fetchone() is not None
                     else:
-                        # SQLite
-                        cursor = conn.execute("SELECT COUNT(*) FROM damage_reports WHERE dr_number LIKE ?", (f"%/{year}",))
-                        count = cursor.fetchone()[0] + 1
+                        cursor = conn.execute("SELECT id FROM damage_reports WHERE dr_number = ? AND is_deleted = 1", (dr_number,))
+                        is_recycled = cursor.fetchone() is not None
                     
-                    # Formato: DR01/2025 (sem espaço para facilitar URLs)
-                    dr_number = f"DR{count:02d}/{year}"
-                    
-                    logging.info(f"✨ Criando novo DR {dr_number}")
+                    if is_recycled:
+                        logging.info(f"♻️  Reciclando número DR eliminado: {dr_number}")
+                    else:
+                        logging.info(f"✨ Criando novo DR: {dr_number}")
                     
                     # Processar imagem do veículo com danos
                     vehicle_damage_image_blob = None
@@ -14898,45 +14955,158 @@ async def create_damage_report(request: Request):
                             image_data = image_data.split(',')[1]
                         vehicle_damage_image_blob = base64.b64decode(image_data)
                     
-                    insert_values = (
-                        dr_number,
-                        data.get('ra_number'),
-                        data.get('contractNumber'),
-                        data.get('date'),
-                        data.get('clientName'),
-                        data.get('clientEmail'),
-                        data.get('clientPhone'),
-                        data.get('address'),
-                        data.get('city'),
-                        data.get('postalCode'),
-                        data.get('country'),
-                        data.get('vehiclePlate'),
-                        data.get('vehicleModel'),
-                        data.get('vehicleBrand'),
-                        data.get('pickupDate'),
-                        data.get('pickupTime'),
-                        data.get('pickupLocation'),
-                        data.get('returnDate'),
-                        data.get('returnTime'),
-                        data.get('returnLocation'),
-                        data.get('issuedBy'),
-                        data.get('inspectionType'),
-                        data.get('inspectorName'),
-                        data.get('mileage'),
-                        data.get('fuelLevel'),
-                        data.get('damageDescription'),
-                        data.get('observations'),
-                        data.get('damageDiagramData'),
-                        data.get('repairItems'),
-                        data.get('damageImages'),
-                        vehicle_damage_image_blob,
-                        request.session.get('username', 'unknown')
-                    )
-                    
-                    if hasattr(conn, 'cursor'):
-                        # PostgreSQL
-                        with conn.cursor() as cur:
-                            cur.execute("""
+                    if is_recycled:
+                        # UPDATE - Reutilizar registo eliminado e resetar flags de eliminação
+                        update_values = (
+                            data.get('ra_number'),
+                            data.get('contractNumber'),
+                            data.get('date'),
+                            data.get('clientName'),
+                            data.get('clientEmail'),
+                            data.get('clientPhone'),
+                            data.get('address'),
+                            data.get('city'),
+                            data.get('postalCode'),
+                            data.get('country'),
+                            data.get('vehiclePlate'),
+                            data.get('vehicleModel'),
+                            data.get('vehicleBrand'),
+                            data.get('pickupDate'),
+                            data.get('pickupTime'),
+                            data.get('pickupLocation'),
+                            data.get('returnDate'),
+                            data.get('returnTime'),
+                            data.get('returnLocation'),
+                            data.get('issuedBy'),
+                            data.get('inspectionType'),
+                            data.get('inspectorName'),
+                            data.get('mileage'),
+                            data.get('fuelLevel'),
+                            data.get('damageDescription'),
+                            data.get('observations'),
+                            data.get('damageDiagramData'),
+                            data.get('repairItems'),
+                            data.get('damageImages'),
+                            vehicle_damage_image_blob,
+                            request.session.get('username', 'unknown'),
+                            datetime.datetime.now().isoformat(),
+                            dr_number
+                        )
+                        
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    UPDATE damage_reports SET
+                                        ra_number = %s, contract_number = %s, date = %s,
+                                        client_name = %s, client_email = %s, client_phone = %s,
+                                        client_address = %s, client_city = %s, client_postal_code = %s, client_country = %s,
+                                        vehicle_plate = %s, vehicle_model = %s, vehicle_brand = %s,
+                                        pickup_date = %s, pickup_time = %s, pickup_location = %s,
+                                        return_date = %s, return_time = %s, return_location = %s,
+                                        issued_by = %s,
+                                        inspection_type = %s, inspector_name = %s, mileage = %s, fuel_level = %s,
+                                        damage_description = %s, observations = %s, damage_diagram_data = %s,
+                                        repair_items = %s, damage_images = %s,
+                                        vehicle_damage_image = %s,
+                                        created_by = %s,
+                                        updated_at = %s,
+                                        is_deleted = 0,
+                                        deleted_at = NULL,
+                                        deleted_by = NULL,
+                                        status = 'draft',
+                                        pdf_data = NULL,
+                                        pdf_filename = NULL
+                                    WHERE dr_number = %s
+                                """, update_values)
+                            conn.commit()
+                        else:
+                            conn.execute("""
+                                UPDATE damage_reports SET
+                                    ra_number = ?, contract_number = ?, date = ?,
+                                    client_name = ?, client_email = ?, client_phone = ?,
+                                    client_address = ?, client_city = ?, client_postal_code = ?, client_country = ?,
+                                    vehicle_plate = ?, vehicle_model = ?, vehicle_brand = ?,
+                                    pickup_date = ?, pickup_time = ?, pickup_location = ?,
+                                    return_date = ?, return_time = ?, return_location = ?,
+                                    issued_by = ?,
+                                    inspection_type = ?, inspector_name = ?, mileage = ?, fuel_level = ?,
+                                    damage_description = ?, observations = ?, damage_diagram_data = ?,
+                                    repair_items = ?, damage_images = ?,
+                                    vehicle_damage_image = ?,
+                                    created_by = ?,
+                                    updated_at = ?,
+                                    is_deleted = 0,
+                                    deleted_at = NULL,
+                                    deleted_by = NULL,
+                                    status = 'draft',
+                                    pdf_data = NULL,
+                                    pdf_filename = NULL
+                                WHERE dr_number = ?
+                            """, update_values)
+                            conn.commit()
+                        
+                        logging.info(f"✅ DR {dr_number} reciclado com sucesso - número reutilizado")
+                        return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully (recycled number)"}
+                    else:
+                        # INSERT - Criar novo registo
+                        insert_values = (
+                            dr_number,
+                            data.get('ra_number'),
+                            data.get('contractNumber'),
+                            data.get('date'),
+                            data.get('clientName'),
+                            data.get('clientEmail'),
+                            data.get('clientPhone'),
+                            data.get('address'),
+                            data.get('city'),
+                            data.get('postalCode'),
+                            data.get('country'),
+                            data.get('vehiclePlate'),
+                            data.get('vehicleModel'),
+                            data.get('vehicleBrand'),
+                            data.get('pickupDate'),
+                            data.get('pickupTime'),
+                            data.get('pickupLocation'),
+                            data.get('returnDate'),
+                            data.get('returnTime'),
+                            data.get('returnLocation'),
+                            data.get('issuedBy'),
+                            data.get('inspectionType'),
+                            data.get('inspectorName'),
+                            data.get('mileage'),
+                            data.get('fuelLevel'),
+                            data.get('damageDescription'),
+                            data.get('observations'),
+                            data.get('damageDiagramData'),
+                            data.get('repairItems'),
+                            data.get('damageImages'),
+                            vehicle_damage_image_blob,
+                            request.session.get('username', 'unknown')
+                        )
+                        
+                        if is_postgres:
+                            # PostgreSQL
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    INSERT INTO damage_reports (
+                                        dr_number, ra_number, contract_number, date,
+                                        client_name, client_email, client_phone,
+                                        client_address, client_city, client_postal_code, client_country,
+                                        vehicle_plate, vehicle_model, vehicle_brand,
+                                        pickup_date, pickup_time, pickup_location,
+                                        return_date, return_time, return_location,
+                                        issued_by,
+                                        inspection_type, inspector_name, mileage, fuel_level,
+                                        damage_description, observations, damage_diagram_data,
+                                        repair_items, damage_images,
+                                        vehicle_damage_image,
+                                        created_by
+                                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, insert_values)
+                            conn.commit()
+                        else:
+                            # SQLite
+                            conn.execute("""
                                 INSERT INTO damage_reports (
                                     dr_number, ra_number, contract_number, date,
                                     client_name, client_email, client_phone,
@@ -14950,30 +15120,12 @@ async def create_damage_report(request: Request):
                                     repair_items, damage_images,
                                     vehicle_damage_image,
                                     created_by
-                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, insert_values)
-                        conn.commit()
-                    else:
-                        # SQLite
-                        conn.execute("""
-                            INSERT INTO damage_reports (
-                                dr_number, ra_number, contract_number, date,
-                                client_name, client_email, client_phone,
-                                client_address, client_city, client_postal_code, client_country,
-                                vehicle_plate, vehicle_model, vehicle_brand,
-                                pickup_date, pickup_time, pickup_location,
-                                return_date, return_time, return_location,
-                                issued_by,
-                                inspection_type, inspector_name, mileage, fuel_level,
-                                damage_description, observations, damage_diagram_data,
-                                repair_items, damage_images,
-                                vehicle_damage_image,
-                                created_by
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, insert_values)
-                        conn.commit()
-                    
-                    return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
+                            conn.commit()
+                        
+                        logging.info(f"✅ DR {dr_number} criado com sucesso - novo número")
+                        return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
             finally:
                 conn.close()
     except Exception as e:
@@ -15020,6 +15172,7 @@ async def list_damage_reports(request: Request):
                                 client_name, vehicle_plate, vehicle_model,
                                 status, created_at, created_by, pdf_filename
                             FROM damage_reports
+                            WHERE is_deleted = 0 OR is_deleted IS NULL
                             ORDER BY id DESC
                         """)
                         rows = cur.fetchall()
@@ -15031,6 +15184,7 @@ async def list_damage_reports(request: Request):
                             client_name, vehicle_plate, vehicle_model,
                             status, created_at, created_by, pdf_filename
                         FROM damage_reports
+                        WHERE is_deleted = 0 OR is_deleted IS NULL
                         ORDER BY id DESC
                     """)
                     rows = cursor.fetchall()
@@ -15118,30 +15272,80 @@ async def get_damage_report(request: Request, dr_number: str):
         return {"ok": False, "error": str(e)}
 
 def _get_next_dr_number():
-    """Gerar próximo número de DR com reset anual automático"""
+    """Gerar próximo número de DR com reset anual automático e reciclagem de números eliminados"""
     from datetime import datetime
     
     with _db_lock:
         conn = _db_connect()
         try:
             current_year = datetime.now().year
+            is_postgres = hasattr(conn, 'cursor')
             
+            # 1. PRIORIDADE: Verificar se há números eliminados disponíveis para reutilizar
+            logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
+            
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT dr_number 
+                        FROM damage_reports 
+                        WHERE is_deleted = 1 
+                        ORDER BY deleted_at ASC 
+                        LIMIT 1
+                    """)
+                    deleted_row = cur.fetchone()
+            else:
+                cursor = conn.execute("""
+                    SELECT dr_number 
+                    FROM damage_reports 
+                    WHERE is_deleted = 1 
+                    ORDER BY deleted_at ASC 
+                    LIMIT 1
+                """)
+                deleted_row = cursor.fetchone()
+            
+            if deleted_row:
+                recycled_number = deleted_row[0]
+                logging.info(f"♻️  Número eliminado encontrado para reciclagem: {recycled_number}")
+                return recycled_number
+            
+            logging.info("✨ Nenhum número eliminado - gerando novo número sequencial")
+            
+            # 2. FALLBACK: Gerar novo número sequencial
             # Obter configuração atual
-            cursor = conn.execute("""
-                SELECT current_year, current_number, prefix 
-                FROM damage_report_numbering 
-                WHERE id = 1
-            """)
-            row = cursor.fetchone()
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT current_year, current_number, prefix 
+                        FROM damage_report_numbering 
+                        WHERE id = 1
+                    """)
+                    row = cur.fetchone()
+            else:
+                cursor = conn.execute("""
+                    SELECT current_year, current_number, prefix 
+                    FROM damage_report_numbering 
+                    WHERE id = 1
+                """)
+                row = cursor.fetchone()
             
             if not row:
                 # Criar configuração inicial
-                conn.execute("""
-                    INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                    VALUES (1, ?, 1, 'DR')
-                """, (current_year,))
-                conn.commit()
-                return f"DR 01/{current_year}"
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                            VALUES (1, %s, 1, 'DR')
+                            ON CONFLICT (id) DO NOTHING
+                        """, (current_year,))
+                        conn.commit()
+                else:
+                    conn.execute("""
+                        INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                        VALUES (1, ?, 1, 'DR')
+                    """, (current_year,))
+                    conn.commit()
+                return f"DR01/{current_year}"
             
             saved_year, current_number, prefix = row
             
@@ -15149,23 +15353,41 @@ def _get_next_dr_number():
             if current_year > saved_year:
                 # Novo ano - reset para 01
                 new_number = 1
-                conn.execute("""
-                    UPDATE damage_report_numbering 
-                    SET current_year = ?, current_number = ?, updated_at = ?
-                    WHERE id = 1
-                """, (current_year, new_number, datetime.now().isoformat()))
-                conn.commit()
-                return f"{prefix} {new_number:02d}/{current_year}"
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE damage_report_numbering 
+                            SET current_year = %s, current_number = %s, updated_at = %s
+                            WHERE id = 1
+                        """, (current_year, new_number, datetime.now().isoformat()))
+                        conn.commit()
+                else:
+                    conn.execute("""
+                        UPDATE damage_report_numbering 
+                        SET current_year = ?, current_number = ?, updated_at = ?
+                        WHERE id = 1
+                    """, (current_year, new_number, datetime.now().isoformat()))
+                    conn.commit()
+                return f"{prefix}{new_number:02d}/{current_year}"
             else:
                 # Mesmo ano - incrementar
                 new_number = current_number + 1
-                conn.execute("""
-                    UPDATE damage_report_numbering 
-                    SET current_number = ?, updated_at = ?
-                    WHERE id = 1
-                """, (new_number, datetime.now().isoformat()))
-                conn.commit()
-                return f"{prefix} {new_number:02d}/{current_year}"
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE damage_report_numbering 
+                            SET current_number = %s, updated_at = %s
+                            WHERE id = 1
+                        """, (new_number, datetime.now().isoformat()))
+                        conn.commit()
+                else:
+                    conn.execute("""
+                        UPDATE damage_report_numbering 
+                        SET current_number = ?, updated_at = ?
+                        WHERE id = 1
+                    """, (new_number, datetime.now().isoformat()))
+                    conn.commit()
+                return f"{prefix}{new_number:02d}/{current_year}"
         finally:
             conn.close()
 
@@ -15211,11 +15433,11 @@ async def upload_damage_reports_pdfs_bulk(request: Request):
                         pdf_data = await file.read()
                         
                         # Detectar número do DR do nome do ficheiro
-                        # Padrões: DR 01/2025, DR_01_2025, DR-01-2025, DR 01:2025, DR 01/24, etc.
+                        # Padrões: DR01/2025, DR_01_2025, DR-01-2025, DR01:2025, DR01/24, etc.
                         patterns = [
-                            r'DR[\s_-]*(\d+)[\s_:/-]*(\d{2,4})',  # DR 01/2025, DR 01/24, DR_01_2025, DR-01-2025, DR 01:2025
+                            r'DR[\s_-]*(\d+)[\s_:/-]*(\d{2,4})',  # DR01/2025, DR01/24, DR_01_2025, DR-01-2025, DR01:2025
                             r'(\d+)[\s_:/-]+(\d{2,4})',            # 01/2025, 01/24, 01_2025, 01:2025
-                            r'DR[\s_-]*(\d+)',                     # DR 01, DR_01
+                            r'DR[\s_-]*(\d+)',                     # DR01, DR_01
                         ]
                         
                         dr_number = None
@@ -15564,6 +15786,9 @@ async def setup_dr_tables():
                             pdf_data BYTEA,
                             pdf_filename TEXT,
                             is_protected INTEGER DEFAULT 0,
+                            is_deleted INTEGER DEFAULT 0,
+                            deleted_at TIMESTAMP,
+                            deleted_by TEXT,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             created_by TEXT,
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -15617,7 +15842,7 @@ async def setup_dr_tables():
                     # Inserir config inicial
                     cur.execute("""
                         INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        VALUES (1, 2025, 40, 'DR')
+                        VALUES (1, 2025, 39, 'DR')
                         ON CONFLICT (id) DO NOTHING
                     """)
                     
@@ -15777,16 +16002,26 @@ async def delete_damage_report(request: Request, dr_number: str):
                 if is_protected:
                     raise HTTPException(status_code=403, detail="Este DR está protegido e não pode ser eliminado")
                 
-                # Eliminar DR
+                # Eliminar DR (soft delete)
                 if hasattr(conn, 'cursor'):
                     with conn.cursor() as cur:
-                        cur.execute("DELETE FROM damage_reports WHERE dr_number = %s", (dr_number,))
-                    conn.commit()
+                        # Soft delete - marcar como eliminado ao invés de deletar
+                        cur.execute("""
+                            UPDATE damage_reports 
+                            SET is_deleted = 1, deleted_at = %s, deleted_by = %s, updated_at = %s
+                            WHERE dr_number = %s
+                        """, (datetime.now().isoformat(), request.session.get('user_email', 'unknown'), datetime.now().isoformat(), dr_number))
+                        conn.commit()
                 else:
-                    conn.execute("DELETE FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    # Soft delete - SQLite
+                    conn.execute("""
+                        UPDATE damage_reports 
+                        SET is_deleted = 1, deleted_at = ?, deleted_by = ?, updated_at = ?
+                        WHERE dr_number = ?
+                    """, (datetime.now().isoformat(), request.session.get('user_email', 'unknown'), datetime.now().isoformat(), dr_number))
                     conn.commit()
                 
-                logging.info(f"✅ DR {dr_number} eliminado com sucesso")
+                logging.info(f"✅ DR {dr_number} marcado como eliminado (soft delete) - número disponível para reutilização")
                 return {"ok": True, "message": f"DR {dr_number} eliminado"}
                 
             finally:
@@ -16072,7 +16307,7 @@ async def update_dr_numbering(request: Request):
                 
                 conn.commit()
                 
-                next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
+                next_number = f"{prefix}{(current_number + 1):02d}/{current_year}"
                 logging.info(f"✅ Numeração DR atualizada: current={current_number}, próximo={next_number}")
                 
                 return {
