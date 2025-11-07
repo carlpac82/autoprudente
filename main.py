@@ -10869,8 +10869,20 @@ async def debug_automated_price_rules(request: Request):
         # Get database info
         import os
         db_url = os.getenv("DATABASE_URL", "")
+        internal_url = os.getenv("INTERNAL_DATABASE_URL", "")
         db_type = "PostgreSQL" if (_USE_NEW_DB and USE_POSTGRES) else "SQLite"
-        db_url_preview = db_url[:50] + "..." if db_url else "local.db"
+        
+        # Show more of URL to identify if it changes
+        if db_url:
+            # Show host and database name (safe to show)
+            import re
+            match = re.search(r'postgresql://[^@]+@([^/]+)/(.+?)(\?|$)', db_url)
+            if match:
+                db_url_preview = f"postgresql://***@{match.group(1)}/{match.group(2)}"
+            else:
+                db_url_preview = db_url[:60] + "..."
+        else:
+            db_url_preview = "local.db"
         
         with _db_lock:
             conn = _db_connect()
@@ -10907,6 +10919,9 @@ async def debug_automated_price_rules(request: Request):
                     "count": len(rows),
                     "db_type": db_type,
                     "db_url": db_url_preview,
+                    "internal_url": internal_url[:60] + "..." if internal_url else None,
+                    "_USE_NEW_DB": _USE_NEW_DB,
+                    "USE_POSTGRES": USE_POSTGRES if _USE_NEW_DB else None,
                     "locations": locations,
                     "sample_rows": [{"location": r[0], "grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in rows[:10]]
                 })
