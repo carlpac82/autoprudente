@@ -2951,6 +2951,10 @@ async def debug_test_group():
     return JSONResponse({"ok": True, "items": result})
 
 def require_auth(request: Request):
+    # Allow internal requests from scheduler
+    if request.headers.get("X-Internal-Request") == "scheduler":
+        return  # Bypass authentication for internal scheduler requests
+    
     if not request.session.get("auth", False):
         raise HTTPException(status_code=401, detail="Unauthorized")
     # Enforce inactivity timeout
