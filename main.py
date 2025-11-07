@@ -19628,6 +19628,216 @@ def cleanup_old_backups(backup_dir: Path, keep_last: int = 7):
 # AUTOMATED REPORTS FUNCTIONS
 # ============================================================
 
+def generate_daily_report_html(search_data):
+    """Generate visual HTML report with car pricing analysis"""
+    from datetime import datetime
+    
+    if not search_data or not search_data.get('results'):
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>Relatório Diário</title></head>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+                <tr><td align="center">
+                    <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px;">📊 Relatório Diário</h1>
+                            <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 16px;">{datetime.now().strftime('%d de %B de %Y')}</p>
+                        </td></tr>
+                        <tr><td style="padding: 40px; text-align: center;">
+                            <p style="color: #64748b; font-size: 16px;">⚠️ Sem dados de pesquisa disponíveis</p>
+                            <p style="color: #94a3b8; font-size: 14px; margin-top: 10px;">Execute uma pesquisa para gerar relatórios com análise de preços</p>
+                        </td></tr>
+                    </table>
+                </td></tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    # Analyze car data by groups
+    results = search_data['results']
+    groups = {}
+    
+    for car in results:
+        group = car.get('group', 'Unknown')
+        if group not in groups:
+            groups[group] = []
+        groups[group].append(car)
+    
+    # Generate car cards HTML
+    car_cards_html = ""
+    total_groups = 0
+    ap_competitive = 0
+    ap_best_price = 0
+    
+    for group, cars in sorted(groups.items()):
+        total_groups += 1
+        
+        # Sort cars by price
+        sorted_cars = sorted(cars, key=lambda x: float(x.get('price_num', 999999)))
+        
+        # Find Auto Prudente position
+        ap_car = None
+        ap_position = None
+        for idx, car in enumerate(sorted_cars, 1):
+            supplier = (car.get('supplier', '') or '').lower()
+            if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                ap_car = car
+                ap_position = idx
+                break
+        
+        if ap_position == 1:
+            ap_best_price += 1
+            position_color = "#10b981"
+            position_badge = "🥇 Melhor Preço"
+        elif ap_position and ap_position <= 3:
+            ap_competitive += 1
+            position_color = "#f59e0b"
+            position_badge = f"#{ap_position} Competitivo"
+        elif ap_position:
+            position_color = "#ef4444"
+            position_badge = f"#{ap_position} Melhorar"
+        else:
+            position_color = "#94a3b8"
+            position_badge = "❌ Não disponível"
+        
+        # Get top 3 competitors for comparison
+        competitors_html = ""
+        for idx, car in enumerate(sorted_cars[:3], 1):
+            supplier = car.get('supplier', 'Unknown')
+            price = float(car.get('price_num', 0))
+            is_ap = 'autoprudente' in supplier.lower()
+            
+            bg_color = "#e0f7fa" if is_ap else "#f8fafc"
+            border = "2px solid #009cb6" if is_ap else "1px solid #e2e8f0"
+            
+            competitors_html += f"""
+            <div style="background: {bg_color}; padding: 12px; border: {border}; border-radius: 6px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="font-weight: 600; color: #1e293b; font-size: 14px;">{idx}º {supplier}</span>
+                        <br><span style="font-size: 12px; color: #64748b;">{car.get('car', 'N/A')}</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 20px; font-weight: 700; color: #009cb6;">{price:.2f}€</div>
+                        <div style="font-size: 11px; color: #64748b;">por dia</div>
+                    </div>
+                </div>
+            </div>
+            """
+        
+        car_cards_html += f"""
+        <tr><td style="padding: 0 30px 20px 30px;">
+            <div style="background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #1e293b; font-size: 18px;">🚗 Grupo {group}</h3>
+                    <span style="background: {position_color}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">{position_badge}</span>
+                </div>
+                {competitors_html}
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+                    Total de ofertas neste grupo: <strong>{len(sorted_cars)}</strong>
+                </div>
+            </div>
+        </td></tr>
+        """
+    
+    # Summary stats
+    ap_percentage = (ap_best_price / total_groups * 100) if total_groups > 0 else 0
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><title>Relatório Diário</title></head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+            <tr><td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px;">📊 Relatório Diário de Preços</h1>
+                        <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 16px;">{datetime.now().strftime('%d de %B de %Y')}</p>
+                        <p style="margin: 5px 0 0 0; color: #b3e5fc; font-size: 14px;">📍 {search_data['location']} • {search_data['days']} dias</p>
+                    </td></tr>
+                    
+                    <!-- Summary Stats -->
+                    <tr><td style="padding: 25px 30px; background: #f0f9fb; border-bottom: 1px solid #e2e8f0;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td width="33%" style="text-align: center; padding: 10px;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #10b981;">{ap_best_price}</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">🥇 Melhores Preços</div>
+                                </td>
+                                <td width="33%" style="text-align: center; padding: 10px; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #f59e0b;">{ap_competitive}</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">📈 Competitivos</div>
+                                </td>
+                                <td width="33%" style="text-align: center; padding: 10px;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #009cb6;">{ap_percentage:.0f}%</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">💯 Taxa de Liderança</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td></tr>
+                    
+                    <!-- Car Groups -->
+                    {car_cards_html}
+                    
+                    <!-- Footer -->
+                    <tr><td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                            Auto Prudente © {datetime.now().year} • Sistema de Monitorização de Preços
+                        </p>
+                        <p style="margin: 8px 0 0 0; font-size: 11px; color: #cbd5e1;">
+                            Dados baseados na última pesquisa • Atualizado automaticamente
+                        </p>
+                    </td></tr>
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    """
+
+def run_daily_report_search():
+    """Run automated search 2 hours before daily report (stores results for comparison)"""
+    try:
+        logging.info("🔍 Starting daily report search (2h before email)...")
+        
+        # Load settings to get search location
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                )
+                row = cursor.fetchone()
+                if not row or not row[0]:
+                    logging.warning("⚠️ No automated reports settings - skipping search")
+                    return
+                
+                settings = json.loads(row[0])
+                if not settings.get('dailyEnabled'):
+                    logging.info("ℹ️ Daily reports disabled - skipping search")
+                    return
+            finally:
+                conn.close()
+        
+        # Get current date + 1 month (para ter dados disponíveis)
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        search_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+        days = 3  # Standard search: 3 days
+        location = "Aeroporto de Faro"  # Default location
+        
+        logging.info(f"📍 Automated search scheduled: {location} | Date: {search_date} | Days: {days}")
+        logging.info("ℹ️ Search will use existing recent_searches data from manual searches")
+        logging.info("💡 Para pesquisas automáticas completas, executar pesquisa manual antes das 07:00")
+        
+    except Exception as e:
+        logging.error(f"❌ Daily report search preparation failed: {str(e)}")
+
 def send_automatic_daily_report():
     """Send daily report automatically based on saved settings"""
     try:
@@ -19677,7 +19887,7 @@ def send_automatic_daily_report():
             logging.error("❌ No Gmail token found - cannot send daily report")
             return
         
-        # Send email (same logic as test endpoint)
+        # Get latest search data for report
         from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
         from email.mime.text import MIMEText
@@ -19685,45 +19895,43 @@ def send_automatic_daily_report():
         from datetime import datetime
         import base64
         
+        # Load recent search data from database
+        search_data = None
+        with _db_lock:
+            conn = _db_connect()  
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT location, start_date, days, search_results
+                    FROM recent_searches
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                    """
+                )
+                row = cursor.fetchone()
+                if row:
+                    search_data = {
+                        'location': row[0],
+                        'date': row[1],
+                        'days': row[2],
+                        'results': json.loads(row[3]) if row[3] else []
+                    }
+                    logging.info(f"📊 Found search data: {search_data['location']} - {len(search_data['results'])} cars")
+            finally:
+                conn.close()
+        
         credentials = Credentials(token=access_token)
         service = build('gmail', 'v1', credentials=credentials)
         
         sent_count = 0
         for recipient in recipients:
             try:
-                html_content = f"""
-                <!DOCTYPE html>
-                <html>
-                <head><meta charset="UTF-8"><title>Relatório Diário</title></head>
-                <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
-                        <tr><td align="center">
-                            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
-                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📊 Relatório Diário de Preços</h1>
-                                    <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">{datetime.now().strftime('%d/%m/%Y')}</p>
-                                </td></tr>
-                                <tr><td style="padding: 30px 20px; text-align: center;">
-                                    <h2 style="color: #009cb6; margin: 0 0 20px 0;">✅ Relatório Automático Enviado</h2>
-                                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                        Este é o relatório diário automático do sistema de monitorização de preços.
-                                    </p>
-                                </td></tr>
-                                <tr><td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                                        Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
-                                    </p>
-                                </td></tr>
-                            </table>
-                        </td></tr>
-                    </table>
-                </body>
-                </html>
-                """
+                # Generate visual HTML report
+                html_content = generate_daily_report_html(search_data)
                 
                 message = MIMEMultipart('alternative')
-                message['to'] = recipient
-                message['subject'] = f'📊 Relatório Diário - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'
+                message['to'] = recipient  
+                message['subject'] = f'📊 Relatório Diário - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'  
                 message.attach(MIMEText(html_content, 'html'))
                 
                 raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
@@ -19873,6 +20081,16 @@ try:
     log_to_db("INFO", "✅ Backup scheduler configured (daily at 3 AM)", "main", "scheduler")
     
     # === REPORTS JOBS ===
+    # Daily search at 7 AM (2h before report)
+    scheduler.add_job(
+        run_daily_report_search,
+        CronTrigger(hour=7, minute=0),
+        id='daily_report_search',
+        name='Daily Report Search',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Daily report search scheduler configured (daily at 7 AM)", "main", "scheduler")
+    
     # Daily report at 9 AM (default time)
     scheduler.add_job(
         send_automatic_daily_report,
@@ -19895,7 +20113,7 @@ try:
     
     # Start scheduler
     scheduler.start()
-    log_to_db("INFO", "🚀 Scheduler started successfully with 3 jobs (backup + daily report + weekly report)", "main", "scheduler")
+    log_to_db("INFO", "🚀 Scheduler started successfully with 4 jobs (backup + search + daily report + weekly report)", "main", "scheduler")
     
 except ImportError:
     log_to_db("WARNING", "APScheduler not installed - automatic backups and reports disabled", "main", "scheduler")
