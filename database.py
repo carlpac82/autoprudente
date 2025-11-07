@@ -70,23 +70,38 @@ class DatabaseConnection:
         self.conn = None
         self.is_postgres = USE_POSTGRES
     
-    def connect(self):
-        """Establish database connection"""
-        if self.is_postgres:
-            # Use connection pool if available
-            if connection_pool:
-                try:
-                    self.conn = connection_pool.getconn()
+    def connect(self, retry_count=3):
+        """Establish database connection with retry logic for SSL errors"""
+        import time
+        
+        for attempt in range(retry_count):
+            try:
+                if self.is_postgres:
+                    # Use connection pool if available
+                    if connection_pool:
+                        try:
+                            self.conn = connection_pool.getconn()
+                            self.conn.autocommit = False
+                            return self.conn
+                        except Exception as e:
+                            logging.error(f"Failed to get connection from pool (attempt {attempt+1}/{retry_count}): {e}")
+                            if attempt < retry_count - 1:
+                                time.sleep(1)  # Wait 1 second before retry
+                                continue
+                    # Fallback to direct connection
+                    self.conn = psycopg2.connect(**DB_CONFIG)
                     self.conn.autocommit = False
-                    return self.conn
-                except Exception as e:
-                    logging.error(f"Failed to get connection from pool: {e}")
-            # Fallback to direct connection
-            self.conn = psycopg2.connect(**DB_CONFIG)
-            self.conn.autocommit = False
-        else:
-            self.conn = sqlite3.connect("data.db", check_same_thread=False)
-            self.conn.row_factory = sqlite3.Row
+                else:
+                    self.conn = sqlite3.connect("data.db", check_same_thread=False)
+                    self.conn.row_factory = sqlite3.Row
+                return self.conn
+            except Exception as e:
+                if attempt < retry_count - 1:
+                    logging.warning(f"Connection attempt {attempt+1} failed: {e}. Retrying...")
+                    time.sleep(1)
+                else:
+                    logging.error(f"Failed to connect after {retry_count} attempts: {e}")
+                    raise
         return self.conn
     
     def close(self):
