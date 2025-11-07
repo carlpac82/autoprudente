@@ -21235,34 +21235,53 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
 @app.delete("/api/automated-search/{search_id}")
 async def delete_automated_search(request: Request, search_id: int):
     """Delete a specific search from history"""
+    require_auth(request)
+    
     try:
+        logging.info(f"🗑️ Attempting to delete search ID: {search_id}")
+        
         with _db_lock:
             conn = _db_connect()
             try:
                 is_postgres = hasattr(conn, 'cursor')
                 
+                # Verificar se o registro existe antes de deletar
                 if is_postgres:
                     with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM automated_search_history WHERE id = %s", (search_id,))
+                        exists = cur.fetchone()
+                        
+                        if not exists:
+                            logging.warning(f"⚠️ Search ID {search_id} not found in database")
+                            return JSONResponse({"ok": False, "error": f"Search ID {search_id} not found"}, status_code=404)
+                        
                         cur.execute(
                             "DELETE FROM automated_search_history WHERE id = %s",
                             (search_id,)
                         )
                     conn.commit()
                 else:
+                    cursor = conn.execute("SELECT id FROM automated_search_history WHERE id = ?", (search_id,))
+                    exists = cursor.fetchone()
+                    
+                    if not exists:
+                        logging.warning(f"⚠️ Search ID {search_id} not found in database")
+                        return JSONResponse({"ok": False, "error": f"Search ID {search_id} not found"}, status_code=404)
+                    
                     conn.execute(
                         "DELETE FROM automated_search_history WHERE id = ?",
                         (search_id,)
                     )
                     conn.commit()
                 
-                logging.info(f"✅ Deleted search ID: {search_id}")
-                return JSONResponse({"ok": True, "message": "Search deleted"})
+                logging.info(f"✅ Successfully deleted search ID: {search_id}")
+                return JSONResponse({"ok": True, "message": "Search deleted successfully"})
                 
             finally:
                 conn.close()
                 
     except Exception as e:
-        logging.error(f"❌ Error deleting search: {str(e)}")
+        logging.error(f"❌ Error deleting search ID {search_id}: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/clean-automated-history")
