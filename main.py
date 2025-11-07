@@ -2225,6 +2225,19 @@ def init_db():
             )
             safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_auto_prices_history ON automated_prices_history(location, grupo, pickup_date, created_at)", "idx_auto_prices_history")
             
+            # Add source column to automated_prices_history if it doesn't exist (migration)
+            try:
+                conn.execute("ALTER TABLE automated_prices_history ADD COLUMN source TEXT DEFAULT 'manual'")
+                conn.commit()
+                logging.info("✅ Added 'source' column to automated_prices_history table")
+            except Exception as e:
+                error_msg = str(e).lower()
+                if 'duplicate column' in error_msg or 'already exists' in error_msg:
+                    logging.debug("ℹ️ Column 'source' already exists in automated_prices_history")
+                else:
+                    logging.error(f"❌ Failed to add 'source' column to automated_prices_history: {e}")
+                pass
+            
             # Tabela para logs do sistema (evitar perda em disco efêmero)
             conn.execute(
                 """
@@ -17466,19 +17479,19 @@ async def save_recent_searches(request: Request):
                     """)
                     # Add source column if it doesn't exist (migration)
                     try:
-                        # Check if column exists first
-                        cursor = conn.execute("""
-                            SELECT column_name 
-                            FROM information_schema.columns 
-                            WHERE table_name='recent_searches' AND column_name='source'
-                        """)
-                        if not cursor.fetchone():
-                            conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
-                            conn.commit()
-                            logging.info("✅ Added 'source' column to recent_searches table")
+                        # Try to add column directly - will fail if already exists
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.commit()
+                        logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
-                        logging.debug(f"Source column migration: {e}")
-                        pass  # Column already exists or error
+                        # Check if error is because column already exists
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                        else:
+                            logging.error(f"❌ Failed to add 'source' column: {e}")
+                            logging.error(f"   Error type: {type(e).__name__}")
+                        pass  # Continue even if migration fails
                 else:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS recent_searches (
@@ -17495,16 +17508,19 @@ async def save_recent_searches(request: Request):
                     """)
                     # Add source column if it doesn't exist (migration)
                     try:
-                        # Check if column exists using PRAGMA
-                        cursor = conn.execute("PRAGMA table_info(recent_searches)")
-                        columns = [row[1] for row in cursor.fetchall()]
-                        if 'source' not in columns:
-                            conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
-                            conn.commit()
-                            logging.info("✅ Added 'source' column to recent_searches table")
+                        # Try to add column directly - will fail if already exists
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.commit()
+                        logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
-                        logging.debug(f"Source column migration: {e}")
-                        pass  # Column already exists or error
+                        # Check if error is because column already exists
+                        error_msg = str(e).lower()
+                        if 'duplicate column' in error_msg or 'already exists' in error_msg:
+                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                        else:
+                            logging.error(f"❌ Failed to add 'source' column: {e}")
+                            logging.error(f"   Error type: {type(e).__name__}")
+                        pass  # Continue even if migration fails
                 
                 # Migrate automated reports settings from user_settings to price_automation_settings
                 try:
