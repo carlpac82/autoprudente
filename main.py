@@ -5035,10 +5035,13 @@ async def track_by_params(request: Request):
         # ═══════════════════════════════════════════════════════════════════════════
         try:
             import sys
+            import asyncio
             print(f"[POST_DIRETO] Tentando POST direto ao Carjet...", file=sys.stderr, flush=True)
             
-            # Usar try_direct_carjet primeiro (POST direto)
-            html = try_direct_carjet(location, start_dt, end_dt, lang=lang, currency=currency)
+            # Usar try_direct_carjet primeiro (POST direto) - NÃO BLOQUEANTE
+            html = await asyncio.to_thread(
+                try_direct_carjet, location, start_dt, end_dt, lang=lang, currency=currency
+            )
             final_url = "https://www.carjet.com/do/list"
             
             # Se POST direto retornar resultados, usar
@@ -5489,10 +5492,13 @@ async def track_by_params(request: Request):
         # ═══════════════════════════════════════════════════════════════════════════
         print(f"[SELENIUM] Iniciando scraping SIMPLES (igual ao teste) para {location}", file=sys.stderr, flush=True)
         try:
-            # Usar função simples que funciona 100%
+            # Usar função simples que funciona 100% - NÃO BLOQUEANTE
             from selenium_simple import scrape_carjet_simple
+            import asyncio
             
-            result = scrape_carjet_simple(location, start_dt, end_dt)
+            result = await asyncio.to_thread(
+                scrape_carjet_simple, location, start_dt, end_dt
+            )
             
             if result.get('ok'):
                 html_content = result.get('html')
