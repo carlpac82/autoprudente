@@ -11209,6 +11209,7 @@ async def save_automated_prices_history(request: Request):
     try:
         data = await request.json()
         username = request.session.get("username", "unknown")
+        source = data.get("source", "manual")  # 'manual' or 'automated'
         
         with _db_lock:
             conn = _db_connect()
@@ -11219,8 +11220,8 @@ async def save_automated_prices_history(request: Request):
                         """
                         INSERT INTO automated_prices_history 
                         (location, grupo, dias, pickup_date, auto_price, real_price, 
-                         strategy_used, strategy_details, min_price_applied, created_by)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         strategy_used, strategy_details, min_price_applied, created_by, source)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             entry.get("location"),
@@ -11232,7 +11233,8 @@ async def save_automated_prices_history(request: Request):
                             entry.get("strategy_used"),
                             json.dumps(entry.get("strategy_details", {})),
                             entry.get("min_price_applied"),
-                            username
+                            username,
+                            source
                         )
                     )
                 
