@@ -1269,6 +1269,7 @@ def _ensure_users_table():
                 con.commit()
                 logging.info("✅ Added google_id column to users table")
             except Exception as e:
+                con.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                 # Column already exists, ignore
                 pass
             
@@ -1278,6 +1279,7 @@ def _ensure_users_table():
                 con.commit()
                 logging.info("✅ Added profile_picture_data column to users table")
             except Exception as e:
+                con.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                 # Column already exists, ignore
                 pass
             
@@ -2231,9 +2233,10 @@ def init_db():
                 conn.commit()
                 logging.info("✅ Added 'source' column to automated_prices_history table")
             except Exception as e:
+                conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                 error_msg = str(e).lower()
                 if 'duplicate column' in error_msg or 'already exists' in error_msg:
-                    logging.debug("ℹ️ Column 'source' already exists in automated_prices_history")
+                    logging.info("ℹ️ Column 'source' already exists in automated_prices_history")
                 else:
                     logging.error(f"❌ Failed to add 'source' column to automated_prices_history: {e}")
                 pass
@@ -17484,6 +17487,7 @@ async def save_recent_searches(request: Request):
                         conn.commit()
                         logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
+                        conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                         # Check if error is because column already exists
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
@@ -17513,6 +17517,7 @@ async def save_recent_searches(request: Request):
                         conn.commit()
                         logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
+                        conn.rollback()  # CRITICAL for SQLite - must rollback on error
                         # Check if error is because column already exists
                         error_msg = str(e).lower()
                         if 'duplicate column' in error_msg or 'already exists' in error_msg:
