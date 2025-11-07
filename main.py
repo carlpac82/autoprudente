@@ -16973,6 +16973,12 @@ async def get_active_rental_agreement_template(request: Request):
     from starlette.responses import Response
     
     try:
+        # Garantir que a tabela existe
+        try:
+            _ensure_rental_agreement_tables()
+        except Exception as table_error:
+            logging.error(f"❌ Failed to ensure RA tables: {table_error}")
+        
         # Buscar template ativo da BD
         with _db_lock:
             conn = _db_connect()
@@ -16980,23 +16986,31 @@ async def get_active_rental_agreement_template(request: Request):
                 is_postgres = hasattr(conn, 'cursor')
                 
                 if is_postgres:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT file_data, filename 
-                        FROM rental_agreement_templates 
-                        WHERE is_active = 1 
-                        ORDER BY version DESC LIMIT 1
-                    """)
-                    row = cursor.fetchone()
-                    cursor.close()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            SELECT file_data, filename 
+                            FROM rental_agreement_templates 
+                            WHERE is_active = 1 
+                            ORDER BY version DESC LIMIT 1
+                        """)
+                        row = cursor.fetchone()
+                        cursor.close()
+                    except Exception as pg_error:
+                        logging.error(f"❌ PostgreSQL query error: {pg_error}")
+                        raise
                 else:
-                    cursor = conn.execute("""
-                        SELECT file_data, filename 
-                        FROM rental_agreement_templates 
-                        WHERE is_active = 1 
-                        ORDER BY version DESC LIMIT 1
-                    """)
-                    row = cursor.fetchone()
+                    try:
+                        cursor = conn.execute("""
+                            SELECT file_data, filename 
+                            FROM rental_agreement_templates 
+                            WHERE is_active = 1 
+                            ORDER BY version DESC LIMIT 1
+                        """)
+                        row = cursor.fetchone()
+                    except Exception as sqlite_error:
+                        logging.error(f"❌ SQLite query error: {sqlite_error}")
+                        raise
                 
                 if not row or not row[0]:
                     logging.warning("⚠️ No active RA template found in database")
@@ -17029,6 +17043,99 @@ async def get_active_rental_agreement_template(request: Request):
             media_type="application/json",
             status_code=500
         )
+
+@app.get("/api/rental-agreements/debug-status")
+async def debug_rental_agreement_status(request: Request):
+    """Debug: Verificar estado das tabelas e templates de RA"""
+    require_auth(request)
+    
+    try:
+        status = {
+            "tables_exist": False,
+            "template_count": 0,
+            "active_template": None,
+            "error": None
+        }
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                # Verificar se tabela existe
+                if is_postgres:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = 'rental_agreement_templates'
+                        )
+                    """)
+                    status["tables_exist"] = cursor.fetchone()[0]
+                    
+                    if status["tables_exist"]:
+                        # Contar templates
+                        cursor.execute("SELECT COUNT(*) FROM rental_agreement_templates")
+                        status["template_count"] = cursor.fetchone()[0]
+                        
+                        # Ver template ativo
+                        cursor.execute("""
+                            SELECT version, filename, num_pages, uploaded_at, is_active
+                            FROM rental_agreement_templates
+                            WHERE is_active = 1
+                            ORDER BY version DESC LIMIT 1
+                        """)
+                        row = cursor.fetchone()
+                        if row:
+                            status["active_template"] = {
+                                "version": row[0],
+                                "filename": row[1],
+                                "num_pages": row[2],
+                                "uploaded_at": str(row[3]),
+                                "is_active": row[4]
+                            }
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name='rental_agreement_templates'
+                    """)
+                    status["tables_exist"] = cursor.fetchone() is not None
+                    
+                    if status["tables_exist"]:
+                        cursor = conn.execute("SELECT COUNT(*) FROM rental_agreement_templates")
+                        status["template_count"] = cursor.fetchone()[0]
+                        
+                        cursor = conn.execute("""
+                            SELECT version, filename, num_pages, uploaded_at, is_active
+                            FROM rental_agreement_templates
+                            WHERE is_active = 1
+                            ORDER BY version DESC LIMIT 1
+                        """)
+                        row = cursor.fetchone()
+                        if row:
+                            status["active_template"] = {
+                                "version": row[0],
+                                "filename": row[1],
+                                "num_pages": row[2],
+                                "uploaded_at": str(row[3]),
+                                "is_active": row[4]
+                            }
+            finally:
+                conn.close()
+        
+        return status
+    except Exception as e:
+        logging.error(f"Debug error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {
+            "tables_exist": False,
+            "template_count": 0,
+            "active_template": None,
+            "error": str(e)
+        }
 
 @app.get("/api/rental-agreements/get-coordinates")
 async def get_rental_agreement_coordinates(request: Request):
