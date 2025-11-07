@@ -10583,6 +10583,10 @@ async def get_active_damage_report_template(request: Request):
                 pdf_data = row[0]
                 filename = row[1] if len(row) > 1 else "template.pdf"
                 
+                # Convert memoryview to bytes if needed (PostgreSQL returns memoryview)
+                if isinstance(pdf_data, memoryview):
+                    pdf_data = bytes(pdf_data)
+                
                 logging.info(f"📄 Serving active template: {filename}")
                 
                 return Response(
@@ -16070,6 +16074,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         template_data = f.read()
                 else:
                     template_data = row[0]
+                    # Convert memoryview to bytes if needed (PostgreSQL returns memoryview)
+                    if isinstance(template_data, memoryview):
+                        template_data = bytes(template_data)
             finally:
                 conn.close()
         
