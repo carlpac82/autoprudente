@@ -10506,7 +10506,7 @@ async def upload_damage_report_template(request: Request):
                 conn.execute("UPDATE damage_report_templates SET is_active = 0")
                 
                 # Inserir novo template
-                placeholders = ", ".join([placeholder] * 7)
+                placeholders = ", ".join([placeholder] * 8)
                 insert_query = f"""
                     INSERT INTO damage_report_templates 
                     (version, filename, file_data, num_pages, uploaded_by, uploaded_at, is_active, notes)
