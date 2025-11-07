@@ -324,8 +324,9 @@
             if (document.getElementById('orgBoth').checked) reportOrganization = 'both';
             
             const settings = {
-                // Daily Report
-                enableDailyReport: document.getElementById('enableDailyReport').checked,
+                // Daily Report (FIXED: use 'dailyEnabled' to match backend)
+                dailyEnabled: document.getElementById('enableDailyReport').checked,
+                enableDailyReport: document.getElementById('enableDailyReport').checked, // Keep for backwards compatibility
                 reportTime: document.getElementById('reportTime').value,
                 searchDays: document.getElementById('searchDays').value,
                 locationFaro: document.getElementById('locationFaro').checked,
@@ -334,8 +335,9 @@
                 reportOrganization: reportOrganization,
                 includeLogo: document.getElementById('includeLogo').checked,
                 
-                // Weekly Report
-                enableWeeklyReport: document.getElementById('enableWeeklyReport').checked,
+                // Weekly Report (FIXED: use 'weeklyEnabled' to match backend)
+                weeklyEnabled: document.getElementById('enableWeeklyReport').checked,
+                enableWeeklyReport: document.getElementById('enableWeeklyReport').checked, // Keep for backwards compatibility
                 weeklyDay: document.getElementById('weeklyDay').value,
                 weeklyTime: document.getElementById('weeklyTime').value,
                 weeklyPeriod: document.getElementById('weeklyPeriod').value,
@@ -486,18 +488,33 @@
         }
         
         function applySettings(settings) {
-            document.getElementById('enableDailyReport').checked = settings.enableDailyReport || false;
+            // Daily Report (check both field names for compatibility)
+            const dailyEnabled = settings.dailyEnabled || settings.enableDailyReport || false;
+            document.getElementById('enableDailyReport').checked = dailyEnabled;
             document.getElementById('reportTime').value = settings.reportTime || '09:00';
             document.getElementById('searchDays').value = settings.searchDays || '1,2,3,4,5,6,7';
             document.getElementById('locationFaro').checked = settings.locationFaro !== false;
             document.getElementById('locationAlbufeira').checked = settings.locationAlbufeira !== false;
             document.getElementById('compareWith').value = settings.compareWith || 'last_search';
             document.getElementById('enableAlertEmails').checked = settings.enableAlertEmails || false;
+            
+            // Weekly Report (check both field names for compatibility)
+            const weeklyEnabled = settings.weeklyEnabled || settings.enableWeeklyReport || false;
+            document.getElementById('enableWeeklyReport').checked = weeklyEnabled;
+            document.getElementById('weeklyDay').value = settings.weeklyDay || 'monday';
+            document.getElementById('weeklyTime').value = settings.weeklyTime || '09:00';
+            document.getElementById('weeklyPeriod').value = settings.weeklyPeriod || 'last_7_days';
+            document.getElementById('weeklyTrends').checked = settings.weeklyTrends !== false;
+            document.getElementById('weeklyBestDays').checked = settings.weeklyBestDays !== false;
+            document.getElementById('weeklySeasonality').checked = settings.weeklySeasonality !== false;
 
             // Trigger display updates
-            document.getElementById('dailyReportSettings').style.display = settings.enableDailyReport ? 'block' : 'none';
+            document.getElementById('dailyReportSettings').style.display = dailyEnabled ? 'block' : 'none';
+            document.getElementById('weeklyReportSettings').style.display = weeklyEnabled ? 'block' : 'none';
             document.getElementById('alertEmailSettings').style.display = settings.enableAlertEmails ? 'block' : 'none';
             document.getElementById('displayReportTime').textContent = settings.reportTime || '09:00';
+            
+            console.log('[SETTINGS] Applied - Daily:', dailyEnabled, 'Weekly:', weeklyEnabled);
         }
 
         // Load settings on page load
