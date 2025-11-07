@@ -14772,6 +14772,51 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         import traceback
         return {"ok": False, "error": str(e), "traceback": traceback.format_exc()}
 
+@app.post("/api/rental-agreements/debug-lines")
+async def debug_rental_agreement_lines(request: Request, file: UploadFile = File(...)):
+    """DEBUG: Extrai TODAS as linhas do PDF numeradas para mapear campos"""
+    require_auth(request)
+    
+    try:
+        import PyPDF2
+        from io import BytesIO
+        
+        contents = await file.read()
+        pdf_file = BytesIO(contents)
+        reader = PyPDF2.PdfReader(pdf_file)
+        
+        # Extrair TODO o texto
+        full_text = ""
+        for page_num, page in enumerate(reader.pages, 1):
+            page_text = page.extract_text()
+            full_text += f"\n=== PÁGINA {page_num} ===\n{page_text}\n"
+        
+        # Dividir em linhas
+        lines = full_text.split('\n')
+        
+        # Numerar linhas
+        numbered_lines = []
+        for i, line in enumerate(lines, 1):
+            numbered_lines.append({
+                "line_number": i,
+                "text": line.strip(),
+                "length": len(line.strip())
+            })
+        
+        logging.info(f"📄 DEBUG: Extraídas {len(numbered_lines)} linhas do PDF")
+        
+        return {
+            "ok": True,
+            "total_lines": len(numbered_lines),
+            "lines": numbered_lines,
+            "full_text": full_text
+        }
+        
+    except Exception as e:
+        logging.error(f"Error debugging RA lines: {e}")
+        import traceback
+        return {"ok": False, "error": str(e), "traceback": traceback.format_exc()}
+
 @app.post("/api/damage-reports/create")
 async def create_damage_report(request: Request):
     """Cria um novo Damage Report"""
