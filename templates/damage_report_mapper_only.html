@@ -1021,9 +1021,20 @@
                 console.warn('[MAPPER] pdfImageData not available, skipping redraw');
                 return;
             }
-            console.log('[MAPPER] Redrawing canvas with', Object.keys(fieldCoordinates).length, 'mapped fields');
-            ctx.putImageData(pdfImageData, 0, 0);
-            redrawMappedBoxes();
+            
+            // Verificar se pdfImageData corresponde ao tamanho do canvas
+            if (pdfImageData.width !== canvas.width || pdfImageData.height !== canvas.height) {
+                console.warn('[MAPPER] pdfImageData size mismatch, skipping redraw');
+                return;
+            }
+            
+            try {
+                console.log('[MAPPER] Redrawing canvas with', Object.keys(fieldCoordinates).length, 'mapped fields');
+                ctx.putImageData(pdfImageData, 0, 0);
+                redrawMappedBoxes();
+            } catch (error) {
+                console.error('[MAPPER] Error in redrawCanvas:', error);
+            }
         }
 
         // Initialize
