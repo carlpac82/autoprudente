@@ -14806,10 +14806,16 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             location_match = re.search(r'\b([A-ZÄÖÜ][A-ZÄÖÜÁÉÍÓÚÂÊÔÃÕÇ\s]{5,50}?)\s+\d{2}\s*[/-]', pickup_section)
             if location_match:
                 location = location_match.group(1).strip()
-                # Validar que não é nome de pessoa (geralmente tem nome e sobrenome apenas)
-                if len(location.split()) >= 2 or re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT', location, re.IGNORECASE):
+                words = location.split()
+                has_business_keyword = re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT|STATION|PRUDENTE|CAR|CARS|HIRE', location, re.IGNORECASE)
+                
+                # REJEITA se for exatamente 2 palavras simples SEM palavra-chave de negócio (provável nome de pessoa)
+                # ACEITA se tiver palavra-chave OU mais de 2 palavras
+                if not (len(words) == 2 and not has_business_keyword):
                     fields['pickupLocation'] = location
                     logging.info(f"   📍 Local Levantamento: {location}")
+                else:
+                    logging.info(f"   ⚠️  Local rejeitado (provável nome): {location}")
         
         # === DEVOLUÇÃO (DROPOFF) ===
         if dropoff_context is not None:
@@ -14838,10 +14844,16 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             location_match = re.search(r'\b([A-ZÄÖÜ][A-ZÄÖÜÁÉÍÓÚÂÊÔÃÕÇ\s]{5,50}?)\s+\d{2}\s*[/-]', dropoff_section)
             if location_match:
                 location = location_match.group(1).strip()
-                # Validar que não é nome de pessoa
-                if len(location.split()) >= 2 or re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT', location, re.IGNORECASE):
+                words = location.split()
+                has_business_keyword = re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT|STATION|PRUDENTE|CAR|CARS|HIRE', location, re.IGNORECASE)
+                
+                # REJEITA se for exatamente 2 palavras simples SEM palavra-chave de negócio (provável nome de pessoa)
+                # ACEITA se tiver palavra-chave OU mais de 2 palavras
+                if not (len(words) == 2 and not has_business_keyword):
                     fields['dropoffLocation'] = location
                     logging.info(f"   📍 Local Devolução: {location}")
+                else:
+                    logging.info(f"   ⚠️  Local rejeitado (provável nome): {location}")
         
         # === 12. FALLBACK PARA LOCAIS ===
         # Se não foram encontrados locais por contexto, tentar método antigo
@@ -14856,9 +14868,11 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         prev_line = re.sub(r'^\d{1,2}\s*:\s*\d{2}\s*', '', prev_line)
                         # Se é maiúsculas e tem tamanho razoável e não é nome de pessoa
                         if prev_line.isupper() and 5 <= len(prev_line) <= 50:
-                            # Filtrar nomes de pessoa (geralmente só 2 palavras)
                             words = prev_line.split()
-                            if len(words) > 2 or re.search(r'AEROPORTO|AIRPORT|AUTO|RENT|STATION', prev_line):
+                            has_business_keyword = re.search(r'AEROPORTO|AIRPORT|AUTO|RENT|STATION|PRUDENTE|CAR|CARS|HIRE', prev_line, re.IGNORECASE)
+                            
+                            # ACEITA se NÃO for exatamente 2 palavras simples sem palavra-chave
+                            if not (len(words) == 2 and not has_business_keyword):
                                 locations_found.append(prev_line)
             
             if len(locations_found) >= 2:
