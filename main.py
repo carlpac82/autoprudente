@@ -1177,6 +1177,13 @@ class PostgreSQLConnectionWrapper:
             import logging
             logging.debug(f"✅ AUTO-CONVERTED: INSERT OR REPLACE → INSERT ... ON CONFLICT DO NOTHING")
         
+        # Convert unquoted 'user' column to quoted "user" (PostgreSQL reserved keyword)
+        import re
+        # Match 'user' as column name but not in strings
+        # Patterns: ", user," -> ", "user","  or "(user)" -> "("user")" or " user " -> " "user" "
+        query = re.sub(r'\buser\b(?=\s*[,\)])', '"user"', query, flags=re.IGNORECASE)
+        query = re.sub(r'\(\s*user\s*,', '("user",', query, flags=re.IGNORECASE)
+        
         self._cursor = self._conn.cursor()
         try:
             if params:
@@ -19768,7 +19775,7 @@ async def preview_daily_report(request: Request):
             try:
                 cursor = conn.execute(
                     """
-                    SELECT location, start_date, days, search_results
+                    SELECT location, start_date, days, results_data
                     FROM recent_searches
                     ORDER BY timestamp DESC
                     LIMIT 1
@@ -19827,7 +19834,7 @@ async def preview_weekly_report(request: Request):
                     
                     cursor = conn.execute(
                         """
-                        SELECT search_results, timestamp
+                        SELECT results_data, timestamp
                         FROM recent_searches
                         WHERE start_date >= ? AND start_date < ?
                         ORDER BY timestamp DESC
@@ -19879,7 +19886,7 @@ async def preview_weekly_report(request: Request):
                     # Get previous week data for comparison
                     cursor_prev = conn.execute(
                         """
-                        SELECT search_results
+                        SELECT results_data
                         FROM recent_searches
                         WHERE start_date >= ? AND start_date < ?
                         AND timestamp < ?
@@ -20575,7 +20582,7 @@ def send_automatic_daily_report():
             try:
                 cursor = conn.execute(
                     """
-                    SELECT location, start_date, days, search_results
+                    SELECT location, start_date, days, results_data
                     FROM recent_searches
                     ORDER BY timestamp DESC
                     LIMIT 1
@@ -20854,7 +20861,7 @@ def send_automatic_weekly_report():
                     
                     cursor = conn.execute(
                         """
-                        SELECT search_results, timestamp
+                        SELECT results_data, timestamp
                         FROM recent_searches
                         WHERE start_date >= ? AND start_date < ?
                         ORDER BY timestamp DESC
@@ -20909,7 +20916,7 @@ def send_automatic_weekly_report():
                     # Get previous week data for comparison (if exists)
                     cursor_prev = conn.execute(
                         """
-                        SELECT search_results
+                        SELECT results_data
                         FROM recent_searches
                         WHERE start_date >= ? AND start_date < ?
                         AND timestamp < ?
