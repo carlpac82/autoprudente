@@ -21441,25 +21441,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 15:45
+    # Test search at 16:00
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=15, minute=45),
+        CronTrigger(hour=16, minute=0),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 15:45)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 16:00)", "main", "scheduler")
     
-    # Test report at 16:15
+    # Test report at 16:20
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=16, minute=15),
+        CronTrigger(hour=16, minute=20),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 16:15)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 16:20)", "main", "scheduler")
     
     # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
     # Search at 12:05 PM
