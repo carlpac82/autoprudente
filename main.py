@@ -10945,6 +10945,17 @@ async def debug_automated_price_rules(request: Request):
                         locations[loc] = 0
                     locations[loc] += 1
                 
+                # Get samples from EACH location (not just first 10)
+                samples_by_location = {}
+                for loc in locations.keys():
+                    cursor = conn.execute(
+                        "SELECT location, grupo, month, day, config FROM automated_price_rules WHERE location = %s LIMIT 3" if db_type == "PostgreSQL" else 
+                        "SELECT location, grupo, month, day, config FROM automated_price_rules WHERE location = ? LIMIT 3",
+                        (loc,)
+                    )
+                    loc_rows = cursor.fetchall()
+                    samples_by_location[loc] = [{"grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in loc_rows]
+                
                 return JSONResponse({
                     "ok": True,
                     "count": len(rows),
@@ -10954,6 +10965,7 @@ async def debug_automated_price_rules(request: Request):
                     "_USE_NEW_DB": _USE_NEW_DB,
                     "USE_POSTGRES": USE_POSTGRES if _USE_NEW_DB else None,
                     "locations": locations,
+                    "samples_by_location": samples_by_location,
                     "sample_rows": [{"location": r[0], "grupo": r[1], "month": r[2], "day": r[3], "config": r[4][:100] if r[4] else None} for r in rows[:10]]
                 })
             finally:
