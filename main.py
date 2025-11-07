@@ -21052,25 +21052,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 13:00 (reagendado após fix syntax error)
+    # Test search at 12:20
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=13, minute=0),
+        CronTrigger(hour=12, minute=20),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 13:00)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 12:20)", "main", "scheduler")
     
-    # Test report at 13:30 (reagendado após fix syntax error)
+    # Test report at 12:50
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=13, minute=30),
+        CronTrigger(hour=12, minute=50),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 13:30)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 12:50)", "main", "scheduler")
     
     # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
     # Search at 12:05 PM
