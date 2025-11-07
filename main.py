@@ -17413,10 +17413,19 @@ async def save_recent_searches(request: Request):
                     """)
                     # Add source column if it doesn't exist (migration)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
-                        conn.commit()
-                    except:
-                        pass  # Column already exists
+                        # Check if column exists first
+                        cursor = conn.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name='recent_searches' AND column_name='source'
+                        """)
+                        if not cursor.fetchone():
+                            conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                            conn.commit()
+                            logging.info("✅ Added 'source' column to recent_searches table")
+                    except Exception as e:
+                        logging.debug(f"Source column migration: {e}")
+                        pass  # Column already exists or error
                 else:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS recent_searches (
@@ -17433,10 +17442,16 @@ async def save_recent_searches(request: Request):
                     """)
                     # Add source column if it doesn't exist (migration)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
-                        conn.commit()
-                    except:
-                        pass  # Column already exists
+                        # Check if column exists using PRAGMA
+                        cursor = conn.execute("PRAGMA table_info(recent_searches)")
+                        columns = [row[1] for row in cursor.fetchall()]
+                        if 'source' not in columns:
+                            conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                            conn.commit()
+                            logging.info("✅ Added 'source' column to recent_searches table")
+                    except Exception as e:
+                        logging.debug(f"Source column migration: {e}")
+                        pass  # Column already exists or error
                 
                 # Clear old searches for this user (keep max 3)
                 placeholder = "%s" if is_postgres else "?"
