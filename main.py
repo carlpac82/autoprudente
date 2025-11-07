@@ -19515,6 +19515,97 @@ async def preview_daily_report(request: Request):
         logging.error(f"Preview daily report error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/reports/weekly/preview")
+async def preview_weekly_report(request: Request):
+    """Preview weekly report HTML (for testing)"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime, timedelta
+        
+        # Analyze last 3 months (same logic as automatic report)
+        months_to_analyze = 3
+        months_data = []
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cutoff_date = (datetime.now() - timedelta(days=30 * months_to_analyze)).strftime('%Y-%m-%d')
+                cursor = conn.execute(
+                    """
+                    SELECT strftime('%Y-%m', timestamp) as month, search_results
+                    FROM recent_searches
+                    WHERE timestamp >= ?
+                    ORDER BY timestamp DESC
+                    """,
+                    (cutoff_date,)
+                )
+                
+                # Group by month and analyze
+                month_groups = {}
+                for row in cursor.fetchall():
+                    month = row[0]
+                    if not row[1]:
+                        continue
+                    
+                    if month not in month_groups:
+                        month_groups[month] = []
+                    
+                    results = json.loads(row[1])
+                    month_groups[month].extend(results)
+                
+                # Analyze each month
+                for month, results in sorted(month_groups.items(), reverse=True):
+                    groups = {}
+                    for car in results:
+                        group = car.get('group', 'Unknown')
+                        if group not in groups:
+                            groups[group] = []
+                        groups[group].append(car)
+                    
+                    best_price_count = 0
+                    competitive_count = 0
+                    total_groups = len(groups)
+                    
+                    for group, cars in groups.items():
+                        sorted_cars = sorted(cars, key=lambda x: float(x.get('price_num', 999999)))
+                        
+                        ap_position = None
+                        for idx, car in enumerate(sorted_cars, 1):
+                            supplier = (car.get('supplier', '') or '').lower()
+                            if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                                ap_position = idx
+                                break
+                        
+                        if ap_position == 1:
+                            best_price_count += 1
+                        elif ap_position and ap_position <= 3:
+                            competitive_count += 1
+                    
+                    month_date = datetime.strptime(month, '%Y-%m')
+                    month_name = month_date.strftime('%B de %Y')
+                    
+                    months_data.append({
+                        'name': month_name,
+                        'best_price_count': best_price_count,
+                        'competitive_count': competitive_count,
+                        'percentage': (best_price_count / total_groups * 100) if total_groups > 0 else 0
+                    })
+                    
+            finally:
+                conn.close()
+        
+        # Generate HTML report
+        html_content = generate_weekly_report_html(months_data)
+        
+        # Return HTML directly for preview
+        from starlette.responses import HTMLResponse
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        logging.error(f"Preview weekly report error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/oauth/outlook/authorize")
 async def oauth_outlook_authorize(request: Request):
     """Initiate Outlook OAuth2 flow"""
@@ -19673,22 +19764,33 @@ def generate_daily_report_html(search_data):
     """Generate visual HTML report with car pricing analysis"""
     from datetime import datetime
     
+    # SVG Icons (monocromáticos)
+    icon_chart = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4-4h2v18h-2V3zm4 8h2v10h-2V11z"/></svg>'
+    icon_trophy = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M20 7h-2V5c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v3c0 2.5 1.5 4.7 3.8 5.7.5 1.7 1.8 3 3.5 3.7V23h5v-1.6c1.7-.7 3-2 3.5-3.7 2.3-1 3.8-3.2 3.8-5.7V9c0-1.1-.9-2-2-2zm0 5c0 1.9-1.2 3.5-2.9 4.1-.2-1.3-.8-2.4-1.7-3.3l-1.4 1.4c.6.6 1 1.5 1 2.4 0 1.9-1.6 3.5-3.5 3.5S8 18.5 8 16.6c0-.9.4-1.8 1-2.4L7.6 12.8c-.9.9-1.5 2-1.7 3.3C4.2 15.5 3 13.9 3 12V9h3V5h12v4h3v3z"/></svg>'
+    icon_car = '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>'
+    icon_location = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>'
+    icon_warning = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
+    
     if not search_data or not search_data.get('results'):
         return f"""
         <!DOCTYPE html>
         <html>
         <head><meta charset="UTF-8"><title>Relatório Diário</title></head>
-        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Outfit', 'Segoe UI', sans-serif;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
                 <tr><td align="center">
-                    <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px;">📊 Relatório Diário</h1>
-                            <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 16px;">{datetime.now().strftime('%d de %B de %Y')}</p>
+                    <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
+                            <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
+                            <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
+                            <p style="margin: 5px 0 0 0; color: #475569; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
                         </td></tr>
                         <tr><td style="padding: 40px; text-align: center;">
-                            <p style="color: #64748b; font-size: 16px;">⚠️ Sem dados de pesquisa disponíveis</p>
-                            <p style="color: #94a3b8; font-size: 14px; margin-top: 10px;">Execute uma pesquisa para gerar relatórios com análise de preços</p>
+                            <div style="display: inline-block; padding: 20px; background: #fef3c7; border-left: 4px solid #f59e0b;">
+                                {icon_warning}
+                                <p style="color: #92400e; font-size: 16px; margin: 10px 0 0 0; font-weight: 500;">Sem dados de pesquisa disponíveis</p>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 14px; margin-top: 15px;">Execute uma pesquisa para gerar relatórios com análise de preços</p>
                         </td></tr>
                     </table>
                 </td></tr>
@@ -19732,17 +19834,17 @@ def generate_daily_report_html(search_data):
         if ap_position == 1:
             ap_best_price += 1
             position_color = "#10b981"
-            position_badge = "🥇 Melhor Preço"
+            position_badge = f'<span style="display:inline-flex;align-items:center;gap:4px;">{icon_trophy} 1º Lugar</span>'
         elif ap_position and ap_position <= 3:
             ap_competitive += 1
             position_color = "#f59e0b"
-            position_badge = f"#{ap_position} Competitivo"
+            position_badge = f'<span style="display:inline-flex;align-items:center;gap:4px;">{icon_chart} #{ap_position} Posição</span>'
         elif ap_position:
             position_color = "#ef4444"
-            position_badge = f"#{ap_position} Melhorar"
+            position_badge = f'<span style="display:inline-flex;align-items:center;gap:4px;">{icon_warning} #{ap_position} Posição</span>'
         else:
             position_color = "#94a3b8"
-            position_badge = "❌ Não disponível"
+            position_badge = f'<span style="display:inline-flex;align-items:center;gap:4px;">{icon_warning} Indisponível</span>'
         
         # Get top 3 competitors for comparison
         competitors_html = ""
@@ -19771,10 +19873,10 @@ def generate_daily_report_html(search_data):
         
         car_cards_html += f"""
         <tr><td style="padding: 0 30px 20px 30px;">
-            <div style="background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="background: #ffffff; border: 2px solid #e2e8f0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="margin: 0; color: #1e293b; font-size: 18px;">🚗 Grupo {group}</h3>
-                    <span style="background: {position_color}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">{position_badge}</span>
+                    <h3 style="margin: 0; color: #1e293b; font-size: 18px; display: flex; align-items: center; gap: 8px;">{icon_car} Grupo {group}</h3>
+                    <span style="background: {position_color}; color: white; padding: 8px 14px; font-size: 12px; font-weight: 600;">{position_badge}</span>
                 </div>
                 {competitors_html}
                 <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
@@ -19791,15 +19893,16 @@ def generate_daily_report_html(search_data):
     <!DOCTYPE html>
     <html>
     <head><meta charset="UTF-8"><title>Relatório Diário</title></head>
-    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Outfit', 'Segoe UI', sans-serif;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
             <tr><td align="center">
-                <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <!-- Header -->
-                    <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px; text-align: center;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px;">📊 Relatório Diário de Preços</h1>
-                        <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 16px;">{datetime.now().strftime('%d de %B de %Y')}</p>
-                        <p style="margin: 5px 0 0 0; color: #b3e5fc; font-size: 14px;">📍 {search_data['location']} • {search_data['days']} dias</p>
+                    <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
+                        <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
+                        <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
+                        <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
+                        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; justify-content: center;">{icon_location} {search_data['location']} • {search_data['days']} dias</p>
                     </td></tr>
                     
                     <!-- Summary Stats -->
@@ -19808,15 +19911,15 @@ def generate_daily_report_html(search_data):
                             <tr>
                                 <td width="33%" style="text-align: center; padding: 10px;">
                                     <div style="font-size: 32px; font-weight: 700; color: #10b981;">{ap_best_price}</div>
-                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">🥇 Melhores Preços</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Melhores Preços</div>
                                 </td>
                                 <td width="33%" style="text-align: center; padding: 10px; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1;">
                                     <div style="font-size: 32px; font-weight: 700; color: #f59e0b;">{ap_competitive}</div>
-                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">📈 Competitivos</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Competitivos</div>
                                 </td>
                                 <td width="33%" style="text-align: center; padding: 10px;">
                                     <div style="font-size: 32px; font-weight: 700; color: #009cb6;">{ap_percentage:.0f}%</div>
-                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">💯 Taxa de Liderança</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Taxa de Liderança</div>
                                 </td>
                             </tr>
                         </table>
@@ -19988,6 +20091,139 @@ def send_automatic_daily_report():
     except Exception as e:
         logging.error(f"❌ Automatic daily report failed: {str(e)}")
 
+def generate_weekly_report_html(months_data):
+    """Generate visual HTML weekly report with monthly analysis"""
+    from datetime import datetime
+    
+    # SVG Icons (monocromáticos)
+    icon_chart = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h2v8H3v-8zm4-6h2v14H7V7zm4-4h2v18h-2V3zm4 8h2v10h-2V11z"/></svg>'
+    icon_trophy = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M20 7h-2V5c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v3c0 2.5 1.5 4.7 3.8 5.7.5 1.7 1.8 3 3.5 3.7V23h5v-1.6c1.7-.7 3-2 3.5-3.7 2.3-1 3.8-3.2 3.8-5.7V9c0-1.1-.9-2-2-2zm0 5c0 1.9-1.2 3.5-2.9 4.1-.2-1.3-.8-2.4-1.7-3.3l-1.4 1.4c.6.6 1 1.5 1 2.4 0 1.9-1.6 3.5-3.5 3.5S8 18.5 8 16.6c0-.9.4-1.8 1-2.4L7.6 12.8c-.9.9-1.5 2-1.7 3.3C4.2 15.5 3 13.9 3 12V9h3V5h12v4h3v3z"/></svg>'
+    icon_calendar = '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>'
+    icon_trend_up = '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/></svg>'
+    icon_trend_down = '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6h-6z"/></svg>'
+    icon_warning = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
+    
+    if not months_data or len(months_data) == 0:
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>Relatório Semanal</title></head>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Outfit', 'Segoe UI', sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+                <tr><td align="center">
+                    <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
+                            <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
+                            <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Semanal</h1>
+                            <p style="margin: 5px 0 0 0; color: #475569; font-size: 15px;">Semana {datetime.now().strftime('%W/%Y')}</p>
+                        </td></tr>
+                        <tr><td style="padding: 40px; text-align: center;">
+                            <div style="display: inline-block; padding: 20px; background: #fef3c7; border-left: 4px solid #f59e0b;">
+                                {icon_warning}
+                                <p style="color: #92400e; font-size: 16px; margin: 10px 0 0 0; font-weight: 500;">Sem dados de análise disponíveis</p>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 14px; margin-top: 15px;">Configure o período de análise (1-6 meses) nas definições</p>
+                        </td></tr>
+                    </table>
+                </td></tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    # Build monthly comparison HTML
+    months_html = ""
+    for month in months_data:
+        month_name = month['name']
+        best = month['best_price_count']
+        competitive = month['competitive_count']
+        
+        months_html += f"""
+        <tr><td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    {icon_calendar}
+                    <span style="font-weight: 600; color: #1e293b; font-size: 16px;">{month_name}</span>
+                </div>
+                <div style="display: flex; gap: 20px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: 700; color: #10b981;">{best}</div>
+                        <div style="font-size: 11px; color: #64748b;">1º Lugar</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: 700; color: #f59e0b;">{competitive}</div>
+                        <div style="font-size: 11px; color: #64748b;">Top 3</div>
+                    </div>
+                </div>
+            </div>
+        </td></tr>
+        """
+    
+    # Calculate totals
+    total_best = sum(m['best_price_count'] for m in months_data)
+    total_competitive = sum(m['competitive_count'] for m in months_data)
+    avg_percentage = sum(m['percentage'] for m in months_data) / len(months_data) if months_data else 0
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><title>Relatório Semanal</title></head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Outfit', 'Segoe UI', sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
+            <tr><td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
+                        <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
+                        <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Semanal</h1>
+                        <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px;">Semana {datetime.now().strftime('%W de %Y')}</p>
+                        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Análise de {len(months_data)} {('mês' if len(months_data) == 1 else 'meses')}</p>
+                    </td></tr>
+                    
+                    <!-- Summary Stats -->
+                    <tr><td style="padding: 25px 30px; background: #f0f9fb; border-bottom: 1px solid #e2e8f0;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td width="33%" style="text-align: center; padding: 10px;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #10b981;">{total_best}</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Total Melhores Preços</div>
+                                </td>
+                                <td width="33%" style="text-align: center; padding: 10px; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #f59e0b;">{total_competitive}</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Total Competitivos</div>
+                                </td>
+                                <td width="33%" style="text-align: center; padding: 10px;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #009cb6;">{avg_percentage:.0f}%</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Média de Liderança</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td></tr>
+                    
+                    <!-- Monthly Breakdown -->
+                    <tr><td style="padding: 20px 30px;">
+                        <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px; font-weight: 600;">Desempenho Mensal</h2>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border: 1px solid #e2e8f0;">
+                            {months_html}
+                        </table>
+                    </td></tr>
+                    
+                    <!-- Footer -->
+                    <tr><td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                            Auto Prudente © {datetime.now().year} • Sistema de Monitorização de Preços
+                        </p>
+                        <p style="margin: 8px 0 0 0; font-size: 11px; color: #cbd5e1;">
+                            Relatório semanal automático • Análise histórica de desempenho
+                        </p>
+                    </td></tr>
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    """
+
 def send_automatic_weekly_report():
     """Send weekly report automatically based on saved settings"""
     try:
@@ -20037,13 +20273,93 @@ def send_automatic_weekly_report():
             logging.error("❌ No Gmail token found - cannot send weekly report")
             return
         
-        # Send email
+        # Analyze historical data from last 3 months (configurable)
         from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        from datetime import datetime
+        from datetime import datetime, timedelta
         import base64
+        
+        months_to_analyze = settings.get('weeklyMonths', 3)  # Default: 3 months
+        months_data = []
+        
+        # Get data from last N months
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Get searches from last N months
+                cutoff_date = (datetime.now() - timedelta(days=30 * months_to_analyze)).strftime('%Y-%m-%d')
+                cursor = conn.execute(
+                    """
+                    SELECT strftime('%Y-%m', timestamp) as month, search_results
+                    FROM recent_searches
+                    WHERE timestamp >= ?
+                    ORDER BY timestamp DESC
+                    """,
+                    (cutoff_date,)
+                )
+                
+                # Group by month and analyze
+                month_groups = {}
+                for row in cursor.fetchall():
+                    month = row[0]
+                    if not row[1]:
+                        continue
+                    
+                    if month not in month_groups:
+                        month_groups[month] = []
+                    
+                    results = json.loads(row[1])
+                    month_groups[month].extend(results)
+                
+                # Analyze each month
+                for month, results in sorted(month_groups.items(), reverse=True):
+                    # Group by car groups
+                    groups = {}
+                    for car in results:
+                        group = car.get('group', 'Unknown')
+                        if group not in groups:
+                            groups[group] = []
+                        groups[group].append(car)
+                    
+                    # Count best prices and competitive
+                    best_price_count = 0
+                    competitive_count = 0
+                    total_groups = len(groups)
+                    
+                    for group, cars in groups.items():
+                        sorted_cars = sorted(cars, key=lambda x: float(x.get('price_num', 999999)))
+                        
+                        # Find Auto Prudente position
+                        ap_position = None
+                        for idx, car in enumerate(sorted_cars, 1):
+                            supplier = (car.get('supplier', '') or '').lower()
+                            if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                                ap_position = idx
+                                break
+                        
+                        if ap_position == 1:
+                            best_price_count += 1
+                        elif ap_position and ap_position <= 3:
+                            competitive_count += 1
+                    
+                    # Format month name
+                    month_date = datetime.strptime(month, '%Y-%m')
+                    month_name = month_date.strftime('%B de %Y')
+                    
+                    months_data.append({
+                        'name': month_name,
+                        'best_price_count': best_price_count,
+                        'competitive_count': competitive_count,
+                        'percentage': (best_price_count / total_groups * 100) if total_groups > 0 else 0
+                    })
+                    
+            finally:
+                conn.close()
+        
+        # Generate HTML report
+        html_content = generate_weekly_report_html(months_data)
         
         credentials = Credentials(token=access_token)
         service = build('gmail', 'v1', credentials=credentials)
@@ -20051,39 +20367,9 @@ def send_automatic_weekly_report():
         sent_count = 0
         for recipient in recipients:
             try:
-                html_content = f"""
-                <!DOCTYPE html>
-                <html>
-                <head><meta charset="UTF-8"><title>Relatório Semanal</title></head>
-                <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
-                        <tr><td align="center">
-                            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                <tr><td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
-                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📊 Relatório Semanal</h1>
-                                    <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">Semana {datetime.now().strftime('%W/%Y')}</p>
-                                </td></tr>
-                                <tr><td style="padding: 30px 20px; text-align: center;">
-                                    <h2 style="color: #009cb6; margin: 0 0 20px 0;">✅ Relatório Semanal Automático</h2>
-                                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                        Resumo semanal do sistema de monitorização de preços.
-                                    </p>
-                                </td></tr>
-                                <tr><td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                                        Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
-                                    </p>
-                                </td></tr>
-                            </table>
-                        </td></tr>
-                    </table>
-                </body>
-                </html>
-                """
-                
                 message = MIMEMultipart('alternative')
                 message['to'] = recipient
-                message['subject'] = f'📊 Relatório Semanal - Auto Prudente (Semana {datetime.now().strftime("%W/%Y")})'
+                message['subject'] = f'Relatório Semanal - Auto Prudente (Semana {datetime.now().strftime("%W/%Y")})'
                 message.attach(MIMEText(html_content, 'html'))
                 
                 raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
