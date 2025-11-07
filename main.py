@@ -3407,6 +3407,18 @@ async def rental_agreement_mapper_page(request: Request):
         "request": request
     })
 
+@app.get("/rental-agreement-debug", response_class=HTMLResponse)
+async def rental_agreement_debug_page(request: Request):
+    """Página de debug para ver linhas numeradas do PDF"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("ra_debug_lines.html", {
+        "request": request
+    })
+
 # --- Admin: environment summary and adjustment preview ---
 @app.get("/admin/env-summary")
 async def admin_env_summary(request: Request):
