@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapeador de Rental Agreement</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f9fafb;
+            padding: 20px;
+        }
+        .mapper-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            max-width: 100%;
+        }
+        .pdf-viewer {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .controls {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        canvas {
+            width: 100%;
+            cursor: crosshair;
+            border: 1px solid #d1d5db;
+        }
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-primary {
+            background: #009cb6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #008299;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        .field-selector {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .current-field {
+            background: #f0f9fb;
+            border: 2px solid #009cb6;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .current-field h3 {
+            color: #009cb6;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .mapped-list {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .mapped-item {
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .page-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mapper-container">
+        <!-- PDF Viewer -->
+        <div class="pdf-viewer">
+            <div class="page-controls">
+                <button class="btn btn-secondary" onclick="previousPage()">← Anterior</button>
+                <span id="pageInfo">Página 1 / 2</span>
+                <button class="btn btn-secondary" onclick="nextPage()">Seguinte →</button>
+            </div>
+            <canvas id="pdfCanvas"></canvas>
+            <div style="text-align: center; margin-top: 10px; color: #6b7280; font-size: 12px;">
+                <span id="canvasInfo">Carregando PDF...</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="current-field">
+                <h3>Campo Atual</h3>
+                <div id="currentFieldName" style="font-size: 18px; font-weight: bold; color: #1f2937;">
+                    Escolhe um campo
+                </div>
+                <div style="margin-top: 10px;">
+                    <span id="fieldProgress">0 / 62 campos</span>
+                </div>
+            </div>
+
+            <select id="fieldSelector" class="field-selector" onchange="selectFieldManually()">
+                <option value="">-- Escolhe um campo --</option>
+            </select>
+
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin-bottom: 10px; color: #1f2937;">Campos Mapeados</h4>
+                <div id="mappedFieldsList" class="mapped-list"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <button class="btn btn-primary" onclick="saveFieldCoordinates()" title="Guardar Coordenadas">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="toggleEditMode()" id="editModeBtn" style="background: #8b5cf6;" title="Modo Editar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="deleteSelectedBox()" id="deleteBtn" style="background: #ef4444; color: white;" disabled title="Eliminar Caixa">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="copySelectedBox()" id="copyBtn" style="background: #10b981; color: white;" disabled title="Copiar Caixa (mantém tamanho)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="pasteBox()" id="pasteBtn" style="background: #06b6d4; color: white;" disabled title="Colar Caixa (clique no canvas para posicionar)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="detectWhiteBoxAtClick()" id="detectBtn" style="background: #f59e0b; color: white;" title="Detectar Caixa Branca (clique numa caixa do PDF)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                        <path d="M11 8v6"></path>
+                        <path d="M8 11h6"></path>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="previousField()" title="Campo Anterior">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="skipCurrentField()" title="Pular Campo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                        <line x1="19" y1="5" x2="19" y2="19"></line>
+                    </svg>
+                </button>
+                <button class="btn" onclick="clearAllFields()" style="background: #f4ad0f; color: white;" title="Limpar Todos os Campos">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div style="margin-top: 15px; padding: 10px; background: #f0f9fb; border-left: 3px solid #009cb6; border-radius: 4px; font-size: 12px;">
+                <div style="font-weight: 600; color: #009cb6; margin-bottom: 5px;">💡 Dicas:</div>
+                <div style="color: #64748b; line-height: 1.5;">
+                    • <strong>Detectar:</strong> Clique no botão laranja, depois clique numa caixa branca do PDF<br>
+                    • <strong>Copiar:</strong> Selecione uma caixa e clique em copiar (verde)<br>
+                    • <strong>Colar:</strong> Clique em colar (ciano) e depois no canvas para posicionar<br>
+                    • <strong>Alinhar:</strong> Arraste caixas perto de outras - alinhamento automático
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Campos do Rental Agreement para mapear
+        const FIELDS_TO_MAP = [
+            // Informações do Contrato
+            { id: 'contractNumber', name: 'Nº Contrato', type: 'text' },
+            { id: 'contractDate', name: 'Data Contrato', type: 'text' },
+            
+            // Dados do Cliente
+            { id: 'clientName', name: 'Nome Cliente', type: 'text' },
+            { id: 'clientEmail', name: 'Email Cliente', type: 'text' },
+            { id: 'clientPhone', name: 'Telefone Cliente', type: 'text' },
+            { id: 'address', name: 'Morada Cliente', type: 'text' },
+            { id: 'city', name: 'Cidade Cliente', type: 'text' },
+            { id: 'postalCode', name: 'Código Postal', type: 'text' },
+            { id: 'country', name: 'País', type: 'text' },
+            { id: 'nif', name: 'NIF/VAT', type: 'text' },
+            
+            // Dados do Veículo
+            { id: 'vehiclePlate', name: 'Matrícula', type: 'text' },
+            { id: 'vehicleBrand', name: 'Marca', type: 'text' },
+            { id: 'vehicleModel', name: 'Modelo', type: 'text' },
+            { id: 'vehicleColor', name: 'Cor', type: 'text' },
+            { id: 'vehicleKm', name: 'Quilómetros', type: 'text' },
+            
+            // Pickup (Levantamento)
+            { id: 'pickupDate', name: 'Data Levantamento', type: 'text' },
+            { id: 'pickupTime', name: 'Hora Levantamento', type: 'text' },
+            { id: 'pickupLocation', name: 'Local Levantamento', type: 'text' },
+            { id: 'pickupFuel', name: 'Combustível Levantamento', type: 'text' },
+            
+            // Return (Devolução)
+            { id: 'returnDate', name: 'Data Devolução', type: 'text' },
+            { id: 'returnTime', name: 'Hora Devolução', type: 'text' },
+            { id: 'returnLocation', name: 'Local Devolução', type: 'text' },
+            { id: 'returnFuel', name: 'Combustível Devolução', type: 'text' },
+            
+            // Valores
+            { id: 'totalDays', name: 'Total Dias', type: 'text' },
+            { id: 'dailyRate', name: 'Preço Diário', type: 'text' },
+            { id: 'totalAmount', name: 'Valor Total', type: 'text' },
+            { id: 'deposit', name: 'Depósito', type: 'text' },
+            
+            // Assinaturas
+            { id: 'clientSignature', name: 'Assinatura Cliente', type: 'signature' },
+            { id: 'staffSignature', name: 'Assinatura Funcionário', type: 'signature' }
+        ];
+
+        let currentFieldIndex = 0;
+        let fieldCoordinates = {};
+        let canvas, ctx, scale, currentPage = 1, pdfDoc, pdfImageData;
+        let isDrawing = false, startX, startY;
+        let isDragging = false, draggedField = null, dragOffsetX = 0, dragOffsetY = 0;
+        let isEditMode = false, selectedField = null;
+        let isResizing = false, resizeHandle = null, resizeStartX = 0, resizeStartY = 0;
+        
+        // Copy/Paste and detection
+        let copiedBox = null;
+        let isPasteMode = false;
+        let isDetectMode = false;
+        const SNAP_THRESHOLD = 5; // pixels para snap automático
+
+        async function loadPDFMapper() {
+            canvas = document.getElementById('pdfCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Carregar template ativo da base de dados (não arquivo fixo)
+            const response = await fetch('/api/rental-agreements/get-active-template');
+            
+            if (!response.ok) {
+                console.error('[MAPPER] Failed to load template:', response.status);
+                alert('Erro ao carregar template PDF. Por favor, faça upload de um template primeiro.');
+                return;
+            }
+            
+            const arrayBuffer = await response.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            console.log('[MAPPER] Template PDF loaded from database');
+            
+            await renderPage(currentPage);
+            
+            canvas.onmousedown = onCanvasClick;
+            canvas.onmousemove = onCanvasMouseMove;
+            canvas.onmouseup = onCanvasMouseUp;
+            
+            populateFieldSelector();
+            await loadExistingCoordinates();
+        }
+
+        async function renderPage(pageNum) {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2 });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            scale = viewport.scale;
+            
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            pdfImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            console.log('[MAPPER] Page rendered, redrawing boxes');
+            await redrawCanvas();  // ✅ Usar redrawCanvas em vez de redrawMappedBoxes
+            document.getElementById('canvasInfo').textContent = `Arrasta para criar caixas • Escala: ${scale}`;
+        }
+
+        function onCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Se em modo edição, verificar clique em handles primeiro
+            if (isEditMode && selectedField) {
+                const coords = fieldCoordinates[selectedField];
+                if (coords && coords.page === currentPage) {
+                    const handle = getHandleAtPosition(mouseX, mouseY, coords);
+                    if (handle) {
+                        isResizing = true;
+                        resizeHandle = handle;
+                        resizeStartX = mouseX;
+                        resizeStartY = mouseY;
+                        return;
+                    }
+                }
+            }
+            
+            // Verificar se clicou numa caixa existente
+            for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                if (coords.page === currentPage) {
+                    const boxX = coords.x * scale;
+                    const boxY = coords.y * scale;
+                    const boxW = coords.width * scale;
+                    const boxH = coords.height * scale;
+                    
+                    if (mouseX >= boxX && mouseX <= boxX + boxW && 
+                        mouseY >= boxY && mouseY <= boxY + boxH) {
+                        
+                        if (isEditMode) {
+                            // Modo edição - selecionar caixa
+                            selectedField = fieldId;
+                            document.getElementById('deleteBtn').disabled = false;
+                            document.getElementById('copyBtn').disabled = false;
+                            redrawCanvas();
+                        } else {
+                            // Modo normal - arrastar caixa
+                            isDragging = true;
+                            draggedField = fieldId;
+                            dragOffsetX = mouseX - boxX;
+                            dragOffsetY = mouseY - boxY;
+                            canvas.style.cursor = 'move';
+                        }
+                        return;
+                    }
+                }
+            }
+            
+            // Não clicou em nenhuma caixa
+            if (isEditMode) {
+                // Desselecionar
+                selectedField = null;
+                document.getElementById('deleteBtn').disabled = true;
+                document.getElementById('copyBtn').disabled = true;
+                redrawCanvas();
+            } else {
+                // Modo desenhar nova caixa
+                startX = mouseX;
+                startY = mouseY;
+                isDrawing = true;
+            }
+        }
+
+        function onCanvasMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            if (isResizing && selectedField) {
+                // Redimensionar caixa
+                const coords = fieldCoordinates[selectedField];
+                const deltaX = mouseX - resizeStartX;
+                const deltaY = mouseY - resizeStartY;
+                
+                const x = coords.x * scale;
+                const y = coords.y * scale;
+                const w = coords.width * scale;
+                const h = coords.height * scale;
+                
+                // Aplicar redimensionamento baseado no handle
+                if (resizeHandle.includes('l')) { // left
+                    coords.x = (x + deltaX) / scale;
+                    coords.width = (w - deltaX) / scale;
+                }
+                if (resizeHandle.includes('r')) { // right
+                    coords.width = (w + deltaX) / scale;
+                }
+                if (resizeHandle.includes('t')) { // top
+                    coords.y = (y + deltaY) / scale;
+                    coords.height = (h - deltaY) / scale;
+                }
+                if (resizeHandle.includes('b')) { // bottom
+                    coords.height = (h + deltaY) / scale;
+                }
+                
+                resizeStartX = mouseX;
+                resizeStartY = mouseY;
+                redrawCanvas();
+            } else if (isDragging && draggedField) {
+                // Arrastar caixa existente
+                const coords = fieldCoordinates[draggedField];
+                coords.x = (mouseX - dragOffsetX) / scale;
+                coords.y = (mouseY - dragOffsetY) / scale;
+                
+                redrawCanvas();  // ✅ Usar redrawCanvas
+            } else if (isDrawing) {
+                // Desenhar nova caixa
+                redrawCanvas();  // ✅ Limpa canvas + redesenha TODAS as caixas
+                
+                // Desenha a nova caixa sendo desenhada
+                ctx.strokeStyle = '#009cb6';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(startX, startY, mouseX - startX, mouseY - startY);
+            }
+        }
+
+        function onCanvasMouseUp(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // PASTE MODE: Colar caixa copiada
+            if (isPasteMode && copiedBox) {
+                isPasteMode = false;
+                canvas.style.cursor = 'default';
+                document.getElementById('pasteBtn').style.opacity = '1';
+                
+                const field = FIELDS_TO_MAP[currentFieldIndex];
+                if (!field) {
+                    showCustomNotification('Nenhum campo selecionado para colar', 'warning');
+                    return;
+                }
+                
+                // Aplicar snap alignment
+                const snapped = applySnapAlignment(
+                    clickX / scale,
+                    clickY / scale,
+                    copiedBox.width,
+                    copiedBox.height
+                );
+                
+                fieldCoordinates[field.id] = {
+                    page: currentPage,
+                    x: snapped.x,
+                    y: snapped.y,
+                    width: copiedBox.width,
+                    height: copiedBox.height
+                };
+                
+                console.log('[MAPPER] Box pasted:', field.id);
+                showCustomNotification(`Caixa colada em: ${field.name}`, 'success');
+                updateMappedList();
+                currentFieldIndex++;
+                updateCurrentField();
+                redrawCanvas();
+                autoSaveCoordinates();
+                return;
+            }
+            
+            // DETECT MODE: Detectar caixa branca ao clicar
+            if (isDetectMode) {
+                isDetectMode = false;
+                canvas.style.cursor = 'default';
+                document.getElementById('detectBtn').style.opacity = '1';
+                
+                const field = FIELDS_TO_MAP[currentFieldIndex];
+                if (!field) {
+                    showCustomNotification('Nenhum campo selecionado para detectar', 'warning');
+                    return;
+                }
+                
+                const detectedBox = detectWhiteBox(clickX, clickY);
+                if (detectedBox) {
+                    // Aplicar snap alignment
+                    const snapped = applySnapAlignment(
+                        detectedBox.x / scale,
+                        detectedBox.y / scale,
+                        detectedBox.width / scale,
+                        detectedBox.height / scale
+                    );
+                    
+                    fieldCoordinates[field.id] = {
+                        page: currentPage,
+                        x: snapped.x,
+                        y: snapped.y,
+                        width: detectedBox.width / scale,
+                        height: detectedBox.height / scale
+                    };
+                    
+                    console.log('[MAPPER] Box detected and mapped:', field.id);
+                    showCustomNotification(`Caixa detectada e mapeada em: ${field.name}`, 'success');
+                    updateMappedList();
+                    currentFieldIndex++;
+                    updateCurrentField();
+                    redrawCanvas();
+                    autoSaveCoordinates();
+                }
+                return;
+            }
+            
+            if (isResizing) {
+                // Terminar redimensionamento
+                isResizing = false;
+                resizeHandle = null;
+                return;
+            }
+            
+            if (isDragging) {
+                // Terminar arrastar
+                isDragging = false;
+                draggedField = null;
+                canvas.style.cursor = 'crosshair';
+                return;
+            }
+            
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            const endX = clickX;
+            const endY = clickY;
+            
+            const field = FIELDS_TO_MAP[currentFieldIndex];
+            if (!field) return;
+            
+            // Get initial box coordinates
+            let boxX = Math.min(startX, endX) / scale;
+            let boxY = Math.min(startY, endY) / scale;
+            let boxW = Math.abs(endX - startX) / scale;
+            let boxH = Math.abs(endY - startY) / scale;
+            
+            // Special auto-detection for vehicle diagram
+            if (field.type === 'diagram') {
+                const diagramBox = autoDetectVehicleDiagram();
+                if (diagramBox) {
+                    console.log('Vehicle diagram auto-detected:', diagramBox);
+                    boxX = diagramBox.x;
+                    boxY = diagramBox.y;
+                    boxW = diagramBox.width;
+                    boxH = diagramBox.height;
+                    showCustomNotification('Diagrama do veículo detetado automaticamente!', 'success');
+                } else {
+                    // Try to detect white boxes/lines in the PDF
+                    const detectedBox = detectWhiteBoxInArea(boxX, boxY, boxW, boxH);
+                    if (detectedBox) {
+                        console.log('White box detected, adjusting coordinates...');
+                        boxX = detectedBox.x;
+                        boxY = detectedBox.y;
+                        boxW = detectedBox.width;
+                        boxH = detectedBox.height;
+                    }
+                }
+            } else {
+                // Try to detect white boxes/lines in the PDF
+                const detectedBox = detectWhiteBoxInArea(boxX, boxY, boxW, boxH);
+                if (detectedBox) {
+                    console.log('White box detected, adjusting coordinates...');
+                    boxX = detectedBox.x;
+                    boxY = detectedBox.y;
+                    boxW = detectedBox.width;
+                    boxH = detectedBox.height;
+                }
+            }
+            
+            fieldCoordinates[field.id] = {
+                page: currentPage,
+                x: boxX,
+                y: boxY,
+                width: boxW,
+                height: boxH
+            };
+            
+            console.log('[MAPPER] Field mapped:', field.id);
+            updateMappedList();
+            currentFieldIndex++;
+            updateCurrentField();
+            redrawCanvas();  // ✅ Limpa canvas + redesenha TODAS as caixas
+            
+            // AUTO-SAVE after mapping (silent)
+            autoSaveCoordinates();
+        }
+
+        function autoDetectVehicleDiagram() {
+            // Auto-detect vehicle diagram by looking for a large rectangular area
+            // with car outline (typically in cyan/blue color on white background)
+            try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                // Look for cyan/blue lines (typical car diagram color)
+                // RGB values for cyan: around (0, 174, 239) or similar blue tones
+                let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                let foundDiagram = false;
+                
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const idx = (y * canvas.width + x) * 4;
+                        const r = data[idx];
+                        const g = data[idx + 1];
+                        const b = data[idx + 2];
+                        
+                        // Detect cyan/blue lines (car outline color)
+                        // Typical cyan: low red, medium-high green, high blue
+                        if (r < 100 && g > 100 && b > 150 && b > r && b > g) {
+                            foundDiagram = true;
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                        }
+                    }
+                }
+                
+                // If found diagram with reasonable size (at least 200x150 pixels)
+                if (foundDiagram && (maxX - minX) > 200 && (maxY - minY) > 150) {
+                    // Add some padding
+                    const padding = 20;
+                    return {
+                        x: Math.max(0, (minX - padding)) / scale,
+                        y: Math.max(0, (minY - padding)) / scale,
+                        width: Math.min(canvas.width, (maxX - minX + padding * 2)) / scale,
+                        height: Math.min(canvas.height, (maxY - minY + padding * 2)) / scale
+                    };
+                }
+            } catch (error) {
+                console.error('[MAPPER] Error auto-detecting diagram:', error);
+            }
+            
+            return null;
+        }
+        
+        function detectWhiteBoxInArea(x, y, width, height) {
+            // Convert to canvas coordinates
+            const canvasX = Math.floor(x * scale);
+            const canvasY = Math.floor(y * scale);
+            const canvasW = Math.floor(width * scale);
+            const canvasH = Math.floor(height * scale);
+            
+            // Get image data for the selected area
+            const imageData = ctx.getImageData(canvasX, canvasY, canvasW, canvasH);
+            const data = imageData.data;
+            
+            // Find edges of white area (threshold: RGB > 240)
+            let minX = canvasW, minY = canvasH, maxX = 0, maxY = 0;
+            let foundWhite = false;
+            
+            for (let py = 0; py < canvasH; py++) {
+                for (let px = 0; px < canvasW; px++) {
+                    const idx = (py * canvasW + px) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    
+                    // Check if pixel is white (or very light)
+                    if (r > 240 && g > 240 && b > 240) {
+                        foundWhite = true;
+                        if (px < minX) minX = px;
+                        if (px > maxX) maxX = px;
+                        if (py < minY) minY = py;
+                        if (py > maxY) maxY = py;
+                    }
+                }
+            }
+            
+            // If found white area larger than 50% of selection, use it
+            if (foundWhite && (maxX - minX) * (maxY - minY) > (canvasW * canvasH * 0.5)) {
+                return {
+                    x: (canvasX + minX) / scale,
+                    y: (canvasY + minY) / scale,
+                    width: (maxX - minX) / scale,
+                    height: (maxY - minY) / scale
+                };
+            }
+            
+            return null;
+        }
+
+        function redrawMappedBoxes() {
+            let boxesDrawn = 0;
+            for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                // FIX: Garantir que page existe, default = 1
+                const fieldPage = coords.page || 1;
+                if (fieldPage === currentPage) {
+                    const isSelected = selectedField === fieldId;
+                    
+                    // Begin new path for each box to avoid state issues
+                    ctx.beginPath();
+                    
+                    // Desenhar caixa
+                    ctx.strokeStyle = isSelected ? '#f59e0b' : '#10b981';
+                    ctx.lineWidth = isSelected ? 3 : 2;
+                    ctx.strokeRect(
+                        coords.x * scale,
+                        coords.y * scale,
+                        coords.width * scale,
+                        coords.height * scale
+                    );
+                    
+                    ctx.closePath();
+                    boxesDrawn++;
+                    
+                    // Se selecionada e em modo edição, desenhar handles
+                    if (isSelected && isEditMode) {
+                        const handleSize = 8;
+                        const x = coords.x * scale;
+                        const y = coords.y * scale;
+                        const w = coords.width * scale;
+                        const h = coords.height * scale;
+                        
+                        ctx.fillStyle = '#f59e0b';
+                        
+                        // 4 cantos
+                        ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize); // top-left
+                        ctx.fillRect(x + w - handleSize/2, y - handleSize/2, handleSize, handleSize); // top-right
+                        ctx.fillRect(x - handleSize/2, y + h - handleSize/2, handleSize, handleSize); // bottom-left
+                        ctx.fillRect(x + w - handleSize/2, y + h - handleSize/2, handleSize, handleSize); // bottom-right
+                        
+                        // 4 lados
+                        ctx.fillRect(x + w/2 - handleSize/2, y - handleSize/2, handleSize, handleSize); // top
+                        ctx.fillRect(x + w/2 - handleSize/2, y + h - handleSize/2, handleSize, handleSize); // bottom
+                        ctx.fillRect(x - handleSize/2, y + h/2 - handleSize/2, handleSize, handleSize); // left
+                        ctx.fillRect(x + w - handleSize/2, y + h/2 - handleSize/2, handleSize, handleSize); // right
+                    }
+                }
+            }
+            if (boxesDrawn === 0 && Object.keys(fieldCoordinates).length > 0) {
+                // Log detalhado para debug
+                const pageDistribution = {};
+                for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                    const p = coords.page || 1;
+                    pageDistribution[p] = (pageDistribution[p] || 0) + 1;
+                }
+                console.warn(`[MAPPER] No boxes drawn on page ${currentPage}`);
+                console.warn(`[MAPPER] Field distribution:`, pageDistribution);
+                console.warn(`[MAPPER] Example field:`, Object.values(fieldCoordinates)[0]);
+            }
+        }
+
+        function populateFieldSelector() {
+            const selector = document.getElementById('fieldSelector');
+            FIELDS_TO_MAP.forEach((field, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = field.name;
+                selector.appendChild(option);
+            });
+        }
+
+        function selectFieldManually() {
+            const selector = document.getElementById('fieldSelector');
+            currentFieldIndex = parseInt(selector.value) || 0;
+            updateCurrentField();
+        }
+
+        function updateCurrentField() {
+            const field = FIELDS_TO_MAP[currentFieldIndex];
+            if (field) {
+                document.getElementById('currentFieldName').textContent = field.name;
+                document.getElementById('fieldSelector').value = currentFieldIndex;
+            }
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const mapped = Object.keys(fieldCoordinates).length;
+            document.getElementById('fieldProgress').textContent = `${mapped} / ${FIELDS_TO_MAP.length} campos`;
+        }
+
+        function updateMappedList() {
+            const list = document.getElementById('mappedFieldsList');
+            list.innerHTML = '';
+            Object.keys(fieldCoordinates).forEach(fieldId => {
+                const field = FIELDS_TO_MAP.find(f => f.id === fieldId);
+                if (field) {
+                    const item = document.createElement('div');
+                    item.className = 'mapped-item';
+                    item.innerHTML = `<span>✓ ${field.name}</span>`;
+                    list.appendChild(item);
+                }
+            });
+        }
+
+        async function saveFieldCoordinates(e) {
+            if (e) e.preventDefault();
+            try {
+                console.log('[MAPPER] Saving coordinates:', fieldCoordinates);
+                const response = await fetch('/api/rental-agreements/save-coordinates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fieldCoordinates)
+                });
+                const result = await response.json();
+                console.log('[MAPPER] Save result:', result);
+                if (result.ok) {
+                    showCustomNotification('Coordenadas guardadas com sucesso!', 'success');
+                    window.parent.postMessage({ type: 'coordinatesSaved' }, '*');
+                } else {
+                    showCustomNotification('Erro ao guardar: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('[MAPPER] Save error:', error);
+                showCustomNotification('Erro ao guardar coordenadas', 'error');
+            }
+        }
+
+        // AUTO-SAVE silencioso (sem notificação) - chamado após mapear cada campo
+        async function autoSaveCoordinates() {
+            try {
+                console.log('[MAPPER] Auto-saving coordinates silently...', Object.keys(fieldCoordinates).length, 'fields');
+                const response = await fetch('/api/rental-agreements/save-coordinates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fieldCoordinates)
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    console.log('[MAPPER] Auto-save successful');
+                } else {
+                    console.warn('[MAPPER] Auto-save failed:', result.error);
+                }
+            } catch (error) {
+                console.error('[MAPPER] Auto-save error:', error);
+            }
+        }
+
+        function skipCurrentField(e) {
+            if (e) e.preventDefault();
+            currentFieldIndex++;
+            if (currentFieldIndex >= FIELDS_TO_MAP.length) {
+                currentFieldIndex = FIELDS_TO_MAP.length - 1;
+                showCustomNotification('Já está no último campo', 'info');
+            }
+            updateCurrentField();
+        }
+
+        function previousField(e) {
+            if (e) e.preventDefault();
+            if (currentFieldIndex > 0) {
+                currentFieldIndex--;
+                updateCurrentField();
+            } else {
+                showCustomNotification('Já está no primeiro campo', 'info');
+            }
+        }
+
+        async function loadExistingCoordinates() {
+            try {
+                console.log('[MAPPER] Loading existing coordinates...');
+                const response = await fetch('/api/rental-agreements/get-coordinates');
+                const data = await response.json();
+                console.log('[MAPPER] Load response:', data);
+                if (data.ok && data.coordinates) {
+                    fieldCoordinates = data.coordinates;
+                    console.log('[MAPPER] Loaded coordinates:', fieldCoordinates);
+                    
+                    // DEBUG: Log page distribution
+                    const pageCount = {};
+                    for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                        const p = coords.page || 'UNDEFINED';
+                        pageCount[p] = (pageCount[p] || 0) + 1;
+                        if (!coords.page) {
+                            console.warn(`[MAPPER] Field ${fieldId} missing page property!`, coords);
+                        }
+                    }
+                    console.log('[MAPPER] Fields per page:', pageCount);
+                    
+                    updateMappedList();
+                    updateProgress();
+                    await redrawCanvas();  // ✅ Usar redrawCanvas
+                } else {
+                    console.log('[MAPPER] No existing coordinates found');
+                }
+            } catch (error) {
+                console.error('[MAPPER] Error loading coordinates:', error);
+            }
+        }
+
+        async function nextPage() {
+            if (currentPage < pdfDoc.numPages) {
+                currentPage++;
+                await renderPage(currentPage);
+                document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
+            }
+        }
+
+        async function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                await renderPage(currentPage);
+                document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
+            }
+        }
+
+        function getHandleAtPosition(mouseX, mouseY, coords) {
+            const handleSize = 8;
+            const x = coords.x * scale;
+            const y = coords.y * scale;
+            const w = coords.width * scale;
+            const h = coords.height * scale;
+            
+            const handles = {
+                'tl': {x: x, y: y},
+                'tr': {x: x + w, y: y},
+                'bl': {x: x, y: y + h},
+                'br': {x: x + w, y: y + h},
+                't': {x: x + w/2, y: y},
+                'b': {x: x + w/2, y: y + h},
+                'l': {x: x, y: y + h/2},
+                'r': {x: x + w, y: y + h/2}
+            };
+            
+            for (const [name, pos] of Object.entries(handles)) {
+                if (Math.abs(mouseX - pos.x) <= handleSize && Math.abs(mouseY - pos.y) <= handleSize) {
+                    return name;
+                }
+            }
+            return null;
+        }
+
+        function toggleEditMode(e) {
+            if (e) e.preventDefault();
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editModeBtn');
+            btn.style.background = isEditMode ? '#10b981' : '#8b5cf6';
+            btn.title = isEditMode ? 'Modo Editar: ON' : 'Modo Editar: OFF';
+            
+            if (!isEditMode) {
+                selectedField = null;
+                document.getElementById('deleteBtn').disabled = true;
+                document.getElementById('copyBtn').disabled = true;
+            } else {
+                document.getElementById('copyBtn').disabled = !selectedField;
+            }
+            redrawCanvas();
+            console.log('[MAPPER] Edit mode:', isEditMode ? 'ON' : 'OFF');
+        }
+
+        // ========== COPY / PASTE BOX ==========
+        function copySelectedBox() {
+            if (!selectedField || !fieldCoordinates[selectedField]) {
+                showCustomNotification('Nenhuma caixa selecionada para copiar', 'warning');
+                return;
+            }
+            
+            copiedBox = { ...fieldCoordinates[selectedField] };
+            document.getElementById('pasteBtn').disabled = false;
+            
+            const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
+            showCustomNotification(`Caixa copiada: ${fieldName}. Clique em "Colar" e depois no canvas para posicionar.`, 'success');
+            console.log('[MAPPER] Box copied:', selectedField, copiedBox);
+        }
+
+        function pasteBox() {
+            if (!copiedBox) {
+                showCustomNotification('Nenhuma caixa copiada', 'warning');
+                return;
+            }
+            
+            isPasteMode = true;
+            isDetectMode = false;
+            canvas.style.cursor = 'crosshair';
+            
+            document.getElementById('pasteBtn').style.opacity = '0.7';
+            document.getElementById('detectBtn').style.opacity = '1';
+            
+            showCustomNotification('Clique no canvas para posicionar a caixa copiada', 'info');
+            console.log('[MAPPER] Paste mode activated');
+        }
+
+        // ========== DETECT WHITE BOX ==========
+        function detectWhiteBoxAtClick() {
+            isDetectMode = true;
+            isPasteMode = false;
+            canvas.style.cursor = 'crosshair';
+            
+            document.getElementById('detectBtn').style.opacity = '0.7';
+            document.getElementById('pasteBtn').style.opacity = '1';
+            
+            showCustomNotification('Clique numa caixa branca do PDF para detectar automaticamente', 'info');
+            console.log('[MAPPER] Detect mode activated');
+        }
+
+        // Detectar caixa branca em torno de um ponto
+        function detectWhiteBox(clickX, clickY) {
+            if (!pdfImageData) {
+                console.error('[MAPPER] No PDF image data available');
+                return null;
+            }
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            console.log('[MAPPER] Detecting white box at:', clickX, clickY);
+            
+            // Verificar se clicou numa área branca
+            const clickIdx = (Math.floor(clickY) * canvas.width + Math.floor(clickX)) * 4;
+            const clickR = data[clickIdx];
+            const clickG = data[clickIdx + 1];
+            const clickB = data[clickIdx + 2];
+            
+            // Se não for branco, avisar
+            if (clickR < 230 || clickG < 230 || clickB < 230) {
+                showCustomNotification('Clique numa área branca do formulário', 'warning');
+                return null;
+            }
+            
+            // Expandir até encontrar bordas (linhas cinza/pretas)
+            let minX = clickX, maxX = clickX;
+            let minY = clickY, maxY = clickY;
+            
+            // Expandir horizontalmente
+            for (let x = clickX; x >= 0; x--) {
+                const idx = (Math.floor(clickY) * canvas.width + Math.floor(x)) * 4;
+                const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                if (r < 200 || g < 200 || b < 200) {
+                    minX = x + 2; // Margem interna
+                    break;
+                }
+            }
+            for (let x = clickX; x < canvas.width; x++) {
+                const idx = (Math.floor(clickY) * canvas.width + Math.floor(x)) * 4;
+                const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                if (r < 200 || g < 200 || b < 200) {
+                    maxX = x - 2; // Margem interna
+                    break;
+                }
+            }
+            
+            // Expandir verticalmente
+            for (let y = clickY; y >= 0; y--) {
+                const idx = (Math.floor(y) * canvas.width + Math.floor(clickX)) * 4;
+                const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                if (r < 200 || g < 200 || b < 200) {
+                    minY = y + 2; // Margem interna
+                    break;
+                }
+            }
+            for (let y = clickY; y < canvas.height; y++) {
+                const idx = (Math.floor(y) * canvas.width + Math.floor(clickX)) * 4;
+                const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                if (r < 200 || g < 200 || b < 200) {
+                    maxY = y - 2; // Margem interna
+                    break;
+                }
+            }
+            
+            const width = maxX - minX;
+            const height = maxY - minY;
+            
+            // Validação
+            if (width < 10 || height < 5 || width > canvas.width * 0.8 || height > canvas.height * 0.8) {
+                console.warn('[MAPPER] Detected box size invalid:', { width, height });
+                showCustomNotification('Caixa detectada com tamanho inválido. Tente novamente.', 'warning');
+                return null;
+            }
+            
+            console.log('[MAPPER] White box detected:', { x: minX, y: minY, width, height });
+            showCustomNotification(`Caixa detectada: ${width}x${height}px`, 'success');
+            
+            return { x: minX, y: minY, width, height };
+        }
+
+        // ========== SNAP ALIGNMENT ==========
+        function applySnapAlignment(x, y, width, height) {
+            let snappedX = x;
+            let snappedY = y;
+            
+            // Procurar caixas próximas para alinhar
+            for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                if (!coords) continue;
+                
+                // Snap horizontal (mesma altura Y ou alinhamento)
+                if (Math.abs(coords.y - y) < SNAP_THRESHOLD) {
+                    snappedY = coords.y;
+                } else if (Math.abs((coords.y + coords.height) - y) < SNAP_THRESHOLD) {
+                    snappedY = coords.y + coords.height;
+                } else if (Math.abs(coords.y - (y + height)) < SNAP_THRESHOLD) {
+                    snappedY = coords.y - height;
+                }
+                
+                // Snap vertical (mesma posição X ou alinhamento)
+                if (Math.abs(coords.x - x) < SNAP_THRESHOLD) {
+                    snappedX = coords.x;
+                } else if (Math.abs((coords.x + coords.width) - x) < SNAP_THRESHOLD) {
+                    snappedX = coords.x + coords.width;
+                } else if (Math.abs(coords.x - (x + width)) < SNAP_THRESHOLD) {
+                    snappedX = coords.x - width;
+                }
+            }
+            
+            // Feedback visual se snapped
+            if (snappedX !== x || snappedY !== y) {
+                console.log('[MAPPER] Snap applied:', { 
+                    original: { x, y }, 
+                    snapped: { x: snappedX, y: snappedY } 
+                });
+            }
+            
+            return { x: snappedX, y: snappedY };
+        }
+
+        // Proteção contra múltiplas chamadas
+        let clearAllFieldsInProgress = false;
+        
+        function clearAllFields(e) {
+            if (e) e.preventDefault();
+            
+            // Proteção: Se já está em progresso, ignora
+            if (clearAllFieldsInProgress) {
+                console.log('[MAPPER] clearAllFields already in progress, ignoring duplicate call');
+                return;
+            }
+            
+            // Verifica se há campos para limpar
+            const mappedCount = Object.keys(fieldCoordinates).length;
+            if (mappedCount === 0) {
+                showCustomNotification('Não há campos mapeados para limpar', 'info');
+                console.log('[MAPPER] No fields to clear');
+                return;
+            }
+            
+            // Ativa proteção
+            clearAllFieldsInProgress = true;
+            console.log('[MAPPER] clearAllFields called - showing confirmation modal');
+            
+            showCustomConfirmModal(
+                'Limpar Todos os Campos?',
+                `Tem a certeza que deseja limpar TODOS os ${mappedCount} campos mapeados? Esta ação não pode ser desfeita.`,
+                () => {
+                    // CONFIRMADO - Limpar campos
+                    fieldCoordinates = {};
+                    selectedField = null;
+                    currentFieldIndex = 0;
+                    document.getElementById('deleteBtn').disabled = true;
+                    updateMappedList();
+                    updateProgress();
+                    updateCurrentField();
+                    redrawCanvas();
+                    showNotification(`${mappedCount} campos foram limpos`, 'warning');
+                    console.log(`[MAPPER] Cleared all fields (${mappedCount} removed)`);
+                    
+                    // AUTO-SAVE após limpar tudo (salva estado vazio)
+                    autoSaveCoordinates();
+                    
+                    // Libera proteção após 2 segundos
+                    setTimeout(() => {
+                        clearAllFieldsInProgress = false;
+                    }, 2000);
+                },
+                () => {
+                    // CANCELADO
+                    console.log('[MAPPER] Clear all fields cancelled by user');
+                    // Libera proteção imediatamente
+                    clearAllFieldsInProgress = false;
+                }
+            );
+        }
+
+        function showNotification(message, type) {
+            showCustomNotification(message, type);
+        }
+        
+        function showCustomNotification(message, type = 'info') {
+            const colors = {
+                'success': '#10b981',
+                'error': '#ef4444',
+                'warning': '#f59e0b',
+                'info': '#009cb6'
+            };
+            
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                color: #1f2937;
+                padding: 16px 20px;
+                border-left: 4px solid ${colors[type] || colors.info};
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 100000;
+                max-width: 400px;
+                font-size: 14px;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function deleteSelectedBox(e) {
+            if (e) e.preventDefault();
+            if (selectedField && fieldCoordinates[selectedField]) {
+                const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
+                
+                showCustomConfirmModal(
+                    'Eliminar Campo?',
+                    `Tem a certeza que deseja eliminar o campo "${fieldName}"?`,
+                    () => {
+                        delete fieldCoordinates[selectedField];
+                        selectedField = null;
+                        document.getElementById('deleteBtn').disabled = true;
+                        updateMappedList();
+                        updateProgress();
+                        redrawCanvas();
+                        showCustomNotification(`Campo "${fieldName}" eliminado`, 'info');
+                        console.log(`[MAPPER] Deleted field: ${fieldName}`);
+                        
+                        // AUTO-SAVE após deletar
+                        autoSaveCoordinates();
+                    }
+                );
+            }
+        }
+        
+        function showCustomConfirmModal(title, message, onConfirm, onCancel) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 999999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 24px;
+                border-radius: 12px;
+                max-width: 400px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            `;
+            
+            content.innerHTML = `
+                <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px;">${title}</h3>
+                <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 14px; line-height: 1.5;">${message}</p>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="cancelBtn" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Cancelar</button>
+                    <button id="confirmBtn" style="padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Confirmar</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            const cancelBtn = content.querySelector('#cancelBtn');
+            const confirmBtn = content.querySelector('#confirmBtn');
+            
+            cancelBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.remove();
+                if (onCancel) onCancel();
+            };
+            
+            confirmBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.remove();
+                if (onConfirm) onConfirm();
+            };
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    e.preventDefault();
+                    modal.remove();
+                }
+            };
+        }
+
+        let isRedrawing = false; // Flag para prevenir loop infinito
+        
+        async function redrawCanvas() {
+            // Prevenir loop infinito de redraws
+            if (isRedrawing) {
+                console.warn('[MAPPER] Redraw already in progress, skipping...');
+                return;
+            }
+            
+            if (!pdfImageData) {
+                console.warn('[MAPPER] pdfImageData not available, skipping redraw');
+                return;
+            }
+            
+            // Verificar se pdfImageData corresponde ao tamanho do canvas
+            if (pdfImageData.width !== canvas.width || pdfImageData.height !== canvas.height) {
+                console.warn('[MAPPER] pdfImageData size mismatch - re-rendering PDF page');
+                // Re-render the PDF to get correct imageData for new canvas size
+                await renderPage(currentPage);
+                return; // renderPage already calls redrawCanvas
+            }
+            
+            isRedrawing = true;
+            try {
+                // Clear and restore PDF image
+                try {
+                    ctx.putImageData(pdfImageData, 0, 0);
+                } catch (e) {
+                    console.error('[MAPPER] putImageData failed:', e);
+                    // Try to re-render page if putImageData fails
+                    isRedrawing = false;
+                    await renderPage(currentPage);
+                    return;
+                }
+                
+                // Reset context state to ensure boxes are visible
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = 1.0;
+                
+                // Redraw all mapped boxes
+                redrawMappedBoxes();
+            } catch (error) {
+                console.error('[MAPPER] Error in redrawCanvas:', error);
+            } finally {
+                isRedrawing = false;
+            }
+        }
+
+        // Detect fullscreen changes and re-render
+        document.addEventListener('fullscreenchange', async () => {
+            if (canvas && pdfDoc) {
+                console.log('[MAPPER] Fullscreen changed, re-rendering PDF');
+                // Small delay to let browser adjust canvas size
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await renderPage(currentPage);
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPDFMapper();
+            updateCurrentField();
+        });
+    </script>
+</body>
+</html>

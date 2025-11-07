@@ -3392,6 +3392,18 @@ async def damage_report_mapper_page(request: Request):
         "request": request
     })
 
+@app.get("/rental-agreement-mapper", response_class=HTMLResponse)
+async def rental_agreement_mapper_page(request: Request):
+    """Página dedicada para mapeamento de campos do Rental Agreement"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("rental_agreement_mapper.html", {
+        "request": request
+    })
+
 # --- Admin: environment summary and adjustment preview ---
 @app.get("/admin/env-summary")
 async def admin_env_summary(request: Request):
@@ -16928,6 +16940,69 @@ async def upload_rental_agreement_template(request: Request, file: UploadFile = 
         import traceback
         logging.error(traceback.format_exc())
         return {"ok": False, "error": str(e)}
+
+@app.get("/api/rental-agreements/get-active-template")
+async def get_active_rental_agreement_template(request: Request):
+    """Obter o template PDF ativo do RA para o mapeador"""
+    require_auth(request)
+    
+    try:
+        from starlette.responses import Response
+        
+        # Buscar template ativo da BD
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT file_data, filename 
+                            FROM rental_agreement_templates 
+                            WHERE is_active = 1 
+                            ORDER BY version DESC LIMIT 1
+                        """)
+                        row = cursor.fetchone()
+                else:
+                    cursor = conn.execute("""
+                        SELECT file_data, filename 
+                        FROM rental_agreement_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                
+                if not row or not row[0]:
+                    return Response(
+                        content=b'{"error": "No active RA template found. Please upload a template first."}',
+                        media_type="application/json",
+                        status_code=404
+                    )
+                
+                pdf_data = row[0]
+                filename = row[1] if row[1] else 'rental_agreement_template.pdf'
+                
+                logging.info(f"📄 Serving RA template from DB: {filename}")
+                return Response(
+                    content=pdf_data,
+                    media_type="application/pdf",
+                    headers={
+                        'Content-Disposition': f'inline; filename="{filename}"',
+                        'Cache-Control': 'no-cache'
+                    }
+                )
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting active RA template: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return Response(
+            content=f'{{"error": "{str(e)}"}}'.encode(),
+            media_type="application/json",
+            status_code=500
+        )
 
 @app.get("/api/rental-agreements/get-coordinates")
 async def get_rental_agreement_coordinates(request: Request):
