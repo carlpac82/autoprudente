@@ -305,26 +305,28 @@
         
         .damage-pin {
             position: absolute;
-            width: 32px;
-            height: 32px;
-            background: #ef4444;
-            border: 3px solid white;
-            border-radius: 50%;
+            width: 40px;
+            height: 56px;
+            background-image: url('/static/pin.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            color: white;
+            padding-top: 8px;
+            color: #1a1a1a;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 16px;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+            transform: translate(-50%, -100%);
             transition: all 0.2s;
         }
         
         .damage-pin:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+            transform: translate(-50%, -100%) scale(1.1);
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
         }
         
         .action-buttons {
