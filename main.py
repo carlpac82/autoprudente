@@ -16946,9 +16946,9 @@ async def get_active_rental_agreement_template(request: Request):
     """Obter o template PDF ativo do RA para o mapeador"""
     require_auth(request)
     
+    from starlette.responses import Response
+    
     try:
-        from starlette.responses import Response
-        
         # Buscar template ativo da BD
         with _db_lock:
             conn = _db_connect()
@@ -16956,14 +16956,15 @@ async def get_active_rental_agreement_template(request: Request):
                 is_postgres = hasattr(conn, 'cursor')
                 
                 if is_postgres:
-                    with conn.cursor() as cursor:
-                        cursor.execute("""
-                            SELECT file_data, filename 
-                            FROM rental_agreement_templates 
-                            WHERE is_active = 1 
-                            ORDER BY version DESC LIMIT 1
-                        """)
-                        row = cursor.fetchone()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT file_data, filename 
+                        FROM rental_agreement_templates 
+                        WHERE is_active = 1 
+                        ORDER BY version DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                    cursor.close()
                 else:
                     cursor = conn.execute("""
                         SELECT file_data, filename 
@@ -16974,8 +16975,9 @@ async def get_active_rental_agreement_template(request: Request):
                     row = cursor.fetchone()
                 
                 if not row or not row[0]:
+                    logging.warning("⚠️ No active RA template found in database")
                     return Response(
-                        content=b'{"error": "No active RA template found. Please upload a template first."}',
+                        content=b'{"error": "No active RA template found. Please upload a template first in Admin Settings."}',
                         media_type="application/json",
                         status_code=404
                     )
@@ -16995,11 +16997,11 @@ async def get_active_rental_agreement_template(request: Request):
             finally:
                 conn.close()
     except Exception as e:
-        logging.error(f"Error getting active RA template: {e}")
+        logging.error(f"❌ Error getting active RA template: {e}")
         import traceback
         logging.error(traceback.format_exc())
         return Response(
-            content=f'{{"error": "{str(e)}"}}'.encode(),
+            content=f'{{"error": "Server error loading RA template. Check if table exists and template is uploaded."}}'.encode(),
             media_type="application/json",
             status_code=500
         )

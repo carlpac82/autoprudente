@@ -174,8 +174,8 @@
                 </button>
                 <button class="btn btn-secondary" onclick="toggleEditMode()" id="editModeBtn" style="background: #8b5cf6;" title="Modo Editar">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                 </button>
                 <button class="btn btn-secondary" onclick="deleteSelectedBox()" id="deleteBtn" style="background: #ef4444; color: white;" disabled title="Eliminar Caixa">
@@ -308,7 +308,21 @@
             
             if (!response.ok) {
                 console.error('[MAPPER] Failed to load template:', response.status);
-                alert('Erro ao carregar template PDF. Por favor, faça upload de um template primeiro.');
+                
+                let errorMsg = 'Erro ao carregar template PDF.';
+                if (response.status === 404) {
+                    errorMsg = '⚠️ ATENÇÃO: Nenhum template de Rental Agreement foi carregado ainda!\n\n' +
+                              'Por favor:\n' +
+                              '1. Volte ao Admin Settings\n' +
+                              '2. Secção "Mapeamento de Rental Agreement"\n' +
+                              '3. Clique em "Upload Template RA"\n' +
+                              '4. Selecione o PDF do Rental Agreement\n' +
+                              '5. Depois volte aqui para mapear os campos';
+                } else {
+                    errorMsg = `Erro ${response.status} ao carregar template. Tente novamente.`;
+                }
+                
+                alert(errorMsg);
                 return;
             }
             
