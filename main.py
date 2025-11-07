@@ -16194,402 +16194,84 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
 
 @app.get("/api/damage-reports/{dr_number:path}/pdf")
 async def download_damage_report_pdf(request: Request, dr_number: str):
-    """Download do Damage Report em PDF - Gera PDF do zero idêntico ao template"""
+    """Download do Damage Report em PDF - Usa template mapeado com coordenadas"""
     require_auth(request)
     
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.units import cm, mm
-        from reportlab.lib import colors
-        from reportlab.platypus import Table, TableStyle
-        from io import BytesIO
+        from starlette.responses import Response
         import json
         
         # Buscar dados da base de dados
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
-                row = cursor.fetchone()
+                # Detectar PostgreSQL vs SQLite
+                is_postgres = False
+                if hasattr(conn, 'cursor'):
+                    is_postgres = True
+                
+                if is_postgres:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
+                    cursor.close()
+                else:
+                    cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
                 
                 if not row:
                     raise HTTPException(status_code=404, detail="Damage Report not found")
                 
-                columns = [desc[0] for desc in cursor.description]
                 report = dict(zip(columns, row))
             finally:
                 conn.close()
         
-        # Criar PDF do zero
-        buffer = BytesIO()
-        p = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
+        # Mapear campos da BD para IDs do mapeador
+        report_data = {
+            'dr_number': report.get('dr_number', ''),
+            'contract_number': report.get('contract_number', ''),
+            'contract_date': report.get('date', ''),
+            'customer_name': report.get('client_name', ''),
+            'customer_email': report.get('client_email', ''),
+            'customer_phone': report.get('client_phone', ''),
+            'customer_address': report.get('client_address', ''),
+            'customer_city': report.get('client_city', ''),
+            'customer_postal': report.get('client_postal_code', ''),
+            'customer_country': report.get('client_country', ''),
+            'vehicle_plate': report.get('vehicle_plate', ''),
+            'vehicle_brand': report.get('vehicle_brand', ''),
+            'vehicle_model': report.get('vehicle_model', ''),
+            'vehicle_color': report.get('vehicle_color', ''),
+            'vehicle_km': report.get('vehicle_km', ''),
+            'pickup_date': report.get('pickup_date', ''),
+            'pickup_time': report.get('pickup_time', ''),
+            'pickup_location': report.get('pickup_location', ''),
+            'return_date': report.get('return_date', ''),
+            'return_time': report.get('return_time', ''),
+            'return_location': report.get('return_location', ''),
+            'fuel_level_pickup': report.get('fuel_pickup', ''),
+            'fuel_level_return': report.get('fuel_return', ''),
+            'total_repair_cost': report.get('total_cost', ''),
+            'inspector_name': report.get('inspector_name', ''),
+            'inspection_date': report.get('inspection_date', '')
+        }
         
-        # Configurar fonte
-        p.setFont("Helvetica", 8)
+        # Usar função de overlay para preencher template
+        pdf_data = _fill_template_pdf_with_data(report_data)
         
-        # ============ HEADER AZUL ============
-        p.setFillColor(colors.HexColor('#009cb6'))
-        p.rect(0, height - 2.5*cm, width, 2.5*cm, fill=1, stroke=0)
-        
-        # Logo/Título
-        p.setFillColor(colors.white)
-        p.setFont("Helvetica-Bold", 20)
-        p.drawString(1.5*cm, height - 1.8*cm, "RELATÓRIO DE DANOS / DAMAGE REPORT")
-        
-        # DR Nº e Data (topo direita)
-        p.setFont("Helvetica", 9)
-        p.drawString(15*cm, height - 1.2*cm, f"DR: {report.get('contract_number', '')}")
-        p.drawString(15*cm, height - 1.8*cm, f"Data: {report.get('date', '')}")
-        
-        # ============ DADOS DO CLIENTE ============
-        y = height - 4*cm
-        p.setFillColor(colors.black)
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(1.5*cm, y, "Dados do Cliente / Client Details")
-        
-        # Linha separadora
-        p.setStrokeColor(colors.HexColor('#009cb6'))
-        p.setLineWidth(1)
-        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
-        
-        # Campos
-        y -= 0.8*cm
-        p.setFont("Helvetica", 8)
-        
-        # Nome
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "Nome Completo / Full Name:")
-        p.setFillColor(colors.black)
-        p.setFont("Helvetica-Bold", 9)
-        p.drawString(6*cm, y, str(report.get('client_name', '')))
-        
-        # Email e Telefone
-        y -= 0.6*cm
-        p.setFont("Helvetica", 8)
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "Email:")
-        p.setFillColor(colors.black)
-        p.drawString(3.5*cm, y, str(report.get('client_email', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(11*cm, y, "Telefone / Phone:")
-        p.setFillColor(colors.black)
-        p.drawString(14*cm, y, str(report.get('client_phone', '')))
-        
-        # Morada
-        y -= 0.6*cm
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "Morada / Address:")
-        p.setFillColor(colors.black)
-        p.drawString(4.5*cm, y, str(report.get('client_address', '')))
-        
-        # Código Postal, Cidade, País
-        y -= 0.6*cm
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "C. Postal:")
-        p.setFillColor(colors.black)
-        p.drawString(3.5*cm, y, str(report.get('client_postal_code', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(6*cm, y, "Cidade / City:")
-        p.setFillColor(colors.black)
-        p.drawString(8.5*cm, y, str(report.get('client_city', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(13*cm, y, "País / Country:")
-        p.setFillColor(colors.black)
-        p.drawString(15.5*cm, y, str(report.get('client_country', '')))
-        
-        # ============ DADOS DO VEÍCULO ============
-        y -= 1.2*cm
-        p.setFont("Helvetica-Bold", 10)
-        p.setFillColor(colors.black)
-        p.drawString(1.5*cm, y, "Dados do Veículo / Vehicle Details")
-        
-        p.setStrokeColor(colors.HexColor('#009cb6'))
-        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
-        
-        y -= 0.8*cm
-        p.setFont("Helvetica", 8)
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "Matrícula / Plate:")
-        p.setFillColor(colors.black)
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(4*cm, y, str(report.get('vehicle_plate', '')))
-        
-        p.setFont("Helvetica", 8)
-        p.setFillColor(colors.grey)
-        p.drawString(8*cm, y, "Marca / Brand:")
-        p.setFillColor(colors.black)
-        p.drawString(10.5*cm, y, str(report.get('vehicle_brand', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(14*cm, y, "Modelo / Model:")
-        p.setFillColor(colors.black)
-        p.drawString(16.5*cm, y, str(report.get('vehicle_model', '')))
-        
-        # ============ LEVANTAMENTO E DEVOLUÇÃO ============
-        y -= 1.2*cm
-        p.setFont("Helvetica-Bold", 10)
-        p.setFillColor(colors.black)
-        p.drawString(1.5*cm, y, "Levantamento e Devolução / Pickup & Return")
-        
-        p.setStrokeColor(colors.HexColor('#009cb6'))
-        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
-        
-        # Levantamento
-        y -= 0.8*cm
-        p.setFont("Helvetica-Bold", 9)
-        p.setFillColor(colors.HexColor('#009cb6'))
-        p.drawString(1.5*cm, y, "LEVANTAMENTO / PICKUP")
-        
-        y -= 0.5*cm
-        p.setFont("Helvetica", 8)
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "Data:")
-        p.setFillColor(colors.black)
-        p.drawString(3*cm, y, str(report.get('pickup_date', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(6*cm, y, "Hora:")
-        p.setFillColor(colors.black)
-        p.drawString(7.5*cm, y, str(report.get('pickup_time', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(10*cm, y, "Local:")
-        p.setFillColor(colors.black)
-        p.drawString(11.5*cm, y, str(report.get('pickup_location', '')))
-        
-        # Devolução
-        y -= 0.7*cm
-        p.setFont("Helvetica-Bold", 9)
-        p.setFillColor(colors.HexColor('#009cb6'))
-        p.drawString(1.5*cm, y, "DEVOLUÇÃO / RETURN")
-        
-        y -= 0.5*cm
-        p.setFont("Helvetica", 8)
-        p.setFillColor(colors.grey)
-        p.drawString(1.5*cm, y, "Data:")
-        p.setFillColor(colors.black)
-        p.drawString(3*cm, y, str(report.get('return_date', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(6*cm, y, "Hora:")
-        p.setFillColor(colors.black)
-        p.drawString(7.5*cm, y, str(report.get('return_time', '')))
-        
-        p.setFillColor(colors.grey)
-        p.drawString(10*cm, y, "Local:")
-        p.setFillColor(colors.black)
-        p.drawString(11.5*cm, y, str(report.get('return_location', '')))
-        
-        # ============ FEITO POR ============
-        if report.get('issued_by'):
-            y -= 0.8*cm
-            p.setFont("Helvetica", 8)
-            p.setFillColor(colors.grey)
-            p.drawString(1.5*cm, y, "Feito por / Issued by:")
-            p.setFillColor(colors.black)
-            p.setFont("Helvetica-Bold", 9)
-            p.drawString(5*cm, y, str(report.get('issued_by', '')))
-        
-        # ============ DANOS NA VIATURA ============
-        y -= 1.2*cm
-        p.setFont("Helvetica-Bold", 10)
-        p.setFillColor(colors.black)
-        p.drawString(1.5*cm, y, "Danos na Viatura / Vehicle Damage")
-        
-        p.setStrokeColor(colors.HexColor('#009cb6'))
-        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
-        
-        # ============ IMAGEM DO VEÍCULO COM DANOS ============
-        vehicle_damage_image_blob = report.get('vehicle_damage_image')
-        if vehicle_damage_image_blob:
-            try:
-                from reportlab.lib.utils import ImageReader
-                
-                y -= 0.8*cm
-                p.setFont("Helvetica", 8)
-                p.setFillColor(colors.grey)
-                p.drawString(1.5*cm, y, "Diagrama do Veículo com Danos Marcados:")
-                
-                y -= 0.5*cm
-                
-                # Criar ImageReader do BLOB
-                img_buffer = BytesIO(vehicle_damage_image_blob)
-                img = ImageReader(img_buffer)
-                
-                # Tamanho da imagem (grande e centralizada)
-                img_width = 15*cm
-                img_height = 10*cm
-                img_x = (width - img_width) / 2  # Centralizar
-                
-                # Verificar se há espaço suficiente
-                if y - img_height < 3*cm:
-                    # Nova página
-                    p.showPage()
-                    y = height - 3*cm
-                
-                # Desenhar imagem
-                p.drawImage(img, img_x, y - img_height, width=img_width, height=img_height, preserveAspectRatio=True, mask='auto')
-                
-                y -= img_height + 0.5*cm
-                
-                logging.info(f"✅ Vehicle damage image inserted into PDF")
-            except Exception as e:
-                logging.error(f"⚠️ Error inserting vehicle damage image: {e}")
-        
-        # Descrição dos danos
-        y -= 0.8*cm
-        p.setFont("Helvetica", 8)
-        damage_desc = report.get('damage_description', '')
-        if damage_desc:
-            # Quebrar texto em linhas se for muito longo
-            max_width = 17*cm
-            words = damage_desc.split()
-            lines = []
-            current_line = []
-            for word in words:
-                test_line = ' '.join(current_line + [word])
-                if p.stringWidth(test_line, "Helvetica", 8) < max_width:
-                    current_line.append(word)
-                else:
-                    if current_line:
-                        lines.append(' '.join(current_line))
-                    current_line = [word]
-            if current_line:
-                lines.append(' '.join(current_line))
-            
-            for line in lines[:5]:  # Máximo 5 linhas
-                p.drawString(1.5*cm, y, line)
-                y -= 0.4*cm
-        
-        # ============ TABELA DE REPARAÇÃO ============
-        y -= 0.8*cm
-        p.setFont("Helvetica-Bold", 10)
-        p.setFillColor(colors.black)
-        p.drawString(1.5*cm, y, "Detalhes da Reparação / Repair Details")
-        
-        p.setStrokeColor(colors.HexColor('#009cb6'))
-        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
-        
-        # Tabela de itens de reparação
-        y -= 0.8*cm
-        repair_items_raw = report.get('repair_items') or '[]'
-        repair_items = json.loads(repair_items_raw) if repair_items_raw else []
-        
-        if repair_items:
-            # Cabeçalho da tabela
-            table_data = [['Descrição', 'Qtd', 'Horas', 'Preço (€)', 'Total (€)']]
-            
-            for item in repair_items:
-                desc = item.get('description', '')[:30]  # Limitar descrição
-                qty = str(item.get('quantity', ''))
-                hours = str(item.get('hours', ''))
-                price = f"{float(item.get('price', 0)):.2f}"
-                total = f"{float(item.get('total', 0)):.2f}"
-                table_data.append([desc, qty, hours, price, total])
-            
-            # Calcular total geral
-            total_geral = sum(float(item.get('total', 0)) for item in repair_items)
-            table_data.append(['', '', '', 'TOTAL:', f"{total_geral:.2f}€"])
-            
-            # Criar tabela
-            table = Table(table_data, colWidths=[8*cm, 1.5*cm, 1.5*cm, 2*cm, 2*cm])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#009cb6')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 9),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
-                ('GRID', (0, 0), (-1, -2), 0.5, colors.grey),
-                ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#009cb6')),
-                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ]))
-            
-            # Desenhar tabela
-            table.wrapOn(p, width, height)
-            table.drawOn(p, 1.5*cm, y - len(table_data)*0.6*cm)
-            y -= (len(table_data)*0.6*cm + 1*cm)
-        
-        # ============ IMAGENS ============
-        damage_images_raw = report.get('damage_images') or '[]'
-        damage_images = json.loads(damage_images_raw) if damage_images_raw else []
-        
-        if damage_images and y > 8*cm:  # Se houver espaço na página
-            y -= 0.5*cm
-            p.setFont("Helvetica-Bold", 10)
-            p.setFillColor(colors.black)
-            p.drawString(1.5*cm, y, "Imagens do Dano / Damage Images")
-            
-            p.setStrokeColor(colors.HexColor('#009cb6'))
-            p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
-            
-            y -= 0.8*cm
-            
-            # Desenhar imagens em grid (3 por linha)
-            from reportlab.lib.utils import ImageReader
-            import base64
-            
-            x_start = 1.5*cm
-            x = x_start
-            img_width = 5*cm
-            img_height = 4*cm
-            margin = 0.5*cm
-            
-            for idx, img_data in enumerate(damage_images[:9]):  # Máximo 9 imagens
-                try:
-                    # Decodificar base64
-                    img_base64 = img_data.split(',')[1] if ',' in img_data else img_data
-                    img_bytes = base64.b64decode(img_base64)
-                    img_buffer = BytesIO(img_bytes)
-                    img = ImageReader(img_buffer)
-                    
-                    # Desenhar imagem
-                    p.drawImage(img, x, y - img_height, width=img_width, height=img_height, preserveAspectRatio=True)
-                    
-                    # Próxima posição
-                    x += img_width + margin
-                    
-                    # Nova linha a cada 3 imagens
-                    if (idx + 1) % 3 == 0:
-                        x = x_start
-                        y -= img_height + margin
-                        
-                        # Nova página se necessário
-                        if y < 3*cm:
-                            p.showPage()
-                            y = height - 3*cm
-                            x = x_start
-                except Exception as e:
-                    logging.error(f"Error adding image {idx}: {e}")
-                    continue
-        
-        # ============ FOOTER ============
-        p.setFillColor(colors.grey)
-        p.setFont("Helvetica", 7)
-        p.drawCentredString(width/2, 1.5*cm, "AUTO PRUDENTE - Rent a Car | www.autoprudente.com")
-        p.drawCentredString(width/2, 1*cm, "Apoio ao Cliente: 00351 289 542 160")
-        
-        # Finalizar
-        p.showPage()
-        p.save()
-        buffer.seek(0)
+        filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
         
         return Response(
-            content=buffer.getvalue(),
+            content=pdf_data,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=DR_{dr_number}.pdf"}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"Error generating PDF: {e}")
+        logging.error(f"Error generating PDF with template: {e}")
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
