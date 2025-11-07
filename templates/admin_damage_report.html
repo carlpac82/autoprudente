@@ -425,7 +425,7 @@
                 'return_location': 'Local Devolução',
                 'issued_by': 'Feito por',
                 'damage_description': 'Descrição Danos',
-                'damage_diagram': 'Diagrama',
+                'vehicle_damage_image': 'Imagem Veículo',
                 'repair_table_header': 'Tabela - Cabeçalho',
                 'repair_line_1': 'Reparação - Linha 1',
                 'repair_line_2': 'Reparação - Linha 2',
@@ -472,7 +472,7 @@
 
         function getFieldType(fieldId) {
             if (fieldId.includes('description')) return 'textarea';
-            if (fieldId.includes('diagram')) return 'image';
+            if (fieldId.includes('damage_image') || fieldId.includes('vehicle_damage')) return 'image';
             if (fieldId.includes('repair') || fieldId.includes('table')) return 'table';
             if (fieldId.includes('images')) return 'images';
             return 'text';

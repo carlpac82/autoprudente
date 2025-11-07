@@ -789,6 +789,42 @@ async def startup_event():
         print(f"📋 Creating Damage Reports tables...", flush=True)
         _ensure_damage_reports_tables()
         print(f"✅ Damage Reports tables ready", flush=True)
+        
+        # Migration: Add vehicle_damage_image column
+        try:
+            if USE_POSTGRES:
+                conn = psycopg2.connect(DATABASE_URL)
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN vehicle_damage_image BYTEA")
+                        conn.commit()
+                    print(f"   ✅ Added vehicle_damage_image column (PostgreSQL)", flush=True)
+                except Exception as e:
+                    conn.rollback()  # CRITICAL for PostgreSQL
+                    error_msg = str(e).lower()
+                    if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                        print(f"   ℹ️  vehicle_damage_image column already exists", flush=True)
+                    else:
+                        print(f"   ⚠️  Could not add vehicle_damage_image: {e}", flush=True)
+                finally:
+                    conn.close()
+            else:
+                conn = _db_connect()
+                try:
+                    conn.execute("ALTER TABLE damage_reports ADD COLUMN vehicle_damage_image BLOB")
+                    conn.commit()
+                    print(f"   ✅ Added vehicle_damage_image column (SQLite)", flush=True)
+                except Exception as e:
+                    conn.rollback()  # CRITICAL for SQLite
+                    error_msg = str(e).lower()
+                    if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                        print(f"   ℹ️  vehicle_damage_image column already exists", flush=True)
+                    else:
+                        print(f"   ⚠️  Could not add vehicle_damage_image: {e}", flush=True)
+                finally:
+                    conn.close()
+        except Exception as e:
+            print(f"   ⚠️  Migration error: {e}", flush=True)
     except Exception as e:
         print(f"⚠️  Damage Reports tables error: {e}", flush=True)
     
