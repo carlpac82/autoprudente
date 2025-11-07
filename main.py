@@ -21168,6 +21168,163 @@ def save_automated_prices_from_searches():
         import traceback
         logging.error(traceback.format_exc())
 
+def save_automated_searches_to_history():
+    """Process recent automated searches and save to automated_search_history table"""
+    from datetime import datetime, timedelta
+    import json
+    
+    try:
+        logging.info("💾 Processing automated searches for history...")
+        
+        # Get recent automated searches (last 24 hours)
+        cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = hasattr(conn, 'cursor')
+                placeholder = "%s" if is_postgres else "?"
+                user_col = '"user"' if is_postgres else 'user'
+                
+                # Get all automated searches from last 24h
+                query = f"""
+                    SELECT location, start_date, days, results_data, timestamp
+                    FROM recent_searches
+                    WHERE source = {placeholder} AND timestamp > {placeholder}
+                    ORDER BY timestamp DESC, location, days
+                """
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query, ('automated', cutoff))
+                        searches = cur.fetchall()
+                else:
+                    searches = conn.execute(query, ('automated', cutoff)).fetchall()
+                
+                if not searches:
+                    logging.info("ℹ️ No automated searches found to process")
+                    return
+                
+                logging.info(f"📊 Found {len(searches)} automated searches to process")
+                
+                # Group searches by location to create a single history entry per location
+                searches_by_location = {}
+                for search in searches:
+                    location, start_date, days, results_json, timestamp = search
+                    
+                    if location not in searches_by_location:
+                        searches_by_location[location] = {
+                            'searches': [],
+                            'latest_timestamp': timestamp
+                        }
+                    
+                    try:
+                        results = json.loads(results_json) if results_json else []
+                        searches_by_location[location]['searches'].append({
+                            'days': days,
+                            'results': results,
+                            'timestamp': timestamp
+                        })
+                    except Exception as e:
+                        logging.error(f"❌ Error parsing results for {location}: {e}")
+                        continue
+                
+                # Process each location
+                saved_count = 0
+                for location, data in searches_by_location.items():
+                    try:
+                        # Aggregate prices by group and days
+                        prices_by_group = {}  # { "B1": { "1": 25.50, "3": 23.00 }, ... }
+                        dias_set = set()
+                        
+                        for search in data['searches']:
+                            days = search['days']
+                            dias_set.add(days)
+                            
+                            for car in search['results']:
+                                grupo = car.get('grupo', car.get('group', 'Unknown'))
+                                price_str = str(car.get('price', '0'))
+                                
+                                # Extract numeric price
+                                try:
+                                    price = float(price_str.replace('€', '').replace(',', '.').strip())
+                                except:
+                                    continue
+                                
+                                if grupo not in prices_by_group:
+                                    prices_by_group[grupo] = {}
+                                
+                                # Keep cheapest price for each group/days combination
+                                day_key = str(days)
+                                if day_key not in prices_by_group[grupo]:
+                                    prices_by_group[grupo][day_key] = price
+                                else:
+                                    prices_by_group[grupo][day_key] = min(prices_by_group[grupo][day_key], price)
+                        
+                        # Prepare data for saving
+                        dias_list = sorted(list(dias_set))
+                        price_count = sum(len(group_prices) for group_prices in prices_by_group.values())
+                        
+                        if not prices_by_group or price_count == 0:
+                            logging.warning(f"⚠️ No valid prices found for {location}")
+                            continue
+                        
+                        # Generate month_key
+                        now = datetime.now()
+                        month_key = f"{now.year}-{str(now.month).zfill(2)}"
+                        
+                        # Save to automated_search_history
+                        prices_json = json.dumps(prices_by_group)
+                        dias_json = json.dumps(dias_list)
+                        search_type = 'automated'
+                        user_email = 'system_scheduler'
+                        
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                try:
+                                    cur.execute("""
+                                        INSERT INTO automated_search_history 
+                                        (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                        VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                                        RETURNING id
+                                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                    search_id = cur.fetchone()[0]
+                                    conn.commit()
+                                    logging.info(f"✅ Saved {location} to history: ID={search_id}, Groups={len(prices_by_group)}, Dias={dias_list}, Prices={price_count}")
+                                    saved_count += 1
+                                except Exception as e:
+                                    logging.error(f"❌ Error saving {location} to PostgreSQL: {e}")
+                                    conn.rollback()
+                        else:
+                            try:
+                                cursor = conn.execute("""
+                                    INSERT INTO automated_search_history 
+                                    (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                search_id = cursor.lastrowid
+                                conn.commit()
+                                logging.info(f"✅ Saved {location} to history: ID={search_id}, Groups={len(prices_by_group)}, Dias={dias_list}, Prices={price_count}")
+                                saved_count += 1
+                            except Exception as e:
+                                logging.error(f"❌ Error saving {location} to SQLite: {e}")
+                                conn.rollback()
+                        
+                    except Exception as e:
+                        logging.error(f"❌ Error processing {location}: {e}")
+                        import traceback
+                        logging.error(traceback.format_exc())
+                
+                logging.info(f"🎉 Saved {saved_count}/{len(searches_by_location)} locations to automated_search_history")
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error in save_automated_searches_to_history: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 def send_automatic_daily_report():
     """Send daily report automatically based on saved settings"""
     from datetime import datetime, timedelta
@@ -21292,7 +21449,13 @@ def send_automatic_daily_report():
         
         logging.info(f"🎉 Daily report completed: {sent_count}/{len(recipients)} sent successfully")
         
-        # Save automated prices from recent searches
+        # Save automated searches to history (for Preços Automatizados page)
+        try:
+            save_automated_searches_to_history()
+        except Exception as e:
+            logging.error(f"⚠️ Failed to save automated searches to history: {str(e)}")
+        
+        # Save automated prices from recent searches (for automated_prices_history table)
         try:
             save_automated_prices_from_searches()
         except Exception as e:
@@ -21657,6 +21820,12 @@ def send_automatic_weekly_report():
                 logging.error(f"❌ Failed to send weekly report to {recipient}: {str(e)}")
         
         logging.info(f"🎉 Weekly report completed: {sent_count}/{len(recipients)} sent successfully")
+        
+        # Save automated searches to history (for Preços Automatizados page)
+        try:
+            save_automated_searches_to_history()
+        except Exception as e:
+            logging.error(f"⚠️ Failed to save automated searches to history: {str(e)}")
         
     except Exception as e:
         logging.error(f"❌ Automatic weekly report failed: {str(e)}")
