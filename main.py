@@ -14412,7 +14412,15 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             fields_from_mapping['country'] = country_detected
                             logging.info(f"   🌍 País detectado automaticamente: {country_detected} (de código postal: {postal_code})")
                     
-                    return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
+                    # Verificar se extraiu campos importantes
+                    important_fields = ['contractNumber', 'clientName', 'vehiclePlate']
+                    has_important = any(fields_from_mapping.get(f) for f in important_fields)
+                    
+                    if has_important:
+                        logging.info("✅ Coordenadas extraíram campos importantes - retornando")
+                        return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
+                    else:
+                        logging.warning("⚠️  Coordenadas não extraíram campos importantes - usando OCR/regex")
         
         except Exception as e:
             logging.warning(f"⚠️  Could not extract using mapped coordinates: {e}")
