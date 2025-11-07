@@ -10867,8 +10867,10 @@ async def debug_automated_price_rules(request: Request):
     """Debug endpoint to check if automated_price_rules table exists and has data"""
     try:
         # Get database info
-        db_type = "PostgreSQL" if USE_POSTGRES else "SQLite"
-        db_url_preview = POSTGRES_DATABASE_URL[:50] + "..." if USE_POSTGRES and POSTGRES_DATABASE_URL else "local.db"
+        import os
+        db_url = os.getenv("DATABASE_URL", "")
+        db_type = "PostgreSQL" if (_USE_NEW_DB and USE_POSTGRES) else "SQLite"
+        db_url_preview = db_url[:50] + "..." if db_url else "local.db"
         
         with _db_lock:
             conn = _db_connect()
