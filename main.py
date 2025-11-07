@@ -20273,7 +20273,9 @@ def run_daily_report_search():
         today = datetime.now()
         days_ahead = random.randint(2, 4)  # Random 2-4 days
         search_date = (today + timedelta(days=days_ahead)).strftime('%Y-%m-%d')
-        days = 3  # Standard search: 3 days
+        
+        # Pesquisar múltiplas durações
+        days_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28]
         
         # PESQUISAR AMBOS OS LOCAIS
         locations = ["Aeroporto de Faro", "Albufeira"]
@@ -20292,26 +20294,27 @@ def run_daily_report_search():
         
         logging.info(f"🌐 Using base URL: {base_url}")
         
-        # Loop para cada local
+        # Loop para cada local e duração
         for idx, location in enumerate(locations, 1):
-            logging.info(f"📍 Automated daily search {idx}/{len(locations)}: {location} | Date: {search_date} (+{days_ahead} dias) | Duration: {days} dias")
-            
-            # Executar pesquisa via HTTP request interno
-            try:
-                logging.info(f"🔍 Executing automated search via internal API...")
+            for days in days_list:
+                logging.info(f"📍 Automated daily search {idx}/{len(locations)}: {location} | Date: {search_date} (+{days_ahead} dias) | Duration: {days} dias")
                 
-                response = requests.post(
-                    f"{base_url}/api/track-by-params",
-                    json={
-                        "location": location,
-                        "start_date": search_date,
-                        "days": days,
-                        "lang": "pt",
-                        "currency": "EUR"
-                    },
-                    timeout=180,  # 3 minutos para scraping
-                    headers={"X-Internal-Request": "scheduler"}
-                )
+                # Executar pesquisa via HTTP request interno
+                try:
+                    logging.info(f"🔍 Executing automated search via internal API...")
+                    
+                    response = requests.post(
+                        f"{base_url}/api/track-by-params",
+                        json={
+                            "location": location,
+                            "start_date": search_date,
+                            "days": days,
+                            "lang": "pt",
+                            "currency": "EUR"
+                        },
+                        timeout=180,  # 3 minutos para scraping
+                        headers={"X-Internal-Request": "scheduler"}
+                    )
                 
                 if response.ok:
                     result = response.json()
@@ -20333,16 +20336,24 @@ def run_daily_report_search():
                                     }
                                 })
                                 
+                                # Detect PostgreSQL correctly
+                                try:
+                                    import psycopg2
+                                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                                except:
+                                    is_postgres = False
+                                
                                 # Save to recent_searches
-                                if hasattr(conn, 'cursor'):
-                                    # PostgreSQL
+                                if is_postgres:
+                                    # PostgreSQL - "user" é palavra reservada, precisa aspas duplas
                                     conn.execute(
                                         """
-                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
+                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
                                         VALUES (%s, %s, %s, %s, %s, %s)
                                         """,
                                         (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
                                     )
+                                    conn.commit()
                                 else:
                                     # SQLite
                                     conn.execute(
@@ -20411,7 +20422,8 @@ def run_weekly_report_search():
         today = datetime.now()
         # PESQUISAR AMBOS OS LOCAIS
         locations = ["Aeroporto de Faro", "Albufeira"]
-        days = 3  # Standard search
+        # Pesquisar múltiplas durações
+        days_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28]
         
         # URL do próprio servidor (detecta Render ou local)
         render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -20422,29 +20434,30 @@ def run_weekly_report_search():
         
         logging.info(f"🌐 Using base URL for weekly: {base_url}")
         
-        # Search for next 3 months × 2 locations
+        # Search for next 3 months × 2 locations × multiple durations
         for month_offset in range(1, 4):  # Month 1, 2, 3
             search_date = (today + timedelta(days=30 * month_offset)).strftime('%Y-%m-%d')
             
             for loc_idx, location in enumerate(locations, 1):
-                logging.info(f"📍 Weekly search month {month_offset} - location {loc_idx}/{len(locations)}: {location} | Date: {search_date} | Days: {days}")
-                
-                # Executar pesquisa via HTTP request interno
-                try:
-                    logging.info(f"🔍 Executing automated weekly search #{month_offset} for {location}...")
+                for days in days_list:
+                    logging.info(f"📍 Weekly search month {month_offset} - location {loc_idx}/{len(locations)}: {location} | Date: {search_date} | Days: {days}")
                     
-                    response = requests.post(
-                        f"{base_url}/api/track-by-params",
-                        json={
-                            "location": location,
-                            "start_date": search_date,
-                            "days": days,
-                            "lang": "pt",
-                            "currency": "EUR"
-                        },
-                        timeout=180,
-                        headers={"X-Internal-Request": "scheduler-weekly"}
-                    )
+                    # Executar pesquisa via HTTP request interno
+                    try:
+                        logging.info(f"🔍 Executing automated weekly search #{month_offset} for {location}...")
+                        
+                        response = requests.post(
+                            f"{base_url}/api/track-by-params",
+                            json={
+                                "location": location,
+                                "start_date": search_date,
+                                "days": days,
+                                "lang": "pt",
+                                "currency": "EUR"
+                            },
+                            timeout=180,
+                            headers={"X-Internal-Request": "scheduler-weekly"}
+                        )
                     
                     if response.ok:
                         result = response.json()
@@ -20457,17 +20470,22 @@ def run_weekly_report_search():
                                 conn = _db_connect()
                                 try:
                                     results_json = json.dumps(items)
-                                    is_postgres = hasattr(conn, 'cursor')
+                                    
+                                    # Detect PostgreSQL correctly
+                                    try:
+                                        import psycopg2
+                                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                                    except:
+                                        is_postgres = False
                                     
                                     if is_postgres:
-                                        with conn.cursor() as cur:
-                                            cur.execute(
-                                                """
-                                                INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
-                                                VALUES (%s, %s, %s, %s, %s, %s)
-                                                """,
-                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                            )
+                                        conn.execute(
+                                            """
+                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
+                                            VALUES (%s, %s, %s, %s, %s, %s)
+                                            """,
+                                            (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                        )
                                         conn.commit()
                                     else:
                                         conn.execute(
