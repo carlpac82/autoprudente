@@ -5394,6 +5394,13 @@ async def track_by_params(request: Request):
                 if items:
                     print(f"[SELENIUM] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
                     items = normalize_and_sort(items, supplier_priority=None)
+                    
+                    # DEBUG: Verificar se campo photo está presente
+                    photos_count = sum(1 for item in items if item.get('photo'))
+                    print(f"[DEBUG] 📸 Fotos encontradas: {photos_count}/{len(items)} carros ({(photos_count/len(items)*100):.1f}%)", file=sys.stderr, flush=True)
+                    if photos_count > 0:
+                        print(f"[DEBUG] 📸 Exemplo de foto: {items[0].get('photo', 'N/A')[:100]}", file=sys.stderr, flush=True)
+                    
                     return _no_store_json({
                         "ok": True,
                         "items": items,
