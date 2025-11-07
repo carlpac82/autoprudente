@@ -17740,6 +17740,56 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ automated_price_rules.rules_json: {e}")
                     
+                    # 7. Ensure automated_prices_history table exists (CRITICAL FOR DAILY REPORTS!)
+                    try:
+                        conn.execute("""
+                            CREATE TABLE IF NOT EXISTS automated_prices_history (
+                                id SERIAL PRIMARY KEY,
+                                location TEXT NOT NULL,
+                                grupo TEXT NOT NULL,
+                                dias INTEGER NOT NULL,
+                                pickup_date TEXT NOT NULL,
+                                auto_price REAL NOT NULL,
+                                real_price REAL NOT NULL,
+                                strategy_used TEXT,
+                                strategy_details TEXT,
+                                min_price_applied REAL,
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                created_by TEXT,
+                                source TEXT DEFAULT 'manual'
+                            )
+                        """)
+                        logging.info("✅ automated_prices_history table created/verified")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history table: {e}")
+                    
+                    # 7b. Ensure automated_prices_history has 'source' column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_prices_history' AND column_name='source'
+                                ) THEN
+                                    ALTER TABLE automated_prices_history ADD COLUMN source TEXT DEFAULT 'manual';
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_prices_history.source column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history.source: {e}")
+                    
+                    # 7c. Create index for automated_prices_history
+                    try:
+                        conn.execute("""
+                            CREATE INDEX IF NOT EXISTS idx_auto_prices_history 
+                            ON automated_prices_history(location, grupo, pickup_date, created_at)
+                        """)
+                        logging.info("✅ automated_prices_history index created/verified")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history index: {e}")
+                    
                     conn.commit()
                 else:
                     # SQLite - just ensure tables exist (columns should be there from init_db)
