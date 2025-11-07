@@ -14513,6 +14513,19 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         if mileage_match:
             fields['mileage'] = mileage_match.group(1).replace(' ', '')
         
+        # COMBINAR CAMPOS para Damage Report
+        # Código Postal / Cidade
+        if fields.get('postalCode') or fields.get('city'):
+            postal_code_city = ' / '.join(filter(None, [fields.get('postalCode'), fields.get('city')]))
+            if postal_code_city:
+                fields['postalCodeCity'] = postal_code_city
+        
+        # Marca / Modelo
+        if fields.get('vehicleBrand') or fields.get('vehicleModel'):
+            brand_model = ' / '.join(filter(None, [fields.get('vehicleBrand'), fields.get('vehicleModel')]))
+            if brand_model:
+                fields['vehicleBrandModel'] = brand_model
+        
         # Log para debug
         logging.info(f"=== CAMPOS EXTRAÍDOS ===")
         for key, value in fields.items():

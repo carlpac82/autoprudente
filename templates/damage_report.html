@@ -2448,14 +2448,18 @@
                     if (fields.clientEmail) document.getElementById('clientEmail').value = fields.clientEmail.toLowerCase();
                     if (fields.clientPhone) document.getElementById('clientPhone').value = fields.clientPhone;
                     if (fields.vehiclePlate) document.getElementById('vehiclePlate').value = fields.vehiclePlate.toUpperCase();
-                    // Combinar marca e modelo do RA
-                    if (fields.vehicleBrand || fields.vehicleModel) {
+                    // Marca / Modelo - Usar campo combinado do backend ou combinar manualmente
+                    if (fields.vehicleBrandModel) {
+                        document.getElementById('vehicleBrandModel').value = fields.vehicleBrandModel.toUpperCase();
+                    } else if (fields.vehicleBrand || fields.vehicleModel) {
                         const brandModel = [fields.vehicleBrand, fields.vehicleModel].filter(x => x).map(x => x.toUpperCase()).join(' / ');
                         document.getElementById('vehicleBrandModel').value = brandModel;
                     }
                     if (fields.address) document.getElementById('address').value = fields.address.toUpperCase();
-                    // Combinar código postal e cidade do RA
-                    if (fields.postalCode || fields.city) {
+                    // Código Postal / Cidade - Usar campo combinado do backend ou combinar manualmente
+                    if (fields.postalCodeCity) {
+                        document.getElementById('postalCodeCity').value = fields.postalCodeCity.toUpperCase();
+                    } else if (fields.postalCode || fields.city) {
                         const postalCodeCity = [fields.postalCode, fields.city?.toUpperCase()].filter(x => x).join(' / ');
                         document.getElementById('postalCodeCity').value = postalCodeCity;
                     }
