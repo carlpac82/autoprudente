@@ -738,6 +738,7 @@ async def startup_event():
     """Initialize database and create default users on startup"""
     print(f"========================================", flush=True)
     print(f"🚀 APP STARTUP - Rental Price Tracker", flush=True)
+    print(f"🔍 Testing data persistence after deploy", flush=True)
     print(f"========================================", flush=True)
     
     # Initialize database tables FIRST
