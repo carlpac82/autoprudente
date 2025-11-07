@@ -21072,9 +21072,30 @@ try:
     )
     log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 11:50 AM)", "main", "scheduler")
     
+    # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
+    # Search at 12:05 PM
+    scheduler.add_job(
+        run_daily_report_search,
+        CronTrigger(hour=12, minute=5),
+        id='search_12h05',
+        name='Daily Search 12:05',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Daily search 12:05 scheduler configured", "main", "scheduler")
+    
+    # Report at 12:40 PM
+    scheduler.add_job(
+        send_automatic_daily_report,
+        CronTrigger(hour=12, minute=40),
+        id='report_12h40',
+        name='Daily Report 12:40',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Daily report 12:40 scheduler configured", "main", "scheduler")
+    
     # Start scheduler
     scheduler.start()
-    log_to_db("INFO", "🚀 Scheduler started successfully with 6 jobs (backup + search + reports + 2 tests)", "main", "scheduler")
+    log_to_db("INFO", "🚀 Scheduler started successfully with 8 jobs (backup + search + reports + 4 custom times)", "main", "scheduler")
     
     # Print all configured jobs with next run times
     print("\n" + "=" * 80)
