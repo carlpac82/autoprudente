@@ -5256,19 +5256,17 @@
                     
                     containerAutomated.appendChild(buttonAutomated);
                     
-                    if (hasCurrentData || hasAutomatedData) {
-                        console.log(`${monthKey}: Current=${hasCurrentData ? history[monthKey].current.length + ' versions' : 'NO DATA'}, Automated=${hasAutomatedData ? history[monthKey].automated.length + ' versions' : 'NO DATA'}`);
+                    if (hasAutomatedData) {
+                        console.log(`${monthKey}: Automated=${history[monthKey].automated.length} versions`);
                     }
                 });
                 
                 if (Object.keys(history).length === 0) {
-                    containerCurrent.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No search history yet. Run some searches to see history here.</div>';
-                    containerAutomated.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No search history yet. Run some searches to see history here.</div>';
+                    containerAutomated.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No search history yet. Run some automated searches to see history here.</div>';
                 }
                 
             } catch (error) {
                 console.error('❌ Error loading history:', error);
-                containerCurrent.innerHTML = '<div class="col-span-full text-center py-4 text-red-500">Error loading history</div>';
                 containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-red-500">Error loading history</div>';
                 showNotification('Error loading search history', 'error');
             }

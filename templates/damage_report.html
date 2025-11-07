@@ -504,6 +504,35 @@
 
         <!-- Tab Content: Formulário -->
         <div id="formContent" class="tab-content active">
+        
+            <!-- Upload Rental Agreement -->
+            <div class="card" style="background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); color: white; margin-bottom: 30px;">
+                <div class="card-header" style="border-color: rgba(255,255,255,0.2);">
+                    <svg class="icon-mono" style="color: white;" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <h2>Upload Rental Agreement</h2>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <p style="margin-bottom: 20px; font-size: 14px; opacity: 0.95;">
+                        📄 Faça upload do PDF do Rental Agreement para extrair automaticamente os dados do cliente, veículo e contrato.
+                    </p>
+                    
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button type="button" onclick="document.getElementById('raFile').click()" 
+                                style="background: white; color: #009cb6; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            Selecionar Rental Agreement
+                        </button>
+                        <input type="file" id="raFile" accept=".pdf" onchange="handleRAUpload(event)" style="display: none;">
+                        <span id="raFilename" style="font-size: 13px; opacity: 0.9;"></span>
+                    </div>
+                </div>
+            </div>
+        
         <form id="damageReportForm">
             <!-- Dados do Contrato -->
             <div class="card">
@@ -2391,11 +2420,15 @@
             const file = event.target.files[0];
             if (!file) return;
             
+            // Mostrar nome do ficheiro
+            const filenameSpan = document.getElementById('raFilename');
+            filenameSpan.textContent = `📎 ${file.name}`;
+            
             const formData = new FormData();
             formData.append('file', file);
             
             // Mostrar loading
-            const uploadBtn = event.target.previousElementSibling;
+            const uploadBtn = event.target.parentElement.querySelector('button');
             const originalText = uploadBtn.innerHTML;
             uploadBtn.innerHTML = '<span style="display: flex; align-items: center; gap: 8px;"><svg class="icon-mono" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Extraindo...</span>';
             uploadBtn.disabled = true;

@@ -15668,11 +15668,44 @@ async def get_dr_numbering(request: Request):
                         "updated_at": updated_at
                     }
                 else:
-                    return {"ok": False, "error": "Configuração não encontrada"}
+                    # Criar registro inicial se não existir
+                    logging.warning("⚠️ Damage report numbering not found, creating initial record...")
+                    current_year = datetime.now().year
+                    current_number = 0
+                    prefix = 'DR'
+                    
+                    if hasattr(conn, 'cursor'):
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                                VALUES (1, %s, %s, %s)
+                                ON CONFLICT (id) DO NOTHING
+                            """, (current_year, current_number, prefix))
+                    else:
+                        # SQLite
+                        conn.execute("""
+                            INSERT OR IGNORE INTO damage_report_numbering (id, current_year, current_number, prefix)
+                            VALUES (1, ?, ?, ?)
+                        """, (current_year, current_number, prefix))
+                    
+                    conn.commit()
+                    
+                    next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
+                    logging.info(f"✅ Created initial numbering: next={next_number}")
+                    
+                    return {
+                        "ok": True,
+                        "current_year": current_year,
+                        "current_number": current_number,
+                        "prefix": prefix,
+                        "next_number": next_number,
+                        "updated_at": datetime.now().isoformat()
+                    }
             finally:
                 conn.close()
     except Exception as e:
-        logging.error(f"Error getting DR numbering: {e}")
+        logging.error(f"Error getting DR numbering: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/numbering/update")
@@ -15779,44 +15812,61 @@ async def save_damage_report_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # Limpar coordenadas antigas
                 if hasattr(conn, 'cursor'):
-                    # PostgreSQL
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM damage_report_coordinates")
-                    cursor.close()
+                    # PostgreSQL - usar um único cursor para todas as operações
+                    with conn.cursor() as cursor:
+                        # Limpar coordenadas antigas
+                        cursor.execute("DELETE FROM damage_report_coordinates")
+                        
+                        logging.info(f"💾 SAVE Coordinates: Salvando {len(coordinates)} campos")
+                        
+                        # Inserir novas coordenadas
+                        for field_id, coord in coordinates.items():
+                            field_type = _detect_field_type(field_id)
+                            
+                            # Inserir em coordenadas atuais
+                            cursor.execute("""
+                                INSERT INTO damage_report_coordinates 
+                                (field_id, x, y, width, height, page, field_type, template_version, updated_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (
+                                field_id,
+                                coord['x'],
+                                coord['y'],
+                                coord['width'],
+                                coord['height'],
+                                coord.get('page', 1),
+                                field_type,
+                                template_version,
+                                datetime.now().isoformat()
+                            ))
+                            
+                            # Inserir em histórico
+                            cursor.execute("""
+                                INSERT INTO damage_report_mapping_history 
+                                (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (
+                                template_version,
+                                field_id,
+                                coord['x'],
+                                coord['y'],
+                                coord['width'],
+                                coord['height'],
+                                coord.get('page', 1),
+                                field_type,
+                                username,
+                                datetime.now().isoformat()
+                            ))
                 else:
                     # SQLite
                     conn.execute("DELETE FROM damage_report_coordinates")
-                
-                logging.info(f"💾 SAVE Coordinates: Salvando {len(coordinates)} campos")
-                
-                # Inserir novas coordenadas
-                for field_id, coord in coordinates.items():
-                    field_type = _detect_field_type(field_id)
                     
-                    # Inserir em coordenadas atuais
-                    if hasattr(conn, 'cursor'):
-                        # PostgreSQL
-                        cursor = conn.cursor()
-                        cursor.execute("""
-                            INSERT INTO damage_report_coordinates 
-                            (field_id, x, y, width, height, page, field_type, template_version, updated_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (
-                            field_id,
-                            coord['x'],
-                            coord['y'],
-                            coord['width'],
-                            coord['height'],
-                            coord.get('page', 1),
-                            field_type,
-                            template_version,
-                            datetime.now().isoformat()
-                        ))
-                        cursor.close()
-                    else:
-                        # SQLite
+                    logging.info(f"💾 SAVE Coordinates: Salvando {len(coordinates)} campos")
+                    
+                    for field_id, coord in coordinates.items():
+                        field_type = _detect_field_type(field_id)
+                        
                         conn.execute("""
                             INSERT INTO damage_report_coordinates 
                             (field_id, x, y, width, height, page, field_type, template_version, updated_at)
@@ -15832,30 +15882,7 @@ async def save_damage_report_coordinates(request: Request):
                             template_version,
                             datetime.now().isoformat()
                         ))
-                    
-                    # Inserir em histórico
-                    if hasattr(conn, 'cursor'):
-                        # PostgreSQL
-                        cursor = conn.cursor()
-                        cursor.execute("""
-                            INSERT INTO damage_report_mapping_history 
-                            (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (
-                            template_version,
-                            field_id,
-                            coord['x'],
-                            coord['y'],
-                            coord['width'],
-                            coord['height'],
-                            coord.get('page', 1),
-                            field_type,
-                            username,
-                            datetime.now().isoformat()
-                        ))
-                        cursor.close()
-                    else:
-                        # SQLite
+                        
                         conn.execute("""
                             INSERT INTO damage_report_mapping_history 
                             (template_version, field_id, x, y, width, height, page, field_type, mapped_by, mapped_at)
@@ -16029,7 +16056,7 @@ def _detect_field_type(field_id: str) -> str:
     
     if 'signature' in field_id_lower or 'sign' in field_id_lower:
         return 'signature'
-    elif 'photo' in field_id_lower or 'image' in field_id_lower or 'croqui' in field_id_lower:
+    elif 'photo' in field_id_lower or 'image' in field_id_lower or 'croqui' in field_id_lower or 'diagram' in field_id_lower:
         return 'image'
     elif 'repair' in field_id_lower or 'table' in field_id_lower:
         return 'table'
@@ -16477,10 +16504,10 @@ async def preview_damage_report_pdf(request: Request):
             'customer_name': body.get('clientName', ''),
             'customer_email': body.get('clientEmail', ''),
             'customer_phone': body.get('clientPhone', ''),
-            'customer_address': body.get('clientAddress', ''),
-            'customer_city': body.get('clientCity', ''),
-            'customer_postal': body.get('clientPostalCode', ''),
-            'customer_country': body.get('clientCountry', ''),
+            'customer_address': body.get('address', ''),  # CORRIGIDO: era clientAddress
+            'customer_city': body.get('city', ''),  # CORRIGIDO: era clientCity
+            'customer_postal': body.get('postalCode', ''),  # CORRIGIDO: era clientPostalCode
+            'customer_country': body.get('country', ''),  # CORRIGIDO: era clientCountry
             'vehicle_plate': body.get('vehiclePlate', ''),
             'vehicle_brand': body.get('vehicleBrand', ''),
             'vehicle_model': body.get('vehicleModel', ''),
@@ -20912,10 +20939,11 @@ def run_daily_report_search():
                                         logging.info(f"[SAVE-DEBUG] Attempting to save: location={location}, days={days}, source=automated")
                                         
                                         if is_postgres:
-                                            conn.execute(
-                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
-                                            )
+                                            with conn.cursor() as cur:
+                                                cur.execute(
+                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
+                                                )
                                         else:
                                             conn.execute(
                                                 'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -21032,10 +21060,11 @@ def run_weekly_report_search():
                                                 is_postgres = False
                                             
                                             if is_postgres:
-                                                conn.execute(
-                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
-                                                )
+                                                with conn.cursor() as cur:
+                                                    cur.execute(
+                                                        'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                                        (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
+                                                    )
                                             else:
                                                 conn.execute(
                                                     'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
