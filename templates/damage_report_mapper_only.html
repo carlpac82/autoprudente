@@ -311,7 +311,7 @@
             await page.render({ canvasContext: ctx, viewport: viewport }).promise;
             pdfImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             console.log('[MAPPER] Page rendered, redrawing boxes');
-            redrawCanvas();  // ✅ Usar redrawCanvas em vez de redrawMappedBoxes
+            await redrawCanvas();  // ✅ Usar redrawCanvas em vez de redrawMappedBoxes
             document.getElementById('canvasInfo').textContent = `Arrasta para criar caixas • Escala: ${scale}`;
         }
 
@@ -778,7 +778,7 @@
                     console.log('[MAPPER] Loaded coordinates:', fieldCoordinates);
                     updateMappedList();
                     updateProgress();
-                    redrawCanvas();  // ✅ Usar redrawCanvas
+                    await redrawCanvas();  // ✅ Usar redrawCanvas
                 } else {
                     console.log('[MAPPER] No existing coordinates found');
                 }
@@ -787,18 +787,18 @@
             }
         }
 
-        function nextPage() {
+        async function nextPage() {
             if (currentPage < pdfDoc.numPages) {
                 currentPage++;
-                renderPage(currentPage);
+                await renderPage(currentPage);
                 document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
             }
         }
 
-        function previousPage() {
+        async function previousPage() {
             if (currentPage > 1) {
                 currentPage--;
-                renderPage(currentPage);
+                await renderPage(currentPage);
                 document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
             }
         }
@@ -1026,7 +1026,7 @@
             };
         }
 
-        function redrawCanvas() {
+        async function redrawCanvas() {
             if (!pdfImageData) {
                 console.warn('[MAPPER] pdfImageData not available, skipping redraw');
                 return;
@@ -1034,8 +1034,10 @@
             
             // Verificar se pdfImageData corresponde ao tamanho do canvas
             if (pdfImageData.width !== canvas.width || pdfImageData.height !== canvas.height) {
-                console.warn('[MAPPER] pdfImageData size mismatch, skipping redraw');
-                return;
+                console.warn('[MAPPER] pdfImageData size mismatch - re-rendering PDF page');
+                // Re-render the PDF to get correct imageData for new canvas size
+                await renderPage(currentPage);
+                return; // renderPage already calls redrawCanvas
             }
             
             try {
@@ -1054,6 +1056,16 @@
                 console.error('[MAPPER] Error in redrawCanvas:', error);
             }
         }
+
+        // Detect fullscreen changes and re-render
+        document.addEventListener('fullscreenchange', async () => {
+            if (canvas && pdfDoc) {
+                console.log('[MAPPER] Fullscreen changed, re-rendering PDF');
+                // Small delay to let browser adjust canvas size
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await renderPage(currentPage);
+            }
+        });
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
