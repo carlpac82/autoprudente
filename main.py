@@ -14313,9 +14313,33 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         if page_num < len(pdf_doc):
                             pdf_page = pdf_doc[page_num]
                             
-                            # Extrair texto da área mapeada
+                            # MÉTODO 1: Extrair texto da área mapeada com PyMuPDF
                             rect = fitz.Rect(x, y, x + width, y + height)
                             text_extracted = pdf_page.get_text("text", clip=rect).strip()
+                            
+                            # MÉTODO 2: Se não extraiu texto, tentar OCR
+                            if not text_extracted:
+                                try:
+                                    import pytesseract
+                                    from PIL import Image
+                                    import io
+                                    
+                                    # Renderizar área como imagem
+                                    zoom = 2  # Aumentar resolução para OCR
+                                    mat = fitz.Matrix(zoom, zoom)
+                                    pix = pdf_page.get_pixmap(matrix=mat, clip=rect)
+                                    
+                                    # Converter para PIL Image
+                                    img_data = pix.tobytes("png")
+                                    img = Image.open(io.BytesIO(img_data))
+                                    
+                                    # Aplicar OCR
+                                    text_extracted = pytesseract.image_to_string(img, lang='por+eng', config='--psm 6').strip()
+                                    
+                                    if text_extracted:
+                                        logging.info(f"   🔍 OCR extraiu {field_id}: {text_extracted[:50]}")
+                                except Exception as ocr_error:
+                                    logging.debug(f"   ⚠️  OCR falhou para {field_id}: {ocr_error}")
                             
                             if text_extracted:
                                 fields_from_mapping[field_id] = text_extracted

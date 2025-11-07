@@ -325,7 +325,6 @@
         }
         
         .damage-pin:hover {
-            transform: translate(-50%, -100%) scale(1.1);
             filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
         }
         
@@ -679,9 +678,16 @@
                 </div>
                 
                 <div class="car-diagram-container">
-                    <p style="color: #6b7280; margin-bottom: 20px; text-align: center;">
-                        💡 Clique no carro para adicionar pins de danos. Clique no pin para remover.
-                    </p>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <label style="font-weight: 600; color: #374151; min-width: 120px;">Tamanho do Pin:</label>
+                            <input type="range" id="pinSizeSlider" min="0.5" max="2" step="0.1" value="1" style="flex: 1;">
+                            <span id="pinSizeValue" style="font-weight: 600; color: #009cb6; min-width: 50px; text-align: center;">100%</span>
+                        </div>
+                        <p style="color: #6b7280; margin: 0; font-size: 13px;">
+                            💡 Clique no carro para adicionar pins de danos. Clique no pin para remover. Ajuste o tamanho antes de marcar.
+                        </p>
+                    </div>
                     
                     <div class="car-view">
                         <div class="car-svg-container" id="carDiagram" onclick="addDamagePin(event, 'all')" style="position: relative;">
@@ -890,6 +896,20 @@
         let damages = [];
         let currentDRNumber = null;
         let repairItems = [];
+        let currentPinSize = 1.0; // Tamanho padrão do pin
+        
+        // Atualizar valor do slider de tamanho do pin
+        document.addEventListener('DOMContentLoaded', function() {
+            const slider = document.getElementById('pinSizeSlider');
+            const value = document.getElementById('pinSizeValue');
+            
+            if (slider && value) {
+                slider.addEventListener('input', function() {
+                    currentPinSize = parseFloat(this.value);
+                    value.textContent = Math.round(currentPinSize * 100) + '%';
+                });
+            }
+        });
         let damageImages = [];
         let vehicleDamageImageData = null;
 
@@ -2303,6 +2323,9 @@
                                     pin.textContent = d.number;
                                     pin.style.left = d.x + 'px';
                                     pin.style.top = d.y + 'px';
+                                    // Aplicar tamanho salvo (default 1.0 se não existir)
+                                    const pinSize = d.size || 1.0;
+                                    pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
                                     pin.onclick = (e) => {
                                         e.stopPropagation();
                                         removeDamagePin(d.id);
@@ -2524,6 +2547,7 @@
             pin.textContent = damageCounter;
             pin.style.left = x + 'px';
             pin.style.top = y + 'px';
+            pin.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
             pin.onclick = (e) => {
                 e.stopPropagation();
                 removeDamagePin(damageId);
@@ -2537,7 +2561,8 @@
                 number: damageCounter,
                 view: view,
                 x: x,
-                y: y
+                y: y,
+                size: currentPinSize
             });
             
             updateDamageList();
