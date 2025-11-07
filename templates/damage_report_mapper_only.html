@@ -810,12 +810,35 @@
             console.log('[MAPPER] Edit mode:', isEditMode ? 'ON' : 'OFF');
         }
 
+        // Proteção contra múltiplas chamadas
+        let clearAllFieldsInProgress = false;
+        
         function clearAllFields(e) {
             if (e) e.preventDefault();
+            
+            // Proteção: Se já está em progresso, ignora
+            if (clearAllFieldsInProgress) {
+                console.log('[MAPPER] clearAllFields already in progress, ignoring duplicate call');
+                return;
+            }
+            
+            // Verifica se há campos para limpar
+            const mappedCount = Object.keys(fieldCoordinates).length;
+            if (mappedCount === 0) {
+                showCustomNotification('Não há campos mapeados para limpar', 'info');
+                console.log('[MAPPER] No fields to clear');
+                return;
+            }
+            
+            // Ativa proteção
+            clearAllFieldsInProgress = true;
+            console.log('[MAPPER] clearAllFields called - showing confirmation modal');
+            
             showCustomConfirmModal(
                 'Limpar Todos os Campos?',
-                'Tem a certeza que deseja limpar TODOS os campos mapeados? Esta ação não pode ser desfeita.',
+                `Tem a certeza que deseja limpar TODOS os ${mappedCount} campos mapeados? Esta ação não pode ser desfeita.`,
                 () => {
+                    // CONFIRMADO - Limpar campos
                     fieldCoordinates = {};
                     selectedField = null;
                     currentFieldIndex = 0;
@@ -824,8 +847,19 @@
                     updateProgress();
                     updateCurrentField();
                     redrawCanvas();
-                    showNotification('Todos os campos foram limpos', 'warning');
-                    console.log('[MAPPER] Cleared all fields');
+                    showNotification(`${mappedCount} campos foram limpos`, 'warning');
+                    console.log(`[MAPPER] Cleared all fields (${mappedCount} removed)`);
+                    
+                    // Libera proteção após 2 segundos
+                    setTimeout(() => {
+                        clearAllFieldsInProgress = false;
+                    }, 2000);
+                },
+                () => {
+                    // CANCELADO
+                    console.log('[MAPPER] Clear all fields cancelled by user');
+                    // Libera proteção imediatamente
+                    clearAllFieldsInProgress = false;
                 }
             );
         }
@@ -891,7 +925,7 @@
             }
         }
         
-        function showCustomConfirmModal(title, message, onConfirm) {
+        function showCustomConfirmModal(title, message, onConfirm, onCancel) {
             const modal = document.createElement('div');
             modal.style.cssText = `
                 position: fixed;
@@ -934,6 +968,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 modal.remove();
+                if (onCancel) onCancel();
             };
             
             confirmBtn.onclick = (e) => {
