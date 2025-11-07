@@ -19523,39 +19523,52 @@ async def preview_weekly_report(request: Request):
     try:
         from datetime import datetime, timedelta
         
-        # Analyze last 3 months (same logic as automatic report)
+        # Analyze NEXT 3 months (same logic as automatic report)
         months_to_analyze = 3
         months_data = []
         
         with _db_lock:
             conn = _db_connect()
             try:
-                cutoff_date = (datetime.now() - timedelta(days=30 * months_to_analyze)).strftime('%Y-%m-%d')
-                cursor = conn.execute(
-                    """
-                    SELECT strftime('%Y-%m', timestamp) as month, search_results
-                    FROM recent_searches
-                    WHERE timestamp >= ?
-                    ORDER BY timestamp DESC
-                    """,
-                    (cutoff_date,)
-                )
+                today = datetime.now()
                 
-                # Group by month and analyze
-                month_groups = {}
-                for row in cursor.fetchall():
-                    month = row[0]
-                    if not row[1]:
+                # For each of the next 3 months
+                for month_offset in range(1, months_to_analyze + 1):
+                    target_date = today + timedelta(days=30 * month_offset)
+                    month_name = target_date.strftime('%B de %Y')
+                    
+                    # Get most recent search for dates in this month range
+                    month_start = target_date.replace(day=1).strftime('%Y-%m-%d')
+                    if target_date.month == 12:
+                        month_end = target_date.replace(year=target_date.year + 1, month=1, day=1).strftime('%Y-%m-%d')
+                    else:
+                        month_end = target_date.replace(month=target_date.month + 1, day=1).strftime('%Y-%m-%d')
+                    
+                    cursor = conn.execute(
+                        """
+                        SELECT search_results, timestamp
+                        FROM recent_searches
+                        WHERE start_date >= ? AND start_date < ?
+                        ORDER BY timestamp DESC
+                        LIMIT 1
+                        """,
+                        (month_start, month_end)
+                    )
+                    
+                    row = cursor.fetchone()
+                    if not row or not row[0]:
+                        months_data.append({
+                            'name': month_name,
+                            'best_price_count': 0,
+                            'competitive_count': 0,
+                            'percentage': 0,
+                            'has_data': False
+                        })
                         continue
                     
-                    if month not in month_groups:
-                        month_groups[month] = []
+                    results = json.loads(row[0])
+                    search_time = row[1]
                     
-                    results = json.loads(row[1])
-                    month_groups[month].extend(results)
-                
-                # Analyze each month
-                for month, results in sorted(month_groups.items(), reverse=True):
                     groups = {}
                     for car in results:
                         group = car.get('group', 'Unknown')
@@ -19582,14 +19595,48 @@ async def preview_weekly_report(request: Request):
                         elif ap_position and ap_position <= 3:
                             competitive_count += 1
                     
-                    month_date = datetime.strptime(month, '%Y-%m')
-                    month_name = month_date.strftime('%B de %Y')
+                    # Get previous week data for comparison
+                    cursor_prev = conn.execute(
+                        """
+                        SELECT search_results
+                        FROM recent_searches
+                        WHERE start_date >= ? AND start_date < ?
+                        AND timestamp < ?
+                        ORDER BY timestamp DESC
+                        LIMIT 1
+                        """,
+                        (month_start, month_end, search_time)
+                    )
+                    
+                    prev_row = cursor_prev.fetchone()
+                    prev_best = None
+                    if prev_row and prev_row[0]:
+                        prev_results = json.loads(prev_row[0])
+                        prev_groups = {}
+                        for car in prev_results:
+                            g = car.get('group', 'Unknown')
+                            if g not in prev_groups:
+                                prev_groups[g] = []
+                            prev_groups[g].append(car)
+                        
+                        prev_best = 0
+                        for g, cars in prev_groups.items():
+                            sorted_c = sorted(cars, key=lambda x: float(x.get('price_num', 999999)))
+                            for idx, car in enumerate(sorted_c, 1):
+                                supplier = (car.get('supplier', '') or '').lower()
+                                if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                                    if idx == 1:
+                                        prev_best += 1
+                                    break
                     
                     months_data.append({
                         'name': month_name,
                         'best_price_count': best_price_count,
                         'competitive_count': competitive_count,
-                        'percentage': (best_price_count / total_groups * 100) if total_groups > 0 else 0
+                        'percentage': (best_price_count / total_groups * 100) if total_groups > 0 else 0,
+                        'has_data': True,
+                        'prev_best': prev_best,
+                        'change': best_price_count - prev_best if prev_best is not None else None
                     })
                     
             finally:
@@ -19982,6 +20029,46 @@ def run_daily_report_search():
     except Exception as e:
         logging.error(f"❌ Daily report search preparation failed: {str(e)}")
 
+def run_weekly_report_search():
+    """Run automated search for next 3 months (2h before weekly report)"""
+    try:
+        logging.info("🔍 Starting weekly report search for next 3 months (2h before email)...")
+        
+        # Load settings
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM user_settings WHERE setting_key = 'automated_reports'"
+                )
+                row = cursor.fetchone()
+                if not row or not row[0]:
+                    logging.warning("⚠️ No automated reports settings - skipping weekly search")
+                    return
+                
+                settings = json.loads(row[0])
+                if not settings.get('weeklyEnabled'):
+                    logging.info("ℹ️ Weekly reports disabled - skipping search")
+                    return
+            finally:
+                conn.close()
+        
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        location = "Aeroporto de Faro"  # Default location
+        days = 3  # Standard search
+        
+        # Search for next 3 months
+        for month_offset in range(1, 4):  # Month 1, 2, 3
+            search_date = (today + timedelta(days=30 * month_offset)).strftime('%Y-%m-%d')
+            logging.info(f"📍 Weekly search month {month_offset}: {location} | Date: {search_date} | Days: {days}")
+        
+        logging.info("ℹ️ Weekly search will use existing recent_searches data")
+        logging.info("💡 Para pesquisas automáticas completas, executar pesquisas manuais antes das 07:00 do sábado")
+        
+    except Exception as e:
+        logging.error(f"❌ Weekly report search preparation failed: {str(e)}")
+
 def send_automatic_daily_report():
     """Send daily report automatically based on saved settings"""
     try:
@@ -20137,27 +20224,54 @@ def generate_weekly_report_html(months_data):
         month_name = month['name']
         best = month['best_price_count']
         competitive = month['competitive_count']
+        has_data = month.get('has_data', True)
+        change = month.get('change')
         
-        months_html += f"""
-        <tr><td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    {icon_calendar}
-                    <span style="font-weight: 600; color: #1e293b; font-size: 16px;">{month_name}</span>
-                </div>
-                <div style="display: flex; gap: 20px;">
-                    <div style="text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700; color: #10b981;">{best}</div>
-                        <div style="font-size: 11px; color: #64748b;">1º Lugar</div>
+        # Trend indicator
+        trend_html = ""
+        if change is not None and change != 0:
+            if change > 0:
+                trend_html = f'<span style="color: #10b981; font-size: 12px; margin-left: 5px;">{icon_trend_up} +{change}</span>'
+            else:
+                trend_html = f'<span style="color: #ef4444; font-size: 12px; margin-left: 5px;">{icon_trend_down} {change}</span>'
+        
+        if not has_data:
+            months_html += f"""
+            <tr><td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        {icon_calendar}
+                        <span style="font-weight: 600; color: #1e293b; font-size: 16px;">{month_name}</span>
                     </div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700; color: #f59e0b;">{competitive}</div>
-                        <div style="font-size: 11px; color: #64748b;">Top 3</div>
+                    <div>
+                        <span style="color: #94a3b8; font-size: 13px;">{icon_warning} Sem dados</span>
                     </div>
                 </div>
-            </div>
-        </td></tr>
-        """
+            </td></tr>
+            """
+        else:
+            months_html += f"""
+            <tr><td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        {icon_calendar}
+                        <span style="font-weight: 600; color: #1e293b; font-size: 16px;">{month_name}</span>
+                    </div>
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: #10b981; display: flex; align-items: center; justify-content: center;">
+                                {best}{trend_html}
+                            </div>
+                            <div style="font-size: 11px; color: #64748b;">1º Lugar</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: #f59e0b;">{competitive}</div>
+                            <div style="font-size: 11px; color: #64748b;">Top 3</div>
+                        </div>
+                    </div>
+                </div>
+            </td></tr>
+            """
     
     # Calculate totals
     total_best = sum(m['best_price_count'] for m in months_data)
@@ -20177,7 +20291,7 @@ def generate_weekly_report_html(months_data):
                         <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
                         <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Semanal</h1>
                         <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px;">Semana {datetime.now().strftime('%W de %Y')}</p>
-                        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Análise de {len(months_data)} {('mês' if len(months_data) == 1 else 'meses')}</p>
+                        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Próximos {len(months_data)} {('mês' if len(months_data) == 1 else 'meses')}</p>
                     </td></tr>
                     
                     <!-- Summary Stats -->
@@ -20273,7 +20387,7 @@ def send_automatic_weekly_report():
             logging.error("❌ No Gmail token found - cannot send weekly report")
             return
         
-        # Analyze historical data from last 3 months (configurable)
+        # Analyze NEXT 3 months (future dates)
         from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
         from email.mime.text import MIMEText
@@ -20284,38 +20398,52 @@ def send_automatic_weekly_report():
         months_to_analyze = settings.get('weeklyMonths', 3)  # Default: 3 months
         months_data = []
         
-        # Get data from last N months
+        # Get most recent search data for next N months
         with _db_lock:
             conn = _db_connect()
             try:
-                # Get searches from last N months
-                cutoff_date = (datetime.now() - timedelta(days=30 * months_to_analyze)).strftime('%Y-%m-%d')
-                cursor = conn.execute(
-                    """
-                    SELECT strftime('%Y-%m', timestamp) as month, search_results
-                    FROM recent_searches
-                    WHERE timestamp >= ?
-                    ORDER BY timestamp DESC
-                    """,
-                    (cutoff_date,)
-                )
+                today = datetime.now()
                 
-                # Group by month and analyze
-                month_groups = {}
-                for row in cursor.fetchall():
-                    month = row[0]
-                    if not row[1]:
+                # For each of the next N months
+                for month_offset in range(1, months_to_analyze + 1):
+                    # Calculate target month (e.g., +1 month, +2 months, +3 months)
+                    target_date = today + timedelta(days=30 * month_offset)
+                    month_name = target_date.strftime('%B de %Y')
+                    
+                    # Get most recent search for dates in this month range
+                    month_start = target_date.replace(day=1).strftime('%Y-%m-%d')
+                    if target_date.month == 12:
+                        month_end = target_date.replace(year=target_date.year + 1, month=1, day=1).strftime('%Y-%m-%d')
+                    else:
+                        month_end = target_date.replace(month=target_date.month + 1, day=1).strftime('%Y-%m-%d')
+                    
+                    cursor = conn.execute(
+                        """
+                        SELECT search_results, timestamp
+                        FROM recent_searches
+                        WHERE start_date >= ? AND start_date < ?
+                        ORDER BY timestamp DESC
+                        LIMIT 1
+                        """,
+                        (month_start, month_end)
+                    )
+                    
+                    row = cursor.fetchone()
+                    if not row or not row[0]:
+                        # No data for this month
+                        months_data.append({
+                            'name': month_name,
+                            'best_price_count': 0,
+                            'competitive_count': 0,
+                            'percentage': 0,
+                            'has_data': False
+                        })
                         continue
                     
-                    if month not in month_groups:
-                        month_groups[month] = []
+                    results = json.loads(row[0])
+                    search_time = row[1]
                     
-                    results = json.loads(row[1])
-                    month_groups[month].extend(results)
-                
-                # Analyze each month
-                for month, results in sorted(month_groups.items(), reverse=True):
-                    # Group by car groups
+                    # Group by car groups and analyze
                     groups = {}
                     for car in results:
                         group = car.get('group', 'Unknown')
@@ -20323,7 +20451,6 @@ def send_automatic_weekly_report():
                             groups[group] = []
                         groups[group].append(car)
                     
-                    # Count best prices and competitive
                     best_price_count = 0
                     competitive_count = 0
                     total_groups = len(groups)
@@ -20344,15 +20471,48 @@ def send_automatic_weekly_report():
                         elif ap_position and ap_position <= 3:
                             competitive_count += 1
                     
-                    # Format month name
-                    month_date = datetime.strptime(month, '%Y-%m')
-                    month_name = month_date.strftime('%B de %Y')
+                    # Get previous week data for comparison (if exists)
+                    cursor_prev = conn.execute(
+                        """
+                        SELECT search_results
+                        FROM recent_searches
+                        WHERE start_date >= ? AND start_date < ?
+                        AND timestamp < ?
+                        ORDER BY timestamp DESC
+                        LIMIT 1
+                        """,
+                        (month_start, month_end, search_time)
+                    )
+                    
+                    prev_row = cursor_prev.fetchone()
+                    prev_best = None
+                    if prev_row and prev_row[0]:
+                        prev_results = json.loads(prev_row[0])
+                        prev_groups = {}
+                        for car in prev_results:
+                            g = car.get('group', 'Unknown')
+                            if g not in prev_groups:
+                                prev_groups[g] = []
+                            prev_groups[g].append(car)
+                        
+                        prev_best = 0
+                        for g, cars in prev_groups.items():
+                            sorted_c = sorted(cars, key=lambda x: float(x.get('price_num', 999999)))
+                            for idx, car in enumerate(sorted_c, 1):
+                                supplier = (car.get('supplier', '') or '').lower()
+                                if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                                    if idx == 1:
+                                        prev_best += 1
+                                    break
                     
                     months_data.append({
                         'name': month_name,
                         'best_price_count': best_price_count,
                         'competitive_count': competitive_count,
-                        'percentage': (best_price_count / total_groups * 100) if total_groups > 0 else 0
+                        'percentage': (best_price_count / total_groups * 100) if total_groups > 0 else 0,
+                        'has_data': True,
+                        'prev_best': prev_best,
+                        'change': best_price_count - prev_best if prev_best is not None else None
                     })
                     
             finally:
@@ -20427,6 +20587,15 @@ try:
         replace_existing=True
     )
     log_to_db("INFO", "✅ Daily report scheduler configured (daily at 9 AM)", "main", "scheduler")
+    
+    # Weekly search on Monday at 7 AM (2h before report) - searches next 3 months
+    scheduler.add_job(
+        run_weekly_report_search,
+        CronTrigger(day_of_week='mon', hour=7, minute=0),
+        id='weekly_report_search',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Weekly report search scheduler configured (Monday at 7 AM - next 3 months)", "main", "scheduler")
     
     # Weekly report on Monday at 9 AM (default time)
     scheduler.add_job(
