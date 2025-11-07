@@ -16067,6 +16067,194 @@ async def preview_damage_report_pdf(request: Request):
             media_type="application/pdf",
             headers={"Content-Disposition": "inline; filename=damage_report_preview.pdf"}
         )
+        width, height = A4
+        
+        # Configurar fonte
+        p.setFont("Helvetica", 8)
+        
+        # ============ HEADER AZUL ============
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.rect(0, height - 2.5*cm, width, 2.5*cm, fill=1, stroke=0)
+        
+        # Logo/Título
+        p.setFillColor(colors.white)
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(1.5*cm, height - 1.8*cm, "RELATÓRIO DE DANOS / DAMAGE REPORT")
+        
+        # DR Nº e Data (topo direita)
+        p.setFont("Helvetica", 9)
+        p.drawString(15*cm, height - 1.2*cm, f"DR: {body.get('contractNumber', '')}")
+        p.drawString(15*cm, height - 1.8*cm, f"Data: {body.get('date', '')}")
+        
+        # ============ DADOS DO CLIENTE ============
+        y = height - 4*cm
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(1.5*cm, y, "Dados do Cliente / Client Details")
+        
+        # Linha separadora
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.setLineWidth(1)
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Campos
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        
+        # Nome
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Nome Completo / Full Name:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(6*cm, y, str(body.get('clientName', '')))
+        
+        # Email e Telefone
+        y -= 0.6*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Email:")
+        p.setFillColor(colors.black)
+        p.drawString(3.5*cm, y, str(body.get('clientEmail', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(11*cm, y, "Telefone / Phone:")
+        p.setFillColor(colors.black)
+        p.drawString(14*cm, y, str(body.get('clientPhone', '')))
+        
+        # Morada
+        y -= 0.6*cm
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Morada / Address:")
+        p.setFillColor(colors.black)
+        p.drawString(4.5*cm, y, str(body.get('clientAddress', '')))
+        
+        # Código Postal, Cidade, País
+        y -= 0.6*cm
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "C. Postal:")
+        p.setFillColor(colors.black)
+        p.drawString(3.5*cm, y, str(body.get('clientPostalCode', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Cidade / City:")
+        p.setFillColor(colors.black)
+        p.drawString(8.5*cm, y, str(body.get('clientCity', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(13*cm, y, "País / Country:")
+        p.setFillColor(colors.black)
+        p.drawString(15.5*cm, y, str(body.get('clientCountry', '')))
+        
+        # ============ DADOS DO VEÍCULO ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Dados do Veículo / Vehicle Details")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Matrícula / Plate:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(4*cm, y, str(body.get('vehiclePlate', '')))
+        
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(8*cm, y, "Marca / Brand:")
+        p.setFillColor(colors.black)
+        p.drawString(10.5*cm, y, str(body.get('vehicleBrand', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(14*cm, y, "Modelo / Model:")
+        p.setFillColor(colors.black)
+        p.drawString(16.5*cm, y, str(body.get('vehicleModel', '')))
+        
+        # ============ LEVANTAMENTO E DEVOLUÇÃO ============
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.setFillColor(colors.black)
+        p.drawString(1.5*cm, y, "Levantamento e Devolução / Pickup & Return")
+        
+        p.setStrokeColor(colors.HexColor('#009cb6'))
+        p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # Levantamento
+        y -= 0.8*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.drawString(1.5*cm, y, "LEVANTAMENTO / PICKUP")
+        
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Data:")
+        p.setFillColor(colors.black)
+        p.drawString(3*cm, y, str(body.get('pickupDate', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Hora:")
+        p.setFillColor(colors.black)
+        p.drawString(7.5*cm, y, str(body.get('pickupTime', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(10*cm, y, "Local:")
+        p.setFillColor(colors.black)
+        p.drawString(11.5*cm, y, str(body.get('pickupLocation', '')))
+        
+        # Devolução
+        y -= 0.7*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor('#009cb6'))
+        p.drawString(1.5*cm, y, "DEVOLUÇÃO / RETURN")
+        
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.setFillColor(colors.grey)
+        p.drawString(1.5*cm, y, "Data:")
+        p.setFillColor(colors.black)
+        p.drawString(3*cm, y, str(body.get('returnDate', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(6*cm, y, "Hora:")
+        p.setFillColor(colors.black)
+        p.drawString(7.5*cm, y, str(body.get('returnTime', '')))
+        
+        p.setFillColor(colors.grey)
+        p.drawString(10*cm, y, "Local:")
+        p.setFillColor(colors.black)
+        p.drawString(11.5*cm, y, str(body.get('returnLocation', '')))
+        
+        # ============ FEITO POR ============
+        if body.get('issuedBy'):
+            y -= 0.8*cm
+            p.setFont("Helvetica", 8)
+            p.setFillColor(colors.grey)
+            p.drawString(1.5*cm, y, "Feito por / Issued by:")
+            p.setFillColor(colors.black)
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(5*cm, y, str(body.get('issuedBy', '')))
+        
+        # ============ FOOTER ============
+        p.setFillColor(colors.grey)
+        p.setFont("Helvetica", 7)
+        p.drawCentredString(width/2, 1.5*cm, "AUTO PRUDENTE - Rent a Car | www.autoprudente.com")
+        p.drawCentredString(width/2, 1*cm, "Apoio ao Cliente: 00351 289 542 160")
+        
+        # Finalizar
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "inline; filename=preview.pdf"}
+        )
+        
     except Exception as e:
         logging.error(f"Error generating preview PDF: {e}")
         import traceback
