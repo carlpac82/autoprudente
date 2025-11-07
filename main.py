@@ -10489,6 +10489,15 @@ async def upload_damage_report_template(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detectar PostgreSQL vs SQLite
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
+                
+                placeholder = "%s" if is_postgres else "?"
+                
                 cursor = conn.execute("SELECT MAX(version) FROM damage_report_templates")
                 row = cursor.fetchone()
                 next_version = (row[0] or 0) + 1
@@ -10497,17 +10506,20 @@ async def upload_damage_report_template(request: Request):
                 conn.execute("UPDATE damage_report_templates SET is_active = 0")
                 
                 # Inserir novo template
-                conn.execute("""
+                placeholders = ", ".join([placeholder] * 7)
+                insert_query = f"""
                     INSERT INTO damage_report_templates 
                     (version, filename, file_data, num_pages, uploaded_by, uploaded_at, is_active, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-                """, (
+                    VALUES ({placeholders})
+                """
+                conn.execute(insert_query, (
                     next_version,
                     filename,
                     pdf_content,
                     num_pages,
                     username,
                     datetime.now().isoformat(),
+                    1,  # is_active
                     notes
                 ))
                 
