@@ -14675,12 +14675,17 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 fields['postalCode'] = postal_code
                 logging.info(f"   📮 Código Postal: {postal_code}")
                 
-                # Procurar cidade ANTES do código postal (mesma linha ou linha anterior)
-                city_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-z\s]{2,30}?)\s+' + re.escape(postal_code), text, re.IGNORECASE)
+                # Procurar cidade ANTES do código postal (mesma linha)
+                # MELHORADO: Procura texto em MAIÚSCULAS antes do código postal
+                # Evita pegar números (XXXXX) ou texto aleatório
+                city_pattern = r'([A-ZÁÉÍÓÚÂÊÔÃÕÇÖÄÜSS][A-ZÁÉÍÓÚÂÊÔÃÕÇÖÄÜß\s-]{2,40}?)\s+' + re.escape(postal_code)
+                city_match = re.search(city_pattern, text)
                 if city_match:
                     city = city_match.group(1).strip()
-                    fields['city'] = city
-                    logging.info(f"   🏙️  Cidade: {city}")
+                    # Validar que não é só números ou X's
+                    if not re.match(r'^[X0-9\s/-]+$', city):
+                        fields['city'] = city
+                        logging.info(f"   🏙️  Cidade: {city}")
                 
                 # Se não encontrou país ainda, usar hint
                 if not fields.get('country'):
@@ -14688,14 +14693,30 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 break
         
         # === 7. MORADA ===
-        # Procurar por palavras-chave ou linha antes do código postal
-        address_keywords = ['RUA', 'AVENIDA', 'TRAVESSA', 'LARGO', 'PRAÇA', 'URBANIZAÇÃO', 'ESTRADA']
+        # Procurar por palavras-chave MULTI-IDIOMA
+        address_keywords = [
+            # Português
+            'RUA', 'AVENIDA', 'TRAVESSA', 'LARGO', 'PRAÇA', 'URBANIZAÇÃO', 'ESTRADA',
+            # Alemão
+            'STRAßE', 'STRASSE', 'WEG', 'PLATZ', 'ALLEE', 'GASSE',
+            # Espanhol
+            'CALLE', 'AVENIDA', 'PLAZA', 'CAMINO',
+            # Inglês
+            'STREET', 'AVENUE', 'ROAD', 'LANE', 'DRIVE', 'BOULEVARD',
+            # Francês
+            'RUE', 'AVENUE', 'BOULEVARD', 'PLACE', 'CHEMIN',
+            # Italiano
+            'VIA', 'VIALE', 'CORSO', 'PIAZZA', 'STRADA',
+        ]
         for keyword in address_keywords:
-            address_match = re.search(rf'\b({keyword}[^\n]+)', text, re.IGNORECASE)
+            address_match = re.search(rf'\b({keyword}[^\n]{{1,80}})', text, re.IGNORECASE)
             if address_match:
-                fields['address'] = address_match.group(1).strip()
-                logging.info(f"   🏠 Morada: {fields['address']}")
-                break
+                addr = address_match.group(1).strip()
+                # Limitar tamanho e remover excesso
+                if len(addr) < 100:
+                    fields['address'] = addr
+                    logging.info(f"   🏠 Morada: {addr}")
+                    break
         
         # === 8. MATRÍCULA ===
         # Padrão português: XX-XX-XX (com ou sem espaços)
@@ -14727,96 +14748,133 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 logging.info(f"   🚙 Modelo: {fields['vehicleModel']}")
                 break
         
-        # === 10. DATAS ===
-        # Formato: DD-MM-YYYY ou DD/MM/YYYY
-        # IMPORTANTE: Data de levantamento SEMPRE antes da data de devolução
+        # === 10. DATAS E HORAS POR CONTEXTO ===
+        # NOVA ABORDAGEM: Usar palavras-chave para encontrar datas e horas corretas
         from datetime import datetime
         current_year = datetime.now().year
         
-        date_patterns = [
-            r'(\d{2}\s*-\s*\d{2}\s*-\s*\d{4})',
-            r'(\d{2}/\d{2}/\d{4})',
-        ]
+        # Palavras-chave para identificar seções de Entrega (Pickup) e Recolha (Dropoff)
+        pickup_keywords = ['ENTREGA', 'PICKUP', 'LEVANTAMENTO', 'SALIDA', 'DEPARTURE', 'ABHOL']
+        dropoff_keywords = ['RECOLHA', 'DROPOFF', 'DEVOLUÇÃO', 'DEVOLUCION', 'RETURN', 'RÜCKGABE']
         
-        dates_with_positions = []
-        for pattern in date_patterns:
-            for match in re.finditer(pattern, text):
-                date_str = match.group(1)
-                # Normalizar
-                date_clean = re.sub(r'\s+', '', date_str).replace('/', '-')
-                # Validar ano (rental atual ±2 anos)
+        # Procurar por contexto de ENTREGA/LEVANTAMENTO
+        pickup_context = None
+        for keyword in pickup_keywords:
+            match = re.search(rf'{keyword}', text, re.IGNORECASE)
+            if match:
+                pickup_context = match.start()
+                logging.info(f"   ✅ Contexto Levantamento encontrado: {keyword}")
+                break
+        
+        # Procurar por contexto de RECOLHA/DEVOLUÇÃO
+        dropoff_context = None
+        for keyword in dropoff_keywords:
+            match = re.search(rf'{keyword}', text, re.IGNORECASE)
+            if match:
+                dropoff_context = match.start()
+                logging.info(f"   ✅ Contexto Devolução encontrado: {keyword}")
+                break
+        
+        # Padrões de data
+        date_pattern = r'(\d{2}\s*[/-]\s*\d{2}\s*[/-]\s*\d{4})'
+        time_pattern = r'(\d{1,2}\s*:\s*\d{2})'
+        
+        # === LEVANTAMENTO (PICKUP) ===
+        if pickup_context is not None:
+            # Procurar data APÓS a palavra-chave de pickup (próximos 200 caracteres)
+            pickup_section = text[pickup_context:pickup_context + 300]
+            
+            # Data
+            date_match = re.search(date_pattern, pickup_section)
+            if date_match:
+                date_clean = re.sub(r'\s+', '', date_match.group(1)).replace('/', '-')
                 try:
-                    year = int(date_clean.split('-')[-1])
+                    day, month, year = map(int, date_clean.split('-'))
                     if current_year - 1 <= year <= current_year + 2:
-                        # Converter para datetime para comparar
-                        day, month, year = map(int, date_clean.split('-'))
-                        date_obj = datetime(year, month, day)
-                        dates_with_positions.append({
-                            'date': date_clean,
-                            'datetime': date_obj,
-                            'position': match.start()
-                        })
+                        fields['pickupDate'] = date_clean
+                        logging.info(f"   📅 Data Levantamento: {date_clean}")
                 except:
                     pass
-        
-        # Ordenar por data (mais antiga primeiro = pickup)
-        if len(dates_with_positions) >= 2:
-            dates_with_positions.sort(key=lambda x: x['datetime'])
-            fields['pickupDate'] = dates_with_positions[0]['date']
-            fields['dropoffDate'] = dates_with_positions[1]['date']
-            logging.info(f"   📅 Data Levantamento: {dates_with_positions[0]['date']}")
-            logging.info(f"   📅 Data Devolução: {dates_with_positions[1]['date']}")
             
-            # === 11. HORAS ===
-            # IMPORTANTE: Hora ABAIXO da data correspondente
-            # Procurar primeira hora APÓS cada data no texto
-            
-            pickup_date_pos = dates_with_positions[0]['position']
-            dropoff_date_pos = dates_with_positions[1]['position']
-            
-            # Texto APÓS data de levantamento (até data de devolução)
-            text_after_pickup = text[pickup_date_pos:dropoff_date_pos]
-            time_pattern = r'(\d{1,2}\s*:\s*\d{2})'
-            
-            # Primeira hora após data de levantamento
-            pickup_time_match = re.search(time_pattern, text_after_pickup)
-            if pickup_time_match:
-                fields['pickupTime'] = clean_time(pickup_time_match.group(1))
+            # Hora (logo após a data)
+            time_match = re.search(time_pattern, pickup_section)
+            if time_match:
+                fields['pickupTime'] = clean_time(time_match.group(1))
                 logging.info(f"   🕐 Hora Levantamento: {fields['pickupTime']}")
             
-            # Texto APÓS data de devolução
-            text_after_dropoff = text[dropoff_date_pos:]
+            # Local (MAIÚSCULAS próximo da palavra-chave, antes da data)
+            location_match = re.search(r'\b([A-ZÄÖÜ][A-ZÄÖÜÁÉÍÓÚÂÊÔÃÕÇ\s]{5,50}?)\s+\d{2}\s*[/-]', pickup_section)
+            if location_match:
+                location = location_match.group(1).strip()
+                # Validar que não é nome de pessoa (geralmente tem nome e sobrenome apenas)
+                if len(location.split()) >= 2 or re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT', location, re.IGNORECASE):
+                    fields['pickupLocation'] = location
+                    logging.info(f"   📍 Local Levantamento: {location}")
+        
+        # === DEVOLUÇÃO (DROPOFF) ===
+        if dropoff_context is not None:
+            # Procurar data APÓS a palavra-chave de dropoff (próximos 200 caracteres)
+            dropoff_section = text[dropoff_context:dropoff_context + 300]
             
-            # Primeira hora após data de devolução
-            dropoff_time_match = re.search(time_pattern, text_after_dropoff)
-            if dropoff_time_match:
-                fields['dropoffTime'] = clean_time(dropoff_time_match.group(1))
+            # Data
+            date_match = re.search(date_pattern, dropoff_section)
+            if date_match:
+                date_clean = re.sub(r'\s+', '', date_match.group(1)).replace('/', '-')
+                try:
+                    day, month, year = map(int, date_clean.split('-'))
+                    if current_year - 1 <= year <= current_year + 2:
+                        fields['dropoffDate'] = date_clean
+                        logging.info(f"   📅 Data Devolução: {date_clean}")
+                except:
+                    pass
+            
+            # Hora (logo após a data)
+            time_match = re.search(time_pattern, dropoff_section)
+            if time_match:
+                fields['dropoffTime'] = clean_time(time_match.group(1))
                 logging.info(f"   🕐 Hora Devolução: {fields['dropoffTime']}")
+            
+            # Local (MAIÚSCULAS próximo da palavra-chave, antes da data)
+            location_match = re.search(r'\b([A-ZÄÖÜ][A-ZÄÖÜÁÉÍÓÚÂÊÔÃÕÇ\s]{5,50}?)\s+\d{2}\s*[/-]', dropoff_section)
+            if location_match:
+                location = location_match.group(1).strip()
+                # Validar que não é nome de pessoa
+                if len(location.split()) >= 2 or re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT', location, re.IGNORECASE):
+                    fields['dropoffLocation'] = location
+                    logging.info(f"   📍 Local Devolução: {location}")
         
-        # === 12. LOCAIS DE LEVANTAMENTO E DEVOLUÇÃO ===
-        # Procurar locais em MAIÚSCULAS antes das datas
-        locations_found = []
-        for i, line in enumerate(lines):
-            # Se linha tem data, a linha anterior pode ser local
-            if re.search(r'\d{2}\s*-\s*\d{2}\s*-\s*\d{4}', line):
-                if i > 0:
-                    prev_line = lines[i-1].strip()
-                    # Remover horas do início
-                    prev_line = re.sub(r'^\d{1,2}\s*:\s*\d{2}\s*', '', prev_line)
-                    # Se é maiúsculas e tem tamanho razoável
-                    if prev_line.isupper() and 5 <= len(prev_line) <= 50:
-                        locations_found.append(prev_line)
-        
-        if len(locations_found) >= 2:
-            fields['pickupLocation'] = locations_found[0]
-            fields['dropoffLocation'] = locations_found[1]
-            logging.info(f"   📍 Local Levantamento: {locations_found[0]}")
-            logging.info(f"   📍 Local Devolução: {locations_found[1]}")
-        elif len(locations_found) == 1:
-            # Mesmo local
-            fields['pickupLocation'] = locations_found[0]
-            fields['dropoffLocation'] = locations_found[0]
-            logging.info(f"   📍 Local (ambos): {locations_found[0]}")
+        # === 12. FALLBACK PARA LOCAIS ===
+        # Se não foram encontrados locais por contexto, tentar método antigo
+        if not fields.get('pickupLocation') or not fields.get('dropoffLocation'):
+            locations_found = []
+            for i, line in enumerate(lines):
+                # Se linha tem data, a linha anterior pode ser local
+                if re.search(r'\d{2}\s*[/-]\s*\d{2}\s*[/-]\s*\d{4}', line):
+                    if i > 0:
+                        prev_line = lines[i-1].strip()
+                        # Remover horas do início
+                        prev_line = re.sub(r'^\d{1,2}\s*:\s*\d{2}\s*', '', prev_line)
+                        # Se é maiúsculas e tem tamanho razoável e não é nome de pessoa
+                        if prev_line.isupper() and 5 <= len(prev_line) <= 50:
+                            # Filtrar nomes de pessoa (geralmente só 2 palavras)
+                            words = prev_line.split()
+                            if len(words) > 2 or re.search(r'AEROPORTO|AIRPORT|AUTO|RENT|STATION', prev_line):
+                                locations_found.append(prev_line)
+            
+            if len(locations_found) >= 2:
+                if not fields.get('pickupLocation'):
+                    fields['pickupLocation'] = locations_found[0]
+                    logging.info(f"   📍 Local Levantamento (fallback): {locations_found[0]}")
+                if not fields.get('dropoffLocation'):
+                    fields['dropoffLocation'] = locations_found[1]
+                    logging.info(f"   📍 Local Devolução (fallback): {locations_found[1]}")
+            elif len(locations_found) == 1:
+                # Mesmo local
+                if not fields.get('pickupLocation'):
+                    fields['pickupLocation'] = locations_found[0]
+                if not fields.get('dropoffLocation'):
+                    fields['dropoffLocation'] = locations_found[0]
+                logging.info(f"   📍 Local (ambos, fallback): {locations_found[0]}")
         
         # COMBINAR CAMPOS para Damage Report
         # Código Postal / Cidade
