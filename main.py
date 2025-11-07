@@ -16996,21 +16996,29 @@ async def get_active_rental_agreement_template(request: Request):
     from starlette.responses import Response
     
     try:
+        logging.info("📥 [RA-TEMPLATE] Starting to load active template...")
+        
         # Garantir que a tabela existe
         try:
+            logging.info("📥 [RA-TEMPLATE] Ensuring tables exist...")
             _ensure_rental_agreement_tables()
+            logging.info("✅ [RA-TEMPLATE] Tables ensured")
         except Exception as table_error:
-            logging.error(f"❌ Failed to ensure RA tables: {table_error}")
+            logging.error(f"❌ [RA-TEMPLATE] Failed to ensure RA tables: {table_error}")
+            import traceback
+            logging.error(traceback.format_exc())
         
         # Buscar template ativo da BD
         with _db_lock:
             conn = _db_connect()
             try:
                 is_postgres = hasattr(conn, 'cursor')
+                logging.info(f"📥 [RA-TEMPLATE] DB type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 if is_postgres:
                     try:
                         cursor = conn.cursor()
+                        logging.info("📥 [RA-TEMPLATE] Executing PostgreSQL query...")
                         cursor.execute("""
                             SELECT file_data, filename 
                             FROM rental_agreement_templates 
@@ -17019,11 +17027,15 @@ async def get_active_rental_agreement_template(request: Request):
                         """)
                         row = cursor.fetchone()
                         cursor.close()
+                        logging.info(f"📥 [RA-TEMPLATE] Query result: {row is not None}")
                     except Exception as pg_error:
-                        logging.error(f"❌ PostgreSQL query error: {pg_error}")
+                        logging.error(f"❌ [RA-TEMPLATE] PostgreSQL query error: {pg_error}")
+                        import traceback
+                        logging.error(traceback.format_exc())
                         raise
                 else:
                     try:
+                        logging.info("📥 [RA-TEMPLATE] Executing SQLite query...")
                         cursor = conn.execute("""
                             SELECT file_data, filename 
                             FROM rental_agreement_templates 
@@ -17031,8 +17043,11 @@ async def get_active_rental_agreement_template(request: Request):
                             ORDER BY version DESC LIMIT 1
                         """)
                         row = cursor.fetchone()
+                        logging.info(f"📥 [RA-TEMPLATE] Query result: {row is not None}")
                     except Exception as sqlite_error:
-                        logging.error(f"❌ SQLite query error: {sqlite_error}")
+                        logging.error(f"❌ [RA-TEMPLATE] SQLite query error: {sqlite_error}")
+                        import traceback
+                        logging.error(traceback.format_exc())
                         raise
                 
                 if not row or not row[0]:
@@ -17067,6 +17082,22 @@ async def get_active_rental_agreement_template(request: Request):
             status_code=500
         )
 
+@app.post("/api/rental-agreements/force-create-tables")
+async def force_create_ra_tables(request: Request):
+    """Force: Criar tabelas de RA manualmente"""
+    require_auth(request)
+    
+    try:
+        logging.info("🔧 Force creating RA tables...")
+        _ensure_rental_agreement_tables()
+        logging.info("✅ RA tables created successfully")
+        return {"ok": True, "message": "RA tables created"}
+    except Exception as e:
+        logging.error(f"❌ Error force creating RA tables: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/rental-agreements/debug-status")
 async def debug_rental_agreement_status(request: Request):
     """Debug: Verificar estado das tabelas e templates de RA"""
@@ -17077,17 +17108,20 @@ async def debug_rental_agreement_status(request: Request):
             "tables_exist": False,
             "template_count": 0,
             "active_template": None,
-            "error": None
+            "error": None,
+            "db_type": None
         }
         
         with _db_lock:
             conn = _db_connect()
             try:
                 is_postgres = hasattr(conn, 'cursor')
+                status["db_type"] = "PostgreSQL" if is_postgres else "SQLite"
                 
                 # Verificar se tabela existe
                 if is_postgres:
                     cursor = conn.cursor()
+                    logging.info(f"[DEBUG] Checking RA tables in PostgreSQL...")
                     cursor.execute("""
                         SELECT EXISTS (
                             SELECT FROM information_schema.tables 
