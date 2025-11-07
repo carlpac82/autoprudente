@@ -1010,6 +1010,95 @@
         return { groups, map };
       }
 
+      // Layout MODERNO fullwidth com fotos grandes (para resultados)
+      function renderModernResults(items) {
+        const { groups, map } = groupByCategory(items);
+        const toNum = (p) => {
+          if (typeof p === 'number' && isFinite(p)) return p;
+          const s = String(p || '').replace(/\s|\u00a0/g, '');
+          const m = s.match(/([0-9.,]+)/);
+          if (!m) return Number.POSITIVE_INFINITY;
+          let num = m[1];
+          const hasComma = num.includes(',');
+          const hasDot = num.includes('.');
+          if (hasComma && hasDot) {
+            num = num.replace(/\./g, '').replace(/,/g, '.');
+          } else if (hasComma && !hasDot) {
+            num = num.replace(/,/g, '.');
+          } else {
+            const parts = num.split('.');
+            if (parts.length > 2) num = parts.join('');
+          }
+          const v = parseFloat(num);
+          return isFinite(v) ? v : Number.POSITIVE_INFINITY;
+        };
+        
+        const cards = [];
+        groups.forEach(g => {
+          if (g.cat === 'Luxury') return;
+          
+          const lst = map.get(g.cat) || [];
+          if (!lst.length) return;
+          
+          // Sort by price
+          const sorted = lst.slice().sort((a,b) => toNum(a.price) - toNum(b.price));
+          
+          sorted.forEach((car, idx) => {
+            const price = toNum(car.price);
+            const priceFormatted = isFinite(price) ? price.toFixed(2) + ' €' : car.price;
+            const supplierName = displaySupplierName(car.supplier || '');
+            const photoUrl = car.photo && car.photo.trim() !== '' ? car.photo : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"%3E%3Crect width="300" height="200" fill="%23f0f9fb"/%3E%3Cpath d="M100 90 L70 90 L70 75 C70 70 72 67 75 65 L95 65 L95 50 L205 50 L205 65 L225 65 C228 67 230 70 230 75 L230 90 L200 90" fill="%23009cb6" opacity="0.3"/%3E%3Ccircle cx="80" cy="90" r="8" fill="%23cbd5e1"/%3E%3Ccircle cx="220" cy="90" r="8" fill="%23cbd5e1"/%3E%3C/svg%3E';
+            
+            // Badge de posição
+            let positionBadge = '';
+            if (idx === 0) {
+              positionBadge = '<div class="absolute top-3 left-3 bg-gradient-to-r from-[#f4ad0f] to-[#f59e0b] text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">🏆 Melhor Preço</div>';
+            }
+            
+            cards.push(`
+              <div class="bg-white rounded-xl border-2 border-gray-200 hover:border-[#009cb6] hover:shadow-2xl transition-all duration-300 overflow-hidden group">
+                <!-- Foto do carro -->
+                <div class="relative bg-gradient-to-br from-[#f0f9fb] to-white p-6 h-56">
+                  ${positionBadge}
+                  <img src="${photoUrl}" alt="${escapeHtml(car.car)}" 
+                       class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                       onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 300 200\'%3E%3Crect width=\'300\' height=\'200\' fill=\'%23f0f9fb\'/%3E%3Cpath d=\'M100 90 L70 90 L70 75 C70 70 72 67 75 65 L95 65 L95 50 L205 50 L205 65 L225 65 C228 67 230 70 230 75 L230 90 L200 90\' fill=\'%23009cb6\' opacity=\'0.3\'/%3E%3Ccircle cx=\'80\' cy=\'90\' r=\'8\' fill=\'%23cbd5e1\'/%3E%3Ccircle cx=\'220\' cy=\'90\' r=\'8\' fill=\'%23cbd5e1\'/%3E%3C/svg%3E'"/>
+                </div>
+                
+                <!-- Informação -->
+                <div class="p-5">
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                      <h3 class="text-lg font-bold text-gray-900 mb-1">${escapeHtml(car.car)}</h3>
+                      <p class="text-sm text-gray-500">${escapeHtml(g.label.split(' - ')[1] || g.label)}</p>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-2xl font-bold text-[#009cb6]">${priceFormatted}</div>
+                      <div class="text-xs text-gray-400">total</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Supplier -->
+                  <div class="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+                    ${getSupplierLogo(car.supplier)}
+                    <span class="text-sm font-medium text-gray-700">${escapeHtml(supplierName)}</span>
+                  </div>
+                </div>
+              </div>
+            `);
+          });
+        });
+        
+        return `
+          <div class="py-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              ${cards.join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      // Preview cards pequenos (APENAS para homepage "Últimas Pesquisas")
       function renderCategoryPreview(items) {
         const { groups, map } = groupByCategory(items);
         const toNum = (p) => {
@@ -1964,9 +2053,8 @@
               <p class="text-sm">Session may have expired. Please try again.</p>
             <\/div>`);
           } else {
-            inner.push(renderCategoryPreview(items));
-            inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
-            inner.push(renderCategoryBlocks(items));
+            // NÃO mostrar preview cards nos resultados, apenas layout moderno
+            inner.push(renderModernResults(items));
             // Mostrar filtros de suppliers após resultados
             showSupplierFilters(items);
           }
