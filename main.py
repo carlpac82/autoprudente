@@ -20315,68 +20315,68 @@ def run_daily_report_search():
                         timeout=180,  # 3 minutos para scraping
                         headers={"X-Internal-Request": "scheduler"}
                     )
-                
-                if response.ok:
-                    result = response.json()
-                    if result.get('ok'):
-                        items = result.get('items', [])
-                        logging.info(f"✅ Automated daily search completed: {len(items)} cars found")
-                        
-                        # Salvar em recent_searches para aparecer na homepage
-                        with _db_lock:
-                            conn = _db_connect()
-                            try:
-                                # Create JSON com results
-                                results_json = json.dumps({
-                                    "cars": items,
-                                    "searchParams": {
-                                        "location": location,
-                                        "start_date": search_date,
-                                        "days": days
-                                    }
-                                })
-                                
-                                # Detect PostgreSQL correctly
-                                try:
-                                    import psycopg2
-                                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
-                                except:
-                                    is_postgres = False
-                                
-                                # Save to recent_searches
-                                if is_postgres:
-                                    # PostgreSQL - "user" é palavra reservada, precisa aspas duplas
-                                    conn.execute(
-                                        """
-                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
-                                        VALUES (%s, %s, %s, %s, %s, %s)
-                                        """,
-                                        (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                    )
-                                    conn.commit()
-                                else:
-                                    # SQLite
-                                    conn.execute(
-                                        """
-                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
-                                        VALUES (?, ?, ?, ?, ?, ?)
-                                        """,
-                                        (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                    )
-                                    conn.commit()
-                                
-                                logging.info(f"✅ Daily search saved to recent_searches (will appear in homepage)")
-                            finally:
-                                conn.close()
-                    else:
-                        logging.warning(f"⚠️ Daily automated search API returned error: {result.get('error')}")
-                else:
-                    logging.error(f"❌ Daily automated search API failed: HTTP {response.status_code}")
                     
-            except Exception as search_error:
-                logging.error(f"❌ Failed to execute automated daily search for {location}: {str(search_error)}")
+                    if response.ok:
+                        result = response.json()
+                        if result.get('ok'):
+                            items = result.get('items', [])
+                            logging.info(f"✅ Automated daily search completed: {len(items)} cars found")
+                            
+                            # Salvar em recent_searches para aparecer na homepage
+                            with _db_lock:
+                                conn = _db_connect()
+                                try:
+                                    # Create JSON com results
+                                    results_json = json.dumps({
+                                        "cars": items,
+                                        "searchParams": {
+                                            "location": location,
+                                            "start_date": search_date,
+                                            "days": days
+                                        }
+                                    })
+                                    
+                                    # Detect PostgreSQL correctly
+                                    try:
+                                        import psycopg2
+                                        is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                                    except:
+                                        is_postgres = False
+                                    
+                                    # Save to recent_searches
+                                    if is_postgres:
+                                        # PostgreSQL - "user" é palavra reservada, precisa aspas duplas
+                                        conn.execute(
+                                            """
+                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
+                                            VALUES (%s, %s, %s, %s, %s, %s)
+                                            """,
+                                            (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                        )
+                                        conn.commit()
+                                    else:
+                                        # SQLite
+                                        conn.execute(
+                                            """
+                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
+                                            VALUES (?, ?, ?, ?, ?, ?)
+                                            """,
+                                            (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                        )
+                                        conn.commit()
+                                    
+                                    logging.info(f"✅ Daily search saved to recent_searches (will appear in homepage)")
+                                finally:
+                                    conn.close()
+                        else:
+                            logging.warning(f"⚠️ Daily automated search API returned error: {result.get('error')}")
+                    else:
+                        logging.error(f"❌ Daily automated search API failed: HTTP {response.status_code}")
+                        
+                except Exception as search_error:
+                    logging.error(f"❌ Failed to execute automated daily search for {location}: {str(search_error)}")
             
-            # Delay entre pesquisas (evitar sobrecarga)
+            # Delay entre locais (evitar sobrecarga)
             if idx < len(locations):
                 logging.info("⏳ Waiting 30s before next location search...")
                 time.sleep(30)
@@ -21052,25 +21052,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 11:30 AM TODAY (reagendado após fix HTTP 401)
+    # Test search at 13:00 (reagendado após fix syntax error)
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=11, minute=30),
+        CronTrigger(hour=13, minute=0),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 11:30 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 13:00)", "main", "scheduler")
     
-    # Test report at 11:50 AM TODAY (reagendado após fix HTTP 401)
+    # Test report at 13:30 (reagendado após fix syntax error)
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=11, minute=50),
+        CronTrigger(hour=13, minute=30),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 11:50 AM)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 13:30)", "main", "scheduler")
     
     # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
     # Search at 12:05 PM
