@@ -20276,9 +20276,17 @@ def run_daily_report_search():
         
         import requests
         import time
+        import os
         
-        # URL do próprio servidor
-        base_url = "http://localhost:8000"  # Render usa porta 8000
+        # URL do próprio servidor (detecta Render ou local)
+        # Render define RENDER_EXTERNAL_HOSTNAME automaticamente
+        render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+        if render_host:
+            base_url = f"https://{render_host}"  # Render usa HTTPS
+        else:
+            base_url = "http://localhost:8000"  # Local development
+        
+        logging.info(f"🌐 Using base URL: {base_url}")
         
         # Loop para cada local
         for idx, location in enumerate(locations, 1):
@@ -20394,12 +20402,21 @@ def run_weekly_report_search():
         
         import requests
         import time
+        import os
         
         today = datetime.now()
         # PESQUISAR AMBOS OS LOCAIS
         locations = ["Aeroporto de Faro", "Albufeira"]
         days = 3  # Standard search
-        base_url = "http://localhost:8000"
+        
+        # URL do próprio servidor (detecta Render ou local)
+        render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+        if render_host:
+            base_url = f"https://{render_host}"  # Render usa HTTPS
+        else:
+            base_url = "http://localhost:8000"  # Local development
+        
+        logging.info(f"🌐 Using base URL for weekly: {base_url}")
         
         # Search for next 3 months × 2 locations
         for month_offset in range(1, 4):  # Month 1, 2, 3
