@@ -20592,10 +20592,10 @@ def generate_daily_report_html(search_data):
             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
                 <tr><td align="center">
                     <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
-                            <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
-                            <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
-                            <p style="margin: 5px 0 0 0; color: #475569; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
+                        <tr><td style="background: #009cb6; padding: 30px; text-align: center;">
+                            <img src="https://carrental-api-5f8q.onrender.com/logo_autoprudente.png" alt="Auto Prudente" style="height: 60px; margin-bottom: 15px;" />
+                            <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
+                            <p style="margin: 5px 0 0 0; color: #e0f7fa; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
                         </td></tr>
                         <tr><td style="padding: 40px; text-align: center;">
                             <div style="display: inline-block; padding: 20px; background: #fef3c7; border-left: 4px solid #f59e0b;">
@@ -20710,11 +20710,11 @@ def generate_daily_report_html(search_data):
             <tr><td align="center">
                 <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <!-- Header -->
-                    <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
-                        <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
-                        <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
-                        <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
-                        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; justify-content: center;">{icon_location} {search_data['location']} • {search_data['days']} dias</p>
+                    <tr><td style="background: #009cb6; padding: 30px; text-align: center;">
+                        <img src="https://carrental-api-5f8q.onrender.com/logo_autoprudente.png" alt="Auto Prudente" style="height: 60px; margin-bottom: 15px;" />
+                        <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
+                        <p style="margin: 8px 0 0 0; color: #e0f7fa; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
+                        <p style="margin: 5px 0 0 0; color: #ffffff; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; justify-content: center;">{icon_location} {search_data['location']} • {search_data['days']} dias</p>
                     </td></tr>
                     
                     <!-- Summary Stats -->
@@ -21724,15 +21724,25 @@ try:
     )
     log_to_db("INFO", "✅ Daily report 12:40 scheduler configured", "main", "scheduler")
     
-    # ⚡ TESTE às 17:00 - Email com pesquisas do dia
+    # ⚡ PESQUISA AUTOMÁTICA às 17:30
     scheduler.add_job(
-        send_automatic_daily_report,
-        CronTrigger(hour=17, minute=0),
-        id='test_17h00',
-        name='TEST Email 17:00',
+        run_daily_report_search,
+        CronTrigger(hour=17, minute=30),
+        id='search_17h30',
+        name='Pesquisa Automática 17:30',
         replace_existing=True
     )
-    log_to_db("INFO", "✅ TEST: Email agendado para 17:00", "main", "scheduler")
+    log_to_db("INFO", "✅ Pesquisa automática agendada para 17:30 (source=automated)", "main", "scheduler")
+    
+    # ⚡ EMAIL AUTOMÁTICO às 18:00 - Com pesquisas do dia
+    scheduler.add_job(
+        send_automatic_daily_report,
+        CronTrigger(hour=18, minute=0),
+        id='email_18h00',
+        name='Email Diário 18:00',
+        replace_existing=True
+    )
+    log_to_db("INFO", "✅ Email diário agendado para 18:00", "main", "scheduler")
     
     # Start scheduler
     scheduler.start()
