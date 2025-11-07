@@ -793,6 +793,7 @@ async def startup_event():
         # Migration: Add vehicle_damage_image column
         try:
             if USE_POSTGRES:
+                import psycopg2  # Import aqui para ter no contexto
                 conn = psycopg2.connect(DATABASE_URL)
                 try:
                     with conn.cursor() as cur:
@@ -21435,25 +21436,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 15:00
+    # Test search at 15:45
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=15, minute=0),
+        CronTrigger(hour=15, minute=45),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 15:00)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 15:45)", "main", "scheduler")
     
-    # Test report at 15:20
+    # Test report at 16:15
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=15, minute=20),
+        CronTrigger(hour=16, minute=15),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 15:20)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 16:15)", "main", "scheduler")
     
     # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
     # Search at 12:05 PM
