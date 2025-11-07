@@ -20544,6 +20544,118 @@ def run_weekly_report_search():
     except Exception as e:
         logging.error(f"❌ Weekly report search preparation failed: {str(e)}")
 
+def save_automated_prices_from_searches():
+    """Save automated prices from recent automated searches to history"""
+    from datetime import datetime, timedelta
+    import json
+    
+    try:
+        logging.info("💾 Saving automated prices from searches...")
+        
+        # Get recent automated searches (last 24 hours)
+        cutoff = (datetime.now() - timedelta(days=1)).isoformat()
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Detect if PostgreSQL
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
+                
+                user_col = '"user"' if is_postgres else 'user'
+                placeholder = "%s" if is_postgres else "?"
+                
+                query = f"""
+                    SELECT location, start_date, days, results_data, timestamp
+                    FROM recent_searches
+                    WHERE source = {placeholder} AND timestamp > {placeholder}
+                    ORDER BY timestamp DESC
+                """
+                cursor = conn.execute(query, ('automated', cutoff))
+                searches = cursor.fetchall()
+                
+                if not searches:
+                    logging.info("ℹ️ No automated searches found to process")
+                    return
+                
+                logging.info(f"📊 Processing {len(searches)} automated searches")
+                
+                # Process each search
+                entries_saved = 0
+                for search in searches:
+                    location, start_date, days, results_json, timestamp = search
+                    
+                    try:
+                        results = json.loads(results_json) if results_json else []
+                    except:
+                        continue
+                    
+                    if not results:
+                        continue
+                    
+                    # Group cars by ACRISS group
+                    groups = {}
+                    for car in results:
+                        grupo = car.get('grupo', car.get('group', 'Unknown'))
+                        price_str = str(car.get('price', '0'))
+                        
+                        # Extract numeric price
+                        try:
+                            price = float(price_str.replace('€', '').replace(',', '.').strip())
+                        except:
+                            continue
+                        
+                        if grupo not in groups:
+                            groups[grupo] = []
+                        groups[grupo].append(price)
+                    
+                    # Save cheapest price per group
+                    for grupo, prices in groups.items():
+                        if not prices:
+                            continue
+                        
+                        cheapest = min(prices)
+                        
+                        # Insert into automated_prices_history
+                        placeholders_insert = ", ".join([placeholder] * 11)
+                        insert_query = f"""
+                            INSERT INTO automated_prices_history
+                            (location, grupo, dias, pickup_date, auto_price, real_price,
+                             strategy_used, strategy_details, min_price_applied, created_by, source)
+                            VALUES ({placeholders_insert})
+                        """
+                        conn.execute(
+                            insert_query,
+                            (
+                                location,
+                                grupo,
+                                days,
+                                start_date,
+                                cheapest,  # auto_price = real_price (no markup)
+                                cheapest,  # real_price
+                                'automated_search',
+                                json.dumps({'search_timestamp': timestamp}),
+                                cheapest,  # min_price_applied
+                                'system',
+                                'automated'
+                            )
+                        )
+                        entries_saved += 1
+                
+                conn.commit()
+                logging.info(f"✅ Saved {entries_saved} automated price entries")
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error saving automated prices: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+
 def send_automatic_daily_report():
     """Send daily report automatically based on saved settings"""
     from datetime import datetime, timedelta
@@ -20642,6 +20754,12 @@ def send_automatic_daily_report():
                 logging.error(f"❌ Failed to send daily report to {recipient}: {str(e)}")
         
         logging.info(f"🎉 Daily report completed: {sent_count}/{len(recipients)} sent successfully")
+        
+        # Save automated prices from recent searches
+        try:
+            save_automated_prices_from_searches()
+        except Exception as e:
+            logging.error(f"⚠️ Failed to save automated prices: {str(e)}")
         
     except Exception as e:
         logging.error(f"❌ Automatic daily report failed: {str(e)}")
