@@ -17763,7 +17763,41 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ automated_prices_history table: {e}")
                     
-                    # 7b. Ensure automated_prices_history has 'source' column
+                    # 7b. Ensure automated_prices_history has 'pickup_date' column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_prices_history' AND column_name='pickup_date'
+                                ) THEN
+                                    ALTER TABLE automated_prices_history ADD COLUMN pickup_date TEXT;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_prices_history.pickup_date column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history.pickup_date: {e}")
+                    
+                    # 7c. Ensure automated_prices_history has 'created_at' column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_prices_history' AND column_name='created_at'
+                                ) THEN
+                                    ALTER TABLE automated_prices_history ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_prices_history.created_at column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history.created_at: {e}")
+                    
+                    # 7d. Ensure automated_prices_history has 'source' column
                     try:
                         conn.execute("""
                             DO $$ 
@@ -17780,7 +17814,7 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ automated_prices_history.source: {e}")
                     
-                    # 7c. Create index for automated_prices_history
+                    # 7e. Create index for automated_prices_history
                     try:
                         conn.execute("""
                             CREATE INDEX IF NOT EXISTS idx_auto_prices_history 
