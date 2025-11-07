@@ -17400,9 +17400,16 @@ async def save_recent_searches(request: Request):
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
                             "user" TEXT,
+                            source TEXT DEFAULT 'manual',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    # Add source column if it doesn't exist (migration)
+                    try:
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.commit()
+                    except:
+                        pass  # Column already exists
                 else:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS recent_searches (
@@ -17413,9 +17420,16 @@ async def save_recent_searches(request: Request):
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
                             user TEXT,
+                            source TEXT DEFAULT 'manual',
                             created_at TEXT DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    # Add source column if it doesn't exist (migration)
+                    try:
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.commit()
+                    except:
+                        pass  # Column already exists
                 
                 # Clear old searches for this user (keep max 3)
                 placeholder = "%s" if is_postgres else "?"
@@ -17426,12 +17440,13 @@ async def save_recent_searches(request: Request):
                 for idx, search in enumerate(searches[:3]):  # Max 3 searches
                     results = search.get('results', [])
                     results_json = json.dumps(results)
+                    source = search.get('source', 'manual')  # 'manual' or 'automated'
                     
-                    logging.info(f"[RECENT-SEARCHES] Search {idx+1}: {search.get('location')} - {len(results)} cars - {len(results_json)} bytes")
+                    logging.info(f"[RECENT-SEARCHES] Search {idx+1}: {search.get('location')} - {len(results)} cars - {len(results_json)} bytes - source: {source}")
                     
-                    placeholders_str = ', '.join([placeholder] * 6)
+                    placeholders_str = ', '.join([placeholder] * 7)
                     conn.execute(f"""
-                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, {user_col})
+                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, {user_col}, source)
                         VALUES ({placeholders_str})
                     """, (
                         search.get('location'),
@@ -17439,7 +17454,8 @@ async def save_recent_searches(request: Request):
                         search.get('days'),
                         results_json,  # JSON completo com todos os dados
                         search.get('timestamp'),
-                        username
+                        username,
+                        source
                     ))
                 
                 conn.commit()
@@ -17483,7 +17499,7 @@ async def load_recent_searches(request: Request):
                 user_col = '"user"' if is_postgres else 'user'
                 
                 cursor = conn.execute(f"""
-                    SELECT location, start_date, days, results_data, timestamp
+                    SELECT location, start_date, days, results_data, timestamp, source
                     FROM recent_searches
                     WHERE {user_col} = {placeholder}
                     ORDER BY created_at DESC
@@ -17499,7 +17515,8 @@ async def load_recent_searches(request: Request):
                         'startDate': row[1],
                         'days': row[2],
                         'results': json.loads(row[3]) if row[3] else [],
-                        'timestamp': row[4]
+                        'timestamp': row[4],
+                        'source': row[5] if len(row) > 5 else 'manual'  # Backward compatibility
                     })
                 
                 return _no_store_json({"ok": True, "searches": searches})
@@ -20358,16 +20375,16 @@ def run_daily_report_search():
                                         
                                         if is_postgres:
                                             conn.execute(
-                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user") VALUES (%s, %s, %s, %s, %s, %s)',
-                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                             )
                                         else:
                                             conn.execute(
-                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user) VALUES (?, ?, ?, ?, ?, ?)',
-                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                             )
                                         conn.commit()
-                                        logging.info(f"✅ Saved to recent_searches: {location} ({days}d)")
+                                        logging.info(f"✅ Saved to recent_searches: {location} ({days}d) [AUTOMATED]")
                                     finally:
                                         conn.close()
                     except Exception as e:
@@ -20478,16 +20495,16 @@ def run_weekly_report_search():
                                             
                                             if is_postgres:
                                                 conn.execute(
-                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user") VALUES (%s, %s, %s, %s, %s, %s)',
-                                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                                 )
                                             else:
                                                 conn.execute(
-                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user) VALUES (?, ?, ?, ?, ?, ?)',
-                                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                                 )
                                             conn.commit()
-                                            logging.info(f"✅ Saved to recent_searches: Weekly M{month_offset} {location} ({days}d)")
+                                            logging.info(f"✅ Saved to recent_searches: Weekly M{month_offset} {location} ({days}d) [AUTOMATED]")
                                         finally:
                                             conn.close()
                         except Exception as e:

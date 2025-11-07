@@ -2880,11 +2880,11 @@
         }
       }
       
-      // PREVIEW REMOVIDO - Variáveis globais desativadas
-      // let compareMode = false;
-      // let selectedForCompare = [];
-      // let currentFilter = 'all';
-      // let currentSort = 'date';
+      // Variáveis globais para controle de pesquisas recentes
+      let compareMode = false;
+      let selectedForCompare = [];
+      let currentFilter = 'all';
+      let currentSort = 'date';
       
       // Função auxiliar para obter imagem REAL do carro (do CarJet)
       function getCarImage(car) {
@@ -2899,9 +2899,8 @@
         return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"%3E%3Crect width="300" height="200" fill="%23f0f9fb"/%3E%3Cpath d="M100 90 L70 90 L70 75 C70 70 72 67 75 65 L95 65 L95 50 L205 50 L205 65 L225 65 C228 67 230 70 230 75 L230 90 L200 90" fill="%23009cb6" opacity="0.3"/%3E%3Ccircle cx="80" cy="90" r="8" fill="%23cbd5e1"/%3E%3Ccircle cx="220" cy="90" r="8" fill="%23cbd5e1"/%3E%3C/svg%3E';
       }
       
-      // PREVIEW REMOVIDO - Função desativada completamente
+      // Função para criar card de pesquisa recente
       function createSearchPreviewCard(search, index) {
-        return null; // DISABLED
         const card = document.createElement('div');
         card.className = 'bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-[#009cb6] hover:shadow-lg transition-all';
         card.dataset.searchIndex = index;
@@ -2945,6 +2944,7 @@
                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
               </svg>
               <span class="font-semibold text-sm text-gray-900">${search.location}</span>
+              ${search.source === 'automated' ? '<span class="px-2 py-0.5 bg-[#f4ad0f] text-white text-[10px] font-bold rounded uppercase">Auto</span>' : ''}
             </div>
             <div class="flex items-center gap-1 text-xs text-gray-500">
               <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -3152,9 +3152,8 @@
         return;
       }
       
-      // PREVIEW REMOVIDO - Função desativada
+      // Função para filtrar e ordenar pesquisas
       function getFilteredAndSortedSearches() {
-        return []; // DISABLED
         let searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         
         // Aplicar filtro
@@ -3242,9 +3241,8 @@
         }
       }
       
-      // PREVIEW REMOVIDO - Função desativada
+      // Função para mostrar comparação de pesquisas
       function showComparison() {
-        return; // DISABLED
         const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         const search1 = searches[selectedForCompare[0]];
         const search2 = searches[selectedForCompare[1]];
