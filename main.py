@@ -20315,7 +20315,7 @@ def run_daily_report_search():
         search_date = (today + timedelta(days=days_ahead)).strftime('%Y-%m-%d')
         
         # Pesquisar múltiplas durações
-        days_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28]
+        days_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14]  # Removido 22 e 28 (causam timeout)
         
         # PESQUISAR AMBOS OS LOCAIS
         locations = ["Aeroporto de Faro", "Albufeira"]
@@ -20444,7 +20444,7 @@ def run_weekly_report_search():
         # PESQUISAR AMBOS OS LOCAIS
         locations = ["Aeroporto de Faro", "Albufeira"]
         # Pesquisar múltiplas durações
-        days_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28]
+        days_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14]  # Removido 22 e 28 (causam timeout)
         
         # URL do próprio servidor (detecta Render ou local)
         render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -21061,25 +21061,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 12:50
+    # Test search at 13:30
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=12, minute=50),
+        CronTrigger(hour=13, minute=30),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 12:50)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 13:30)", "main", "scheduler")
     
-    # Test report at 13:25
+    # Test report at 14:00
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=13, minute=25),
+        CronTrigger(hour=14, minute=0),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 13:25)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 14:00)", "main", "scheduler")
     
     # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
     # Search at 12:05 PM
