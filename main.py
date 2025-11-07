@@ -14551,8 +14551,8 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         fields = {}
         
         # === 1. NÚMERO DO CONTRATO ===
-        # Padrão: XXXXX-XX (5 dígitos, hífen, 2 dígitos)
-        # Geralmente uma das primeiras linhas do documento
+        # Padrão: XXXXX-VV (5 dígitos, hífen, versão de 2 dígitos)
+        # Exemplo: 00000-09, 12345-01, etc.
         contract_match = re.search(r'\b(\d{5}-\d{2})\b', text)
         if contract_match:
             fields['contractNumber'] = contract_match.group(1)
@@ -14566,21 +14566,30 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             logging.info(f"   📧 Email: {fields['clientEmail']}")
         
         # === 3. TELEFONE ===
-        # Padrão: 9 dígitos (Portugal/Espanha)
-        # Procurar perto do email ou isolado
+        # Padrão: Com ou sem indicativo internacional
+        # Exemplos: +351 912345678, 912345678, +34 600123456
         phone_patterns = [
+            r'\+(\d{1,4})\s*(\d{9})',  # Com indicativo: +351 912345678
             r'(\d{9})\s+[A-Z0-9._%+-]+@',  # Antes do email
             r'(?<!\d)(\d{9})(?!\d)',  # 9 dígitos isolados
         ]
-        for pattern in phone_patterns:
+        for i, pattern in enumerate(phone_patterns):
             phone_match = re.search(pattern, text)
             if phone_match:
-                # Validar que não é NIF (geralmente começa com 1,2,3,5,6,8)
-                phone = phone_match.group(1)
-                if not (phone.startswith(('1', '2', '3', '5', '6', '8')) and len(phone) == 9):
-                    fields['clientPhone'] = phone
-                    logging.info(f"   📞 Telefone: {phone}")
+                if i == 0:  # Com indicativo
+                    country_code = phone_match.group(1)
+                    phone_number = phone_match.group(2)
+                    fields['clientPhone'] = f"+{country_code} {phone_number}"
+                    logging.info(f"   📞 Telefone: {fields['clientPhone']}")
                     break
+                else:
+                    # Sem indicativo
+                    phone = phone_match.group(1)
+                    # Validar que não é NIF (geralmente começa com 1,2,3,5,6,8)
+                    if not (phone.startswith(('1', '2', '3', '5', '6', '8')) and len(phone) == 9):
+                        fields['clientPhone'] = phone
+                        logging.info(f"   📞 Telefone: {phone}")
+                        break
         
         # === 4. NOME DO CLIENTE ===
         # Estratégia: linha APÓS o contrato e ANTES do país
@@ -14600,21 +14609,63 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         
         # === 5. PAÍS ===
         # Código de 2 letras isolado (DE, PT, ES, FR, etc.)
+        # Lista expandida de códigos ISO 3166-1 alpha-2
         country_match = re.search(r'\b([A-Z]{2})\b', text)
         if country_match:
             country_code = country_match.group(1)
-            # Validar que é código de país conhecido
-            known_countries = ['PT', 'ES', 'FR', 'DE', 'IT', 'UK', 'US', 'NL', 'BE', 'CH', 'AT', 'IE', 'PL']
+            # Validar que é código de país conhecido (ISO 3166-1 alpha-2)
+            known_countries = [
+                # Europa
+                'PT', 'ES', 'FR', 'DE', 'IT', 'UK', 'GB', 'NL', 'BE', 'CH', 'AT', 'IE', 'PL',
+                'SE', 'NO', 'DK', 'FI', 'GR', 'CZ', 'HU', 'RO', 'BG', 'SK', 'HR', 'SI', 'LT',
+                'LV', 'EE', 'LU', 'MT', 'CY', 'IS', 'LI', 'MC', 'AD', 'SM', 'VA',
+                # América
+                'US', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'VE', 'EC', 'UY', 'PY', 'BO',
+                # Ásia
+                'CN', 'JP', 'IN', 'KR', 'TH', 'MY', 'SG', 'ID', 'PH', 'VN', 'TR', 'IL', 'AE',
+                'SA', 'QA', 'KW', 'BH', 'OM', 'JO', 'LB',
+                # Oceania
+                'AU', 'NZ',
+                # África
+                'ZA', 'EG', 'MA', 'TN', 'DZ', 'NG', 'KE', 'GH',
+            ]
             if country_code in known_countries:
                 fields['country'] = country_code
                 logging.info(f"   🌍 País: {country_code}")
         
         # === 6. CÓDIGO POSTAL E CIDADE ===
-        # Detectar por padrões de código postal
+        # Detectar por padrões de código postal MUNDIAL
         postal_patterns = [
-            (r'\b(\d{4}-\d{3})\b', 'PORTUGAL'),  # PT: 8000-000
-            (r'\b(\d{5})\b', 'SPAIN'),  # ES: 28001
-            (r'\b([A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2})\b', 'UK'),  # UK: SW1A 1AA
+            # Portugal: 8000-000, 1000-001
+            (r'\b(\d{4}-\d{3})\b', 'PORTUGAL'),
+            # Espanha: 28001, 08001
+            (r'\b([0-5]\d{4})\b', 'SPAIN'),
+            # Reino Unido: SW1A 1AA, M1 1AE, B33 8TH
+            (r'\b([A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2})\b', 'UK'),
+            # Estados Unidos: 12345, 12345-6789
+            (r'\b(\d{5}(?:-\d{4})?)\b', 'USA'),
+            # França: 75001, 13008
+            (r'\b([0-9]{5})\b', 'FRANCE'),
+            # Alemanha: 10115, 80331
+            (r'\b([0-9]{5})\b', 'GERMANY'),
+            # Itália: 00100, 20100
+            (r'\b([0-9]{5})\b', 'ITALY'),
+            # Holanda: 1012 AB, 1012AB
+            (r'\b(\d{4}\s?[A-Z]{2})\b', 'NETHERLANDS'),
+            # Bélgica: 1000, 2000
+            (r'\b([1-9]\d{3})\b', 'BELGIUM'),
+            # Suíça: 8001, 1200
+            (r'\b([1-9]\d{3})\b', 'SWITZERLAND'),
+            # Canadá: K1A 0B1, H2X 1Y7
+            (r'\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b', 'CANADA'),
+            # Irlanda: D02 AF30, A65 F4E2
+            (r'\b([A-Z]\d{2}\s?[A-Z0-9]{4})\b', 'IRELAND'),
+            # Polónia: 00-950, 31-002
+            (r'\b(\d{2}-\d{3})\b', 'POLAND'),
+            # Áustria: 1010, 5020
+            (r'\b([1-9]\d{3})\b', 'AUSTRIA'),
+            # Grécia: 104 32, 546 21
+            (r'\b(\d{3}\s?\d{2})\b', 'GREECE'),
         ]
         
         for pattern, country_hint in postal_patterns:
@@ -14678,6 +14729,7 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         
         # === 10. DATAS ===
         # Formato: DD-MM-YYYY ou DD/MM/YYYY
+        # IMPORTANTE: Data de levantamento SEMPRE antes da data de devolução
         from datetime import datetime
         current_year = datetime.now().year
         
@@ -14686,37 +14738,60 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             r'(\d{2}/\d{2}/\d{4})',
         ]
         
-        dates_found = []
+        dates_with_positions = []
         for pattern in date_patterns:
-            dates = re.findall(pattern, text)
-            for date_str in dates:
+            for match in re.finditer(pattern, text):
+                date_str = match.group(1)
                 # Normalizar
                 date_clean = re.sub(r'\s+', '', date_str).replace('/', '-')
-                # Validar ano (rental atual ±1 ano)
+                # Validar ano (rental atual ±2 anos)
                 try:
                     year = int(date_clean.split('-')[-1])
                     if current_year - 1 <= year <= current_year + 2:
-                        dates_found.append(date_clean)
+                        # Converter para datetime para comparar
+                        day, month, year = map(int, date_clean.split('-'))
+                        date_obj = datetime(year, month, day)
+                        dates_with_positions.append({
+                            'date': date_clean,
+                            'datetime': date_obj,
+                            'position': match.start()
+                        })
                 except:
                     pass
         
-        if len(dates_found) >= 2:
-            fields['pickupDate'] = dates_found[0]
-            fields['dropoffDate'] = dates_found[1]
-            logging.info(f"   📅 Data Levantamento: {dates_found[0]}")
-            logging.info(f"   📅 Data Devolução: {dates_found[1]}")
-        
-        # === 11. HORAS ===
-        # Formato: HH:MM
-        time_pattern = r'(\d{1,2}\s*:\s*\d{2})'
-        times = re.findall(time_pattern, text)
-        times_clean = [clean_time(t) for t in times]
-        
-        if len(times_clean) >= 2:
-            fields['pickupTime'] = times_clean[0]
-            fields['dropoffTime'] = times_clean[1]
-            logging.info(f"   🕐 Hora Levantamento: {times_clean[0]}")
-            logging.info(f"   🕐 Hora Devolução: {times_clean[1]}")
+        # Ordenar por data (mais antiga primeiro = pickup)
+        if len(dates_with_positions) >= 2:
+            dates_with_positions.sort(key=lambda x: x['datetime'])
+            fields['pickupDate'] = dates_with_positions[0]['date']
+            fields['dropoffDate'] = dates_with_positions[1]['date']
+            logging.info(f"   📅 Data Levantamento: {dates_with_positions[0]['date']}")
+            logging.info(f"   📅 Data Devolução: {dates_with_positions[1]['date']}")
+            
+            # === 11. HORAS ===
+            # IMPORTANTE: Hora ABAIXO da data correspondente
+            # Procurar primeira hora APÓS cada data no texto
+            
+            pickup_date_pos = dates_with_positions[0]['position']
+            dropoff_date_pos = dates_with_positions[1]['position']
+            
+            # Texto APÓS data de levantamento (até data de devolução)
+            text_after_pickup = text[pickup_date_pos:dropoff_date_pos]
+            time_pattern = r'(\d{1,2}\s*:\s*\d{2})'
+            
+            # Primeira hora após data de levantamento
+            pickup_time_match = re.search(time_pattern, text_after_pickup)
+            if pickup_time_match:
+                fields['pickupTime'] = clean_time(pickup_time_match.group(1))
+                logging.info(f"   🕐 Hora Levantamento: {fields['pickupTime']}")
+            
+            # Texto APÓS data de devolução
+            text_after_dropoff = text[dropoff_date_pos:]
+            
+            # Primeira hora após data de devolução
+            dropoff_time_match = re.search(time_pattern, text_after_dropoff)
+            if dropoff_time_match:
+                fields['dropoffTime'] = clean_time(dropoff_time_match.group(1))
+                logging.info(f"   🕐 Hora Devolução: {fields['dropoffTime']}")
         
         # === 12. LOCAIS DE LEVANTAMENTO E DEVOLUÇÃO ===
         # Procurar locais em MAIÚSCULAS antes das datas
