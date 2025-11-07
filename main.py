@@ -20623,6 +20623,8 @@ def run_daily_report_search():
                                         except:
                                             is_postgres = False
                                         
+                                        logging.info(f"[SAVE-DEBUG] Attempting to save: location={location}, days={days}, source=automated")
+                                        
                                         if is_postgres:
                                             conn.execute(
                                                 'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
@@ -20634,7 +20636,7 @@ def run_daily_report_search():
                                                 (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                             )
                                         conn.commit()
-                                        logging.info(f"✅ Saved to recent_searches: {location} ({days}d) [AUTOMATED]")
+                                        logging.info(f"✅ SAVED to recent_searches: {location} ({days}d) [AUTOMATED] - source column OK!")
                                     finally:
                                         conn.close()
                     except Exception as e:
@@ -20895,25 +20897,36 @@ def send_automatic_daily_report():
         with _db_lock:
             conn = _db_connect()
             try:
+                # DEBUG: Check if table exists
+                logging.info("[EMAIL-DEBUG] Checking price_automation_settings table...")
+                
                 cursor = conn.execute(
                     "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
                 )
                 row = cursor.fetchone()
+                
+                logging.info(f"[EMAIL-DEBUG] Query result: row={'EXISTS' if row else 'NULL'}, value={'EXISTS' if (row and row[0]) else 'EMPTY'}")
+                
                 if not row or not row[0]:
-                    logging.warning("⚠️ No automated reports settings found - skipping daily report")
+                    logging.warning("⚠️ No automated reports settings found in price_automation_settings")
+                    logging.warning("⚠️ User needs to configure reports at: /admin/customization/automated-reports")
                     return
                 
                 settings = json.loads(row[0])
+                logging.info(f"[EMAIL-DEBUG] Settings loaded: dailyEnabled={settings.get('dailyEnabled')}, recipients={len(settings.get('recipients', []))}")
+                
                 if not settings.get('dailyEnabled'):
                     logging.info("ℹ️ Daily reports are disabled - skipping")
                     return
                 
                 recipients = settings.get('recipients', [])
                 if not recipients:
-                    logging.warning("⚠️ No recipients configured - skipping daily report")
+                    logging.warning("⚠️ No recipients configured in settings")
+                    logging.warning("⚠️ Settings structure: " + str(list(settings.keys())))
+                    logging.warning("⚠️ Please configure at: /admin/customization/automated-reports")
                     return
                 
-                logging.info(f"📧 Sending daily report to {len(recipients)} recipient(s)")
+                logging.info(f"📧 Sending daily report to {len(recipients)} recipient(s): {recipients}")
             finally:
                 conn.close()
         
