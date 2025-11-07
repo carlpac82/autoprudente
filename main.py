@@ -20270,75 +20270,93 @@ def run_daily_report_search():
         days_ahead = random.randint(2, 4)  # Random 2-4 days
         search_date = (today + timedelta(days=days_ahead)).strftime('%Y-%m-%d')
         days = 3  # Standard search: 3 days
-        location = "Aeroporto de Faro"  # Default location
         
-        logging.info(f"📍 Automated daily search: {location} | Date: {search_date} (+{days_ahead} dias) | Duration: {days} dias")
+        # PESQUISAR AMBOS OS LOCAIS
+        locations = ["Aeroporto de Faro", "Albufeira"]
         
-        # Executar pesquisa via HTTP request interno
-        try:
-            import requests
+        import requests
+        import time
+        
+        # URL do próprio servidor
+        base_url = "http://localhost:8000"  # Render usa porta 8000
+        
+        # Loop para cada local
+        for idx, location in enumerate(locations, 1):
+            logging.info(f"📍 Automated daily search {idx}/{len(locations)}: {location} | Date: {search_date} (+{days_ahead} dias) | Duration: {days} dias")
             
-            # URL do próprio servidor
-            base_url = "http://localhost:8000"  # Render usa porta 8000
-            
-            logging.info(f"🔍 Executing automated search via internal API...")
-            
-            response = requests.post(
-                f"{base_url}/api/track-by-params",
-                json={
-                    "location": location,
-                    "start_date": search_date,
-                    "days": days,
-                    "lang": "pt",
-                    "currency": "EUR"
-                },
-                timeout=180,  # 3 minutos para scraping
-                headers={"X-Internal-Request": "scheduler"}
-            )
-            
-            if response.ok:
-                result = response.json()
-                if result.get('ok'):
-                    items = result.get('items', [])
-                    logging.info(f"✅ Automated daily search completed: {len(items)} cars found")
-                    
-                    # Salvar em recent_searches para aparecer na homepage
-                    with _db_lock:
-                        conn = _db_connect()
-                        try:
-                            results_json = json.dumps(items)
-                            is_postgres = hasattr(conn, 'cursor')
-                            
-                            if is_postgres:
-                                with conn.cursor() as cur:
-                                    cur.execute(
+            # Executar pesquisa via HTTP request interno
+            try:
+                logging.info(f"🔍 Executing automated search via internal API...")
+                
+                response = requests.post(
+                    f"{base_url}/api/track-by-params",
+                    json={
+                        "location": location,
+                        "start_date": search_date,
+                        "days": days,
+                        "lang": "pt",
+                        "currency": "EUR"
+                    },
+                    timeout=180,  # 3 minutos para scraping
+                    headers={"X-Internal-Request": "scheduler"}
+                )
+                
+                if response.ok:
+                    result = response.json()
+                    if result.get('ok'):
+                        items = result.get('items', [])
+                        logging.info(f"✅ Automated daily search completed: {len(items)} cars found")
+                        
+                        # Salvar em recent_searches para aparecer na homepage
+                        with _db_lock:
+                            conn = _db_connect()
+                            try:
+                                # Create JSON com results
+                                results_json = json.dumps({
+                                    "cars": items,
+                                    "searchParams": {
+                                        "location": location,
+                                        "start_date": search_date,
+                                        "days": days
+                                    }
+                                })
+                                
+                                # Save to recent_searches
+                                if hasattr(conn, 'cursor'):
+                                    # PostgreSQL
+                                    conn.execute(
                                         """
-                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
+                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
                                         VALUES (%s, %s, %s, %s, %s, %s)
                                         """,
                                         (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
                                     )
-                                conn.commit()
-                            else:
-                                conn.execute(
-                                    """
-                                    INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
-                                    VALUES (?, ?, ?, ?, ?, ?)
-                                    """,
-                                    (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                )
-                                conn.commit()
-                            
-                            logging.info(f"✅ Daily search saved to recent_searches (will appear in homepage)")
-                        finally:
-                            conn.close()
+                                else:
+                                    # SQLite
+                                    conn.execute(
+                                        """
+                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
+                                        VALUES (?, ?, ?, ?, ?, ?)
+                                        """,
+                                        (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                    )
+                                    conn.commit()
+                                
+                                logging.info(f"✅ Daily search saved to recent_searches (will appear in homepage)")
+                            finally:
+                                conn.close()
+                    else:
+                        logging.warning(f"⚠️ Daily automated search API returned error: {result.get('error')}")
                 else:
-                    logging.warning(f"⚠️ Daily automated search API returned error: {result.get('error')}")
-            else:
-                logging.error(f"❌ Daily automated search API failed: HTTP {response.status_code}")
-                
-        except Exception as search_error:
-            logging.error(f"❌ Failed to execute automated daily search: {str(search_error)}")
+                    logging.error(f"❌ Daily automated search API failed: HTTP {response.status_code}")
+                    
+            except Exception as search_error:
+                logging.error(f"❌ Failed to execute automated daily search for {location}: {str(search_error)}")
+            
+            # Delay entre pesquisas (evitar sobrecarga)
+            if idx < len(locations):
+                logging.info("⏳ Waiting 30s before next location search...")
+                time.sleep(30)
         
     except Exception as e:
         logging.error(f"❌ Daily report search preparation failed: {str(e)}")
@@ -20374,85 +20392,87 @@ def run_weekly_report_search():
             finally:
                 conn.close()
         
-        from datetime import datetime, timedelta
         import requests
+        import time
         
         today = datetime.now()
-        location = "Aeroporto de Faro"  # Default location
+        # PESQUISAR AMBOS OS LOCAIS
+        locations = ["Aeroporto de Faro", "Albufeira"]
         days = 3  # Standard search
         base_url = "http://localhost:8000"
         
-        # Search for next 3 months
+        # Search for next 3 months × 2 locations
         for month_offset in range(1, 4):  # Month 1, 2, 3
             search_date = (today + timedelta(days=30 * month_offset)).strftime('%Y-%m-%d')
-            logging.info(f"📍 Weekly search month {month_offset}: {location} | Date: {search_date} | Days: {days}")
             
-            # Executar pesquisa via HTTP request interno
-            try:
-                logging.info(f"🔍 Executing automated weekly search #{month_offset}...")
+            for loc_idx, location in enumerate(locations, 1):
+                logging.info(f"📍 Weekly search month {month_offset} - location {loc_idx}/{len(locations)}: {location} | Date: {search_date} | Days: {days}")
                 
-                response = requests.post(
-                    f"{base_url}/api/track-by-params",
-                    json={
-                        "location": location,
-                        "start_date": search_date,
-                        "days": days,
-                        "lang": "pt",
-                        "currency": "EUR"
-                    },
-                    timeout=180,
-                    headers={"X-Internal-Request": "scheduler-weekly"}
-                )
-                
-                if response.ok:
-                    result = response.json()
-                    if result.get('ok'):
-                        items = result.get('items', [])
-                        logging.info(f"✅ Weekly search #{month_offset} completed: {len(items)} cars")
-                        
-                        # Salvar em recent_searches
-                        with _db_lock:
-                            conn = _db_connect()
-                            try:
-                                results_json = json.dumps(items)
-                                is_postgres = hasattr(conn, 'cursor')
-                                
-                                if is_postgres:
-                                    with conn.cursor() as cur:
-                                        cur.execute(
+                # Executar pesquisa via HTTP request interno
+                try:
+                    logging.info(f"🔍 Executing automated weekly search #{month_offset} for {location}...")
+                    
+                    response = requests.post(
+                        f"{base_url}/api/track-by-params",
+                        json={
+                            "location": location,
+                            "start_date": search_date,
+                            "days": days,
+                            "lang": "pt",
+                            "currency": "EUR"
+                        },
+                        timeout=180,
+                        headers={"X-Internal-Request": "scheduler-weekly"}
+                    )
+                    
+                    if response.ok:
+                        result = response.json()
+                        if result.get('ok'):
+                            items = result.get('items', [])
+                            logging.info(f"✅ Weekly search #{month_offset} for {location} completed: {len(items)} cars")
+                            
+                            # Salvar em recent_searches
+                            with _db_lock:
+                                conn = _db_connect()
+                                try:
+                                    results_json = json.dumps(items)
+                                    is_postgres = hasattr(conn, 'cursor')
+                                    
+                                    if is_postgres:
+                                        with conn.cursor() as cur:
+                                            cur.execute(
+                                                """
+                                                INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
+                                                VALUES (%s, %s, %s, %s, %s, %s)
+                                                """,
+                                                (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
+                                            )
+                                        conn.commit()
+                                    else:
+                                        conn.execute(
                                             """
-                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user")
-                                            VALUES (%s, %s, %s, %s, %s, %s)
+                                            INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
+                                            VALUES (?, ?, ?, ?, ?, ?)
                                             """,
                                             (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
                                         )
-                                    conn.commit()
-                                else:
-                                    conn.execute(
-                                        """
-                                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user)
-                                        VALUES (?, ?, ?, ?, ?, ?)
-                                        """,
-                                        (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
-                                    )
-                                    conn.commit()
-                                
-                                logging.info(f"✅ Weekly search #{month_offset} saved to recent_searches")
-                            finally:
-                                conn.close()
+                                        conn.commit()
+                                    
+                                    logging.info(f"✅ Weekly search #{month_offset} for {location} saved to recent_searches")
+                                finally:
+                                    conn.close()
+                        else:
+                            logging.warning(f"⚠️ Weekly search #{month_offset} for {location} API error: {result.get('error')}")
                     else:
-                        logging.warning(f"⚠️ Weekly search #{month_offset} API error: {result.get('error')}")
-                else:
-                    logging.error(f"❌ Weekly search #{month_offset} failed: HTTP {response.status_code}")
-                    
-            except Exception as search_error:
-                logging.error(f"❌ Failed weekly search #{month_offset}: {str(search_error)}")
-            
-            # Aguardar 30s entre pesquisas para evitar detecção
-            if month_offset < 3:
-                logging.info("⏳ Waiting 30s before next search...")
-                import time
-                time.sleep(30)
+                        logging.error(f"❌ Weekly search #{month_offset} for {location} failed: HTTP {response.status_code}")
+                        
+                except Exception as search_error:
+                    logging.error(f"❌ Failed weekly search #{month_offset} for {location}: {str(search_error)}")
+                
+                # Delay entre locations (exceto após o último local do último mês)
+                if loc_idx < len(locations) or month_offset < 3:
+                    logging.info("⏳ Waiting 30s before next search...")
+                    time.sleep(30)
         
     except Exception as e:
         logging.error(f"❌ Weekly report search preparation failed: {str(e)}")
