@@ -17474,7 +17474,11 @@ async def load_recent_searches(request: Request):
             conn = _db_connect()
             try:
                 # PostgreSQL compatibility
-                is_postgres = hasattr(conn, 'cursor')
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
                 placeholder = "%s" if is_postgres else "?"
                 user_col = '"user"' if is_postgres else 'user'
                 
@@ -20343,14 +20347,8 @@ def run_daily_report_search():
                                 with _db_lock:
                                     conn = _db_connect()
                                     try:
-                                        results_json = json.dumps({
-                                            "cars": items,
-                                            "searchParams": {
-                                                "location": location,
-                                                "start_date": search_date,
-                                                "days": days
-                                            }
-                                        })
+                                        # Save items array directly (not nested in "cars" object)
+                                        results_json = json.dumps(items)
                                         
                                         try:
                                             import psycopg2
@@ -20369,6 +20367,7 @@ def run_daily_report_search():
                                                 (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
                                             )
                                         conn.commit()
+                                        logging.info(f"✅ Saved to recent_searches: {location} ({days}d)")
                                     finally:
                                         conn.close()
                     except Exception as e:
@@ -20488,6 +20487,7 @@ def run_weekly_report_search():
                                                     (location, search_date, days, results_json, datetime.now().isoformat(), 'admin')
                                                 )
                                             conn.commit()
+                                            logging.info(f"✅ Saved to recent_searches: Weekly M{month_offset} {location} ({days}d)")
                                         finally:
                                             conn.close()
                         except Exception as e:
@@ -21037,25 +21037,25 @@ try:
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
     # === TESTE HOJE ===
-    # Test search at 12:20
+    # Test search at 12:50
     scheduler.add_job(
         run_daily_report_search,
-        CronTrigger(hour=12, minute=20),
+        CronTrigger(hour=12, minute=50),
         id='test_daily_search',
         name='TEST Daily Report Search',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 12:20)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 12:50)", "main", "scheduler")
     
-    # Test report at 12:50
+    # Test report at 13:25
     scheduler.add_job(
         send_automatic_daily_report,
-        CronTrigger(hour=12, minute=50),
+        CronTrigger(hour=13, minute=25),
         id='test_daily_report',
         name='TEST Daily Report',
         replace_existing=True
     )
-    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 12:50)", "main", "scheduler")
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 13:25)", "main", "scheduler")
     
     # === PESQUISAS E RELATÓRIOS ADICIONAIS ===
     # Search at 12:05 PM
