@@ -17061,7 +17061,11 @@ async def get_active_rental_agreement_template(request: Request):
                 pdf_data = row[0]
                 filename = row[1] if row[1] else 'rental_agreement_template.pdf'
                 
-                logging.info(f"📄 Serving RA template from DB: {filename}")
+                # PostgreSQL retorna BYTEA como memoryview - converter para bytes
+                if isinstance(pdf_data, memoryview):
+                    pdf_data = bytes(pdf_data)
+                
+                logging.info(f"📄 Serving RA template from DB: {filename} ({len(pdf_data)} bytes)")
                 return Response(
                     content=pdf_data,
                     media_type="application/pdf",
