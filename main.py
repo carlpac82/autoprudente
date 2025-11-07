@@ -14472,8 +14472,8 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             logging.warning(f"⚠️  Could not extract using mapped coordinates: {e}")
             # Continuar para método fallback (OCR/regex)
         
-        # MÉTODO 2: Extração por LINHA (mais confiável)
-        logging.info("📄 Using LINE-BASED extraction")
+        # MÉTODO 2: Extração INTELIGENTE por PADRÕES (robusta para tamanhos variáveis)
+        logging.info("📄 Using PATTERN-BASED intelligent extraction")
         reader = PyPDF2.PdfReader(pdf_file)
         
         # Extrair todo o texto
@@ -14481,22 +14481,14 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         for page in reader.pages:
             text += page.extract_text()
         
-        # Dividir em linhas
+        # Dividir em linhas para análise contextual
         lines = text.split('\n')
-        
-        def get_line(line_num):
-            """Pega linha pelo número (1-indexed)"""
-            if 1 <= line_num <= len(lines):
-                return lines[line_num - 1].strip()
-            return ""
         
         def clean_spaces(text):
             """Remove espaços extras entre caracteres"""
             # Remove espaços entre letras/números individuais
             # Ex: "3 0 - X Q - 9 7" → "30-XQ-97"
-            import re
-            # Remove espaços entre caracteres individuais
-            cleaned = re.sub(r'(?<=\S)\s+(?=\S)', '', text)
+            cleaned = re.sub(r'(\w)\s+(?=\w)', r'\1', text)
             # Remove espaços ao redor de hífens
             cleaned = re.sub(r'\s*-\s*', '-', cleaned)
             return cleaned
@@ -14558,107 +14550,198 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         
         fields = {}
         
-        # LINHA 4: Número do Contrato
-        contract_line = get_line(4)
-        if contract_line:
-            fields['contractNumber'] = contract_line
-            logging.info(f"   📝 Linha 4 (Contrato): {contract_line}")
+        # === 1. NÚMERO DO CONTRATO ===
+        # Padrão: XXXXX-XX (5 dígitos, hífen, 2 dígitos)
+        # Geralmente uma das primeiras linhas do documento
+        contract_match = re.search(r'\b(\d{5}-\d{2})\b', text)
+        if contract_match:
+            fields['contractNumber'] = contract_match.group(1)
+            logging.info(f"   📝 Contrato: {fields['contractNumber']}")
         
-        # LINHA 5: Nome do Cliente
-        name_line = get_line(5)
-        if name_line:
-            fields['clientName'] = name_line
-            logging.info(f"   👤 Linha 5 (Nome): {name_line}")
+        # === 2. EMAIL ===
+        # Padrão universal de email
+        email_match = re.search(r'\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b', text, re.IGNORECASE)
+        if email_match:
+            fields['clientEmail'] = email_match.group(1).lower()
+            logging.info(f"   📧 Email: {fields['clientEmail']}")
         
-        # LINHA 6: País (apenas iniciais)
-        country_line = get_line(6)
-        if country_line:
-            country_code = extract_country_code(country_line)
-            fields['country'] = country_code
-            logging.info(f"   🌍 Linha 6 (País): {country_code}")
+        # === 3. TELEFONE ===
+        # Padrão: 9 dígitos (Portugal/Espanha)
+        # Procurar perto do email ou isolado
+        phone_patterns = [
+            r'(\d{9})\s+[A-Z0-9._%+-]+@',  # Antes do email
+            r'(?<!\d)(\d{9})(?!\d)',  # 9 dígitos isolados
+        ]
+        for pattern in phone_patterns:
+            phone_match = re.search(pattern, text)
+            if phone_match:
+                # Validar que não é NIF (geralmente começa com 1,2,3,5,6,8)
+                phone = phone_match.group(1)
+                if not (phone.startswith(('1', '2', '3', '5', '6', '8')) and len(phone) == 9):
+                    fields['clientPhone'] = phone
+                    logging.info(f"   📞 Telefone: {phone}")
+                    break
         
-        # LINHA 11: Morada
-        address_line = get_line(11)
-        if address_line:
-            fields['address'] = address_line
-            logging.info(f"   🏠 Linha 11 (Morada): {address_line}")
+        # === 4. NOME DO CLIENTE ===
+        # Estratégia: linha APÓS o contrato e ANTES do país
+        # Geralmente é uma linha com APENAS LETRAS MAIÚSCULAS
+        if contract_match:
+            contract_pos = text.find(contract_match.group(1))
+            text_after_contract = text[contract_pos + len(contract_match.group(1)):]
+            
+            # Procurar primeira linha que seja APENAS letras maiúsculas e espaços (2-50 chars)
+            name_match = re.search(r'\n\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{3,50}?)\s*\n', text_after_contract)
+            if name_match:
+                name = name_match.group(1).strip()
+                # Validar que não tem números
+                if not re.search(r'\d', name) and len(name.split()) >= 2:
+                    fields['clientName'] = name
+                    logging.info(f"   👤 Nome: {name}")
         
-        # LINHA 12: Código Postal e Cidade (mesma linha)
-        postal_city_line = get_line(12)
-        if postal_city_line:
-            postal_code, city = split_postal_city(postal_city_line)
-            if postal_code:
+        # === 5. PAÍS ===
+        # Código de 2 letras isolado (DE, PT, ES, FR, etc.)
+        country_match = re.search(r'\b([A-Z]{2})\b', text)
+        if country_match:
+            country_code = country_match.group(1)
+            # Validar que é código de país conhecido
+            known_countries = ['PT', 'ES', 'FR', 'DE', 'IT', 'UK', 'US', 'NL', 'BE', 'CH', 'AT', 'IE', 'PL']
+            if country_code in known_countries:
+                fields['country'] = country_code
+                logging.info(f"   🌍 País: {country_code}")
+        
+        # === 6. CÓDIGO POSTAL E CIDADE ===
+        # Detectar por padrões de código postal
+        postal_patterns = [
+            (r'\b(\d{4}-\d{3})\b', 'PORTUGAL'),  # PT: 8000-000
+            (r'\b(\d{5})\b', 'SPAIN'),  # ES: 28001
+            (r'\b([A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2})\b', 'UK'),  # UK: SW1A 1AA
+        ]
+        
+        for pattern, country_hint in postal_patterns:
+            postal_match = re.search(pattern, text)
+            if postal_match:
+                postal_code = postal_match.group(1)
                 fields['postalCode'] = postal_code
-                logging.info(f"   📮 Linha 12 (Código Postal): {postal_code}")
-            if city:
-                fields['city'] = city
-                logging.info(f"   🏙️  Linha 12 (Cidade): {city}")
+                logging.info(f"   📮 Código Postal: {postal_code}")
+                
+                # Procurar cidade ANTES do código postal (mesma linha ou linha anterior)
+                city_match = re.search(r'([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-z\s]{2,30}?)\s+' + re.escape(postal_code), text, re.IGNORECASE)
+                if city_match:
+                    city = city_match.group(1).strip()
+                    fields['city'] = city
+                    logging.info(f"   🏙️  Cidade: {city}")
+                
+                # Se não encontrou país ainda, usar hint
+                if not fields.get('country'):
+                    fields['country'] = country_hint
+                break
         
-        # LINHA 14: Email e Telefone (mesma linha)
-        email_phone_line = get_line(14)
-        if email_phone_line:
-            email, phone = extract_email_phone(email_phone_line)
-            if email:
-                fields['clientEmail'] = email
-                logging.info(f"   📧 Linha 14 (Email): {email}")
-            if phone:
-                fields['clientPhone'] = phone
-                logging.info(f"   📞 Linha 14 (Telefone): {phone}")
+        # === 7. MORADA ===
+        # Procurar por palavras-chave ou linha antes do código postal
+        address_keywords = ['RUA', 'AVENIDA', 'TRAVESSA', 'LARGO', 'PRAÇA', 'URBANIZAÇÃO', 'ESTRADA']
+        for keyword in address_keywords:
+            address_match = re.search(rf'\b({keyword}[^\n]+)', text, re.IGNORECASE)
+            if address_match:
+                fields['address'] = address_match.group(1).strip()
+                logging.info(f"   🏠 Morada: {fields['address']}")
+                break
         
-        # LINHA 23: Local de Levantamento
-        pickup_location_line = get_line(23)
-        if pickup_location_line:
-            fields['pickupLocation'] = pickup_location_line
-            logging.info(f"   📍 Linha 23 (Local Levantamento): {pickup_location_line}")
+        # === 8. MATRÍCULA ===
+        # Padrão português: XX-XX-XX (com ou sem espaços)
+        plate_patterns = [
+            r'([A-Z]{1,2}\s*-\s*\d{2}\s*-\s*[A-Z]{2})',  # Com espaços
+            r'([0-9]{2}\s*-\s*[A-Z]{2}\s*-\s*[0-9]{2})',  # Novo formato
+        ]
+        for pattern in plate_patterns:
+            plate_match = re.search(pattern, text)
+            if plate_match:
+                plate = clean_spaces(plate_match.group(1))
+                fields['vehiclePlate'] = plate
+                logging.info(f"   🚗 Matrícula: {plate}")
+                break
         
-        # LINHA 24: Data de Levantamento
-        pickup_date_line = get_line(24)
-        if pickup_date_line:
-            fields['pickupDate'] = pickup_date_line
-            logging.info(f"   📅 Linha 24 (Data Levantamento): {pickup_date_line}")
+        # === 9. MARCA E MODELO DO VEÍCULO ===
+        # Procurar marcas conhecidas seguidas de modelo
+        known_brands = ['PEUGEOT', 'RENAULT', 'CITROEN', 'VOLKSWAGEN', 'VW', 'FORD', 'OPEL',
+                       'SEAT', 'FIAT', 'TOYOTA', 'NISSAN', 'HYUNDAI', 'KIA', 'BMW', 'MERCEDES',
+                       'AUDI', 'SKODA', 'MAZDA', 'HONDA', 'SUZUKI', 'DACIA', 'VOLVO']
         
-        # LINHA 25: Hora de Levantamento + Local de Devolução
-        pickup_time_dropoff_loc_line = get_line(25)
-        if pickup_time_dropoff_loc_line:
-            pickup_time, dropoff_location = extract_time_location(pickup_time_dropoff_loc_line)
-            if pickup_time:
-                fields['pickupTime'] = pickup_time
-                logging.info(f"   🕐 Linha 25 (Hora Levantamento): {pickup_time}")
-            if dropoff_location:
-                fields['dropoffLocation'] = dropoff_location
-                logging.info(f"   📍 Linha 25 (Local Devolução): {dropoff_location}")
+        for brand in known_brands:
+            brand_pattern = rf'\b({brand})\s+([A-Z0-9\s.]+?)(?=\s*\n|$)'
+            brand_match = re.search(brand_pattern, text)
+            if brand_match:
+                fields['vehicleBrand'] = brand_match.group(1)
+                fields['vehicleModel'] = brand_match.group(2).strip()
+                logging.info(f"   🏭 Marca: {fields['vehicleBrand']}")
+                logging.info(f"   🚙 Modelo: {fields['vehicleModel']}")
+                break
         
-        # LINHA 26: Data de Devolução
-        dropoff_date_line = get_line(26)
-        if dropoff_date_line:
-            fields['dropoffDate'] = dropoff_date_line
-            logging.info(f"   📅 Linha 26 (Data Devolução): {dropoff_date_line}")
+        # === 10. DATAS ===
+        # Formato: DD-MM-YYYY ou DD/MM/YYYY
+        from datetime import datetime
+        current_year = datetime.now().year
         
-        # LINHA 27: Hora de Devolução (limpar números extras)
-        dropoff_time_line = get_line(27)
-        if dropoff_time_line:
-            dropoff_time = clean_time(dropoff_time_line)
-            fields['dropoffTime'] = dropoff_time
-            logging.info(f"   🕐 Linha 27 (Hora Devolução): {dropoff_time}")
+        date_patterns = [
+            r'(\d{2}\s*-\s*\d{2}\s*-\s*\d{4})',
+            r'(\d{2}/\d{2}/\d{4})',
+        ]
         
-        # LINHA 49: Matrícula (com espaços)
-        plate_line = get_line(49)
-        if plate_line:
-            # Remover espaços: "3 0 - X Q - 9 7" → "30-XQ-97"
-            plate_cleaned = clean_spaces(plate_line)
-            fields['vehiclePlate'] = plate_cleaned
-            logging.info(f"   🚗 Linha 49 (Matrícula): {plate_cleaned}")
+        dates_found = []
+        for pattern in date_patterns:
+            dates = re.findall(pattern, text)
+            for date_str in dates:
+                # Normalizar
+                date_clean = re.sub(r'\s+', '', date_str).replace('/', '-')
+                # Validar ano (rental atual ±1 ano)
+                try:
+                    year = int(date_clean.split('-')[-1])
+                    if current_year - 1 <= year <= current_year + 2:
+                        dates_found.append(date_clean)
+                except:
+                    pass
         
-        # LINHA 50: Marca e Modelo (mesma linha)
-        brand_model_line = get_line(50)
-        if brand_model_line:
-            brand, model = extract_brand_model(brand_model_line)
-            if brand:
-                fields['vehicleBrand'] = brand
-                logging.info(f"   🏭 Linha 50 (Marca): {brand}")
-            if model:
-                fields['vehicleModel'] = model
-                logging.info(f"   🚙 Linha 50 (Modelo): {model}")
+        if len(dates_found) >= 2:
+            fields['pickupDate'] = dates_found[0]
+            fields['dropoffDate'] = dates_found[1]
+            logging.info(f"   📅 Data Levantamento: {dates_found[0]}")
+            logging.info(f"   📅 Data Devolução: {dates_found[1]}")
+        
+        # === 11. HORAS ===
+        # Formato: HH:MM
+        time_pattern = r'(\d{1,2}\s*:\s*\d{2})'
+        times = re.findall(time_pattern, text)
+        times_clean = [clean_time(t) for t in times]
+        
+        if len(times_clean) >= 2:
+            fields['pickupTime'] = times_clean[0]
+            fields['dropoffTime'] = times_clean[1]
+            logging.info(f"   🕐 Hora Levantamento: {times_clean[0]}")
+            logging.info(f"   🕐 Hora Devolução: {times_clean[1]}")
+        
+        # === 12. LOCAIS DE LEVANTAMENTO E DEVOLUÇÃO ===
+        # Procurar locais em MAIÚSCULAS antes das datas
+        locations_found = []
+        for i, line in enumerate(lines):
+            # Se linha tem data, a linha anterior pode ser local
+            if re.search(r'\d{2}\s*-\s*\d{2}\s*-\s*\d{4}', line):
+                if i > 0:
+                    prev_line = lines[i-1].strip()
+                    # Remover horas do início
+                    prev_line = re.sub(r'^\d{1,2}\s*:\s*\d{2}\s*', '', prev_line)
+                    # Se é maiúsculas e tem tamanho razoável
+                    if prev_line.isupper() and 5 <= len(prev_line) <= 50:
+                        locations_found.append(prev_line)
+        
+        if len(locations_found) >= 2:
+            fields['pickupLocation'] = locations_found[0]
+            fields['dropoffLocation'] = locations_found[1]
+            logging.info(f"   📍 Local Levantamento: {locations_found[0]}")
+            logging.info(f"   📍 Local Devolução: {locations_found[1]}")
+        elif len(locations_found) == 1:
+            # Mesmo local
+            fields['pickupLocation'] = locations_found[0]
+            fields['dropoffLocation'] = locations_found[0]
+            logging.info(f"   📍 Local (ambos): {locations_found[0]}")
         
         # COMBINAR CAMPOS para Damage Report
         # Código Postal / Cidade
@@ -14674,11 +14757,11 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 fields['vehicleBrandModel'] = brand_model
         
         # Log para debug
-        logging.info(f"✅ === CAMPOS EXTRAÍDOS (LINE-BASED) ===")
+        logging.info(f"✅ === CAMPOS EXTRAÍDOS (PATTERN-BASED) ===")
         for key, value in fields.items():
             logging.info(f"   {key}: {value}")
         
-        return {"ok": True, "fields": fields, "method": "line_based"}
+        return {"ok": True, "fields": fields, "method": "pattern_based"}
         
     except Exception as e:
         logging.error(f"Error extracting RA fields: {e}")
