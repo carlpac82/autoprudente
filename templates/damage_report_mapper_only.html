@@ -504,10 +504,14 @@
                 height: boxH
             };
             
+            console.log('[MAPPER] Field mapped:', field.id);
             updateMappedList();
             currentFieldIndex++;
             updateCurrentField();
             redrawMappedBoxes();
+            
+            // AUTO-SAVE after mapping (silent)
+            autoSaveCoordinates();
         }
 
         function autoDetectVehicleDiagram() {
@@ -713,6 +717,26 @@
             }
         }
 
+        // AUTO-SAVE silencioso (sem notificação) - chamado após mapear cada campo
+        async function autoSaveCoordinates() {
+            try {
+                console.log('[MAPPER] Auto-saving coordinates silently...', Object.keys(fieldCoordinates).length, 'fields');
+                const response = await fetch('/api/damage-reports/save-coordinates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fieldCoordinates)
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    console.log('[MAPPER] Auto-save successful');
+                } else {
+                    console.warn('[MAPPER] Auto-save failed:', result.error);
+                }
+            } catch (error) {
+                console.error('[MAPPER] Auto-save error:', error);
+            }
+        }
+
         function skipCurrentField(e) {
             if (e) e.preventDefault();
             currentFieldIndex++;
@@ -850,6 +874,9 @@
                     showNotification(`${mappedCount} campos foram limpos`, 'warning');
                     console.log(`[MAPPER] Cleared all fields (${mappedCount} removed)`);
                     
+                    // AUTO-SAVE após limpar tudo (salva estado vazio)
+                    autoSaveCoordinates();
+                    
                     // Libera proteção após 2 segundos
                     setTimeout(() => {
                         clearAllFieldsInProgress = false;
@@ -920,6 +947,9 @@
                         redrawCanvas();
                         showCustomNotification(`Campo "${fieldName}" eliminado`, 'info');
                         console.log(`[MAPPER] Deleted field: ${fieldName}`);
+                        
+                        // AUTO-SAVE após deletar
+                        autoSaveCoordinates();
                     }
                 );
             }
