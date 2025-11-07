@@ -35,6 +35,7 @@ def fix_users_table():
                 conn.commit()
                 logging.info(f"✅ Added column: users.{col_name}")
             except Exception as e:
+                conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                 if "already exists" in str(e) or "duplicate column" in str(e).lower():
                     logging.info(f"⏭️  Column already exists: users.{col_name}")
                 else:
@@ -64,6 +65,7 @@ def fix_system_logs_table():
                 conn.commit()
                 logging.info(f"✅ Added column: system_logs.{col_name}")
             except Exception as e:
+                conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                 if "already exists" in str(e) or "duplicate column" in str(e).lower():
                     logging.info(f"⏭️  Column already exists: system_logs.{col_name}")
                 else:
