@@ -20645,7 +20645,7 @@ def generate_daily_report_html(search_data):
                 <tr><td align="center">
                     <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <tr><td style="background: #009cb6; padding: 30px; text-align: center;">
-                            <img src="https://carrental-api-5f8q.onrender.com/logo_autoprudente.png" alt="Auto Prudente" style="height: 60px; margin-bottom: 15px;" />
+                            <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 60px; margin-bottom: 15px;" />
                             <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 26px; font-weight: 600;">Relatório Diário de Preços</h1>
                             <p style="margin: 5px 0 0 0; color: #e0f7fa; font-size: 15px;">{datetime.now().strftime('%d de %B de %Y')}</p>
                         </td></tr>
@@ -21132,10 +21132,10 @@ def save_automated_prices_from_searches():
                         cheapest = min(prices)
                         
                         # Insert into automated_prices_history
-                        placeholders_insert = ", ".join([placeholder] * 11)
+                        placeholders_insert = ", ".join([placeholder] * 10)
                         insert_query = f"""
                             INSERT INTO automated_prices_history
-                            (location, grupo, dias, pickup_date, auto_price, real_price,
+                            (location, grupo, pickup_date, auto_price, real_price,
                              strategy_used, strategy_details, min_price_applied, created_by, source)
                             VALUES ({placeholders_insert})
                         """
@@ -21144,12 +21144,11 @@ def save_automated_prices_from_searches():
                             (
                                 location,
                                 grupo,
-                                days,
                                 start_date,
                                 cheapest,  # auto_price = real_price (no markup)
                                 cheapest,  # real_price
                                 'automated_search',
-                                json.dumps({'search_timestamp': timestamp}),
+                                json.dumps({'search_timestamp': timestamp, 'days': days}),
                                 cheapest,  # min_price_applied
                                 'system',
                                 'automated'
@@ -21486,7 +21485,7 @@ def generate_weekly_report_html(months_data):
                 <tr><td align="center">
                     <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
-                            <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
+                            <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
                             <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Semanal</h1>
                             <p style="margin: 5px 0 0 0; color: #475569; font-size: 15px;">Semana {datetime.now().strftime('%W/%Y')}</p>
                         </td></tr>
@@ -21574,7 +21573,7 @@ def generate_weekly_report_html(months_data):
                 <table width="700" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr><td style="background: #7ec6e0; padding: 30px; text-align: center;">
-                        <img src="https://carrental-api-latest.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
+                        <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" style="height: 40px; margin-bottom: 15px;" />
                         <h1 style="margin: 10px 0 0 0; color: #1e293b; font-size: 26px; font-weight: 600;">Relatório Semanal</h1>
                         <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px;">Semana {datetime.now().strftime('%W de %Y')}</p>
                         <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Próximos {len(months_data)} {('mês' if len(months_data) == 1 else 'meses')}</p>
