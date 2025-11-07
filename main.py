@@ -17148,9 +17148,23 @@ def _ensure_recent_searches_table():
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
                             "user" TEXT,
+                            source TEXT DEFAULT 'manual',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    
+                    # CRITICAL MIGRATION: Add source column if table already exists without it
+                    try:
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.commit()
+                        logging.info("✅ Added 'source' column to recent_searches (PostgreSQL)")
+                    except Exception as e:
+                        conn.rollback()  # MUST rollback on error
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                        else:
+                            logging.error(f"⚠️ Failed to add 'source' column: {e}")
                 else:
                     # SQLite syntax
                     conn.execute("""
@@ -17162,9 +17176,23 @@ def _ensure_recent_searches_table():
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
                             user TEXT,
+                            source TEXT DEFAULT 'manual',
                             created_at TEXT DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    
+                    # CRITICAL MIGRATION: Add source column if table already exists without it
+                    try:
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.commit()
+                        logging.info("✅ Added 'source' column to recent_searches (SQLite)")
+                    except Exception as e:
+                        conn.rollback()  # MUST rollback on error
+                        error_msg = str(e).lower()
+                        if 'duplicate column' in error_msg or 'already exists' in error_msg:
+                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                        else:
+                            logging.error(f"⚠️ Failed to add 'source' column: {e}")
                 
                 # Create index for faster queries
                 try:
