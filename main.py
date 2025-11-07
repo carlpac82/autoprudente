@@ -14356,6 +14356,15 @@ async def create_damage_report(request: Request):
                     # UPDATE - Atualizar DR existente
                     logging.info(f"🔄 Atualizando DR {existing_dr_number}")
                     
+                    # Processar imagem do veículo com danos
+                    vehicle_damage_image_blob = None
+                    if data.get('vehicleDamageImage'):
+                        import base64
+                        image_data = data.get('vehicleDamageImage')
+                        if image_data.startswith('data:image'):
+                            image_data = image_data.split(',')[1]
+                        vehicle_damage_image_blob = base64.b64decode(image_data)
+                    
                     update_values = (
                         data.get('ra_number'),
                         data.get('contractNumber'),
@@ -14386,6 +14395,7 @@ async def create_damage_report(request: Request):
                         data.get('damageDiagramData'),
                         data.get('repairItems'),
                         data.get('damageImages'),
+                        vehicle_damage_image_blob,
                         datetime.datetime.now().isoformat(),
                         existing_dr_number
                     )
@@ -14405,6 +14415,7 @@ async def create_damage_report(request: Request):
                                     inspection_type = %s, inspector_name = %s, mileage = %s, fuel_level = %s,
                                     damage_description = %s, observations = %s, damage_diagram_data = %s,
                                     repair_items = %s, damage_images = %s,
+                                    vehicle_damage_image = %s,
                                     updated_at = %s
                                 WHERE dr_number = %s
                             """, update_values)
@@ -14423,6 +14434,7 @@ async def create_damage_report(request: Request):
                                 inspection_type = ?, inspector_name = ?, mileage = ?, fuel_level = ?,
                                 damage_description = ?, observations = ?, damage_diagram_data = ?,
                                 repair_items = ?, damage_images = ?,
+                                vehicle_damage_image = ?,
                                 updated_at = ?
                             WHERE dr_number = ?
                         """, update_values)
@@ -14448,6 +14460,15 @@ async def create_damage_report(request: Request):
                     dr_number = f"DR{count:02d}/{year}"
                     
                     logging.info(f"✨ Criando novo DR {dr_number}")
+                    
+                    # Processar imagem do veículo com danos
+                    vehicle_damage_image_blob = None
+                    if data.get('vehicleDamageImage'):
+                        import base64
+                        image_data = data.get('vehicleDamageImage')
+                        if image_data.startswith('data:image'):
+                            image_data = image_data.split(',')[1]
+                        vehicle_damage_image_blob = base64.b64decode(image_data)
                     
                     insert_values = (
                         dr_number,
@@ -14480,6 +14501,7 @@ async def create_damage_report(request: Request):
                         data.get('damageDiagramData'),
                         data.get('repairItems'),
                         data.get('damageImages'),
+                        vehicle_damage_image_blob,
                         request.session.get('username', 'unknown')
                     )
                     
@@ -14498,8 +14520,9 @@ async def create_damage_report(request: Request):
                                     inspection_type, inspector_name, mileage, fuel_level,
                                     damage_description, observations, damage_diagram_data,
                                     repair_items, damage_images,
+                                    vehicle_damage_image,
                                     created_by
-                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """, insert_values)
                         conn.commit()
                     else:
@@ -14516,8 +14539,9 @@ async def create_damage_report(request: Request):
                                 inspection_type, inspector_name, mileage, fuel_level,
                                 damage_description, observations, damage_diagram_data,
                                 repair_items, damage_images,
+                                vehicle_damage_image,
                                 created_by
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, insert_values)
                         conn.commit()
                     
@@ -16314,6 +16338,43 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         
         p.setStrokeColor(colors.HexColor('#009cb6'))
         p.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
+        
+        # ============ IMAGEM DO VEÍCULO COM DANOS ============
+        vehicle_damage_image_blob = report.get('vehicle_damage_image')
+        if vehicle_damage_image_blob:
+            try:
+                from reportlab.lib.utils import ImageReader
+                
+                y -= 0.8*cm
+                p.setFont("Helvetica", 8)
+                p.setFillColor(colors.grey)
+                p.drawString(1.5*cm, y, "Diagrama do Veículo com Danos Marcados:")
+                
+                y -= 0.5*cm
+                
+                # Criar ImageReader do BLOB
+                img_buffer = BytesIO(vehicle_damage_image_blob)
+                img = ImageReader(img_buffer)
+                
+                # Tamanho da imagem (grande e centralizada)
+                img_width = 15*cm
+                img_height = 10*cm
+                img_x = (width - img_width) / 2  # Centralizar
+                
+                # Verificar se há espaço suficiente
+                if y - img_height < 3*cm:
+                    # Nova página
+                    p.showPage()
+                    y = height - 3*cm
+                
+                # Desenhar imagem
+                p.drawImage(img, img_x, y - img_height, width=img_width, height=img_height, preserveAspectRatio=True, mask='auto')
+                
+                y -= img_height + 0.5*cm
+                
+                logging.info(f"✅ Vehicle damage image inserted into PDF")
+            except Exception as e:
+                logging.error(f"⚠️ Error inserting vehicle damage image: {e}")
         
         # Descrição dos danos
         y -= 0.8*cm
