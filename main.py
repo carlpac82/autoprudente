@@ -20748,9 +20748,30 @@ try:
     )
     log_to_db("INFO", "✅ Weekly report scheduler configured (Monday at 9 AM)", "main", "scheduler")
     
+    # === TESTE HOJE ===
+    # Test search at 8:30 AM TODAY
+    scheduler.add_job(
+        run_daily_report_search,
+        CronTrigger(hour=8, minute=30),
+        id='test_daily_search',
+        name='TEST Daily Report Search',
+        replace_existing=True
+    )
+    log_to_db("INFO", "🧪 TEST Daily search scheduler configured (TODAY at 8:30 AM)", "main", "scheduler")
+    
+    # Test report at 9:00 AM TODAY
+    scheduler.add_job(
+        send_automatic_daily_report,
+        CronTrigger(hour=9, minute=0),
+        id='test_daily_report',
+        name='TEST Daily Report',
+        replace_existing=True
+    )
+    log_to_db("INFO", "🧪 TEST Daily report scheduler configured (TODAY at 9:00 AM)", "main", "scheduler")
+    
     # Start scheduler
     scheduler.start()
-    log_to_db("INFO", "🚀 Scheduler started successfully with 4 jobs (backup + search + daily report + weekly report)", "main", "scheduler")
+    log_to_db("INFO", "🚀 Scheduler started successfully with 6 jobs (backup + search + reports + 2 tests)", "main", "scheduler")
     
 except ImportError:
     log_to_db("WARNING", "APScheduler not installed - automatic backups and reports disabled", "main", "scheduler")
