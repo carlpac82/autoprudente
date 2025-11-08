@@ -127,5 +127,13 @@
     "width": 500,
     "height": 400,
     "comment": "Croqui do veículo - área grande central, ajustar posição exata"
+  },
+  "vehicleDiagram": {
+    "page": 1,
+    "x": 50,
+    "y": 280,
+    "width": 500,
+    "height": 400,
+    "comment": "Alias para vehicle_diagram (camelCase) - mesmas coordenadas"
   }
 }
