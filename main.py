@@ -17330,16 +17330,19 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
         import json
         
         # LOG: Dados recebidos
-        logging.info("🔍 PDF FILL - Report data keys:")
+        logging.info("="*80)
+        logging.info("🔍 PDF FILL - Report data received:")
         logging.info(f"   date: {report_data.get('date', 'MISSING')}")
         logging.info(f"   inspection_date: {report_data.get('inspection_date', 'MISSING')}")
         logging.info(f"   dr_number: {report_data.get('dr_number', 'MISSING')}")
         logging.info(f"   ra_number: {report_data.get('ra_number', 'MISSING')}")
         logging.info(f"   contract_number: {report_data.get('contract_number', 'MISSING')}")
+        logging.info(f"   vehicle_diagram: {'PRESENT (' + str(len(report_data.get('vehicle_diagram', ''))) + ' chars)' if report_data.get('vehicle_diagram') else 'MISSING'}")
         pins_check = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
         logging.info(f"   damage_pins/damageDiagramData: {'FOUND' if pins_check else 'MISSING'}")
         if pins_check:
             logging.info(f"      Pins data: {str(pins_check)[:200]}...")
+        logging.info("="*80)
         
         # 1. Carregar template ativo da BD
         with _db_lock:
@@ -17495,18 +17498,24 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         if 'damage_description' in field_id:
                             logging.info(f"   ✅ Alias usado: {field_id} → {alias_key} = '{value[:50]}...'")
                 
-                # Log detalhado para debugar campos
-                if 'diagram' in field_id.lower() or 'photo' in field_id.lower() or 'signature' in field_id.lower():
-                    logging.info(f"🔍 Campo: {field_id}")
+                # Log detalhado para campos importantes
+                is_important = any(keyword in field_id.lower() for keyword in ['diagram', 'photo', 'signature', 'dr_number', 'ra_number', 'date', 'quantity'])
+                if is_important:
+                    logging.info(f"🔍 Campo: {field_id} (page {coords['page']})")
                     logging.info(f"   Alias usado: {alias_used if alias_used else 'N/A'}")
-                    logging.info(f"   Tem valor? {bool(value)}")
-                    logging.info(f"   Tamanho: {len(value) if value else 0}")
-                    if not value:
+                    logging.info(f"   Tem valor? {bool(value)} | Tamanho: {len(str(value)) if value else 0}")
+                    if value:
+                        preview = str(value)[:80] if not isinstance(value, list) else f"[{len(value)} items]"
+                        logging.info(f"   Preview: {preview}")
+                    else:
                         # Verificar se existe em report_data com outro nome
-                        possible_keys = [k for k in report_data.keys() if 'diagram' in k.lower() or 'photo' in k.lower()]
-                        logging.info(f"   Chaves possíveis em report_data: {possible_keys}")
+                        if 'diagram' in field_id.lower():
+                            possible_keys = [k for k in report_data.keys() if 'diagram' in k.lower()]
+                            logging.info(f"   ⚠️ VAZIO! Chaves com 'diagram' em report_data: {possible_keys}")
                 
                 if not value:
+                    if is_important:
+                        logging.warning(f"⚠️ Skipping {field_id} - sem valor")
                     continue
                 
                 # Converter coordenadas (PDF usa origem no canto inferior esquerdo)
@@ -17856,7 +17865,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower:
                         text_y = _calculate_centered_y(y, height, style['size'])
                         can.drawRightString(x + width - 5, text_y, text_value[:50])
-                        logging.info(f"✅ RIGHT-ALIGNED: {field_id} = {text_value[:50]} at x={x + width - 5}")
+                        logging.info(f"✅✅✅ RIGHT-ALIGNED: {field_id} = '{text_value[:50]}' at x={x + width - 5}, y={text_y}, width={width}")
                     # Handle multiline text for textarea fields
                     elif 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text - CADA LINHA CENTRALIZADA VERTICALMENTE
@@ -18077,7 +18086,6 @@ async def preview_damage_report_pdf(request: Request):
             'total_repair_cost': body.get('totalCost', ''),
             'inspector_name': body.get('issuedBy', ''),  # ✅ Colaborador (frontend: issuedBy)
             'issued_by': body.get('issuedBy', ''),  # ✅ Alias alternativo
-            'inspection_date': body.get('inspectionDate', ''),
             # Campos avançados: imagens, tabelas, assinaturas
             'damage_description': body.get('damageDescription', ''),
             'vehicle_diagram': body.get('vehicleDiagram', ''),  # Croqui base64
