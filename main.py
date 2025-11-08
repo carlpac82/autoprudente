@@ -734,12 +734,12 @@ def _ensure_damage_reports_tables():
                         )
                     """)
                     
-                    # Inserir templates padrão (PT, EN, ES)
+                    # Inserir templates padrão (PT, EN, FR, DE)
                     cur.execute("""
                         INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
                         SELECT 'pt', 'Português',
-                            'Damage Report {drNumber} - {vehiclePlate}',
-                            E'Olá {firstName},\n\nSegue em anexo o Damage Report nº {drNumber} referente ao contrato {contractNumber}.\n\n**Detalhes:**\n- Matrícula: {vehiclePlate}\n- Data: {date}\n\nCumprimentos,\nAuto Prudente'
+                            'Relatório de Danos {drNumber} - {vehiclePlate}',
+                            E'Olá {firstName},\n\nSegue em anexo o Relatório de Danos nº {drNumber} referente ao contrato {contractNumber}.\n\n**Detalhes:**\n- Matrícula: {vehiclePlate}\n- Data: {date}\n\nCumprimentos,\nAuto Prudente'
                         WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'pt')
                     """)
                     
@@ -753,10 +753,18 @@ def _ensure_damage_reports_tables():
                     
                     cur.execute("""
                         INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
-                        SELECT 'es', 'Español',
-                            'Damage Report {drNumber} - {vehiclePlate}',
-                            E'Hola {firstName},\n\nAdjunto encontrará el Damage Report nº {drNumber} del contrato {contractNumber}.\n\n**Detalles:**\n- Matrícula: {vehiclePlate}\n- Fecha: {date}\n\nSaludos,\nAuto Prudente'
-                        WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'es')
+                        SELECT 'fr', 'Français',
+                            'Rapport de Dommages {drNumber} - {vehiclePlate}',
+                            E'Bonjour {firstName},\n\nVeuillez trouver ci-joint le Rapport de Dommages nº {drNumber} pour le contrat {contractNumber}.\n\n**Détails:**\n- Véhicule: {vehiclePlate}\n- Date: {date}\n\nCordialement,\nAuto Prudente'
+                        WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'fr')
+                    """)
+                    
+                    cur.execute("""
+                        INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
+                        SELECT 'de', 'Deutsch',
+                            'Schadensbericht {drNumber} - {vehiclePlate}',
+                            E'Hallo {firstName},\n\nAnbei finden Sie den Schadensbericht Nr. {drNumber} für Vertrag {contractNumber}.\n\n**Details:**\n- Fahrzeug: {vehiclePlate}\n- Datum: {date}\n\nMit freundlichen Grüßen,\nAuto Prudente'
+                        WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'de')
                     """)
                     
                     cur.execute("CREATE INDEX IF NOT EXISTS idx_dr_number ON damage_reports(dr_number)")
@@ -767,7 +775,7 @@ def _ensure_damage_reports_tables():
                     print("   ✅ damage_report_mapping_history", flush=True)
                     print("   ✅ damage_report_templates", flush=True)
                     print("   ✅ damage_report_numbering", flush=True)
-                    print("   ✅ dr_email_templates (3 languages)", flush=True)
+                    print("   ✅ dr_email_templates (PT, EN, FR, DE)", flush=True)
                     
                 conn.commit()
             finally:
@@ -15939,36 +15947,37 @@ def _ensure_damage_report_tables():
 def _detect_language_from_country(country_code):
     """
     Detect language based on country code (ISO 3166-1 alpha-2)
-    Returns: language_code (pt, en, es, de, fr, etc.)
+    Returns: language_code (pt, en, fr, de)
+    Fallback: English for all other countries
     """
     if not country_code:
         return 'pt'  # Default para Portugal
     
     country_code = country_code.upper().strip()
     
-    # Mapeamento país → idioma
+    # Mapeamento país → idioma (apenas PT, EN, FR, DE)
     language_map = {
         # Português
         'PT': 'pt', 'BR': 'pt', 'AO': 'pt', 'MZ': 'pt',
-        # Espanhol
-        'ES': 'es', 'AR': 'es', 'CL': 'es', 'CO': 'es', 'MX': 'es',
-        'PE': 'es', 'VE': 'es', 'EC': 'es', 'GT': 'es', 'CU': 'es',
-        'BO': 'es', 'DO': 'es', 'HN': 'es', 'PY': 'es', 'SV': 'es',
-        'NI': 'es', 'CR': 'es', 'PA': 'es', 'UY': 'es',
         # Alemão
         'DE': 'de', 'AT': 'de', 'CH': 'de', 'LU': 'de', 'LI': 'de',
         # Francês
-        'FR': 'fr', 'BE': 'fr', 'CA': 'fr', 'MC': 'fr', 'SN': 'fr',
-        # Italiano
-        'IT': 'it', 'SM': 'it', 'VA': 'it',
-        # Holandês
-        'NL': 'nl',
+        'FR': 'fr', 'BE': 'fr', 'MC': 'fr', 'SN': 'fr',
         # Inglês (resto do mundo)
         'GB': 'en', 'US': 'en', 'IE': 'en', 'AU': 'en', 'NZ': 'en',
         'CA': 'en', 'ZA': 'en', 'IN': 'en', 'SG': 'en',
+        # Espanhol → Inglês (sem template ES)
+        'ES': 'en', 'AR': 'en', 'CL': 'en', 'CO': 'en', 'MX': 'en',
+        'PE': 'en', 'VE': 'en', 'EC': 'en', 'GT': 'en', 'CU': 'en',
+        'BO': 'en', 'DO': 'en', 'HN': 'en', 'PY': 'en', 'SV': 'en',
+        'NI': 'en', 'CR': 'en', 'PA': 'en', 'UY': 'en',
+        # Italiano → Inglês (sem template IT)
+        'IT': 'en', 'SM': 'en', 'VA': 'en',
+        # Holandês → Inglês (sem template NL)
+        'NL': 'en',
     }
     
-    detected = language_map.get(country_code, 'en')  # Default inglês
+    detected = language_map.get(country_code, 'en')  # Default: Inglês para países não listados
     logging.info(f"🌍 Country '{country_code}' → Language '{detected}'")
     return detected
 
