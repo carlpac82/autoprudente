@@ -1885,27 +1885,48 @@
                 preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Capturando diagrama...</p>';
                 
                 // Capturar o diagrama da viatura com pins como imagem
+                console.log('🚗 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('🚗 TENTANDO CAPTURAR DIAGRAMA DO CARRO...');
                 const carDiagram = document.getElementById('carDiagram');
+                console.log('   carDiagram elemento:', carDiagram);
+                
                 if (carDiagram) {
                     try {
                         const img = carDiagram.querySelector('img');
+                        console.log('   img elemento:', img);
+                        console.log('   img.complete:', img?.complete);
+                        console.log('   img.src:', img?.src?.substring(0, 50) + '...');
                         
                         // Criar canvas manualmente (mais confiável que html2canvas)
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
+                        console.log('   Canvas criado:', canvas);
                         
                         // Esperar imagem carregar se necessário
                         if (img && !img.complete) {
+                            console.log('   ⏳ Aguardando imagem carregar...');
                             await new Promise((resolve, reject) => {
-                                img.onload = resolve;
-                                img.onerror = () => reject(new Error('Failed to load car diagram image'));
-                                setTimeout(() => reject(new Error('Timeout loading image')), 5000);
+                                img.onload = () => {
+                                    console.log('   ✅ Imagem carregada!');
+                                    resolve();
+                                };
+                                img.onerror = () => {
+                                    console.error('   ❌ Erro ao carregar imagem!');
+                                    reject(new Error('Failed to load car diagram image'));
+                                };
+                                setTimeout(() => {
+                                    console.error('   ❌ Timeout ao carregar imagem!');
+                                    reject(new Error('Timeout loading image'));
+                                }, 5000);
                             });
                         }
                         
                         if (!img || !img.complete) {
+                            console.error('   ❌ Imagem não está carregada!');
                             throw new Error('Car diagram image not loaded');
                         }
+                        
+                        console.log('   ✅ Imagem pronta para desenhar');
                         
                         // Definir tamanho do canvas baseado na imagem
                         canvas.width = img.naturalWidth || img.width || 1000;
@@ -1944,19 +1965,36 @@
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
+                        console.log('   📸 Canvas convertido para Base64');
+                        console.log('   Base64 length:', diagramBase64.length);
+                        console.log('   Base64 preview:', diagramBase64.substring(0, 100) + '...');
                         
                         // Validar
                         if (!diagramBase64 || diagramBase64 === 'data:,' || diagramBase64.length < 100) {
+                            console.error('   ❌ Canvas vazio ou inválido!');
+                            console.error('   diagramBase64:', diagramBase64);
                             throw new Error('Empty canvas generated');
                         }
                         
                         data.vehicleDiagram = diagramBase64;
-                        console.log('✅ Diagrama capturado:', diagramBase64.substring(0, 50) + '...', '| Pins:', pins.length, '| Size:', diagramBase64.length);
+                        console.log('   ✅ data.vehicleDiagram DEFINIDO!');
+                        console.log('   Pins desenhados:', pins.length);
+                        console.log('   Size total:', diagramBase64.length, 'chars');
+                        console.log('🚗 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                         
                     } catch (error) {
-                        console.error('❌ Erro ao capturar diagrama:', error);
+                        console.error('🚗 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.error('❌ ERRO AO CAPTURAR DIAGRAMA:', error);
+                        console.error('   Mensagem:', error.message);
+                        console.error('   Stack:', error.stack);
+                        console.error('🚗 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                         showNotification('Aviso: Não foi possível capturar o diagrama - ' + error.message, 'warning');
                     }
+                } else {
+                    console.error('🚗 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.error('❌ carDiagram elemento NÃO ENCONTRADO!');
+                    console.error('   Procurado: #carDiagram');
+                    console.error('🚗 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 }
                 
                 // Adicionar descrições de danos individuais
@@ -1996,6 +2034,16 @@
                     data.damageDiagramData = JSON.stringify(damages);
                     console.log('🔥 FALLBACK: Damage pins adicionado:', damages.length, 'pins');
                 }
+                
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('📤📤📤 DATA FINAL ANTES DE ENVIAR:');
+                console.log('   drNumber:', data.drNumber);
+                console.log('   contractNumber:', data.contractNumber);
+                console.log('   date:', data.date);
+                console.log('   vehicleDiagram:', data.vehicleDiagram ? `PRESENTE (${data.vehicleDiagram.length} chars)` : '❌ AUSENTE ❌');
+                console.log('   damageDiagramData (pins):', data.damageDiagramData ? `PRESENTE (${JSON.parse(data.damageDiagramData).length} pins)` : '❌ AUSENTE ❌');
+                console.log('   Total de campos:', Object.keys(data).length);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 
                 preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Gerando preview do PDF...</p>';
                 
