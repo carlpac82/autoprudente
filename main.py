@@ -464,6 +464,7 @@ from datetime import datetime, timezone, timedelta
 import traceback as _tb
 import logging
 import json
+import base64
 
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse, FileResponse
@@ -17006,11 +17007,12 @@ def _detect_field_type(field_id: str) -> str:
         return 'signature'
     elif 'photo' in field_id_lower or 'image' in field_id_lower or 'croqui' in field_id_lower or 'diagram' in field_id_lower:
         return 'image'
-    elif 'repair' in field_id_lower or 'table' in field_id_lower:
+    elif field_id_lower == 'repair_items' or field_id_lower == 'table_repair':
+        # Apenas repair_items (JSON array) é tabela - repair_line_X são campos individuais
         return 'table'
     elif 'images' in field_id_lower:
         return 'images'
-    elif any(word in field_id_lower for word in ['cost', 'price', 'total', 'subtotal']):
+    elif any(word in field_id_lower for word in ['cost', 'price', 'total', 'subtotal', 'hours']):
         return 'currency'
     elif 'date' in field_id_lower:
         return 'date'
@@ -17394,10 +17396,15 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     can.setFont(font_name, style['size'])
                     can.setFillColorRGB(*style['color'])
                     
+                    # Convert to uppercase (except for notes/observations fields)
+                    text_value = str(value)
+                    if 'notes' not in field_id and 'observation' not in field_id:
+                        text_value = text_value.upper()
+                    
                     # Handle multiline text for textarea fields
                     if 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text
-                        lines = str(value).split('\n')
+                        lines = text_value.split('\n')
                         line_height = style['size'] + 2  # Dynamic line height based on font size
                         current_y = y + height - line_height
                         
@@ -17408,7 +17415,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     else:
                         # Single line text - centralizado verticalmente
                         text_y = _calculate_centered_y(y, height, style['size'])
-                        can.drawString(x + 2, text_y, str(value)[:int(width / 5)])
+                        can.drawString(x + 2, text_y, text_value[:int(width / 5)])
             
             can.save()
             
