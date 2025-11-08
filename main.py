@@ -14663,9 +14663,60 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         print(f"   • {field_id}: {value[:50] if len(value) > 50 else value}")
                     print("="*80)
                     
-                    logging.info(f"✅ SUCESSO: Usando {len(fields_from_mapping)} campos das coordenadas mapeadas")
-                    logging.info("   ⚡ Retornando campos extraídos (SEM usar padrões)")
-                    return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
+                    # MAPEAR CAMPOS DO RA PARA DAMAGE REPORT (nomes corretos)
+                    # O frontend espera estes nomes exatos de campos
+                    dr_fields = {}
+                    
+                    # Mapear cada campo extraído para o nome correto do DR
+                    field_mapping = {
+                        'contractNumber': 'contractNumber',      # Número do Contrato → DR Nº Contrato
+                        'clientName': 'clientName',              # Nome do Cliente
+                        'clientEmail': 'clientEmail',            # Email do Cliente  
+                        'clientPhone': 'clientPhone',            # Telefone do Cliente
+                        'address': 'address',                    # Morada
+                        'city': 'city',                          # Cidade
+                        'postalCode': 'postalCode',              # Código Postal
+                        'postalCodeCity': 'postalCodeCity',      # Código Postal / Cidade (combinado)
+                        'country': 'country',                    # País
+                        'vehiclePlate': 'vehiclePlate',          # Matrícula
+                        'vehicleBrand': 'vehicleBrand',          # Marca
+                        'vehicleModel': 'vehicleModel',          # Modelo
+                        'vehicleBrandModel': 'vehicleBrandModel', # Marca / Modelo (combinado)
+                        'pickupDate': 'pickupDate',              # Data de Levantamento
+                        'pickupTime': 'pickupTime',              # Hora de Levantamento
+                        'pickupLocation': 'pickupLocation',      # Local de Levantamento
+                        'pickupFuel': 'pickupFuel',              # Combustível Levantamento
+                        'dropoffDate': 'dropoffDate',            # Data de Devolução
+                        'dropoffTime': 'dropoffTime',            # Hora de Devolução
+                        'dropoffLocation': 'dropoffLocation',    # Local de Devolução
+                        'dropoffFuel': 'dropoffFuel',            # Combustível Devolução
+                    }
+                    
+                    # Copiar campos mapeados
+                    for ra_field, dr_field in field_mapping.items():
+                        if ra_field in fields_from_mapping and fields_from_mapping[ra_field]:
+                            dr_fields[dr_field] = fields_from_mapping[ra_field]
+                            logging.info(f"   ✅ Mapeado: {ra_field} → {dr_field} = {fields_from_mapping[ra_field][:50]}")
+                    
+                    # Se tiver postalCodeCity combinado, dividir
+                    if 'postalCodeCity' in dr_fields and ' / ' in dr_fields['postalCodeCity']:
+                        parts = dr_fields['postalCodeCity'].split(' / ', 1)
+                        if not dr_fields.get('postalCode'):
+                            dr_fields['postalCode'] = parts[0].strip()
+                        if not dr_fields.get('city') and len(parts) > 1:
+                            dr_fields['city'] = parts[1].strip()
+                    
+                    # Se tiver vehicleBrandModel combinado, dividir
+                    if 'vehicleBrandModel' in dr_fields and ' / ' in dr_fields['vehicleBrandModel']:
+                        parts = dr_fields['vehicleBrandModel'].split(' / ', 1)
+                        if not dr_fields.get('vehicleBrand'):
+                            dr_fields['vehicleBrand'] = parts[0].strip()
+                        if not dr_fields.get('vehicleModel') and len(parts) > 1:
+                            dr_fields['vehicleModel'] = parts[1].strip()
+                    
+                    logging.info(f"✅ SUCESSO: {len(dr_fields)} campos mapeados para Damage Report")
+                    logging.info("   ⚡ Retornando campos prontos para inserir no DR")
+                    return {"ok": True, "fields": dr_fields, "method": "mapped_coordinates"}
         
             else:
                 # Não tinha coordenadas mapeadas
