@@ -18112,62 +18112,13 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 )
                                 logging.info(f"✅ Drew photo {field_id} (COVER mode: filled {int(width)}x{int(height)} box with crop)")
                             
-                            # PINS DO DIAGRAMA: Desenhar DEPOIS da imagem para aparecerem por cima
+                            # PINS JÁ INCLUÍDOS NA IMAGEM DO FRONTEND!
+                            # O frontend captura a imagem do carro COM os pins já desenhados
+                            # Não é necessário desenhar pins aqui - evita duplicação
                             if is_diagram:
-                                logging.info(f"🖼️ DIAGRAM DETECTED: {field_id}, searching for pins...")
-                                
-                                # Buscar pins de TODAS as formas possíveis
-                                pins_data = (report_data.get('damage_pins') or 
-                                           report_data.get('damageDiagramData') or 
-                                           report_data.get('damage_diagram_data') or
-                                           report_data.get('damage_pins_data'))
-                                
-                                logging.info(f"   Pins data found: {bool(pins_data)} | Type: {type(pins_data).__name__ if pins_data else 'None'}")
-                                if pins_data and isinstance(pins_data, str):
-                                    logging.info(f"   Pins data preview: {pins_data[:200]}...")
-                                
-                                if pins_data:
-                                    try:
-                                        import json as json_module
-                                        pins = pins_data
-                                        if isinstance(pins, str):
-                                            pins = json_module.loads(pins)
-                                        
-                                        if isinstance(pins, list) and len(pins) > 0:
-                                            logging.info(f"🎯 Drawing {len(pins)} damage pins on diagram")
-                                            logging.info(f"   Diagram area for pins: x={diagram_final_x}, y={diagram_final_y}, w={diagram_final_width}, h={diagram_final_height}")
-                                            
-                                            for pin in pins:
-                                                pin_number = pin.get('number', '?')
-                                                pin_x_percent = pin.get('x', 0)
-                                                pin_y_percent = pin.get('y', 0)
-                                                
-                                                # Coordenadas dos pins são % da área do diagrama final (após CONTAIN mode)
-                                                pin_x = diagram_final_x + (pin_x_percent / 100) * diagram_final_width
-                                                pin_y = diagram_final_y + (pin_y_percent / 100) * diagram_final_height
-                                                
-                                                # Círculo vermelho
-                                                pin_radius = 8
-                                                can.setFillColorRGB(1, 0, 0)
-                                                can.setStrokeColorRGB(1, 1, 1)
-                                                can.setLineWidth(2)
-                                                can.circle(pin_x, pin_y, pin_radius, fill=1, stroke=1)
-                                                
-                                                # Número branco
-                                                can.setFillColorRGB(1, 1, 1)
-                                                can.setFont("Helvetica-Bold", 10)
-                                                text_width = can.stringWidth(str(pin_number), "Helvetica-Bold", 10)
-                                                text_x = pin_x - (text_width / 2)
-                                                text_y = pin_y - 3.5
-                                                can.drawString(text_x, text_y, str(pin_number))
-                                            
-                                            logging.info(f"✅ Drew {len(pins)} pins on diagram at ({x}, {y}) size {width}x{height}")
-                                        else:
-                                            logging.warning(f"⚠️ Pins data is not a list or is empty: {type(pins).__name__}")
-                                    except Exception as e:
-                                        logging.error(f"❌ Error drawing pins: {e}", exc_info=True)
-                                else:
-                                    logging.warning(f"⚠️ No pins data found for diagram {field_id}")
+                                logging.info(f"🖼️ DIAGRAM DETECTED: {field_id}")
+                                logging.info(f"   ✅ Pins already included in the captured image from frontend")
+                                logging.info(f"   ℹ️ No need to redraw pins - avoiding duplication")
                     except Exception as e:
                         logging.error(f"Error drawing image {field_id}: {e}")
                         # Fallback: draw placeholder
