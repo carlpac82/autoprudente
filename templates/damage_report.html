@@ -551,6 +551,10 @@
                         <input type="text" id="contractNumber" name="contractNumber" required>
                     </div>
                     <div class="form-group">
+                        <label>RA Number / Rental Agreement</label>
+                        <input type="text" id="raNumber" name="raNumber" placeholder="RA-2025-001">
+                    </div>
+                    <div class="form-group">
                         <label>Data *</label>
                         <input type="date" id="date" name="date" required>
                     </div>
@@ -2516,7 +2520,10 @@
                 
                 if (data.ok && data.fields) {
                     const fields = data.fields;
+                    // Preencher RA Number e Contract Number se extraídos
+                    if (fields.raNumber) document.getElementById('raNumber').value = fields.raNumber.toUpperCase();
                     if (fields.contractNumber) document.getElementById('contractNumber').value = fields.contractNumber.toUpperCase();
+                    
                     if (fields.clientName) document.getElementById('clientName').value = fields.clientName.toUpperCase();
                     if (fields.clientEmail) document.getElementById('clientEmail').value = fields.clientEmail.toLowerCase();
                     if (fields.clientPhone) document.getElementById('clientPhone').value = fields.clientPhone;

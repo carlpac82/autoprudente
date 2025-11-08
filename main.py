@@ -17285,6 +17285,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 # FIELD NAME ALIASES: Mapear snake_case (BD) → camelCase (report_data)
                 # Necessário porque coordenadas usam snake_case mas report_data tem camelCase
                 field_aliases = {
+                    'ra_number': 'ra_number',  # ✅ RA Number (mesmo nome)
                     'contract_number': 'contractNumber',
                     'customer_name': 'clientName',
                     'customer_email': 'clientEmail',
@@ -17304,7 +17305,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'return_date': 'returnDate',
                     'return_time': 'returnTime',
                     'return_location': 'returnLocation',
-                    'inspector_name': 'inspector_name',
+                    'inspector_name': 'inspector_name',  # ✅ Mantido para compatibilidade
+                    'issued_by': 'issued_by',  # ✅ Colaborador (alias)
                     'inspection_date': 'inspection_date',
                 }
                 
@@ -17727,6 +17729,7 @@ async def preview_damage_report_pdf(request: Request):
         # Mapear campos do frontend para IDs do mapeador (usando os mesmos nomes camelCase)
         report_data = {
             'dr_number': body.get('drNumber', ''),
+            'ra_number': body.get('raNumber', ''),  # ✅ RA Number
             'contractNumber': body.get('contractNumber', ''),
             'date': body.get('date', ''),
             'clientName': body.get('clientName', ''),
@@ -17752,7 +17755,8 @@ async def preview_damage_report_pdf(request: Request):
             'fuel_level_pickup': body.get('fuelPickup', ''),
             'fuel_level_return': body.get('fuelReturn', ''),
             'total_repair_cost': body.get('totalCost', ''),
-            'inspector_name': body.get('inspectorName', ''),
+            'inspector_name': body.get('issuedBy', ''),  # ✅ Colaborador (frontend: issuedBy)
+            'issued_by': body.get('issuedBy', ''),  # ✅ Alias alternativo
             'inspection_date': body.get('inspectionDate', ''),
             # Campos avançados: imagens, tabelas, assinaturas
             'damage_description': body.get('damageDescription', ''),
