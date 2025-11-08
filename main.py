@@ -603,7 +603,7 @@ def _ensure_damage_reports_tables():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if not is_postgres:
                     print("   ⚠️  SQLite detected, skipping DR tables", flush=True)
@@ -742,7 +742,7 @@ def _ensure_rental_agreement_tables():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if not is_postgres:
                     print("   ⚠️  SQLite detected, skipping RA tables", flush=True)
@@ -1369,7 +1369,7 @@ def _db_connect():
     if _USE_NEW_DB:
         conn = _db_connect_new()
         # Wrap PostgreSQL connection to add execute() method
-        if hasattr(conn, 'cursor') and not hasattr(conn, 'row_factory'):
+        if conn.__class__.__module__ == 'psycopg2.extensions' and not hasattr(conn, 'row_factory'):
             return PostgreSQLConnectionWrapper(conn)
         return conn
     else:
@@ -1455,7 +1455,7 @@ def _get_current_user_from_session(request: Request):
     try:
         conn = _db_connect()
         try:
-            if hasattr(conn, 'cursor'):
+            if conn.__class__.__module__ == 'psycopg2.extensions':
                 # PostgreSQL
                 cursor = conn.cursor()
                 cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
@@ -1740,7 +1740,7 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
             with _db_lock:
                 conn = _db_connect()
                 try:
-                    is_postgres = hasattr(conn, 'cursor')
+                    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                     
                     if is_postgres:
                         # PostgreSQL
@@ -2815,7 +2815,7 @@ def save_search_to_history(location: str, start_date: str, end_date: str, days: 
             conn = _db_connect()
             try:
                 # PostgreSQL e SQLite compatibility
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL - usar %s e "user" com aspas
                     cursor = conn.cursor()
                     cursor.execute(
@@ -10676,7 +10676,7 @@ async def get_active_damage_report_template(request: Request):
             try:
                 # Detectar PostgreSQL vs SQLite
                 is_postgres = False
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     is_postgres = True
                 
                 if is_postgres:
@@ -10755,7 +10755,7 @@ async def get_damage_report_coordinates(request: Request):
             try:
                 rows = []
                 
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -10913,7 +10913,7 @@ async def download_damage_report_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -11073,7 +11073,7 @@ async def save_price_automation_settings(request: Request):
             conn = _db_connect()
             try:
                 # Detect PostgreSQL vs SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
                 # Salvar cada configuração
@@ -12124,7 +12124,8 @@ def _ensure_vehicle_photos_table():
                 """)
                 
                 # Migration: Ensure columns exist (PostgreSQL)
-                if hasattr(con, 'cursor'):
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                if is_postgres:
                     try:
                         with con.cursor() as cur:
                             # Add photo_url if missing
@@ -12183,7 +12184,8 @@ def _ensure_vehicle_images_table():
                 """)
                 
                 # Migration: Add source_url if not exists (PostgreSQL)
-                if hasattr(con, 'cursor'):
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                if is_postgres:
                     try:
                         with con.cursor() as cur:
                             cur.execute("""
@@ -12256,52 +12258,13 @@ async def startup_migrate_automated_reports():
         import traceback
         logging.error(traceback.format_exc())
 
-@app.on_event("startup")
-async def startup_update_dr_numbering():
-    """Atualizar configuração de numeração DR para DR40/2025"""
-    try:
-        from datetime import datetime
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                is_postgres = hasattr(conn, 'cursor')
-                
-                # Verificar se existe registo na tabela
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("SELECT current_number FROM damage_report_numbering WHERE id = 1")
-                        row = cur.fetchone()
-                else:
-                    cursor = conn.execute("SELECT current_number FROM damage_report_numbering WHERE id = 1")
-                    row = cursor.fetchone()
-                
-                if row and row[0] < 39:
-                    # Atualizar para 39 (próximo será DR40/2025)
-                    if is_postgres:
-                        with conn.cursor() as cur:
-                            cur.execute("""
-                                UPDATE damage_report_numbering 
-                                SET current_number = 39, current_year = 2025, updated_at = %s
-                                WHERE id = 1
-                            """, (datetime.now().isoformat(),))
-                    else:
-                        conn.execute("""
-                            UPDATE damage_report_numbering 
-                            SET current_number = 39, current_year = 2025, updated_at = ?
-                            WHERE id = 1
-                        """, (datetime.now().isoformat(),))
-                    
-                    conn.commit()
-                    logging.info("✅ [STARTUP] DR numbering atualizado: próximo DR será DR40/2025")
-                    print("✅ [STARTUP] DR numbering configurado: próximo = DR40/2025", flush=True)
-                else:
-                    logging.debug("[STARTUP] DR numbering já está configurado corretamente")
-            finally:
-                conn.close()
-    except Exception as e:
-        logging.error(f"❌ [STARTUP] Erro ao atualizar DR numbering: {str(e)}")
-        import traceback
-        logging.error(traceback.format_exc())
+# DESATIVADO: Esta função causava problemas ao sobrescrever numeração após deploy
+# Numeração agora é gerida APENAS manualmente via interface web
+# @app.on_event("startup")
+# async def startup_update_dr_numbering():
+#     """Atualizar configuração de numeração DR para DR40/2025"""
+#     # FUNÇÃO DESATIVADA - Numeração gerida manualmente
+#     pass
 
 @app.post("/api/vehicles/{vehicle_name}/photo/upload")
 async def upload_vehicle_photo(vehicle_name: str, request: Request, file: UploadFile = File(...)):
@@ -12322,7 +12285,7 @@ async def upload_vehicle_photo(vehicle_name: str, request: Request, file: Upload
             conn = _db_connect()
             try:
                 # Salvar em vehicle_photos
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with conn.cursor() as cur:
                         cur.execute("""
@@ -12389,7 +12352,7 @@ async def download_vehicle_photo_from_url(vehicle_name: str, request: Request):
             conn = _db_connect()
             try:
                 # Salvar em vehicle_photos
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with conn.cursor() as cur:
                         cur.execute("""
@@ -12853,7 +12816,7 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                         content_type = photo_info.get("content_type", "image/jpeg")
                         photo_url = photo_info.get("url")
                         
-                        if hasattr(conn, 'cursor'):
+                        if conn.__class__.__module__ == 'psycopg2.extensions':
                             # PostgreSQL
                             with conn.cursor() as cur:
                                 cur.execute("""
@@ -13131,7 +13094,7 @@ async def download_all_photos_from_carjet(request: Request):
                                 photo_data = photo_response.content
                                 
                                 # Salvar na tabela vehicle_photos
-                                if hasattr(conn, 'cursor'):
+                                if conn.__class__.__module__ == 'psycopg2.extensions':
                                     # PostgreSQL
                                     with conn.cursor() as cur:
                                         cur.execute("""
@@ -13770,7 +13733,7 @@ async def download_vehicle_images(request: Request):
                         with _db_lock:
                             con = _db_connect()
                             try:
-                                if hasattr(con, 'cursor'):
+                                if con.__class__.__module__ == 'psycopg2.extensions':
                                     # PostgreSQL
                                     with con.cursor() as cur:
                                         cur.execute("""
@@ -13820,7 +13783,7 @@ async def get_vehicle_photo(vehicle_name: str):
                 row = None
                 
                 # PostgreSQL or SQLite
-                if hasattr(con, 'cursor'):
+                if con.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL - usar cursor
                     cursor = con.cursor()
                     
@@ -13954,7 +13917,7 @@ async def get_vehicle_photo_metadata(vehicle_name: str, request: Request):
             con = _db_connect()
             try:
                 # Try vehicle_photos first (has photo_url)
-                if hasattr(con, 'cursor'):
+                if con.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with con.cursor() as cur:
                         cur.execute(
@@ -13978,7 +13941,7 @@ async def get_vehicle_photo_metadata(vehicle_name: str, request: Request):
                     })
                 
                 # Fallback: try vehicle_images (has source_url)
-                if hasattr(con, 'cursor'):
+                if con.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with con.cursor() as cur:
                         cur.execute(
@@ -14307,7 +14270,7 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             logging.info("📍 Procurando coordenadas mapeadas...")
             with _db_lock:
                 conn = _db_connect()
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if is_postgres:
                     with conn.cursor() as cur:
@@ -14356,13 +14319,23 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             best_text = ""
                             best_method = "DIRETO"
                             
+                            # ✅ PRIORIDADE: Testar DIRETO primeiro
                             for method_name, coords in methods.items():
                                 rect_test = fitz.Rect(*coords)
                                 text_test = pdf_page.get_text("text", clip=rect_test).strip()
                                 text_clean = ' '.join(text_test.split()) if text_test else ""
                                 
-                                # Escolher texto mais limpo (sem números/códigos estranhos para campos de texto)
-                                if len(text_clean) > len(best_text):
+                                if text_clean:
+                                    print(f"   {method_name}: '{text_clean[:40]}'")
+                                
+                                # Se DIRETO tiver texto, usar! Só tentar outros se DIRETO estiver vazio
+                                if method_name == "DIRETO" and text_clean:
+                                    best_text = text_clean
+                                    best_method = "DIRETO"
+                                    break  # ✅ USAR DIRETO E PARAR
+                                
+                                # Se DIRETO está vazio, testar outros métodos
+                                if not best_text and text_clean:
                                     # Validação básica: se campo é location, deve ter letras
                                     if 'Location' in field_id or 'location' in field_id:
                                         if any(c.isalpha() for c in text_clean) and not any(char in text_clean for char in ['J5V', 'H4H', '08 -']):
@@ -14371,9 +14344,6 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                                     else:
                                         best_text = text_clean
                                         best_method = method_name
-                                
-                                if text_clean:
-                                    print(f"   {method_name}: '{text_clean[:40]}'")
                             
                             text_extracted = best_text
                             print(f"   ✅ Escolhido: {best_method} → '{text_extracted}'")
@@ -14532,10 +14502,10 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         'pickupTime': 'pickupTime',              # Hora de Levantamento
                         'pickupLocation': 'pickupLocation',      # Local de Levantamento
                         'pickupFuel': 'pickupFuel',              # Combustível Levantamento
-                        'dropoffDate': 'dropoffDate',            # Data de Devolução
-                        'dropoffTime': 'dropoffTime',            # Hora de Devolução
-                        'dropoffLocation': 'dropoffLocation',    # Local de Devolução
-                        'dropoffFuel': 'dropoffFuel',            # Combustível Devolução
+                        'returnDate': 'returnDate',              # Data de Devolução
+                        'returnTime': 'returnTime',              # Hora de Devolução
+                        'returnLocation': 'returnLocation',      # Local de Devolução
+                        'returnFuel': 'returnFuel',              # Combustível Devolução
                     }
                     
                     # Copiar campos mapeados
@@ -14543,6 +14513,15 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         if ra_field in fields_from_mapping and fields_from_mapping[ra_field]:
                             dr_fields[dr_field] = fields_from_mapping[ra_field]
                             logging.info(f"   ✅ Mapeado: {ra_field} → {dr_field} = {fields_from_mapping[ra_field][:50]}")
+                    
+                    # Limpar matrícula: remover espaços entre números e letras
+                    # "3 0 - X Q - 9 7" → "30-XQ-97"
+                    if 'vehiclePlate' in dr_fields:
+                        plate = dr_fields['vehiclePlate']
+                        # Remover espaços mas manter hífens
+                        plate_clean = plate.replace(' ', '')
+                        dr_fields['vehiclePlate'] = plate_clean
+                        logging.info(f"   🚗 Matrícula limpa: '{plate}' → '{plate_clean}'")
                     
                     # Se tiver postalCodeCity combinado, dividir
                     if 'postalCodeCity' in dr_fields and ' / ' in dr_fields['postalCodeCity']:
@@ -15242,7 +15221,7 @@ async def create_damage_report(request: Request):
                         existing_dr_number
                     )
                     
-                    if hasattr(conn, 'cursor'):
+                    if conn.__class__.__module__ == 'psycopg2.extensions':
                         # PostgreSQL
                         with conn.cursor() as cur:
                             cur.execute("""
@@ -15290,7 +15269,7 @@ async def create_damage_report(request: Request):
                     conn = _db_connect()  # Re-abrir conexão
                     
                     # Verificar se é um número reciclado (já existe na tabela com is_deleted = 1)
-                    is_postgres = hasattr(conn, 'cursor')
+                    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                     is_recycled = False
                     
                     if is_postgres:
@@ -15504,7 +15483,7 @@ async def list_damage_reports(request: Request):
                 logging.info("📋 Listando Damage Reports...")
                 
                 # Verificar se é PostgreSQL ou SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 # Verificar se a coluna is_protected existe
@@ -15603,7 +15582,7 @@ async def get_damage_report(request: Request, dr_number: str):
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with conn.cursor() as cur:
                         cur.execute("SELECT * FROM damage_reports WHERE dr_number = %s", (dr_number,))
@@ -16061,7 +16040,7 @@ async def protect_uploaded_drs(request: Request):
             conn = _db_connect()
             try:
                 # Marcar todos os DRs que têm PDF como protegidos
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with conn.cursor() as cur:
                         cur.execute("""
@@ -16101,7 +16080,7 @@ async def setup_dr_tables():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if not is_postgres:
                     return {"ok": False, "error": "Apenas para PostgreSQL"}
@@ -16225,7 +16204,7 @@ async def setup_car_groups_table():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if is_postgres:
                     # PostgreSQL
@@ -16302,7 +16281,7 @@ async def cleanup_invalid_drs():
             try:
                 for dr_number in invalid_drs:
                     try:
-                        if hasattr(conn, 'cursor'):
+                        if conn.__class__.__module__ == 'psycopg2.extensions':
                             # PostgreSQL - rollback antes de cada tentativa
                             conn.rollback()
                             with conn.cursor() as cur:
@@ -16347,7 +16326,7 @@ async def delete_damage_report(request: Request, dr_number: str):
             conn = _db_connect()
             try:
                 # Verificar se DR existe e se é protegido
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     with conn.cursor() as cur:
                         cur.execute("SELECT is_protected FROM damage_reports WHERE dr_number = %s", (dr_number,))
                         row = cur.fetchone()
@@ -16363,7 +16342,7 @@ async def delete_damage_report(request: Request, dr_number: str):
                     raise HTTPException(status_code=403, detail="Este DR está protegido e não pode ser eliminado")
                 
                 # Eliminar DR (soft delete)
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     with conn.cursor() as cur:
                         # Soft delete - marcar como eliminado ao invés de deletar
                         cur.execute("""
@@ -16401,7 +16380,7 @@ async def debug_damage_reports(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     with conn.cursor() as cur:
                         cur.execute("""
                             SELECT 
@@ -16554,7 +16533,7 @@ async def get_dr_numbering(request: Request):
             try:
                 row = None
                 
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -16592,7 +16571,7 @@ async def get_dr_numbering(request: Request):
                     current_number = 0
                     prefix = 'DR'
                     
-                    if hasattr(conn, 'cursor'):
+                    if conn.__class__.__module__ == 'psycopg2.extensions':
                         # PostgreSQL
                         with conn.cursor() as cur:
                             cur.execute("""
@@ -16647,7 +16626,7 @@ async def update_dr_numbering(request: Request):
                 logging.info(f"🔄 UPDATE Numbering: Recebido current_number={current_number}, prefix={prefix}")
                 
                 # Atualizar numeração (sem updated_by pois coluna não existe)
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     with conn.cursor() as cur:
                         cur.execute("""
@@ -16702,7 +16681,7 @@ async def save_damage_report_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -16730,7 +16709,7 @@ async def save_damage_report_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     # PostgreSQL - usar um único cursor para todas as operações
                     with conn.cursor() as cursor:
                         # Limpar coordenadas antigas
@@ -17011,7 +16990,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
             conn = _db_connect()
             try:
                 is_postgres = False
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     is_postgres = True
                 
                 if is_postgres:
@@ -17047,7 +17026,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     cursor = conn.cursor()
                     cursor.execute("""
                         SELECT field_id, x, y, width, height, page 
@@ -17507,7 +17486,7 @@ async def download_original_pdf_query(request: Request, dr_number: str, preview:
         with _db_lock:
             conn = _db_connect()
             try:
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     with conn.cursor() as cur:
                         cur.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = %s", (dr_number,))
                         row = cur.fetchone()
@@ -17554,7 +17533,7 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
             try:
                 # Primeiro listar todos os DRs para debug
                 logging.info("📋 Listando todos os DRs na BD:")
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     with conn.cursor() as cur:
                         cur.execute("SELECT dr_number, pdf_filename, CASE WHEN pdf_data IS NULL THEN 'NULL' ELSE 'OK' END as pdf_status FROM damage_reports")
                         all_drs = cur.fetchall()
@@ -17567,7 +17546,7 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
                         logging.info(f"  - {dr[0]} | PDF: {dr[1]} | Data: {dr[2]}")
                 
                 # Agora buscar o DR específico
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     with conn.cursor() as cur:
                         cur.execute("SELECT pdf_data, pdf_filename FROM damage_reports WHERE dr_number = %s", (dr_number,))
                         row = cur.fetchone()
@@ -17630,7 +17609,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
             try:
                 # Detectar PostgreSQL vs SQLite
                 is_postgres = False
-                if hasattr(conn, 'cursor'):
+                if conn.__class__.__module__ == 'psycopg2.extensions':
                     is_postgres = True
                 
                 if is_postgres:
@@ -17728,7 +17707,7 @@ async def upload_rental_agreement_template(request: Request, file: UploadFile = 
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 # Obter próxima versão
                 if is_postgres:
@@ -17806,7 +17785,7 @@ async def get_active_rental_agreement_template(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 logging.info(f"📥 [RA-TEMPLATE] DB type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 if is_postgres:
@@ -17913,7 +17892,7 @@ async def debug_rental_agreement_status(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 status["db_type"] = "PostgreSQL" if is_postgres else "SQLite"
                 
                 # Verificar se tabela existe
@@ -18059,7 +18038,7 @@ async def get_rental_agreement_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if is_postgres:
                     with conn.cursor() as cur:
@@ -18117,7 +18096,7 @@ async def save_rental_agreement_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if is_postgres:
                     with conn.cursor() as cur:
@@ -18144,7 +18123,7 @@ async def save_rental_agreement_coordinates(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if is_postgres:
                     with conn.cursor() as cursor:
@@ -20030,7 +20009,7 @@ async def sync_all_settings(request: Request):
             conn = _db_connect()
             try:
                 # Detect PostgreSQL vs SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
                 for key, value in data.items():
@@ -20098,7 +20077,7 @@ async def save_automated_reports_settings(request: Request):
             conn = _db_connect()
             try:
                 # Detect PostgreSQL vs SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
                 # Save as JSON
@@ -20339,7 +20318,7 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
                     conn = _db_connect()
                     try:
                         # Detectar PostgreSQL vs SQLite
-                        is_postgres = hasattr(conn, 'cursor')
+                        is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                         placeholder = "%s" if is_postgres else "?"
                         
                         # Se há um novo refresh_token, atualizar tudo
@@ -20488,7 +20467,7 @@ async def save_oauth_token(request: Request):
             conn = _db_connect()
             try:
                 # Detectar PostgreSQL vs SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
                 query = f"""
@@ -20530,7 +20509,7 @@ async def load_oauth_token(request: Request):
             conn = _db_connect()
             try:
                 # Detectar PostgreSQL vs SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
                 cursor = conn.execute(
@@ -20641,7 +20620,7 @@ async def save_email_settings(request: Request):
             conn = _db_connect()
             try:
                 # Detect PostgreSQL vs SQLite
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
                 # Save to user_settings table
@@ -22690,7 +22669,7 @@ def save_automated_searches_to_history():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 user_col = '"user"' if is_postgres else 'user'
                 
@@ -23913,7 +23892,7 @@ async def save_automated_search_history(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 # Generate month_key
                 from datetime import datetime
@@ -24001,7 +23980,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 history = {}
                 
                 # Build WHERE clause for location filter
@@ -24121,7 +24100,7 @@ async def delete_automated_search(request: Request, search_id: int):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 # Verificar se o registro existe antes de deletar
                 if is_postgres:
@@ -24169,7 +24148,7 @@ async def clean_automated_history():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 deleted_count = 0
                 
                 if is_postgres:
@@ -24207,7 +24186,7 @@ async def migrate_supplier_data_column():
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = hasattr(conn, 'cursor')
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
                 if is_postgres:
                     with conn.cursor() as cur:

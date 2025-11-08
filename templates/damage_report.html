@@ -2490,15 +2490,29 @@
                     }
                     if (fields.country) document.getElementById('country').value = fields.country.toUpperCase();
                     if (fields.pickupDate) {
-                        const parts = fields.pickupDate.split('-');
-                        document.getElementById('pickupDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        // Remover espaços e converter "06 - 11 - 2025" → "2025-11-06"
+                        const dateClean = fields.pickupDate.replace(/\s+/g, ''); // Remove todos os espaços
+                        const parts = dateClean.split('-');
+                        if (parts.length === 3) {
+                            document.getElementById('pickupDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
                     }
                     if (fields.returnDate) {
-                        const parts = fields.returnDate.split('-');
-                        document.getElementById('returnDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        // Remover espaços e converter "06 - 12 - 2025" → "2025-12-06"
+                        const dateClean = fields.returnDate.replace(/\s+/g, ''); // Remove todos os espaços
+                        const parts = dateClean.split('-');
+                        if (parts.length === 3) {
+                            document.getElementById('returnDate').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
                     }
-                    if (fields.pickupTime) document.getElementById('pickupTime').value = fields.pickupTime;
-                    if (fields.returnTime) document.getElementById('returnTime').value = fields.returnTime;
+                    if (fields.pickupTime) {
+                        // Remover espaços: "10 : 30" → "10:30"
+                        document.getElementById('pickupTime').value = fields.pickupTime.replace(/\s+/g, '');
+                    }
+                    if (fields.returnTime) {
+                        // Remover espaços: "12 : 00" → "12:00"
+                        document.getElementById('returnTime').value = fields.returnTime.replace(/\s+/g, '');
+                    }
                     if (fields.pickupLocation) document.getElementById('pickupLocation').value = fields.pickupLocation.toUpperCase();
                     if (fields.returnLocation) document.getElementById('returnLocation').value = fields.returnLocation.toUpperCase();
                     
