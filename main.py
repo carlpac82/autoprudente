@@ -14319,6 +14319,10 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 # Abrir PDF com PyMuPDF
                 pdf_doc = fitz.open(stream=contents, filetype="pdf")
                 
+                logging.info(f"\n{'='*60}")
+                logging.info(f"🔍 DIAGNÓSTICO DE COORDENADAS")
+                logging.info(f"{'='*60}")
+                
                 for row in coords_rows:
                     field_id, x, y, width, height, page = row[0], row[1], row[2], row[3], row[4], row[5]
                     
@@ -14331,11 +14335,14 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             
                             # USAR coordenadas DIRETAS (Canvas já as salvou em pontos PDF)
                             page_height = pdf_page.rect.height
+                            page_width = pdf_page.rect.width
                             
                             # TESTE: Usar coordenadas diretas primeiro
                             pdf_y = y
                             
-                            logging.info(f"   📏 Usando coords diretas: x={x}, y={y}, w={width}, h={height} (page_height={page_height})")
+                            logging.info(f"\n📍 Campo: {field_id}")
+                            logging.info(f"   📄 PDF: {page_width:.1f}x{page_height:.1f}")
+                            logging.info(f"   📐 Coords DB: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
                             
                             # MÉTODO 1: Extrair texto da área mapeada com PyMuPDF
                             rect = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
