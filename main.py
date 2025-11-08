@@ -17561,11 +17561,14 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 draw_y = y
                             
                             # PINS DO DIAGRAMA: Desenhar ANTES da imagem para aparecerem por cima
-                            if is_diagram and 'damage_pins' in report_data and report_data['damage_pins']:
+                            # Tentar múltiplos nomes de campo: damage_pins, damageDiagramData, damage_diagram_data
+                            pins_data = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
+                            
+                            if is_diagram and pins_data:
                                 try:
-                                    # Parse damage_pins (pode ser string JSON ou lista)
+                                    # Parse pins (pode ser string JSON ou lista)
                                     import json as json_module
-                                    pins = report_data['damage_pins']
+                                    pins = pins_data
                                     if isinstance(pins, str):
                                         pins = json_module.loads(pins)
                                     
@@ -18010,6 +18013,8 @@ async def preview_damage_report_pdf(request: Request):
             # Campos avançados: imagens, tabelas, assinaturas
             'damage_description': body.get('damageDescription', ''),
             'vehicle_diagram': body.get('vehicleDiagram', ''),  # Croqui base64
+            'damage_diagram_data': body.get('damageDiagramData', ''),  # ✅ Pins dos danos (JSON array)
+            'damageDiagramData': body.get('damageDiagramData', ''),  # ✅ Alias para compatibilidade
             'damage_photo_1': body.get('damagePhoto1', ''),
             'damage_photo_2': body.get('damagePhoto2', ''),
             'damage_photo_3': body.get('damagePhoto3', ''),
@@ -18249,7 +18254,10 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
             'fuel_level_return': report.get('fuel_return', ''),
             'total_repair_cost': report.get('total_cost', ''),
             'inspector_name': report.get('inspector_name', ''),
-            'inspection_date': report.get('inspection_date', '')
+            'inspection_date': report.get('inspection_date', ''),
+            # Adicionar pins do diagrama (JSON array de danos)
+            'damage_diagram_data': report.get('damage_diagram_data', ''),
+            'damageDiagramData': report.get('damage_diagram_data', '')  # Alias para compatibilidade
         }
         
         # Usar função de overlay para preencher template
