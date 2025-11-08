@@ -705,7 +705,7 @@ def _ensure_damage_reports_tables():
                     
                     cur.execute("""
                         CREATE TABLE IF NOT EXISTS damage_report_numbering (
-                            id SERIAL PRIMARY KEY,
+                            id INTEGER PRIMARY KEY,
                             current_year INTEGER NOT NULL,
                             current_number INTEGER NOT NULL,
                             prefix TEXT DEFAULT 'DR',
@@ -713,10 +713,11 @@ def _ensure_damage_reports_tables():
                         )
                     """)
                     
+                    # Inserir valores iniciais APENAS se não existir nenhum registro
                     cur.execute("""
                         INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        VALUES (1, 2025, 39, 'DR')
-                        ON CONFLICT (id) DO NOTHING
+                        SELECT 1, 2025, 1, 'DR'
+                        WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                     """)
                     
                     cur.execute("CREATE INDEX IF NOT EXISTS idx_dr_number ON damage_reports(dr_number)")
@@ -15719,19 +15720,20 @@ def _get_next_dr_number():
                 row = cursor.fetchone()
             
             if not row:
-                # Criar configuração inicial
+                # Criar configuração inicial APENAS se não existir
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute("""
                             INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                            VALUES (1, %s, 1, 'DR')
-                            ON CONFLICT (id) DO NOTHING
+                            SELECT 1, %s, 1, 'DR'
+                            WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                         """, (current_year,))
                         conn.commit()
                 else:
                     conn.execute("""
                         INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        VALUES (1, ?, 1, 'DR')
+                        SELECT 1, ?, 1, 'DR'
+                        WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                     """, (current_year,))
                     conn.commit()
                 return f"DR01/{current_year}"
@@ -16220,7 +16222,7 @@ async def setup_dr_tables():
                     # 4. Numeração
                     cur.execute("""
                         CREATE TABLE IF NOT EXISTS damage_report_numbering (
-                            id SERIAL PRIMARY KEY,
+                            id INTEGER PRIMARY KEY,
                             current_year INTEGER NOT NULL,
                             current_number INTEGER NOT NULL,
                             prefix TEXT DEFAULT 'DR',
@@ -16228,11 +16230,11 @@ async def setup_dr_tables():
                         )
                     """)
                     
-                    # Inserir config inicial
+                    # Inserir config inicial APENAS se não existir
                     cur.execute("""
                         INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        VALUES (1, 2025, 39, 'DR')
-                        ON CONFLICT (id) DO NOTHING
+                        SELECT 1, 2025, 1, 'DR'
+                        WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                     """)
                     
                     # Índices
@@ -16626,14 +16628,15 @@ async def get_dr_numbering(request: Request):
                         with conn.cursor() as cur:
                             cur.execute("""
                                 INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                                VALUES (1, %s, %s, %s)
-                                ON CONFLICT (id) DO NOTHING
+                                SELECT 1, %s, %s, %s
+                                WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                             """, (current_year, current_number, prefix))
                     else:
                         # SQLite
                         conn.execute("""
-                            INSERT OR IGNORE INTO damage_report_numbering (id, current_year, current_number, prefix)
-                            VALUES (1, ?, ?, ?)
+                            INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                            SELECT 1, ?, ?, ?
+                            WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                         """, (current_year, current_number, prefix))
                     
                     conn.commit()
