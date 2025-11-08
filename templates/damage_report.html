@@ -1826,6 +1826,37 @@
                 const formData = new FormData(document.getElementById('damageReportForm'));
                 const data = Object.fromEntries(formData);
                 
+                // ✅ ADICIONAR CAMPOS QUE NÃO ESTÃO NO FORM
+                // DR Number (gerado automaticamente)
+                if (currentDRNumber) {
+                    data.drNumber = currentDRNumber;
+                    console.log('✅ DR Number:', currentDRNumber);
+                } else {
+                    console.warn('⚠️ DR Number não definido - será gerado');
+                }
+                
+                // RA Number do campo (pode não existir)
+                const raField = document.getElementById('raNumber');
+                if (raField && raField.value) {
+                    data.raNumber = raField.value;
+                    console.log('✅ RA Number:', raField.value);
+                }
+                
+                // Data de inspeção (campo date)
+                const dateField = document.getElementById('date');
+                if (dateField && dateField.value) {
+                    data.date = dateField.value;
+                    console.log('✅ Date:', dateField.value);
+                }
+                
+                // Damage Diagram Data (pins JSON)
+                if (damages && damages.length > 0) {
+                    data.damageDiagramData = JSON.stringify(damages);
+                    console.log('✅ Damage pins:', damages.length, 'pins');
+                } else {
+                    console.warn('⚠️ Nenhum pin de dano adicionado');
+                }
+                
                 // Mostrar loading
                 const preview = document.getElementById('livePreview');
                 preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Capturando diagrama...</p>';
