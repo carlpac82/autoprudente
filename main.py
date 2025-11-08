@@ -15199,8 +15199,8 @@ async def create_damage_report(request: Request):
             conn = _db_connect()
             try:
                 # Detectar tipo de BD para CREATE TABLE correto
-                is_postgres = conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']
-                logging.error(f"💾 BD detectado: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                is_postgres = isinstance(conn, PostgreSQLConnectionWrapper)
+                logging.error(f"💾 BD detectado: {'PostgreSQL' if is_postgres else 'SQLite'} (wrapper={type(conn).__name__})")
                 
                 if is_postgres:
                     # PostgreSQL - Usar SERIAL, BYTEA, TIMESTAMP
@@ -15304,7 +15304,7 @@ async def create_damage_report(request: Request):
                 
                 # Adicionar colunas pdf_data e pdf_filename se não existirem (para tabelas antigas)
                 # PostgreSQL: Verificar se colunas existem ANTES de adicionar (evita abort da transação)
-                is_postgres = conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']
+                # (is_postgres já foi detectado acima)
                 
                 if is_postgres:
                     # PostgreSQL: Verificar colunas primeiro
