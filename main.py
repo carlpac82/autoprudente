@@ -17087,6 +17087,11 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 
                 # Obter valor do campo
                 value = report_data.get(field_id, '')
+                
+                # Log para debugar vehicle_diagram
+                if 'diagram' in field_id.lower() or 'vehicleDiagram' in field_id:
+                    logging.info(f"🔍 Processando {field_id}: tem valor? {bool(value)}, tamanho: {len(value) if value else 0}")
+                
                 if not value:
                     continue
                 

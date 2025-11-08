@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/css/styles.css">
     <script src="/static/notifications.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         
@@ -1803,6 +1804,27 @@
                 
                 // Mostrar loading
                 const preview = document.getElementById('livePreview');
+                preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Capturando diagrama...</p>';
+                
+                // Capturar o diagrama da viatura com pins como imagem
+                const carDiagram = document.getElementById('carDiagram');
+                if (carDiagram && damages.length > 0) {
+                    try {
+                        const canvas = await html2canvas(carDiagram, {
+                            backgroundColor: null,
+                            scale: 2,
+                            logging: false,
+                            useCORS: true
+                        });
+                        const diagramBase64 = canvas.toDataURL('image/png');
+                        data.vehicleDiagram = diagramBase64;
+                        console.log('✅ Diagrama capturado:', diagramBase64.substring(0, 50) + '...');
+                    } catch (error) {
+                        console.error('Erro ao capturar diagrama:', error);
+                        showNotification('Aviso: Não foi possível capturar o diagrama', 'warning');
+                    }
+                }
+                
                 preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Gerando preview do PDF...</p>';
                 
                 // Enviar dados para gerar PDF preview
