@@ -15719,7 +15719,6 @@ async def list_damage_reports(request: Request):
                                 client_name, vehicle_plate, vehicle_model,
                                 status, created_at, created_by, pdf_filename
                             FROM damage_reports
-                            WHERE is_deleted = 0 OR is_deleted IS NULL
                             ORDER BY id DESC
                         """)
                         rows = cur.fetchall()
@@ -15731,7 +15730,6 @@ async def list_damage_reports(request: Request):
                             client_name, vehicle_plate, vehicle_model,
                             status, created_at, created_by, pdf_filename
                         FROM damage_reports
-                        WHERE is_deleted = 0 OR is_deleted IS NULL
                         ORDER BY id DESC
                     """)
                     rows = cursor.fetchall()
@@ -15829,34 +15827,11 @@ def _get_next_dr_number():
             is_postgres = hasattr(conn, 'cursor')
             
             # 1. PRIORIDADE: Verificar se há números eliminados disponíveis para reutilizar
-            logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
+            # NOTA: Reciclagem de números desativada (coluna is_deleted não existe)
+            # logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
+            # TODO: Adicionar coluna is_deleted se reciclagem for necessária
             
-            if is_postgres:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT dr_number 
-                        FROM damage_reports 
-                        WHERE is_deleted = 1 
-                        ORDER BY deleted_at ASC 
-                        LIMIT 1
-                    """)
-                    deleted_row = cur.fetchone()
-            else:
-                cursor = conn.execute("""
-                    SELECT dr_number 
-                    FROM damage_reports 
-                    WHERE is_deleted = 1 
-                    ORDER BY deleted_at ASC 
-                    LIMIT 1
-                """)
-                deleted_row = cursor.fetchone()
-            
-            if deleted_row:
-                recycled_number = deleted_row[0]
-                logging.info(f"♻️  Número eliminado encontrado para reciclagem: {recycled_number}")
-                return recycled_number
-            
-            logging.info("✨ Nenhum número eliminado - gerando novo número sequencial")
+            logging.info("✨ Gerando novo número sequencial")
             
             # 2. FALLBACK: Gerar novo número sequencial
             # Obter configuração atual
