@@ -16911,7 +16911,7 @@ def _get_field_style(field_id: str) -> dict:
     """
     field_id_lower = field_id.lower()
     
-    # Default style
+    # Default style - tudo igual, sem negrito ou itálico
     style = {
         'font': 'Helvetica',
         'size': 8,
@@ -16920,27 +16920,9 @@ def _get_field_style(field_id: str) -> dict:
         'italic': False
     }
     
-    # Headers and important fields - bold and larger
-    if any(word in field_id_lower for word in ['dr_number', 'contract_number', 'total']):
+    # EXCEÇÃO: DR number e RA number (contract) ficam em negrito
+    if any(word in field_id_lower for word in ['dr_number', 'contract_number', 'contractnumber']):
         style['bold'] = True
-        style['size'] = 10
-    
-    # Titles - bold
-    elif any(word in field_id_lower for word in ['name', 'plate']):
-        style['bold'] = True
-        style['size'] = 9
-    
-    # Dates - italic
-    elif any(word in field_id_lower for word in ['date', 'time']):
-        style['italic'] = True
-    
-    # Small fields
-    elif any(word in field_id_lower for word in ['email', 'phone', 'postal']):
-        style['size'] = 7
-    
-    # Descriptions - smaller for multiline
-    elif any(word in field_id_lower for word in ['description', 'notes']):
-        style['size'] = 7
     
     return style
 
