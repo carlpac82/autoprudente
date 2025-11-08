@@ -15198,9 +15198,9 @@ async def create_damage_report(request: Request):
             logging.error("💾 Lock adquirido, conectando BD...")
             conn = _db_connect()
             try:
-                # Detectar tipo de BD para CREATE TABLE correto
-                is_postgres = isinstance(conn, PostgreSQLConnectionWrapper)
-                logging.error(f"💾 BD detectado: {'PostgreSQL' if is_postgres else 'SQLite'} (wrapper={type(conn).__name__})")
+                # Detectar tipo de BD para CREATE TABLE correto (usar type.__name__ para evitar problemas de isinstance)
+                is_postgres = type(conn).__name__ == 'PostgreSQLConnectionWrapper'
+                logging.error(f"💾 BD detectado: {'PostgreSQL' if is_postgres else 'SQLite'} (wrapper={type(conn).__name__}, is_postgres={is_postgres})")
                 
                 if is_postgres:
                     # PostgreSQL - Usar SERIAL, BYTEA, TIMESTAMP
