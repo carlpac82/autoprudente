@@ -18286,10 +18286,24 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 
                 elif field_type == 'date':
                     # DATA FORMATADA
+                    logging.info(f"📅 DATE FIELD DETECTED: {field_id}")
+                    logging.info(f"   Raw value: '{value}' (type: {type(value).__name__})")
+                    logging.info(f"   Position: x={x}, y={y}, w={width}, h={height}")
+                    
+                    if not value or value == '':
+                        logging.warning(f"   ⚠️ DATE VALUE IS EMPTY! Skipping.")
+                        # Desenhar placeholder para debug
+                        can.setFont("Helvetica", 8)
+                        can.setFillColorRGB(1, 0, 0)  # Vermelho
+                        text_y = _calculate_centered_y(y, height, 8)
+                        can.drawString(x + 2, text_y, "[NO DATE]")
+                        continue
+                    
                     formatted_value = _format_date(value)
                     style = _get_field_style(field_id)
                     
-                    logging.info(f"📅 DATE FIELD: {field_id} = '{value}' → formatted: '{formatted_value}'")
+                    logging.info(f"   Formatted: '{formatted_value}'")
+                    logging.info(f"   Style: font={style['font']}, size={style['size']}, color={style['color']}")
                     
                     # Apply style
                     font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
@@ -18299,7 +18313,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     
                     text_y = _calculate_centered_y(y, height, style['size'])
                     can.drawString(x + 2, text_y, formatted_value)
-                    logging.info(f"✅ Drew date at x={x + 2}, y={text_y}")
+                    logging.info(f"✅ DATE DRAWN at x={x + 2}, y={text_y} → '{formatted_value}'")
                 
                 elif field_type == 'number':
                     # NÚMERO FORMATADO

@@ -107,16 +107,16 @@
   "date": {
     "page": 1,
     "x": 20,
-    "y": 750,
-    "width": 120,
+    "y": 80,
+    "width": 150,
     "height": 15,
-    "comment": "Data do relatório - coordenadas aproximadas, ajustar se necessário"
+    "comment": "Data do relatório - posição visível no cabeçalho (perto DR number)"
   },
   "inspection_date": {
     "page": 1,
     "x": 20,
-    "y": 750,
-    "width": 120,
+    "y": 80,
+    "width": 150,
     "height": 15,
     "comment": "Alias para date - mesmas coordenadas"
   },
