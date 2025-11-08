@@ -16868,10 +16868,19 @@ def _validate_image_data(image_data: str) -> bool:
     """Valida se dados de imagem são válidos"""
     try:
         if not image_data:
+            logging.error("❌ Image validation: empty data")
+            return False
+        
+        if not isinstance(image_data, str):
+            logging.error(f"❌ Image validation: not a string, type={type(image_data)}")
             return False
         
         # Remove prefix if present
         img_data = image_data.split(',')[1] if ',' in image_data else image_data
+        
+        if len(img_data) < 100:
+            logging.error(f"❌ Image validation: too short ({len(img_data)} chars)")
+            return False
         
         # Try to decode
         img_bytes = base64.b64decode(img_data)
@@ -16883,10 +16892,13 @@ def _validate_image_data(image_data: str) -> bool:
         
         # Check minimum size
         if img.width < 10 or img.height < 10:
+            logging.error(f"❌ Image validation: too small ({img.width}x{img.height})")
             return False
         
+        logging.info(f"✅ Image valid: {img.width}x{img.height}, {img.format}")
         return True
-    except:
+    except Exception as e:
+        logging.error(f"❌ Image validation failed: {str(e)}")
         return False
 
 def _validate_table_data(table_data) -> bool:
@@ -17155,14 +17167,10 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'return_location': 'returnLocation',
                     'inspector_name': 'inspector_name',
                     'inspection_date': 'inspection_date',
-                    'vehicle_diagram': 'vehicleDiagram',  # Diagrama do carro com pins
                 }
                 
-                # ALIASES DE FOTOS (damage_photo_X → damagePhotoX)
-                for i in range(1, 10):
-                    field_aliases[f'damage_photo_{i}'] = f'damagePhoto{i}'
-                
-                # ALIASES DE DESCRIÇÕES DE DANOS (damage_description_line_X → damage_X)
+                # NOTA: vehicle_diagram e damage_photo_X já batem (ambos com underscore)
+                # NOTA: damage_description_line_X precisa mapear para damage_X
                 for i in range(1, 16):
                     field_aliases[f'damage_description_line_{i}'] = f'damage_{i}'
                 
@@ -17498,6 +17506,18 @@ async def preview_damage_report_pdf(request: Request):
         # Receber dados do formulário
         body = await request.json()
         
+        # LOG: Ver o que o frontend envia
+        logging.info("=" * 80)
+        logging.info("🔍 PREVIEW PDF - Dados recebidos do frontend:")
+        logging.info(f"   vehicleDiagram: {len(body.get('vehicleDiagram', '')) if body.get('vehicleDiagram') else 0} chars")
+        for i in range(1, 10):
+            photo = body.get(f'damagePhoto{i}', '')
+            if photo:
+                logging.info(f"   damagePhoto{i}: {len(photo)} chars")
+        logging.info(f"   repairItems: {len(body.get('repairItems', []))} items")
+        logging.info(f"   Damages (damage_X): {[k for k in body.keys() if k.startswith('damage_')]}")
+        logging.info("=" * 80)
+        
         # Dividir campos combinados
         # Código Postal / Cidade
         postal_code_city = body.get('postalCodeCity', '')
@@ -17565,6 +17585,23 @@ async def preview_damage_report_pdf(request: Request):
             'signature_inspector': body.get('signatureInspector', ''),  # Assinatura base64
             'signature_client': body.get('signatureClient', '')  # Assinatura base64
         }
+        
+        # Adicionar descrições de danos individuais (damage_1, damage_2, ...)
+        for i in range(1, 16):
+            damage_key = f'damage_{i}'
+            if damage_key in body:
+                report_data[damage_key] = body.get(damage_key, '')
+        
+        # Processar repairItems: distribuir pelos campos individuais do PDF
+        repair_items = body.get('repairItems', [])
+        if repair_items and isinstance(repair_items, list):
+            for idx, item in enumerate(repair_items[:10], start=1):  # Max 10 linhas
+                # Cada item tem: description, quantity, hours, price, total
+                report_data[f'repair_line_{idx}'] = item.get('description', '')
+                report_data[f'repair_line_{idx}_qty'] = str(item.get('quantity', ''))
+                report_data[f'repair_line_{idx}_hours'] = str(item.get('hours', ''))
+                report_data[f'repair_line_{idx}_price'] = str(item.get('price', ''))
+                report_data[f'repair_line_{idx}_subtotal'] = str(item.get('total', ''))
         
         # Usar função de overlay para preencher template
         pdf_data = _fill_template_pdf_with_data(report_data)
