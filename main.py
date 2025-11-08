@@ -16727,13 +16727,21 @@ async def get_dr_numbering(request: Request):
     
     try:
         from datetime import datetime
+        import psycopg2
+        
+        logging.info(f"📖 [DR-NUMBERING] GET Request received")
         
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detectar tipo de BD
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                db_type = "PostgreSQL" if is_postgres else "SQLite"
+                logging.info(f"📊 [DR-NUMBERING] Database: {db_type}")
+                
                 row = None
                 
-                if conn.__class__.__module__ == 'psycopg2.extensions':
+                if is_postgres:
                     # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -16755,23 +16763,24 @@ async def get_dr_numbering(request: Request):
                 if row:
                     current_year, current_number, prefix, updated_at = row
                     next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
-                    logging.info(f"📊 GET Numbering: current={current_number}, next={next_number}")
+                    logging.info(f"✅ [DR-NUMBERING] GET Success: current={current_number}, prefix={prefix}, next={next_number}")
                     return {
                         "ok": True,
                         "current_year": current_year,
                         "current_number": current_number,
                         "prefix": prefix,
                         "next_number": next_number,
-                        "updated_at": updated_at
+                        "updated_at": updated_at,
+                        "database": db_type
                     }
                 else:
                     # Criar registro inicial se não existir
-                    logging.warning("⚠️ Damage report numbering not found, creating initial record...")
+                    logging.warning("⚠️ [DR-NUMBERING] Not found in DB, creating initial record...")
                     current_year = datetime.now().year
                     current_number = 0
                     prefix = 'DR'
                     
-                    if conn.__class__.__module__ == 'psycopg2.extensions':
+                    if is_postgres:
                         # PostgreSQL
                         with conn.cursor() as cur:
                             cur.execute("""
@@ -16779,18 +16788,23 @@ async def get_dr_numbering(request: Request):
                                 SELECT 1, %s, %s, %s
                                 WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                             """, (current_year, current_number, prefix))
+                            rows_affected = cur.rowcount
+                            logging.info(f"📝 [DR-NUMBERING] INSERT: {rows_affected} row(s) inserted")
                     else:
                         # SQLite
-                        conn.execute("""
+                        cursor = conn.execute("""
                             INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
                             SELECT 1, ?, ?, ?
                             WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                         """, (current_year, current_number, prefix))
+                        rows_affected = cursor.rowcount
+                        logging.info(f"📝 [DR-NUMBERING] INSERT: {rows_affected} row(s) inserted")
                     
                     conn.commit()
+                    logging.info(f"💾 [DR-NUMBERING] COMMIT executed")
                     
                     next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
-                    logging.info(f"✅ Created initial numbering: next={next_number}")
+                    logging.info(f"✅ [DR-NUMBERING] Created initial: next={next_number}")
                     
                     return {
                         "ok": True,
@@ -16798,12 +16812,13 @@ async def get_dr_numbering(request: Request):
                         "current_number": current_number,
                         "prefix": prefix,
                         "next_number": next_number,
-                        "updated_at": datetime.now().isoformat()
+                        "updated_at": datetime.now().isoformat(),
+                        "database": db_type
                     }
             finally:
                 conn.close()
     except Exception as e:
-        logging.error(f"Error getting DR numbering: {e}", exc_info=True)
+        logging.error(f"❌ [DR-NUMBERING] GET Error: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/numbering/update")
@@ -16813,52 +16828,83 @@ async def update_dr_numbering(request: Request):
     
     try:
         from datetime import datetime
+        import psycopg2
         
         data = await request.json()
         current_number = int(data.get('current_number', 1))
         prefix = data.get('prefix', 'DR')
         username = request.session.get('username', 'admin')
         
+        logging.info(f"🔄 [DR-NUMBERING] UPDATE Request: current_number={current_number}, prefix={prefix}, user={username}")
+        
         with _db_lock:
             conn = _db_connect()
             try:
                 current_year = datetime.now().year
                 
-                logging.info(f"🔄 UPDATE Numbering: Recebido current_number={current_number}, prefix={prefix}")
+                # Detectar tipo de BD
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                db_type = "PostgreSQL" if is_postgres else "SQLite"
+                logging.info(f"📊 [DR-NUMBERING] Database: {db_type}")
                 
-                # Atualizar numeração (sem updated_by pois coluna não existe)
-                if conn.__class__.__module__ == 'psycopg2.extensions':
+                # Atualizar numeração
+                if is_postgres:
                     # PostgreSQL
                     with conn.cursor() as cur:
+                        # Primeiro verificar se o registro existe
+                        cur.execute("SELECT current_number FROM damage_report_numbering WHERE id = 1")
+                        existing = cur.fetchone()
+                        logging.info(f"📋 [DR-NUMBERING] Current value in DB: {existing[0] if existing else 'NOT FOUND'}")
+                        
                         cur.execute("""
                             UPDATE damage_report_numbering
                             SET current_number = %s, prefix = %s, current_year = %s, updated_at = %s
                             WHERE id = 1
                         """, (current_number, prefix, current_year, datetime.now().isoformat()))
-                        logging.info(f"✅ PostgreSQL UPDATE executado: current_number={current_number}")
+                        rows_affected = cur.rowcount
+                        logging.info(f"✅ [DR-NUMBERING] PostgreSQL UPDATE: {rows_affected} row(s) affected")
+                        
+                        # Verificar se foi atualizado
+                        cur.execute("SELECT current_number, prefix FROM damage_report_numbering WHERE id = 1")
+                        updated = cur.fetchone()
+                        logging.info(f"✅ [DR-NUMBERING] After UPDATE: current_number={updated[0]}, prefix={updated[1]}")
                 else:
                     # SQLite
-                    conn.execute("""
+                    cursor = conn.execute("SELECT current_number FROM damage_report_numbering WHERE id = 1")
+                    existing = cursor.fetchone()
+                    logging.info(f"📋 [DR-NUMBERING] Current value in DB: {existing[0] if existing else 'NOT FOUND'}")
+                    
+                    cursor = conn.execute("""
                         UPDATE damage_report_numbering
                         SET current_number = ?, prefix = ?, current_year = ?, updated_at = ?
                         WHERE id = 1
                     """, (current_number, prefix, current_year, datetime.now().isoformat()))
-                    logging.info(f"✅ SQLite UPDATE executado: current_number={current_number}")
+                    rows_affected = cursor.rowcount
+                    logging.info(f"✅ [DR-NUMBERING] SQLite UPDATE: {rows_affected} row(s) affected")
+                    
+                    # Verificar se foi atualizado
+                    cursor = conn.execute("SELECT current_number, prefix FROM damage_report_numbering WHERE id = 1")
+                    updated = cursor.fetchone()
+                    logging.info(f"✅ [DR-NUMBERING] After UPDATE: current_number={updated[0]}, prefix={updated[1]}")
                 
                 conn.commit()
+                logging.info(f"💾 [DR-NUMBERING] COMMIT executed successfully")
                 
                 next_number = f"{prefix}{(current_number + 1):02d}/{current_year}"
-                logging.info(f"✅ Numeração DR atualizada: current={current_number}, próximo={next_number}")
+                logging.info(f"✅ [DR-NUMBERING] Numeração atualizada: current={current_number}, next={next_number}")
                 
                 return {
                     "ok": True,
                     "message": "Numeração atualizada com sucesso",
-                    "next_number": next_number
+                    "next_number": next_number,
+                    "current_number": current_number,
+                    "prefix": prefix,
+                    "database": db_type
                 }
             finally:
                 conn.close()
     except Exception as e:
-        logging.error(f"Error updating DR numbering: {e}")
+        logging.error(f"❌ [DR-NUMBERING] Error updating: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/save-coordinates")
