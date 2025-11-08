@@ -16911,9 +16911,9 @@ def _get_field_style(field_id: str) -> dict:
     """
     field_id_lower = field_id.lower()
     
-    # Default style - tudo igual, sem negrito ou itálico
+    # Default style - Arial 8pt, sem negrito ou itálico
     style = {
-        'font': 'Helvetica',
+        'font': 'Helvetica',  # ReportLab usa Helvetica (similar a Arial)
         'size': 8,
         'color': (0, 0, 0),  # RGB black
         'bold': False,
