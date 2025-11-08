@@ -16864,26 +16864,30 @@ async def save_damage_report_coordinates(request: Request):
         logging.error(f"Error saving coordinates: {e}")
         return {"ok": False, "error": str(e)}
 
-def _validate_image_data(image_data: str) -> bool:
+def _validate_image_data(image_data: str, field_id: str = "unknown") -> bool:
     """Valida se dados de imagem são válidos"""
     try:
         if not image_data:
-            logging.error("❌ Image validation: empty data")
+            logging.error(f"❌ [{field_id}] Image validation: empty data")
             return False
         
         if not isinstance(image_data, str):
-            logging.error(f"❌ Image validation: not a string, type={type(image_data)}")
+            logging.error(f"❌ [{field_id}] Image validation: not a string, type={type(image_data)}")
             return False
         
         # Remove prefix if present
-        img_data = image_data.split(',')[1] if ',' in image_data else image_data
+        has_prefix = ',' in image_data
+        img_data = image_data.split(',')[1] if has_prefix else image_data
+        
+        logging.info(f"🔍 [{field_id}] Validating: total={len(image_data)} chars, prefix={'✅' if has_prefix else '❌'}, base64={len(img_data)} chars")
         
         if len(img_data) < 100:
-            logging.error(f"❌ Image validation: too short ({len(img_data)} chars)")
+            logging.error(f"❌ [{field_id}] Image validation: too short ({len(img_data)} chars)")
             return False
         
         # Try to decode
         img_bytes = base64.b64decode(img_data)
+        logging.info(f"🔍 [{field_id}] Base64 decoded: {len(img_bytes)} bytes")
         
         # Try to open with PIL
         from PIL import Image
@@ -16892,13 +16896,13 @@ def _validate_image_data(image_data: str) -> bool:
         
         # Check minimum size
         if img.width < 10 or img.height < 10:
-            logging.error(f"❌ Image validation: too small ({img.width}x{img.height})")
+            logging.error(f"❌ [{field_id}] Image validation: too small ({img.width}x{img.height})")
             return False
         
-        logging.info(f"✅ Image valid: {img.width}x{img.height}, {img.format}")
+        logging.info(f"✅ [{field_id}] Image valid: {img.width}x{img.height}, {img.format}")
         return True
     except Exception as e:
-        logging.error(f"❌ Image validation failed: {str(e)}")
+        logging.error(f"❌ [{field_id}] Image validation failed: {str(e)}")
         return False
 
 def _validate_table_data(table_data) -> bool:
@@ -17211,7 +17215,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 if field_type == 'image' or field_type == 'signature':
                     # IMAGEM ou ASSINATURA
                     # VALIDAÇÃO
-                    if not _validate_image_data(value):
+                    if not _validate_image_data(value, field_id):
                         logging.warning(f"Invalid image data for {field_id}, drawing placeholder")
                         can.setStrokeColor(grey)
                         can.setFillColor(grey)
@@ -17464,7 +17468,7 @@ async def validate_damage_report_data(request: Request):
         for field in image_fields:
             if body.get(field):
                 validation_results['field_count'] += 1
-                if not _validate_image_data(body[field]):
+                if not _validate_image_data(body[field], field):
                     validation_results['warnings'].append(f"Imagem inválida: {field}")
         
         # Validate repair items table
@@ -17511,11 +17515,30 @@ async def preview_damage_report_pdf(request: Request):
         # LOG: Ver o que o frontend envia
         logging.info("=" * 80)
         logging.info("🔍 PREVIEW PDF - Dados recebidos do frontend:")
-        logging.info(f"   vehicleDiagram: {len(body.get('vehicleDiagram', '')) if body.get('vehicleDiagram') else 0} chars")
+        
+        # LOG: Diagrama do veículo
+        vehicle_diagram = body.get('vehicleDiagram', '')
+        if vehicle_diagram:
+            has_prefix = ',' in vehicle_diagram
+            data_part = vehicle_diagram.split(',')[1] if has_prefix else vehicle_diagram
+            logging.info(f"   vehicleDiagram: {len(vehicle_diagram)} chars total")
+            logging.info(f"      Prefix: {'✅ Sim (data:image/...)' if has_prefix else '❌ Não'}")
+            logging.info(f"      Base64 data: {len(data_part)} chars")
+            logging.info(f"      Preview: {vehicle_diagram[:70]}...")
+        else:
+            logging.info(f"   vehicleDiagram: ❌ VAZIO")
+        
+        # LOG: Fotos de danos
+        photos_count = 0
         for i in range(1, 10):
             photo = body.get(f'damagePhoto{i}', '')
             if photo:
+                photos_count += 1
+                has_prefix = ',' in photo
+                data_part = photo.split(',')[1] if has_prefix else photo
                 logging.info(f"   damagePhoto{i}: {len(photo)} chars")
+                logging.info(f"      Prefix: {'✅' if has_prefix else '❌'} | Base64: {len(data_part)} chars | Preview: {photo[:50]}...")
+        logging.info(f"   📸 Total fotos: {photos_count}")
         logging.info(f"   repairItems: {len(body.get('repairItems', []))} items")
         logging.info(f"   totalRepairCost: {body.get('totalRepairCost', 'N/A')} €")
         damage_keys = [k for k in body.keys() if k.startswith('damage_')]
