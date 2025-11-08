@@ -15132,52 +15132,106 @@ async def create_damage_report(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS damage_reports (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        dr_number TEXT UNIQUE,
-                        ra_number TEXT,
-                        contract_number TEXT,
-                        date DATE,
-                        client_name TEXT,
-                        client_email TEXT,
-                        client_phone TEXT,
-                        client_address TEXT,
-                        client_city TEXT,
-                        client_postal_code TEXT,
-                        client_country TEXT,
-                        vehicle_plate TEXT,
-                        vehicle_model TEXT,
-                        vehicle_brand TEXT,
-                        pickup_date DATETIME,
-                        pickup_time TEXT,
-                        pickup_location TEXT,
-                        return_date DATETIME,
-                        return_time TEXT,
-                        return_location TEXT,
-                        issued_by TEXT,
-                        inspection_type TEXT,
-                        inspector_name TEXT,
-                        mileage INTEGER,
-                        fuel_level TEXT,
-                        damage_description TEXT,
-                        observations TEXT,
-                        damage_diagram_data TEXT,
-                        repair_items TEXT,
-                        damage_images TEXT,
-                        total_amount REAL,
-                        status TEXT DEFAULT 'draft',
-                        pdf_data BLOB,
-                        pdf_filename TEXT,
-                        is_protected INTEGER DEFAULT 0,
-                        is_deleted INTEGER DEFAULT 0,
-                        deleted_at TIMESTAMP,
-                        deleted_by TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        created_by TEXT,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
+                # Detectar tipo de BD para CREATE TABLE correto
+                is_postgres = conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']
+                
+                if is_postgres:
+                    # PostgreSQL - Usar SERIAL, BYTEA, TIMESTAMP
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS damage_reports (
+                                id SERIAL PRIMARY KEY,
+                                dr_number TEXT UNIQUE,
+                                ra_number TEXT,
+                                contract_number TEXT,
+                                date DATE,
+                                client_name TEXT,
+                                client_email TEXT,
+                                client_phone TEXT,
+                                client_address TEXT,
+                                client_city TEXT,
+                                client_postal_code TEXT,
+                                client_country TEXT,
+                                vehicle_plate TEXT,
+                                vehicle_model TEXT,
+                                vehicle_brand TEXT,
+                                pickup_date TIMESTAMP,
+                                pickup_time TEXT,
+                                pickup_location TEXT,
+                                return_date TIMESTAMP,
+                                return_time TEXT,
+                                return_location TEXT,
+                                issued_by TEXT,
+                                inspection_type TEXT,
+                                inspector_name TEXT,
+                                mileage INTEGER,
+                                fuel_level TEXT,
+                                damage_description TEXT,
+                                observations TEXT,
+                                damage_diagram_data TEXT,
+                                repair_items TEXT,
+                                damage_images TEXT,
+                                total_amount REAL,
+                                status TEXT DEFAULT 'draft',
+                                pdf_data BYTEA,
+                                pdf_filename TEXT,
+                                is_protected INTEGER DEFAULT 0,
+                                is_deleted INTEGER DEFAULT 0,
+                                deleted_at TIMESTAMP,
+                                deleted_by TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                created_by TEXT,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                else:
+                    # SQLite - Usar AUTOINCREMENT, BLOB, DATETIME
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS damage_reports (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            dr_number TEXT UNIQUE,
+                            ra_number TEXT,
+                            contract_number TEXT,
+                            date DATE,
+                            client_name TEXT,
+                            client_email TEXT,
+                            client_phone TEXT,
+                            client_address TEXT,
+                            client_city TEXT,
+                            client_postal_code TEXT,
+                            client_country TEXT,
+                            vehicle_plate TEXT,
+                            vehicle_model TEXT,
+                            vehicle_brand TEXT,
+                            pickup_date DATETIME,
+                            pickup_time TEXT,
+                            pickup_location TEXT,
+                            return_date DATETIME,
+                            return_time TEXT,
+                            return_location TEXT,
+                            issued_by TEXT,
+                            inspection_type TEXT,
+                            inspector_name TEXT,
+                            mileage INTEGER,
+                            fuel_level TEXT,
+                            damage_description TEXT,
+                            observations TEXT,
+                            damage_diagram_data TEXT,
+                            repair_items TEXT,
+                            damage_images TEXT,
+                            total_amount REAL,
+                            status TEXT DEFAULT 'draft',
+                            pdf_data BLOB,
+                            pdf_filename TEXT,
+                            is_protected INTEGER DEFAULT 0,
+                            is_deleted INTEGER DEFAULT 0,
+                            deleted_at TIMESTAMP,
+                            deleted_by TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            created_by TEXT,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
                 
                 # Adicionar colunas pdf_data e pdf_filename se não existirem (para tabelas antigas)
                 # PostgreSQL: Verificar se colunas existem ANTES de adicionar (evita abort da transação)
