@@ -542,15 +542,17 @@
                     copiedBox.height
                 );
                 
-                fieldCoordinates[field.id] = {
+                const compositeKey = `${field.id}@page${currentPage}`;
+                fieldCoordinates[compositeKey] = {
                     page: currentPage,
                     x: snapped.x,
                     y: snapped.y,
                     width: copiedBox.width,
-                    height: copiedBox.height
+                    height: copiedBox.height,
+                    originalFieldId: field.id
                 };
                 
-                console.log('[MAPPER] Box pasted:', field.id);
+                console.log('[MAPPER] Box pasted:', field.id, 'on page', currentPage);
                 showCustomNotification(`Caixa colada em: ${field.name}`, 'success');
                 updateMappedList();
                 currentFieldIndex++;
@@ -582,15 +584,17 @@
                         detectedBox.height / scale
                     );
                     
-                    fieldCoordinates[field.id] = {
+                    const compositeKey = `${field.id}@page${currentPage}`;
+                    fieldCoordinates[compositeKey] = {
                         page: currentPage,
                         x: snapped.x,
                         y: snapped.y,
                         width: detectedBox.width / scale,
-                        height: detectedBox.height / scale
+                        height: detectedBox.height / scale,
+                        originalFieldId: field.id
                     };
                     
-                    console.log('[MAPPER] Box detected and mapped:', field.id);
+                    console.log('[MAPPER] Box detected and mapped:', field.id, 'on page', currentPage);
                     showCustomNotification(`Caixa detectada e mapeada em: ${field.name}`, 'success');
                     updateMappedList();
                     currentFieldIndex++;
@@ -664,15 +668,17 @@
                 }
             }
             
-            fieldCoordinates[field.id] = {
+            const compositeKey = `${field.id}@page${currentPage}`;
+            fieldCoordinates[compositeKey] = {
                 page: currentPage,
                 x: boxX,
                 y: boxY,
                 width: boxW,
-                height: boxH
+                height: boxH,
+                originalFieldId: field.id
             };
             
-            console.log('[MAPPER] Field mapped:', field.id);
+            console.log('[MAPPER] Field mapped:', field.id, 'on page', currentPage);
             updateMappedList();
             currentFieldIndex++;
             updateCurrentField();
@@ -864,19 +870,38 @@
         }
 
         function updateProgress() {
-            const mapped = Object.keys(fieldCoordinates).length;
+            // Contar campos únicos (não contar múltiplas páginas do mesmo campo)
+            const uniqueFields = new Set();
+            Object.values(fieldCoordinates).forEach(coords => {
+                const originalId = coords.originalFieldId || 'unknown';
+                uniqueFields.add(originalId);
+            });
+            const mapped = uniqueFields.size;
             document.getElementById('fieldProgress').textContent = `${mapped} / ${FIELDS_TO_MAP.length} campos`;
         }
 
         function updateMappedList() {
             const list = document.getElementById('mappedFieldsList');
             list.innerHTML = '';
-            Object.keys(fieldCoordinates).forEach(fieldId => {
+            
+            // Agrupar por field_id original
+            const groupedFields = {};
+            Object.entries(fieldCoordinates).forEach(([key, coords]) => {
+                const originalId = coords.originalFieldId || key.replace(/@page\d+$/, '');
+                if (!groupedFields[originalId]) {
+                    groupedFields[originalId] = [];
+                }
+                groupedFields[originalId].push(coords.page || 1);
+            });
+            
+            // Mostrar campos mapeados
+            Object.entries(groupedFields).forEach(([fieldId, pages]) => {
                 const field = FIELDS_TO_MAP.find(f => f.id === fieldId);
                 if (field) {
                     const item = document.createElement('div');
                     item.className = 'mapped-item';
-                    item.innerHTML = `<span>✓ ${field.name}</span>`;
+                    const pageInfo = pages.length > 1 ? ` (pág. ${pages.sort((a,b) => a-b).join(', ')})` : '';
+                    item.innerHTML = `<span>✓ ${field.name}${pageInfo}</span>`;
                     list.appendChild(item);
                 }
             });
@@ -885,11 +910,26 @@
         async function saveFieldCoordinates(e) {
             if (e) e.preventDefault();
             try {
-                console.log('[MAPPER] Saving coordinates:', fieldCoordinates);
+                // Converter fieldCoordinates para array, extraindo field_id original das chaves compostas
+                const coordsArray = Object.entries(fieldCoordinates).map(([key, coords]) => {
+                    const fieldId = coords.originalFieldId || key.replace(/@page\d+$/, '');
+                    
+                    return {
+                        field_id: fieldId,
+                        x: coords.x,
+                        y: coords.y,
+                        width: coords.width,
+                        height: coords.height,
+                        page: coords.page || 1,
+                        field_type: coords.field_type
+                    };
+                });
+                
+                console.log(`[MAPPER] Saving ${coordsArray.length} coordinate entries...`);
                 const response = await fetch('/api/damage-reports/save-coordinates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(fieldCoordinates)
+                    body: JSON.stringify(coordsArray)
                 });
                 const result = await response.json();
                 console.log('[MAPPER] Save result:', result);
@@ -908,11 +948,27 @@
         // AUTO-SAVE silencioso (sem notificação) - chamado após mapear cada campo
         async function autoSaveCoordinates() {
             try {
-                console.log('[MAPPER] Auto-saving coordinates silently...', Object.keys(fieldCoordinates).length, 'fields');
+                // Converter fieldCoordinates para array, extraindo field_id original das chaves compostas
+                const coordsArray = Object.entries(fieldCoordinates).map(([key, coords]) => {
+                    // Extrair field_id original da chave composta (field_id@pageN -> field_id)
+                    const fieldId = coords.originalFieldId || key.replace(/@page\d+$/, '');
+                    
+                    return {
+                        field_id: fieldId,
+                        x: coords.x,
+                        y: coords.y,
+                        width: coords.width,
+                        height: coords.height,
+                        page: coords.page || 1,
+                        field_type: coords.field_type
+                    };
+                });
+                
+                console.log(`[MAPPER] Auto-saving ${coordsArray.length} coordinate entries...`);
                 const response = await fetch('/api/damage-reports/save-coordinates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(fieldCoordinates)
+                    body: JSON.stringify(coordsArray)
                 });
                 const result = await response.json();
                 if (result.ok) {
@@ -952,23 +1008,47 @@
                 const data = await response.json();
                 console.log('[MAPPER] Load response:', data);
                 if (data.ok && data.coordinates) {
-                    fieldCoordinates = data.coordinates;
-                    console.log('[MAPPER] Loaded coordinates:', fieldCoordinates);
+                    // Processar coordenadas: expandir arrays em entradas separadas
+                    fieldCoordinates = {};
+                    let totalEntries = 0;
+                    
+                    for (const [fieldId, coordData] of Object.entries(data.coordinates)) {
+                        if (Array.isArray(coordData)) {
+                            // Múltiplas entradas para o mesmo campo (páginas diferentes)
+                            coordData.forEach((coords, index) => {
+                                const key = `${fieldId}@page${coords.page || 1}`;
+                                fieldCoordinates[key] = {
+                                    ...coords,
+                                    originalFieldId: fieldId, // Guardar ID original
+                                    page: coords.page || 1
+                                };
+                                totalEntries++;
+                            });
+                        } else {
+                            // Entrada única (compatibilidade com formato antigo)
+                            const key = `${fieldId}@page${coordData.page || 1}`;
+                            fieldCoordinates[key] = {
+                                ...coordData,
+                                originalFieldId: fieldId,
+                                page: coordData.page || 1
+                            };
+                            totalEntries++;
+                        }
+                    }
+                    
+                    console.log(`[MAPPER] Loaded ${totalEntries} coordinate entries for ${Object.keys(data.coordinates).length} fields`);
                     
                     // DEBUG: Log page distribution
                     const pageCount = {};
-                    for (const [fieldId, coords] of Object.entries(fieldCoordinates)) {
+                    for (const [key, coords] of Object.entries(fieldCoordinates)) {
                         const p = coords.page || 'UNDEFINED';
                         pageCount[p] = (pageCount[p] || 0) + 1;
-                        if (!coords.page) {
-                            console.warn(`[MAPPER] Field ${fieldId} missing page property!`, coords);
-                        }
                     }
-                    console.log('[MAPPER] Fields per page:', pageCount);
+                    console.log('[MAPPER] Entries per page:', pageCount);
                     
                     updateMappedList();
                     updateProgress();
-                    await redrawCanvas();  // ✅ Usar redrawCanvas
+                    await redrawCanvas();
                 } else {
                     console.log('[MAPPER] No existing coordinates found');
                 }
@@ -1047,7 +1127,11 @@
             copiedBox = { ...fieldCoordinates[selectedField] };
             document.getElementById('pasteBtn').disabled = false;
             
-            const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
+            // Extrair field_id original da chave composta
+            const coords = fieldCoordinates[selectedField];
+            const originalFieldId = coords.originalFieldId || selectedField.replace(/@page\d+$/, '');
+            const fieldName = FIELDS_TO_MAP.find(f => f.id === originalFieldId)?.name || selectedField;
+            
             showCustomNotification(`Caixa copiada: ${fieldName}. Clique em "Colar" e depois no canvas para posicionar.`, 'success');
             console.log('[MAPPER] Box copied:', selectedField, copiedBox);
         }
@@ -1300,11 +1384,15 @@
         function deleteSelectedBox(e) {
             if (e) e.preventDefault();
             if (selectedField && fieldCoordinates[selectedField]) {
-                const fieldName = FIELDS_TO_MAP.find(f => f.id === selectedField)?.name;
+                // Extrair field_id original da chave composta
+                const coords = fieldCoordinates[selectedField];
+                const originalFieldId = coords.originalFieldId || selectedField.replace(/@page\d+$/, '');
+                const fieldName = FIELDS_TO_MAP.find(f => f.id === originalFieldId)?.name || selectedField;
+                const pageInfo = coords.page ? ` (página ${coords.page})` : '';
                 
                 showCustomConfirmModal(
                     'Eliminar Campo?',
-                    `Tem a certeza que deseja eliminar o campo "${fieldName}"?`,
+                    `Tem a certeza que deseja eliminar o campo "${fieldName}"${pageInfo}?`,
                     () => {
                         delete fieldCoordinates[selectedField];
                         selectedField = null;
@@ -1312,8 +1400,8 @@
                         updateMappedList();
                         updateProgress();
                         redrawCanvas();
-                        showCustomNotification(`Campo "${fieldName}" eliminado`, 'info');
-                        console.log(`[MAPPER] Deleted field: ${fieldName}`);
+                        showCustomNotification(`Campo "${fieldName}"${pageInfo} eliminado`, 'info');
+                        console.log(`[MAPPER] Deleted field: ${fieldName}${pageInfo}`);
                         
                         // AUTO-SAVE após deletar
                         autoSaveCoordinates();

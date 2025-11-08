@@ -10772,21 +10772,35 @@ async def get_damage_report_coordinates(request: Request):
                     """)
                     rows = cursor.fetchall()
                 
+                # Agrupar coordenadas por field_id (permite múltiplas entradas por campo)
                 coordinates = {}
                 template_version = 1
                 for row in rows:
                     field_id = row[0]
-                    coordinates[field_id] = {
+                    coord_data = {
                         'x': row[1],
                         'y': row[2],
                         'width': row[3],
                         'height': row[4],
                         'page': row[5] if row[5] else 1
                     }
+                    
+                    # Se field já existe, adicionar ao array; senão criar novo array
+                    if field_id in coordinates:
+                        # Já é array, adicionar nova entrada
+                        if isinstance(coordinates[field_id], list):
+                            coordinates[field_id].append(coord_data)
+                        else:
+                            # Converter para array (compatibilidade com formato antigo)
+                            coordinates[field_id] = [coordinates[field_id], coord_data]
+                    else:
+                        # Primeira entrada - manter compatibilidade com frontend antigo
+                        coordinates[field_id] = coord_data
+                    
                     if len(row) > 7 and row[7]:
                         template_version = row[7]
                 
-                logging.info(f"📊 GET Coordinates: {len(coordinates)} fields")
+                logging.info(f"📊 GET Coordinates: {len(coordinates)} fields (some may have multiple pages)")
                 return {"ok": True, "coordinates": coordinates, "version": template_version}
             finally:
                 conn.close()
@@ -16856,9 +16870,22 @@ async def save_damage_report_coordinates(request: Request):
         import json
         from datetime import datetime
         
-        # Receber coordenadas
+        # Receber coordenadas (suporta objeto OU array)
         data = await request.json()
-        coordinates = data.get('coordinates', data)  # Suportar ambos os formatos
+        raw_coordinates = data.get('coordinates', data)
+        
+        # Converter para array se for objeto (compatibilidade)
+        if isinstance(raw_coordinates, dict):
+            # Formato antigo: { "field_id": {x, y, ...}, ... }
+            # Converter para array: [ {field_id, x, y, page, ...}, ... ]
+            coordinates = []
+            for field_id, coord in raw_coordinates.items():
+                coord_copy = coord.copy() if isinstance(coord, dict) else {}
+                coord_copy['field_id'] = field_id
+                coordinates.append(coord_copy)
+        else:
+            # Formato novo: array já pronto
+            coordinates = raw_coordinates
         
         # Obter usuário atual
         username = request.session.get('username', 'system')
@@ -16904,8 +16931,17 @@ async def save_damage_report_coordinates(request: Request):
                         
                         logging.info(f"💾 SAVE Coordinates: Salvando {len(coordinates)} campos")
                         
-                        # Inserir novas coordenadas
-                        for field_id, coord in coordinates.items():
+                        # Inserir novas coordenadas (agora array)
+                        for coord in coordinates:
+                            field_id_raw = coord.get('field_id')
+                            if not field_id_raw:
+                                continue
+                            
+                            # Extrair field_id real (remover @pageX se presente)
+                            import re
+                            match = re.match(r'^(.+)@page\d+$', field_id_raw)
+                            field_id = match.group(1) if match else field_id_raw
+                            
                             field_type = _detect_field_type(field_id)
                             
                             # Inserir em coordenadas atuais
@@ -16915,10 +16951,10 @@ async def save_damage_report_coordinates(request: Request):
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """, (
                                 field_id,
-                                coord['x'],
-                                coord['y'],
-                                coord['width'],
-                                coord['height'],
+                                coord.get('x'),
+                                coord.get('y'),
+                                coord.get('width'),
+                                coord.get('height'),
                                 coord.get('page', 1),
                                 field_type,
                                 template_version,
@@ -16933,10 +16969,10 @@ async def save_damage_report_coordinates(request: Request):
                             """, (
                                 template_version,
                                 field_id,
-                                coord['x'],
-                                coord['y'],
-                                coord['width'],
-                                coord['height'],
+                                coord.get('x'),
+                                coord.get('y'),
+                                coord.get('width'),
+                                coord.get('height'),
                                 coord.get('page', 1),
                                 field_type,
                                 username,
@@ -16948,7 +16984,16 @@ async def save_damage_report_coordinates(request: Request):
                     
                     logging.info(f"💾 SAVE Coordinates: Salvando {len(coordinates)} campos")
                     
-                    for field_id, coord in coordinates.items():
+                    for coord in coordinates:
+                        field_id_raw = coord.get('field_id')
+                        if not field_id_raw:
+                            continue
+                        
+                        # Extrair field_id real (remover @pageX se presente)
+                        import re
+                        match = re.match(r'^(.+)@page\d+$', field_id_raw)
+                        field_id = match.group(1) if match else field_id_raw
+                        
                         field_type = _detect_field_type(field_id)
                         
                         conn.execute("""
@@ -16957,10 +17002,10 @@ async def save_damage_report_coordinates(request: Request):
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             field_id,
-                            coord['x'],
-                            coord['y'],
-                            coord['width'],
-                            coord['height'],
+                            coord.get('x'),
+                            coord.get('y'),
+                            coord.get('width'),
+                            coord.get('height'),
                             coord.get('page', 1),
                             field_type,
                             template_version,
@@ -16974,10 +17019,10 @@ async def save_damage_report_coordinates(request: Request):
                         """, (
                             template_version,
                             field_id,
-                            coord['x'],
-                            coord['y'],
-                            coord['width'],
-                            coord['height'],
+                            coord.get('x'),
+                            coord.get('y'),
+                            coord.get('width'),
+                            coord.get('height'),
                             coord.get('page', 1),
                             field_type,
                             username,
@@ -16989,9 +17034,18 @@ async def save_damage_report_coordinates(request: Request):
             finally:
                 conn.close()
         
-        # Guardar também em ficheiro JSON (backup)
+        # Guardar também em ficheiro JSON (backup) - converter array para objeto para compatibilidade
+        backup_coords = {}
+        for coord in coordinates:
+            field_id = coord.get('field_id')
+            if field_id:
+                # Se já existe field_id, criar chave composta
+                page = coord.get('page', 1)
+                key = f"{field_id}@page{page}" if field_id in backup_coords else field_id
+                backup_coords[key] = coord
+        
         with open('damage_report_coordinates.json', 'w') as f:
-            json.dump(coordinates, f, indent=2)
+            json.dump(backup_coords, f, indent=2)
         
         return {"ok": True, "count": len(coordinates), "version": template_version}
     except Exception as e:
@@ -17065,14 +17119,14 @@ def _validate_table_data(table_data) -> bool:
         return False
 
 def _format_currency(value) -> str:
-    """Formata valor como moeda portuguesa (€ 120,00)"""
+    """Formata valor como moeda portuguesa (120,00) - SEM € pois já está no template"""
     try:
         # Convert to float
         if isinstance(value, str):
             value = float(value.replace(',', '.').replace('€', '').strip())
         
-        # Format with thousands separator and 2 decimals
-        return f"€ {value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        # Format with thousands separator and 2 decimals - SEM símbolo €
+        return f"{value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
     except:
         return str(value)
 
@@ -17107,6 +17161,17 @@ def _format_number(value) -> str:
     except:
         return str(value)
 
+def _format_hours(value) -> str:
+    """Formata horas SEM casas decimais"""
+    try:
+        if isinstance(value, str):
+            value = float(value.replace(',', '.').strip())
+        
+        # Sem casas decimais para horas
+        return f"{int(value)}"
+    except:
+        return str(value)
+
 def _get_field_style(field_id: str) -> dict:
     """
     Retorna estilo customizado para o campo
@@ -17123,8 +17188,14 @@ def _get_field_style(field_id: str) -> dict:
         'italic': False
     }
     
-    # EXCEÇÃO: DR number e RA number (contract) ficam em negrito
+    # EXCEÇÕES:
+    # DR number e RA number (contract) ficam em negrito
     if any(word in field_id_lower for word in ['dr_number', 'contract_number', 'contractnumber']):
+        style['bold'] = True
+    
+    # Total da reparação: 9pt bold
+    if any(word in field_id_lower for word in ['total_repair', 'totalrepair', 'total_cost', 'totalcost']):
+        style['size'] = 9
         style['bold'] = True
     
     return style
@@ -17399,16 +17470,16 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             img_buffer.seek(0)
                             
                             # Draw image on canvas
-                            # preserveAspectRatio=False → ESTICA para preencher espaço mapeado
+                            # preserveAspectRatio=True → PRESERVAR proporção (não deformar)
                             can.drawImage(
                                 ImageReader(img_buffer),
                                 x, y,
                                 width=width,
                                 height=height,
-                                preserveAspectRatio=False,  # ✅ ESTICAR para preencher
+                                preserveAspectRatio=True,  # ✅ PRESERVAR proporção
                                 mask='auto' if is_diagram else None  # ✅ Transparência só para diagrama
                             )
-                            logging.info(f"✅ Drew image for {field_id}")
+                            logging.info(f"✅ Drew image for {field_id} (preserving aspect ratio)")
                     except Exception as e:
                         logging.error(f"Error drawing image {field_id}: {e}")
                         # Fallback: draw placeholder
@@ -17449,41 +17520,56 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 line_y = y + (i * row_height)
                                 can.line(x, line_y, x + width, line_y)
                             
-                            # Draw vertical lines (4 columns: desc, qty, price, total)
-                            col_widths = [width * 0.4, width * 0.2, width * 0.2, width * 0.2]
+                            # Draw vertical lines (5 columns: desc, qty, hours, price, total)
+                            col_widths = [width * 0.35, width * 0.12, width * 0.13, width * 0.20, width * 0.20]
                             col_x = x
                             for col_width in col_widths:
                                 can.line(col_x, y, col_x, y + height)
                                 col_x += col_width
                             can.line(col_x, y, col_x, y + height)  # Last line
                             
-                            # Draw header
+                            # Draw header (CENTRALIZADO VERTICALMENTE)
                             can.setFont("Helvetica-Bold", 7)
-                            can.drawString(x + 2, y + height - row_height + 4, "Descrição")
-                            can.drawString(x + col_widths[0] + 2, y + height - row_height + 4, "Qtd")
-                            can.drawString(x + col_widths[0] + col_widths[1] + 2, y + height - row_height + 4, "Preço")
-                            can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, y + height - row_height + 4, "Total")
+                            header_font_size = 7
+                            header_y_base = y + height - row_height
+                            header_y = _calculate_centered_y(header_y_base, row_height, header_font_size)
+                            can.drawString(x + 2, header_y, "Descrição")
+                            can.drawString(x + col_widths[0] + 2, header_y, "Qtd")
+                            can.drawString(x + col_widths[0] + col_widths[1] + 2, header_y, "Horas")
+                            can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, header_y, "Preço")
+                            can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3] + 2, header_y, "Total")
                             
-                            # Draw rows with FORMATTING
+                            # Draw rows with FORMATTING (CENTRALIZADO VERTICALMENTE)
                             can.setFont("Helvetica", 6)
+                            row_font_size = 6
                             for i, row in enumerate(table_data[:10]):
-                                row_y = y + height - ((i + 2) * row_height) + 4
+                                row_y_base = y + height - ((i + 2) * row_height)
+                                row_y = _calculate_centered_y(row_y_base, row_height, row_font_size)
                                 
-                                # Description (truncated)
+                                # Description (truncated, left-aligned)
                                 can.drawString(x + 2, row_y, str(row.get('description', ''))[:30])
                                 
-                                # Quantity (number) - aceita 'quantity' ou 'qty'
+                                # Quantity (number, center-aligned)
                                 qty_value = row.get('quantity', row.get('qty', ''))
                                 qty_formatted = _format_number(qty_value) if qty_value else ''
-                                can.drawString(x + col_widths[0] + 2, row_y, qty_formatted)
+                                qty_x = x + col_widths[0] + (col_widths[1] / 2)
+                                can.drawCentredString(qty_x, row_y, qty_formatted)
                                 
-                                # Price (currency)
+                                # Hours (sem decimais, center-aligned)
+                                hours_value = row.get('hours', '')
+                                hours_formatted = _format_hours(hours_value) if hours_value else ''
+                                hours_x = x + col_widths[0] + col_widths[1] + (col_widths[2] / 2)
+                                can.drawCentredString(hours_x, row_y, hours_formatted)
+                                
+                                # Price (currency, right-aligned with € symbol)
                                 price_formatted = _format_currency(row.get('price', '')) if row.get('price') else ''
-                                can.drawString(x + col_widths[0] + col_widths[1] + 2, row_y, price_formatted)
+                                price_x = x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3] - 5
+                                can.drawRightString(price_x, row_y, price_formatted)
                                 
-                                # Total (currency)
+                                # Total (currency, right-aligned with € symbol)
                                 total_formatted = _format_currency(row.get('total', '')) if row.get('total') else ''
-                                can.drawString(x + col_widths[0] + col_widths[1] + col_widths[2] + 2, row_y, total_formatted)
+                                total_x = x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3] + col_widths[4] - 5
+                                can.drawRightString(total_x, row_y, total_formatted)
                             
                             logging.info(f"✅ Drew table for {field_id} with {len(table_data)} rows")
                     except Exception as e:
@@ -17495,7 +17581,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         can.drawString(x + 2, text_y, str(value)[:50])
                 
                 elif field_type == 'currency':
-                    # MOEDA FORMATADA
+                    # MOEDA FORMATADA (alinhada à direita para € symbol do template)
                     formatted_value = _format_currency(value)
                     style = _get_field_style(field_id)
                     
@@ -17506,7 +17592,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     can.setFillColorRGB(*style['color'])
                     
                     text_y = _calculate_centered_y(y, height, style['size'])
-                    can.drawString(x + 2, text_y, formatted_value)
+                    # Right-align para alinhar com símbolo € no template
+                    can.drawRightString(x + width - 5, text_y, formatted_value)
                 
                 elif field_type == 'date':
                     # DATA FORMATADA
