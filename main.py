@@ -17741,7 +17741,7 @@ def _detect_field_type(field_id: str) -> str:
         return 'currency'
     elif 'date' in field_id_lower:
         return 'date'
-    elif any(word in field_id_lower for word in ['km', 'quantity', 'qty', 'number']) and 'contract' not in field_id_lower:
+    elif any(word in field_id_lower for word in ['km', 'quantity', 'qty', 'number']) and not any(exclude in field_id_lower for exclude in ['contract', 'dr_number', 'ra_number', 'phone']):
         return 'number'
     else:
         return 'text'
@@ -17779,10 +17779,19 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
         logging.info("🔍 PDF FILL - Report data received:")
         logging.info(f"   date: {report_data.get('date', 'MISSING')}")
         logging.info(f"   inspection_date: {report_data.get('inspection_date', 'MISSING')}")
-        logging.info(f"   dr_number: {report_data.get('dr_number', 'MISSING')}")
-        logging.info(f"   ra_number: {report_data.get('ra_number', 'MISSING')}")
-        logging.info(f"   contract_number: {report_data.get('contract_number', 'MISSING')}")
+        logging.info(f"   dr_number: '{report_data.get('dr_number', 'MISSING')}'")
+        logging.info(f"   ra_number: '{report_data.get('ra_number', 'MISSING')}'")
+        logging.info(f"   contract_number: '{report_data.get('contract_number', 'MISSING')}'")
+        logging.info(f"   contractNumber: '{report_data.get('contractNumber', 'MISSING')}'")
         logging.info(f"   vehicle_diagram: {'PRESENT (' + str(len(report_data.get('vehicle_diagram', ''))) + ' chars)' if report_data.get('vehicle_diagram') else 'MISSING'}")
+        
+        # Log TODAS as chaves com "diagram" ou "pin"
+        diagram_keys = [k for k in report_data.keys() if 'diagram' in k.lower() or 'pin' in k.lower()]
+        logging.info(f"   Keys com diagram/pin: {diagram_keys}")
+        for key in diagram_keys:
+            val = report_data.get(key, '')
+            logging.info(f"      {key}: {type(val).__name__}, len={len(str(val)) if val else 0}")
+        
         pins_check = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
         logging.info(f"   damage_pins/damageDiagramData: {'FOUND' if pins_check else 'MISSING'}")
         if pins_check:
@@ -17947,9 +17956,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             logging.info(f"   ✅ Alias usado: {field_id} → {alias_key} = '{value[:50]}...'")
                 
                 # Log detalhado para campos importantes
-                is_important = any(keyword in field_id.lower() for keyword in ['diagram', 'photo', 'signature', 'dr_number', 'ra_number', 'date', 'quantity'])
+                is_important = any(keyword in field_id.lower() for keyword in ['diagram', 'photo', 'signature', 'dr_number', 'ra_number', 'date', 'quantity', 'pin'])
                 if is_important:
-                    logging.info(f"🔍 Campo: {field_id} (page {coords['page']})")
+                    logging.info(f"🔍 Campo: {field_id} (page {coords['page']}) | Type: {field_type}")
                     logging.info(f"   Alias usado: {alias_used if alias_used else 'N/A'}")
                     logging.info(f"   Tem valor? {bool(value)} | Tamanho: {len(str(value)) if value else 0}")
                     if value:
@@ -17957,9 +17966,12 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         logging.info(f"   Preview: {preview}")
                     else:
                         # Verificar se existe em report_data com outro nome
-                        if 'diagram' in field_id.lower():
-                            possible_keys = [k for k in report_data.keys() if 'diagram' in k.lower()]
-                            logging.info(f"   ⚠️ VAZIO! Chaves com 'diagram' em report_data: {possible_keys}")
+                        if 'diagram' in field_id.lower() or 'pin' in field_id.lower():
+                            possible_keys = [k for k in report_data.keys() if 'diagram' in k.lower() or 'pin' in k.lower()]
+                            logging.info(f"   ⚠️ VAZIO! Chaves disponíveis: {possible_keys}")
+                        if 'date' in field_id.lower():
+                            date_keys = [k for k in report_data.keys() if 'date' in k.lower()]
+                            logging.info(f"   ⚠️ VAZIO! Chaves com 'date': {date_keys}")
                 
                 if not value:
                     if is_important:
@@ -18091,45 +18103,60 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             logging.info(f"✅ Drew image for {field_id} (COVER mode: filled {int(width)}x{int(height)} box)")
                             
                             # PINS DO DIAGRAMA: Desenhar DEPOIS da imagem para aparecerem por cima
-                            pins_data = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
-                            
-                            if is_diagram and pins_data:
-                                try:
-                                    import json as json_module
-                                    pins = pins_data
-                                    if isinstance(pins, str):
-                                        pins = json_module.loads(pins)
-                                    
-                                    if isinstance(pins, list) and len(pins) > 0:
-                                        logging.info(f"🎯 Drawing {len(pins)} damage pins on diagram")
+                            if is_diagram:
+                                logging.info(f"🖼️ DIAGRAM DETECTED: {field_id}, searching for pins...")
+                                
+                                # Buscar pins de TODAS as formas possíveis
+                                pins_data = (report_data.get('damage_pins') or 
+                                           report_data.get('damageDiagramData') or 
+                                           report_data.get('damage_diagram_data') or
+                                           report_data.get('damage_pins_data'))
+                                
+                                logging.info(f"   Pins data found: {bool(pins_data)} | Type: {type(pins_data).__name__ if pins_data else 'None'}")
+                                if pins_data and isinstance(pins_data, str):
+                                    logging.info(f"   Pins data preview: {pins_data[:200]}...")
+                                
+                                if pins_data:
+                                    try:
+                                        import json as json_module
+                                        pins = pins_data
+                                        if isinstance(pins, str):
+                                            pins = json_module.loads(pins)
                                         
-                                        for pin in pins:
-                                            pin_number = pin.get('number', '?')
-                                            pin_x_percent = pin.get('x', 0)
-                                            pin_y_percent = pin.get('y', 0)
+                                        if isinstance(pins, list) and len(pins) > 0:
+                                            logging.info(f"🎯 Drawing {len(pins)} damage pins on diagram")
                                             
-                                            # Coordenadas dos pins são % da caixa original
-                                            pin_x = x + (pin_x_percent / 100) * width
-                                            pin_y = y + (pin_y_percent / 100) * height
+                                            for pin in pins:
+                                                pin_number = pin.get('number', '?')
+                                                pin_x_percent = pin.get('x', 0)
+                                                pin_y_percent = pin.get('y', 0)
+                                                
+                                                # Coordenadas dos pins são % da caixa original
+                                                pin_x = x + (pin_x_percent / 100) * width
+                                                pin_y = y + (pin_y_percent / 100) * height
+                                                
+                                                # Círculo vermelho
+                                                pin_radius = 8
+                                                can.setFillColorRGB(1, 0, 0)
+                                                can.setStrokeColorRGB(1, 1, 1)
+                                                can.setLineWidth(2)
+                                                can.circle(pin_x, pin_y, pin_radius, fill=1, stroke=1)
+                                                
+                                                # Número branco
+                                                can.setFillColorRGB(1, 1, 1)
+                                                can.setFont("Helvetica-Bold", 10)
+                                                text_width = can.stringWidth(str(pin_number), "Helvetica-Bold", 10)
+                                                text_x = pin_x - (text_width / 2)
+                                                text_y = pin_y - 3.5
+                                                can.drawString(text_x, text_y, str(pin_number))
                                             
-                                            # Círculo vermelho
-                                            pin_radius = 8
-                                            can.setFillColorRGB(1, 0, 0)
-                                            can.setStrokeColorRGB(1, 1, 1)
-                                            can.setLineWidth(2)
-                                            can.circle(pin_x, pin_y, pin_radius, fill=1, stroke=1)
-                                            
-                                            # Número branco
-                                            can.setFillColorRGB(1, 1, 1)
-                                            can.setFont("Helvetica-Bold", 10)
-                                            text_width = can.stringWidth(str(pin_number), "Helvetica-Bold", 10)
-                                            text_x = pin_x - (text_width / 2)
-                                            text_y = pin_y - 3.5
-                                            can.drawString(text_x, text_y, str(pin_number))
-                                        
-                                        logging.info(f"✅ Drew {len(pins)} pins on diagram")
-                                except Exception as e:
-                                    logging.error(f"Error drawing pins: {e}", exc_info=True)
+                                            logging.info(f"✅ Drew {len(pins)} pins on diagram at ({x}, {y}) size {width}x{height}")
+                                        else:
+                                            logging.warning(f"⚠️ Pins data is not a list or is empty: {type(pins).__name__}")
+                                    except Exception as e:
+                                        logging.error(f"❌ Error drawing pins: {e}", exc_info=True)
+                                else:
+                                    logging.warning(f"⚠️ No pins data found for diagram {field_id}")
                     except Exception as e:
                         logging.error(f"Error drawing image {field_id}: {e}")
                         # Fallback: draw placeholder
@@ -18316,10 +18343,10 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     
                     # DR NUMBER, RA NUMBER, CONTRACT NUMBER: RIGHT-ALIGNED
                     field_id_lower = field_id.lower()
-                    if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower or 'contract_number' in field_id_lower:
+                    if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower or 'contract' in field_id_lower:
                         text_y = _calculate_centered_y(y, height, style['size'])
                         can.drawRightString(x + width - 2, text_y, text_value[:50])
-                        logging.info(f"✅ RIGHT-ALIGNED: {field_id} = '{text_value[:50]}' at x={x + width - 2}, y={text_y}, width={width}")
+                        logging.info(f"✅✅✅ RIGHT-ALIGNED: {field_id} = '{text_value[:50]}' at x={x + width - 2}, y={text_y}, width={width}")
                     # Handle multiline text for textarea fields
                     elif 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text - CADA LINHA CENTRALIZADA VERTICALMENTE
