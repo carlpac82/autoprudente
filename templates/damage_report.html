@@ -8,9 +8,15 @@
     <meta http-equiv="Expires" content="-1">
     <meta name="cache-control" content="no-cache">
     <meta name="expires" content="0">
-    <title>Relatório de Danos - Auto Prudente v2.2-FINAL</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <script src="/static/notifications.js"></script>
+    <title>Relatório de Danos - Auto Prudente v2.3-CACHE-FIX</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=2.3">
+    <script src="/static/notifications.js?v=2.3"></script>
+    <script>
+        // Force cache bypass - v2.3-DEBUG
+        const jsVersion = '2.3-DEBUG-202511082026';
+        console.log('🔄 JavaScript Version:', jsVersion, '- Loaded at:', new Date().toISOString());
+        console.log('🔄 If you see OLD logs, Render deploy is NOT complete yet!');
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
