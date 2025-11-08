@@ -238,6 +238,25 @@
             box-shadow: 0 4px 12px rgba(0, 156, 182, 0.3);
         }
         
+        /* Submit Button - Azul website com hover/active amarelo */
+        #submitButton {
+            background-color: #009cb6 !important;
+            border-color: #009cb6 !important;
+        }
+        
+        #submitButton:hover {
+            background-color: #f6b511 !important;
+            border-color: #f6b511 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(246, 181, 17, 0.3);
+        }
+        
+        #submitButton:active {
+            background-color: #f6b511 !important;
+            border-color: #f6b511 !important;
+            transform: translateY(0);
+        }
+        
         .btn-secondary {
             background: white;
             color: #6b7280;
@@ -820,7 +839,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                 </button>
-                <button type="submit" class="btn btn-success" id="submitButton" title="Guardar Damage Report" style="width: 48px; height: 48px; padding: 12px; border-radius: 8px;">
+                <button type="submit" class="btn" id="submitButton" title="Guardar Damage Report" style="width: 48px; height: 48px; padding: 12px; border-radius: 8px; background-color: #009cb6; border-color: #009cb6; color: white; transition: all 0.2s;">
                     <svg class="icon-mono" style="width: 24px; height: 24px;" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                     </svg>
@@ -3096,11 +3115,17 @@
         document.getElementById('damageReportForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('💾 SUBMIT FORM - Guardar Damage Report');
+            console.log('   Event:', e);
+            
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
+            console.log('   FormData convertido:', Object.keys(data).length, 'campos');
             
             // Adicionar dados dos danos
             data.damageDiagramData = JSON.stringify(damages);
+            console.log('   Damages:', damages.length, 'pins');
             
             // Criar descrição completa dos danos
             const damageDescriptions = damages
@@ -3109,6 +3134,7 @@
                 .join('\n');
             
             data.damageDescription = damageDescriptions;
+            console.log('   Descrição danos:', damageDescriptions.substring(0, 100) + '...');
             
             // Adicionar itens de reparo
             data.repairItems = JSON.stringify(repairItems);
@@ -3121,19 +3147,27 @@
             // Se estamos editando, enviar o DR number existente
             if (currentDRNumber) {
                 data.existingDRNumber = currentDRNumber;
+                console.log('   Modo: ATUALIZAR DR existente:', currentDRNumber);
+            } else {
+                console.log('   Modo: CRIAR novo DR');
             }
             
             try {
+                console.log('   📤 Enviando para /api/damage-reports/create...');
                 const response = await fetch('/api/damage-reports/create', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
                 
+                console.log('   📥 Response status:', response.status);
                 const result = await response.json();
+                console.log('   📥 Result:', result);
                 
                 if (result.ok) {
                     currentDRNumber = result.dr_number;
+                    console.log('   ✅ SUCCESS! DR Number:', result.dr_number);
+                    console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Verificar se foi criação ou atualização
                     const isUpdate = document.getElementById('submitButton').title === 'Atualizar DR';
@@ -3157,11 +3191,19 @@
                     // Scroll para o topo
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
+                    console.error('   ❌ ERRO! result.ok =', result.ok);
+                    console.error('   Error:', result.error);
+                    console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     showNotification('Erro: ' + (result.error || 'Desconhecido'), 'error');
                 }
             } catch (error) {
-                console.error('Erro:', error);
-                showNotification('Erro ao guardar', 'error');
+                console.error('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.error('❌ EXCEPTION ao guardar DR!');
+                console.error('   Error:', error);
+                console.error('   Message:', error.message);
+                console.error('   Stack:', error.stack);
+                console.error('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                showNotification('Erro ao guardar: ' + error.message, 'error');
             }
         });
 
