@@ -17182,6 +17182,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     value = report_data.get(alias_key, '')
                     if value:
                         alias_used = alias_key
+                        if 'damage_description' in field_id:
+                            logging.info(f"   ✅ Alias usado: {field_id} → {alias_key} = '{value[:50]}...'")
                 
                 # Log detalhado para debugar campos
                 if 'diagram' in field_id.lower() or 'photo' in field_id.lower() or 'signature' in field_id.lower():
@@ -17515,7 +17517,11 @@ async def preview_damage_report_pdf(request: Request):
             if photo:
                 logging.info(f"   damagePhoto{i}: {len(photo)} chars")
         logging.info(f"   repairItems: {len(body.get('repairItems', []))} items")
-        logging.info(f"   Damages (damage_X): {[k for k in body.keys() if k.startswith('damage_')]}")
+        damage_keys = [k for k in body.keys() if k.startswith('damage_')]
+        logging.info(f"   Damages (damage_X): {damage_keys}")
+        for dk in sorted(damage_keys):
+            val = body.get(dk, '')
+            logging.info(f"      {dk}: '{val[:50]}...' ({len(val)} chars)" if len(val) > 50 else f"      {dk}: '{val}'")
         logging.info("=" * 80)
         
         # Dividir campos combinados
@@ -17587,14 +17593,20 @@ async def preview_damage_report_pdf(request: Request):
         }
         
         # Adicionar descrições de danos individuais (damage_1, damage_2, ...)
+        # IMPORTANTE: Mapper tem "damage_description_line_X", mas recebemos "damage_X"
+        # O alias no _fill_template_pdf_with_data faz: damage_description_line_X → damage_X
+        damage_count = 0
         for i in range(1, 16):
             damage_key = f'damage_{i}'
             if damage_key in body:
                 report_data[damage_key] = body.get(damage_key, '')
+                damage_count += 1
+        logging.info(f"📝 Adicionados {damage_count} damage_X ao report_data")
         
         # Processar repairItems: distribuir pelos campos individuais do PDF
         repair_items = body.get('repairItems', [])
         if repair_items and isinstance(repair_items, list):
+            logging.info(f"🔧 Processando {len(repair_items)} repairItems:")
             for idx, item in enumerate(repair_items[:10], start=1):  # Max 10 linhas
                 # Cada item tem: description, quantity, hours, price, total
                 report_data[f'repair_line_{idx}'] = item.get('description', '')
@@ -17602,6 +17614,7 @@ async def preview_damage_report_pdf(request: Request):
                 report_data[f'repair_line_{idx}_hours'] = str(item.get('hours', ''))
                 report_data[f'repair_line_{idx}_price'] = str(item.get('price', ''))
                 report_data[f'repair_line_{idx}_subtotal'] = str(item.get('total', ''))
+                logging.info(f"   L{idx}: {item.get('description', '')[:30]} | Qty:{item.get('quantity','')} | Hours:{item.get('hours','')} | €{item.get('price','')} | Total:€{item.get('total','')}")
         
         # Usar função de overlay para preencher template
         pdf_data = _fill_template_pdf_with_data(report_data)
