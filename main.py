@@ -17155,7 +17155,16 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'return_location': 'returnLocation',
                     'inspector_name': 'inspector_name',
                     'inspection_date': 'inspection_date',
+                    'vehicle_diagram': 'vehicleDiagram',  # Diagrama do carro com pins
                 }
+                
+                # ALIASES DE FOTOS (damage_photo_X → damagePhotoX)
+                for i in range(1, 10):
+                    field_aliases[f'damage_photo_{i}'] = f'damagePhoto{i}'
+                
+                # ALIASES DE DESCRIÇÕES DE DANOS (damage_description_line_X → damage_X)
+                for i in range(1, 16):
+                    field_aliases[f'damage_description_line_{i}'] = f'damage_{i}'
                 
                 # Obter valor do campo (tentar field_id direto primeiro, depois alias)
                 value = report_data.get(field_id, '')

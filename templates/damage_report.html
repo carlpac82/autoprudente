@@ -1748,18 +1748,75 @@
                 const carDiagram = document.getElementById('carDiagram');
                 if (carDiagram) {
                     try {
-                        const canvas = await html2canvas(carDiagram, {
-                            backgroundColor: null,
-                            scale: 2,
-                            logging: false,
-                            useCORS: true
+                        const img = carDiagram.querySelector('img');
+                        
+                        // Criar canvas manualmente (mais confiável que html2canvas)
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Esperar imagem carregar se necessário
+                        if (img && !img.complete) {
+                            await new Promise((resolve, reject) => {
+                                img.onload = resolve;
+                                img.onerror = () => reject(new Error('Failed to load car diagram image'));
+                                setTimeout(() => reject(new Error('Timeout loading image')), 5000);
+                            });
+                        }
+                        
+                        if (!img || !img.complete) {
+                            throw new Error('Car diagram image not loaded');
+                        }
+                        
+                        // Definir tamanho do canvas baseado na imagem
+                        canvas.width = img.naturalWidth || img.width || 1000;
+                        canvas.height = img.naturalHeight || img.height || 700;
+                        
+                        // Desenhar fundo branco
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Desenhar imagem do carro
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // Desenhar pins de danos
+                        const pins = carDiagram.querySelectorAll('.damage-pin');
+                        pins.forEach(pin => {
+                            const rect = pin.getBoundingClientRect();
+                            const containerRect = carDiagram.getBoundingClientRect();
+                            
+                            // Calcular posição relativa
+                            const x = ((rect.left - containerRect.left) / containerRect.width) * canvas.width;
+                            const y = ((rect.top - containerRect.top) / containerRect.height) * canvas.height;
+                            
+                            // Desenhar pin
+                            const pinSize = 30;
+                            ctx.fillStyle = '#dc2626';
+                            ctx.beginPath();
+                            ctx.arc(x + pinSize/2, y + pinSize/2, pinSize/2, 0, Math.PI * 2);
+                            ctx.fill();
+                            
+                            // Desenhar número
+                            const number = pin.textContent;
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 16px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(number, x + pinSize/2, y + pinSize/2);
                         });
-                        const diagramBase64 = canvas.toDataURL('image/png');
+                        
+                        const diagramBase64 = canvas.toDataURL('image/png', 0.95);
+                        
+                        // Validar
+                        if (!diagramBase64 || diagramBase64 === 'data:,' || diagramBase64.length < 100) {
+                            throw new Error('Empty canvas generated');
+                        }
+                        
                         data.vehicleDiagram = diagramBase64;
-                        console.log('✅ Diagrama capturado:', diagramBase64.substring(0, 50) + '...', '| Pins:', damages.length);
+                        console.log('✅ Diagrama capturado:', diagramBase64.substring(0, 50) + '...', '| Pins:', pins.length, '| Size:', diagramBase64.length);
+                        
                     } catch (error) {
-                        console.error('Erro ao capturar diagrama:', error);
-                        showNotification('Aviso: Não foi possível capturar o diagrama', 'warning');
+                        console.error('❌ Erro ao capturar diagrama:', error);
+                        showNotification('Aviso: Não foi possível capturar o diagrama - ' + error.message, 'warning');
                     }
                 }
                 
