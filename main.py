@@ -17904,6 +17904,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 field_aliases = {
                     'ra_number': 'ra_number',  # ✅ RA Number (mesmo nome)
                     'contract_number': 'contractNumber',
+                    'dr_number': 'dr_number',  # ✅ DR Number (mesmo nome)
+                    'vehicle_diagram': 'vehicle_diagram',  # ✅ Croqui (mesmo nome)
+                    'damage_pins': 'damage_pins',  # ✅ Pins do diagrama
                     'customer_name': 'clientName',
                     'customer_email': 'clientEmail',
                     'customer_phone': 'clientPhone',
@@ -18273,7 +18276,13 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     can.setFillColorRGB(*style['color'])
                     
                     text_y = _calculate_centered_y(y, height, style['size'])
-                    can.drawString(x + 2, text_y, formatted_value)
+                    
+                    # QUANTIDADES: CENTER-ALIGNED (repair_line_X_qty)
+                    if '_qty' in field_id.lower():
+                        can.drawCentredString(x + width / 2, text_y, formatted_value)
+                        logging.info(f"✅ CENTERED QTY: {field_id} = '{formatted_value}' at center x={x + width / 2}")
+                    else:
+                        can.drawString(x + 2, text_y, formatted_value)
                 
                 elif field_type == 'hours':
                     # HORAS SEM DECIMAIS (center-aligned)
@@ -18305,12 +18314,12 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     if 'notes' not in field_id and 'observation' not in field_id:
                         text_value = text_value.upper()
                     
-                    # DR NUMBER e RA NUMBER: RIGHT-ALIGNED
+                    # DR NUMBER, RA NUMBER, CONTRACT NUMBER: RIGHT-ALIGNED
                     field_id_lower = field_id.lower()
-                    if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower:
+                    if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower or 'contract_number' in field_id_lower:
                         text_y = _calculate_centered_y(y, height, style['size'])
-                        can.drawRightString(x + width - 5, text_y, text_value[:50])
-                        logging.info(f"✅✅✅ RIGHT-ALIGNED: {field_id} = '{text_value[:50]}' at x={x + width - 5}, y={text_y}, width={width}")
+                        can.drawRightString(x + width - 2, text_y, text_value[:50])
+                        logging.info(f"✅ RIGHT-ALIGNED: {field_id} = '{text_value[:50]}' at x={x + width - 2}, y={text_y}, width={width}")
                     # Handle multiline text for textarea fields
                     elif 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text - CADA LINHA CENTRALIZADA VERTICALMENTE
@@ -18536,6 +18545,7 @@ async def preview_damage_report_pdf(request: Request):
             'vehicle_diagram': body.get('vehicleDiagram', ''),  # Croqui base64
             'damage_diagram_data': body.get('damageDiagramData', ''),  # ✅ Pins dos danos (JSON array)
             'damageDiagramData': body.get('damageDiagramData', ''),  # ✅ Alias para compatibilidade
+            'damage_pins': body.get('damageDiagramData', ''),  # ✅ Alias adicional para os pins
             'damage_photo_1': body.get('damagePhoto1', ''),
             'damage_photo_2': body.get('damagePhoto2', ''),
             'damage_photo_3': body.get('damagePhoto3', ''),
