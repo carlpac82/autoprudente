@@ -16968,6 +16968,17 @@ def _detect_field_type(field_id: str) -> str:
     else:
         return 'text'
 
+def _calculate_centered_y(y, height, font_size):
+    """
+    Calcula a posição Y para centralizar verticalmente o texto na caixa
+    y: posição Y da caixa (inferior)
+    height: altura da caixa
+    font_size: tamanho da fonte
+    """
+    # ReportLab desenha texto a partir da baseline
+    # Para centralizar: y + (height / 2) - (font_size / 3)
+    return y + (height / 2) - (font_size / 3)
+
 def _fill_template_pdf_with_data(report_data: dict) -> bytes:
     """
     Preenche o template PDF ativo com dados usando coordenadas mapeadas
@@ -17230,7 +17241,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         # Fallback: draw text
                         can.setFont("Helvetica", 8)
                         can.setFillColor(black)
-                        can.drawString(x + 2, y + 4, str(value)[:50])
+                        text_y = _calculate_centered_y(y, height, 8)
+                        can.drawString(x + 2, text_y, str(value)[:50])
                 
                 elif field_type == 'currency':
                     # MOEDA FORMATADA
@@ -17243,7 +17255,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     can.setFont(font_name, style['size'])
                     can.setFillColorRGB(*style['color'])
                     
-                    can.drawString(x + 2, y + 4, formatted_value)
+                    text_y = _calculate_centered_y(y, height, style['size'])
+                    can.drawString(x + 2, text_y, formatted_value)
                 
                 elif field_type == 'date':
                     # DATA FORMATADA
@@ -17256,7 +17269,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     can.setFont(font_name, style['size'])
                     can.setFillColorRGB(*style['color'])
                     
-                    can.drawString(x + 2, y + 4, formatted_value)
+                    text_y = _calculate_centered_y(y, height, style['size'])
+                    can.drawString(x + 2, text_y, formatted_value)
                 
                 elif field_type == 'number':
                     # NÚMERO FORMATADO
@@ -17269,7 +17283,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     can.setFont(font_name, style['size'])
                     can.setFillColorRGB(*style['color'])
                     
-                    can.drawString(x + 2, y + 4, formatted_value)
+                    text_y = _calculate_centered_y(y, height, style['size'])
+                    can.drawString(x + 2, text_y, formatted_value)
                 
                 else:
                     # TEXTO SIMPLES COM ESTILO
@@ -17293,8 +17308,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 can.drawString(x + 2, current_y, line[:int(width / 5)])
                                 current_y -= line_height
                     else:
-                        # Single line text
-                        can.drawString(x + 2, y + 4, str(value)[:int(width / 5)])
+                        # Single line text - centralizado verticalmente
+                        text_y = _calculate_centered_y(y, height, style['size'])
+                        can.drawString(x + 2, text_y, str(value)[:int(width / 5)])
             
             can.save()
             
