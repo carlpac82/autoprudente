@@ -17329,6 +17329,18 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
         import base64
         import json
         
+        # LOG: Dados recebidos
+        logging.info("🔍 PDF FILL - Report data keys:")
+        logging.info(f"   date: {report_data.get('date', 'MISSING')}")
+        logging.info(f"   inspection_date: {report_data.get('inspection_date', 'MISSING')}")
+        logging.info(f"   dr_number: {report_data.get('dr_number', 'MISSING')}")
+        logging.info(f"   ra_number: {report_data.get('ra_number', 'MISSING')}")
+        logging.info(f"   contract_number: {report_data.get('contract_number', 'MISSING')}")
+        pins_check = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
+        logging.info(f"   damage_pins/damageDiagramData: {'FOUND' if pins_check else 'MISSING'}")
+        if pins_check:
+            logging.info(f"      Pins data: {str(pins_check)[:200]}...")
+        
         # 1. Carregar template ativo da BD
         with _db_lock:
             conn = _db_connect()
@@ -17575,29 +17587,57 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             img_aspect = img_width / img_height
                             box_aspect = width / height
                             
-                            # Ajustar dimensões para COVER (preencher toda a caixa mantendo aspect ratio)
+                            # COVER MODE: Redimensionar imagem para preencher TODA a caixa
                             if img_aspect > box_aspect:
-                                # Imagem mais larga: ajustar pela ALTURA (zoom in na largura)
-                                draw_height = height
-                                draw_width = height * img_aspect
-                                # Centralizar horizontalmente (crop nas bordas)
-                                draw_x = x - (draw_width - width) / 2
-                                draw_y = y
+                                # Imagem mais larga: ajustar pela ALTURA
+                                new_height = height
+                                new_width = height * img_aspect
                             else:
-                                # Imagem mais alta: ajustar pela LARGURA (zoom in na altura)
-                                draw_width = width
-                                draw_height = width / img_aspect
-                                # Centralizar verticalmente (crop nas bordas)
-                                draw_x = x
-                                draw_y = y - (draw_height - height) / 2
+                                # Imagem mais alta: ajustar pela LARGURA
+                                new_width = width
+                                new_height = width / img_aspect
                             
-                            # PINS DO DIAGRAMA: Desenhar ANTES da imagem para aparecerem por cima
-                            # Tentar múltiplos nomes de campo: damage_pins, damageDiagramData, damage_diagram_data
+                            # Redimensionar imagem ANTES de desenhar (crop automático)
+                            img_resized = img.resize((int(new_width), int(new_height)), Image.Resampling.LANCZOS)
+                            
+                            # Crop para caixa exata (center crop)
+                            if new_width > width:
+                                # Crop horizontal
+                                left = (new_width - width) / 2
+                                img_cropped = img_resized.crop((int(left), 0, int(left + width), int(new_height)))
+                            else:
+                                # Crop vertical
+                                top = (new_height - height) / 2
+                                img_cropped = img_resized.crop((0, int(top), int(new_width), int(top + height)))
+                            
+                            # Save cropped image
+                            img_buffer = BytesIO()
+                            if is_diagram and img_cropped.mode == 'RGBA':
+                                img_cropped.save(img_buffer, format='PNG')
+                            else:
+                                if img_cropped.mode == 'RGBA':
+                                    # Converter para RGB se não for diagrama
+                                    background = Image.new('RGB', img_cropped.size, (255, 255, 255))
+                                    background.paste(img_cropped, mask=img_cropped.split()[-1])
+                                    img_cropped = background
+                                img_cropped.save(img_buffer, format='JPEG', quality=90)
+                            img_buffer.seek(0)
+                            
+                            # Desenhar imagem PRIMEIRO (já no tamanho exato da caixa)
+                            can.drawImage(
+                                ImageReader(img_buffer),
+                                x, y,
+                                width=width,
+                                height=height,
+                                mask='auto' if is_diagram else None
+                            )
+                            logging.info(f"✅ Drew image for {field_id} (COVER mode: filled {int(width)}x{int(height)} box)")
+                            
+                            # PINS DO DIAGRAMA: Desenhar DEPOIS da imagem para aparecerem por cima
                             pins_data = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
                             
                             if is_diagram and pins_data:
                                 try:
-                                    # Parse pins (pode ser string JSON ou lista)
                                     import json as json_module
                                     pins = pins_data
                                     if isinstance(pins, str):
@@ -17606,48 +17646,33 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     if isinstance(pins, list) and len(pins) > 0:
                                         logging.info(f"🎯 Drawing {len(pins)} damage pins on diagram")
                                         
-                                        # Ajustar posições dos pins para o contain mode
                                         for pin in pins:
-                                            # Pin tem: {number, x, y} onde x,y são % da imagem original
                                             pin_number = pin.get('number', '?')
-                                            pin_x_percent = pin.get('x', 0)  # 0-100%
-                                            pin_y_percent = pin.get('y', 0)  # 0-100%
+                                            pin_x_percent = pin.get('x', 0)
+                                            pin_y_percent = pin.get('y', 0)
                                             
-                                            # Converter % para coordenadas do canvas (dentro da área da imagem desenhada)
-                                            pin_x = draw_x + (pin_x_percent / 100) * draw_width
-                                            pin_y = draw_y + (pin_y_percent / 100) * draw_height
+                                            # Coordenadas dos pins são % da caixa original
+                                            pin_x = x + (pin_x_percent / 100) * width
+                                            pin_y = y + (pin_y_percent / 100) * height
                                             
-                                            # Desenhar círculo vermelho (pin)
-                                            pin_radius = 8  # 8 pontos de raio
-                                            can.setFillColorRGB(1, 0, 0)  # Vermelho
-                                            can.setStrokeColorRGB(1, 1, 1)  # Borda branca
+                                            # Círculo vermelho
+                                            pin_radius = 8
+                                            can.setFillColorRGB(1, 0, 0)
+                                            can.setStrokeColorRGB(1, 1, 1)
                                             can.setLineWidth(2)
                                             can.circle(pin_x, pin_y, pin_radius, fill=1, stroke=1)
                                             
-                                            # Desenhar número do dano (branco, centralizado)
-                                            can.setFillColorRGB(1, 1, 1)  # Branco
+                                            # Número branco
+                                            can.setFillColorRGB(1, 1, 1)
                                             can.setFont("Helvetica-Bold", 10)
-                                            
-                                            # Centralizar texto no círculo
                                             text_width = can.stringWidth(str(pin_number), "Helvetica-Bold", 10)
                                             text_x = pin_x - (text_width / 2)
-                                            text_y = pin_y - 3.5  # Ajuste vertical para centrar
-                                            
+                                            text_y = pin_y - 3.5
                                             can.drawString(text_x, text_y, str(pin_number))
                                         
                                         logging.info(f"✅ Drew {len(pins)} pins on diagram")
                                 except Exception as e:
                                     logging.error(f"Error drawing pins: {e}", exc_info=True)
-                            
-                            # Draw image on canvas (sem preserveAspectRatio, já calculamos manualmente)
-                            can.drawImage(
-                                ImageReader(img_buffer),
-                                draw_x, draw_y,
-                                width=draw_width,
-                                height=draw_height,
-                                mask='auto' if is_diagram else None  # ✅ Transparência só para diagrama
-                            )
-                            logging.info(f"✅ Drew image for {field_id} (contain mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box)")
                     except Exception as e:
                         logging.error(f"Error drawing image {field_id}: {e}")
                         # Fallback: draw placeholder
@@ -17723,6 +17748,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 # Centro da coluna quantity
                                 qty_x = x + col_widths[0] + (col_widths[1] / 2)
                                 can.drawCentredString(qty_x, row_y, qty_formatted)
+                                logging.debug(f"   Qty: {qty_formatted} centered at x={qty_x}")
                                 
                                 # Hours (sem decimais, center-aligned)
                                 hours_value = row.get('hours', '')
@@ -17769,6 +17795,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     formatted_value = _format_date(value)
                     style = _get_field_style(field_id)
                     
+                    logging.info(f"📅 DATE FIELD: {field_id} = '{value}' → formatted: '{formatted_value}'")
+                    
                     # Apply style
                     font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
                     font_name = f"{font_name}-Oblique" if style['italic'] and not style['bold'] else font_name
@@ -17777,6 +17805,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     
                     text_y = _calculate_centered_y(y, height, style['size'])
                     can.drawString(x + 2, text_y, formatted_value)
+                    logging.info(f"✅ Drew date at x={x + 2}, y={text_y}")
                 
                 elif field_type == 'number':
                     # NÚMERO FORMATADO
@@ -17827,6 +17856,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower:
                         text_y = _calculate_centered_y(y, height, style['size'])
                         can.drawRightString(x + width - 5, text_y, text_value[:50])
+                        logging.info(f"✅ RIGHT-ALIGNED: {field_id} = {text_value[:50]} at x={x + width - 5}")
                     # Handle multiline text for textarea fields
                     elif 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text - CADA LINHA CENTRALIZADA VERTICALMENTE
