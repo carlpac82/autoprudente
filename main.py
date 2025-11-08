@@ -17979,19 +17979,25 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 # Detectar tipo de campo (ANTES de converter coordenadas para usar nos logs)
                 field_type = _detect_field_type(field_id)
                 
+                # LOG PRÉ-TRANSFORMAÇÃO (para diagrama)
+                is_diagram_check = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
+                if is_diagram_check:
+                    logging.error(f"🖼️🖼️🖼️ TENTANDO DESENHAR CROQUI: {field_id}")
+                    logging.error(f"   Valor tem {len(str(value))} chars")
+                    logging.error(f"   Coords ORIGINAIS (DB): x={coords['x']}, y={coords['y']}, w={coords['width']}, h={coords['height']}")
+                    logging.error(f"   page_height={page_height}")
+                
                 # Converter coordenadas (PDF usa origem no canto inferior esquerdo)
                 x = coords['x']
                 y = page_height - coords['y'] - coords['height']
                 width = coords['width']
                 height = coords['height']
                 
+                # LOG PÓS-TRANSFORMAÇÃO
+                if is_diagram_check:
+                    logging.error(f"   Coords TRANSFORMADAS: x={x}, y={y}, w={width}, h={height}")
+                
                 if field_type == 'image' or field_type == 'signature':
-                    # LOG CRÍTICO: Sempre que tenta desenhar imagem
-                    is_diagram_check = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
-                    if is_diagram_check:
-                        logging.error(f"🖼️🖼️🖼️ TENTANDO DESENHAR CROQUI: {field_id}")
-                        logging.error(f"   Valor tem {len(str(value))} chars")
-                        logging.error(f"   Coordenadas: x={x}, y={y}, w={width}, h={height}")
                     
                     # IMAGEM ou ASSINATURA
                     # VALIDAÇÃO
@@ -18094,6 +18100,10 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             
                             if is_diagram:
                                 # DIAGRAMA: CONTAIN mode (ajustar SEM cortar, manter proporções)
+                                if is_diagram_check:
+                                    logging.error(f"🖼️ ANTES CONTAIN: x={x}, y={y}, w={width}, h={height}")
+                                    logging.error(f"🖼️ Imagem: {img_width}x{img_height}")
+                                
                                 img_aspect = img_width / img_height
                                 box_aspect = width / height
                                 
@@ -18103,12 +18113,20 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     draw_height = width / img_aspect
                                     draw_x = x
                                     draw_y = y + (height - draw_height) / 2  # Centrar verticalmente
+                                    if is_diagram_check:
+                                        logging.error(f"🖼️ CONTAIN branch: MAIS LARGA")
+                                        logging.error(f"🖼️ Aspect: img={img_aspect:.3f} box={box_aspect:.3f}")
+                                        logging.error(f"🖼️ CALCULADO: draw_x={draw_x}, draw_y={draw_y}, draw_w={draw_width}, draw_h={draw_height}")
                                 else:
                                     # Imagem mais alta: ajustar pela ALTURA
                                     draw_height = height
                                     draw_width = height * img_aspect
                                     draw_x = x + (width - draw_width) / 2  # Centrar horizontalmente
                                     draw_y = y
+                                    if is_diagram_check:
+                                        logging.error(f"🖼️ CONTAIN branch: MAIS ALTA")
+                                        logging.error(f"🖼️ Aspect: img={img_aspect:.3f} box={box_aspect:.3f}")
+                                        logging.error(f"🖼️ CALCULADO: draw_x={draw_x}, draw_y={draw_y}, draw_w={draw_width}, draw_h={draw_height}")
                                 
                                 # Guardar posição final para os pins
                                 diagram_final_x, diagram_final_y = draw_x, draw_y
