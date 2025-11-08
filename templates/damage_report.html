@@ -1829,6 +1829,11 @@
                 data.repairItems = repairItems;
                 console.log('✅ Repair items:', repairItems);
                 
+                // Calcular e adicionar total de reparação
+                const totalRepairCost = repairItems.reduce((sum, item) => sum + item.total, 0);
+                data.totalRepairCost = totalRepairCost.toFixed(2);
+                console.log('✅ Total repair cost:', data.totalRepairCost, '€');
+                
                 // Adicionar imagens de danos (apenas base64 data, não o objeto completo)
                 damageImages.forEach((img, index) => {
                     data[`damagePhoto${index + 1}`] = img.data;  // ✅ Enviar apenas base64

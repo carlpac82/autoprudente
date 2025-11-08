@@ -17517,6 +17517,7 @@ async def preview_damage_report_pdf(request: Request):
             if photo:
                 logging.info(f"   damagePhoto{i}: {len(photo)} chars")
         logging.info(f"   repairItems: {len(body.get('repairItems', []))} items")
+        logging.info(f"   totalRepairCost: {body.get('totalRepairCost', 'N/A')} €")
         damage_keys = [k for k in body.keys() if k.startswith('damage_')]
         logging.info(f"   Damages (damage_X): {damage_keys}")
         for dk in sorted(damage_keys):
@@ -17615,6 +17616,11 @@ async def preview_damage_report_pdf(request: Request):
                 report_data[f'repair_line_{idx}_price'] = str(item.get('price', ''))
                 report_data[f'repair_line_{idx}_subtotal'] = str(item.get('total', ''))
                 logging.info(f"   L{idx}: {item.get('description', '')[:30]} | Qty:{item.get('quantity','')} | Hours:{item.get('hours','')} | €{item.get('price','')} | Total:€{item.get('total','')}")
+        
+        # Adicionar total de reparação (soma de todos os subtotais)
+        total_repair_cost = body.get('totalRepairCost', '0.00')
+        report_data['total_repair_cost'] = total_repair_cost
+        logging.info(f"💰 Total repair cost: {total_repair_cost} €")
         
         # Usar função de overlay para preencher template
         pdf_data = _fill_template_pdf_with_data(report_data)
