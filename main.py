@@ -17890,6 +17890,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'contract_number': 'contractNumber',
                     'dr_number': 'dr_number',  # ✅ DR Number (mesmo nome)
                     'vehicle_diagram': 'vehicle_diagram',  # ✅ Croqui (mesmo nome)
+                    'vehicleDiagram': 'vehicle_diagram',  # ✅ Alias camelCase → snake_case
                     'damage_pins': 'damage_pins',  # ✅ Pins do diagrama
                     'customer_name': 'clientName',
                     'customer_email': 'clientEmail',
