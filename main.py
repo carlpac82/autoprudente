@@ -17560,6 +17560,9 @@ async def save_damage_report_coordinates(request: Request):
 
 def _validate_image_data(image_data: str, field_id: str = "unknown") -> bool:
     """Valida se dados de imagem são válidos"""
+    is_diagram = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
+    log_fn = logging.error if is_diagram else logging.info
+    
     try:
         if not image_data:
             logging.error(f"❌ [{field_id}] Image validation: empty data")
@@ -17573,7 +17576,7 @@ def _validate_image_data(image_data: str, field_id: str = "unknown") -> bool:
         has_prefix = ',' in image_data
         img_data = image_data.split(',')[1] if has_prefix else image_data
         
-        logging.info(f"🔍 [{field_id}] Validating: total={len(image_data)} chars, prefix={'✅' if has_prefix else '❌'}, base64={len(img_data)} chars")
+        log_fn(f"🔍 [{field_id}] Validating: total={len(image_data)} chars, prefix={'✅' if has_prefix else '❌'}, base64={len(img_data)} chars")
         
         if len(img_data) < 100:
             logging.error(f"❌ [{field_id}] Image validation: too short ({len(img_data)} chars)")
@@ -17581,7 +17584,7 @@ def _validate_image_data(image_data: str, field_id: str = "unknown") -> bool:
         
         # Try to decode
         img_bytes = base64.b64decode(img_data)
-        logging.info(f"🔍 [{field_id}] Base64 decoded: {len(img_bytes)} bytes")
+        log_fn(f"🔍 [{field_id}] Base64 decoded: {len(img_bytes)} bytes")
         
         # Try to open with PIL
         from PIL import Image
@@ -17593,7 +17596,7 @@ def _validate_image_data(image_data: str, field_id: str = "unknown") -> bool:
             logging.error(f"❌ [{field_id}] Image validation: too small ({img.width}x{img.height})")
             return False
         
-        logging.info(f"✅ [{field_id}] Image valid: {img.width}x{img.height}, {img.format}")
+        log_fn(f"✅ [{field_id}] Image valid: {img.width}x{img.height}, {img.format}")
         return True
     except Exception as e:
         logging.error(f"❌ [{field_id}] Image validation failed: {str(e)}")
@@ -17992,7 +17995,17 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     
                     # IMAGEM ou ASSINATURA
                     # VALIDAÇÃO
-                    if not _validate_image_data(value, field_id):
+                    if is_diagram_check:
+                        logging.error("🖼️ Chamando validação...")
+                    
+                    is_valid = _validate_image_data(value, field_id)
+                    
+                    if is_diagram_check:
+                        logging.error(f"🖼️ Validação retornou: {is_valid}")
+                    
+                    if not is_valid:
+                        if is_diagram_check:
+                            logging.error("🖼️ VALIDAÇÃO FALHOU! Desenhando placeholder...")
                         logging.warning(f"Invalid image data for {field_id}, drawing placeholder")
                         can.setStrokeColor(grey)
                         can.setFillColor(grey)
@@ -18002,17 +18015,30 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         continue
                     
                     try:
+                        if is_diagram_check:
+                            logging.error("🖼️ VALIDAÇÃO OK! Começando processamento...")
+                        
                         # Decode base64 image
                         if isinstance(value, str) and ('data:image' in value or value.startswith('/9j')):
+                            if is_diagram_check:
+                                logging.error(f"🖼️ Decodificando base64 ({len(value)} chars)...")
+                            
                             # Remove data:image prefix if present
                             img_data = value.split(',')[1] if ',' in value else value
                             img_bytes = base64.b64decode(img_data)
+                            
+                            if is_diagram_check:
+                                logging.error(f"🖼️ Decodificado: {len(img_bytes)} bytes. Abrindo com PIL...")
                             
                             # Load image with PIL
                             img = Image.open(BytesIO(img_bytes))
                             
                             # Convert to RGB if needed (EXCETO para diagrama - manter transparência)
                             is_diagram = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
+                            
+                            if is_diagram_check:
+                                logging.error(f"🖼️ Imagem aberta: {img.mode}, {img.size}")
+                            
                             logging.info(f"🔍 {field_id}: is_diagram={is_diagram}, mode={img.mode}, size={img.size}")
                             
                             if not is_diagram and img.mode in ('RGBA', 'LA', 'P'):
@@ -18023,6 +18049,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                                 img = background
                             elif is_diagram:
+                                if is_diagram_check:
+                                    logging.error(f"🖼️ É diagrama! Removendo fundo branco...")
+                                
                                 # Diagrama: REMOVER fundo branco e garantir transparência (SEM NUMPY)
                                 if img.mode != 'RGBA':
                                     img = img.convert('RGBA')
@@ -18040,6 +18069,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                         # Se pixel é branco/claro, tornar transparente
                                         if r > threshold and g > threshold and b > threshold:
                                             pixels[x, y] = (r, g, b, 0)  # Alpha = 0
+                                
+                                if is_diagram_check:
+                                    logging.error(f"🖼️ Fundo branco removido!")
                                 
                                 logging.info(f"✅ Diagrama: fundo branco removido, mantém transparência (RGBA) - PIL only")
                             
@@ -18083,10 +18115,12 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 diagram_final_width, diagram_final_height = draw_width, draw_height
                                 
                                 # Desenhar diagrama SEM crop, mantendo proporções originais
+                                logging.error(f"🖼️ Preparando buffer PNG para {field_id}...")
                                 img_buffer = BytesIO()
                                 img.save(img_buffer, format='PNG')
                                 img_buffer.seek(0)
                                 
+                                logging.error(f"🖼️ Chamando can.drawImage em ({int(draw_x)}, {int(draw_y)}, {int(draw_width)}x{int(draw_height)})...")
                                 can.drawImage(
                                     ImageReader(img_buffer),
                                     draw_x, draw_y,
@@ -18094,6 +18128,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     height=draw_height,
                                     mask='auto'
                                 )
+                                logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
                                 logging.info(f"✅ Drew diagram {field_id} (CONTAIN mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box, NO CROP)")
                             else:
                                 # FOTOS: COVER mode (preencher com crop)
