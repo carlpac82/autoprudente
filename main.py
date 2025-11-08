@@ -10746,17 +10746,14 @@ async def get_damage_report_coordinates(request: Request):
     require_auth(request)
     
     try:
-        # Garantir tabelas existem
         _ensure_damage_report_tables()
         
-        # Ler da BD
         with _db_lock:
             conn = _db_connect()
             try:
                 rows = []
                 
                 if conn.__class__.__module__ == 'psycopg2.extensions':
-                    # PostgreSQL
                     cursor = conn.cursor()
                     cursor.execute("""
                         SELECT field_id, x, y, width, height, page, field_type, template_version
@@ -10766,7 +10763,6 @@ async def get_damage_report_coordinates(request: Request):
                     rows = cursor.fetchall()
                     cursor.close()
                 else:
-                    # SQLite
                     cursor = conn.execute("""
                         SELECT field_id, x, y, width, height, page, field_type, template_version
                         FROM damage_report_coordinates
@@ -10785,7 +10781,8 @@ async def get_damage_report_coordinates(request: Request):
                         'height': row[4],
                         'page': row[5] if row[5] else 1
                     }
-                    template_version = row[7] if row[7] else 1
+                    if len(row) > 7 and row[7]:
+                        template_version = row[7]
                 
                 logging.info(f"📊 GET Coordinates: {len(coordinates)} fields")
                 return {"ok": True, "coordinates": coordinates, "version": template_version}
@@ -10793,6 +10790,59 @@ async def get_damage_report_coordinates(request: Request):
                 conn.close()
     except Exception as e:
         logging.error(f"Error getting coordinates: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/damage-reports/get-coordinates-public")
+async def get_damage_report_coordinates_public():
+    """
+    Endpoint TEMPORÁRIO público para sincronizar coordenadas
+    TODO: REMOVER após sincronização!
+    """
+    try:
+        _ensure_damage_report_tables()
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                rows = []
+                
+                if conn.__class__.__module__ == 'psycopg2.extensions':
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM damage_report_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                    cursor.close()
+                else:
+                    cursor = conn.execute("""
+                        SELECT field_id, x, y, width, height, page, field_type, template_version
+                        FROM damage_report_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                
+                coordinates = {}
+                template_version = 1
+                for row in rows:
+                    field_id = row[0]
+                    coordinates[field_id] = {
+                        'x': row[1],
+                        'y': row[2],
+                        'width': row[3],
+                        'height': row[4],
+                        'page': row[5] if row[5] else 1
+                    }
+                    if len(row) > 7 and row[7]:
+                        template_version = row[7]
+                
+                logging.info(f"📊 [PUBLIC] GET Coordinates: {len(coordinates)} fields")
+                return {"ok": True, "coordinates": coordinates, "version": template_version, "count": len(coordinates)}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting coordinates (public): {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/regenerate-grid")
