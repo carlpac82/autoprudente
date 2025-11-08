@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .header { background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); padding: 20px; text-align: center; color: white; }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .logo { height: 60px; }
+        .dr-info { text-align: right; font-size: 14px; line-height: 1.4; }
+        .dr-info strong { display: block; }
+        .content { max-width: 600px; margin: 20px auto; padding: 0 20px; }
+        .footer { background: #009cb6; color: white; padding: 20px; margin-top: 40px; font-size: 12px; text-align: center; }
+        .footer-bar { background: #009cb6; height: 4px; margin: 20px 0; }
+        .phone-icon { display: inline-block; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <!-- CABEÇALHO COM LOGO E DR/RA -->
+    <div class="header">
+        <div class="header-content">
+            <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" class="logo">
+            <div class="dr-info">
+                <strong>Damage Report: {drNumber}</strong>
+                <strong>Rental Agreement: {raNumber}</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CORPO DO EMAIL -->
+    <div class="content">
+        <p>Olá <strong>{firstName}</strong>,</p>
+        
+        <p>Obrigado por ter escolhido a Auto Prudente Rent a Car!</p>
+        
+        <p>Devido a circunstâncias imprevistas ocorridas durante o contrato de aluguer acima referido, o veículo que alugou sofreu danos.</p>
+        
+        <p>O seu contrato de aluguer reflete que recusou o nosso seguro premium, optando por aceitar a total responsabilidade por qualquer perda ou dano que ocorra, independentemente de quem foi o culpado.</p>
+        
+        <p>Assim sendo, é responsável pelo valor descrito em anexo.</p>
+        
+        <p>Se este assunto for resolvido pela sua seguradora ou entidade gestora do cartão de crédito, remeta-lhes os documentos anexos e contacte-nos com as informações do seu sinistro.</p>
+        
+        <p>O objetivo deste e-mail é informar que iremos cobrar no seu cartão de crédito todas as despesas correspondentes aos danos ocorridos durante o período de aluguer.</p>
+        
+        <p>Por favor, não desconsidere este aviso de cobrança. Caso tenha alguma dúvida relativamente ao aviso contacte-nos através do email <a href="mailto:info@auto-prudente.com">info@auto-prudente.com</a>.</p>
+        
+        <p><strong>Sinceramente,</strong><br>
+        Departamento de Assistente Administrativo</p>
+        
+        <div class="footer-bar"></div>
+        
+        <p>Se tiver dúvidas ou quiser fazer comentários, não hesite em contactar-nos.</p>
+        
+        <p><span class="phone-icon">☏</span> <strong>+351 289 542 160</strong></p>
+    </div>
+    
+    <!-- RODAPÉ COM INFORMAÇÕES LEGAIS -->
+    <div class="footer">
+        <p><strong>@ Auto Prudente Rent a Car</strong></p>
+        
+        <p style="margin: 15px 0;">You are receiving this email because you have signed a vehicle rental contract with Auto Prudente Rent a Car. As data controller, Auto Prudente Rent a Car Unipessoal, Lda. processes your personal data to send you information and services related to your rental, processing related to the execution of your vehicle rental contract. For more information about how Auto Prudente Rent a Car processes your personal data and your rights under data protection law, please consult our privacy policy.</p>
+        
+        <p><strong>Auto Prudente Rent a Car Unipessoal, Lda.</strong><br>
+        Fiscal Number: PT 503 539 791<br>
+        Main Office: Estrada de Santa Eulália, Edifício Onda do Mar Loja E, 8200-269 Albufeira<br>
+        Telefone: +351 289 542 160 | E-mail: info@auto-prudente.com</p>
+    </div>
+</body>
+</html>

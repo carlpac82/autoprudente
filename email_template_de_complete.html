@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .header { background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); padding: 20px; text-align: center; color: white; }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .logo { height: 60px; }
+        .dr-info { text-align: right; font-size: 14px; line-height: 1.4; }
+        .dr-info strong { display: block; }
+        .content { max-width: 600px; margin: 20px auto; padding: 0 20px; }
+        .footer { background: #009cb6; color: white; padding: 20px; margin-top: 40px; font-size: 12px; text-align: center; }
+        .footer-bar { background: #009cb6; height: 4px; margin: 20px 0; }
+        .phone-icon { display: inline-block; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <!-- KOPFZEILE MIT LOGO UND DR/RA -->
+    <div class="header">
+        <div class="header-content">
+            <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_AUP.png" alt="Auto Prudente" class="logo">
+            <div class="dr-info">
+                <strong>Schadensbericht: {drNumber}</strong>
+                <strong>Mietvertrag: {raNumber}</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- E-MAIL INHALT -->
+    <div class="content">
+        <p>Hallo <strong>{firstName}</strong>,</p>
+        
+        <p>Vielen Dank, dass Sie sich für Auto Prudente Rent a Car entschieden haben!</p>
+        
+        <p>Aufgrund unvorhergesehener Umstände während des oben genannten Mietvertrags wurde das von Ihnen gemietete Fahrzeug beschädigt.</p>
+        
+        <p>Ihr Mietvertrag zeigt, dass Sie unsere Premium-Versicherung abgelehnt haben und sich dafür entschieden haben, die volle Verantwortung für jeden Verlust oder Schaden zu übernehmen, unabhängig davon, wer schuld war.</p>
+        
+        <p>Daher sind Sie für den in der Anlage beschriebenen Betrag verantwortlich.</p>
+        
+        <p>Wenn diese Angelegenheit von Ihrer Versicherung oder Kreditkartenverwaltung gelöst wird, leiten Sie bitte die beigefügten Dokumente weiter und kontaktieren Sie uns mit Ihren Schadensinformationen.</p>
+        
+        <p>Der Zweck dieser E-Mail ist es, Sie darüber zu informieren, dass wir Ihre Kreditkarte mit allen Kosten belasten werden, die mit dem Schaden während der Mietzeit zusammenhängen.</p>
+        
+        <p>Bitte ignorieren Sie diese Rechnungsanzeige nicht. Wenn Sie Fragen zur Anzeige haben, kontaktieren Sie uns bitte unter <a href="mailto:info@auto-prudente.com">info@auto-prudente.com</a>.</p>
+        
+        <p><strong>Mit freundlichen Grüßen,</strong><br>
+        Verwaltungsabteilung</p>
+        
+        <div class="footer-bar"></div>
+        
+        <p>Wenn Sie Fragen haben oder Kommentare abgeben möchten, zögern Sie bitte nicht, uns zu kontaktieren.</p>
+        
+        <p><span class="phone-icon">☏</span> <strong>+351 289 542 160</strong></p>
+    </div>
+    
+    <!-- FUSSZEILE MIT RECHTLICHEN INFORMATIONEN -->
+    <div class="footer">
+        <p><strong>@ Auto Prudente Rent a Car</strong></p>
+        
+        <p style="margin: 15px 0;">Sie erhalten diese E-Mail, weil Sie einen Fahrzeugmietvertrag mit Auto Prudente Rent a Car unterzeichnet haben. Als Datenverantwortlicher verarbeitet Auto Prudente Rent a Car Unipessoal, Lda. Ihre personenbezogenen Daten, um Ihnen Informationen und Dienstleistungen im Zusammenhang mit Ihrer Miete zu senden, im Rahmen der Ausführung Ihres Fahrzeugmietvertrags. Weitere Informationen darüber, wie Auto Prudente Rent a Car Ihre personenbezogenen Daten verarbeitet und Ihre Rechte nach dem Datenschutzgesetz finden Sie in unserer Datenschutzerklärung.</p>
+        
+        <p><strong>Auto Prudente Rent a Car Unipessoal, Lda.</strong><br>
+        Steuernummer: PT 503 539 791<br>
+        Hauptsitz: Estrada de Santa Eulália, Edifício Onda do Mar Loja E, 8200-269 Albufeira<br>
+        Telefon: +351 289 542 160 | E-Mail: info@auto-prudente.com</p>
+    </div>
+</body>
+</html>
