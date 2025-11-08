@@ -14339,6 +14339,12 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             rect = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
                             text_extracted = pdf_page.get_text("text", clip=rect).strip()
                             
+                            # Limpar texto extraído (remover quebras de linha, espaços extras)
+                            if text_extracted:
+                                # Manter quebras de linha para endereços, mas remover excessos
+                                text_extracted = ' '.join(text_extracted.split())
+                                logging.info(f"   ✅ Texto extraído de {field_id}: '{text_extracted[:80]}...'")
+                            
                             # MÉTODO 2: Se não extraiu texto, tentar OCR
                             if not text_extracted:
                                 try:
@@ -14372,9 +14378,10 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 
                 pdf_doc.close()
                 
-                # Se extraiu campos usando coordenadas, combinar e retornar
+                # Se extraiu campos usando coordenadas, processar e retornar
                 if fields_from_mapping:
-                    logging.info(f"✅ Extracted {len(fields_from_mapping)} fields using mapped coordinates")
+                    logging.info(f"✅ Extraídos {len(fields_from_mapping)} campos usando coordenadas mapeadas")
+                    logging.info(f"   Campos: {list(fields_from_mapping.keys())}")
                     
                     # Combinar campos para Damage Report
                     if fields_from_mapping.get('postalCode') or fields_from_mapping.get('city'):
@@ -14458,19 +14465,22 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             fields_from_mapping['country'] = country_detected
                             logging.info(f"   🌍 País detectado automaticamente: {country_detected} (de código postal: {postal_code})")
                     
-                    # Verificar se extraiu campos importantes
-                    important_fields = ['contractNumber', 'clientName', 'vehiclePlate']
-                    has_important = any(fields_from_mapping.get(f) for f in important_fields)
-                    
-                    if has_important:
-                        logging.info("✅ Coordenadas extraíram campos importantes - retornando")
-                        return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
-                    else:
-                        logging.warning("⚠️  Coordenadas não extraíram campos importantes - usando OCR/regex")
+                    # ✅ SEMPRE retornar se extraiu QUALQUER campo das coordenadas
+                    # NãO usar fallback de padrões se coordenadas estão configuradas
+                    logging.info(f"✅ SUCESSO: Usando {len(fields_from_mapping)} campos das coordenadas mapeadas")
+                    logging.info("   ⚡ Retornando campos extraídos (SEM usar padrões)")
+                    return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
+        
+            else:
+                # Não tinha coordenadas mapeadas
+                logging.info("⚠️  Nenhuma coordenada mapeada encontrada no banco")
+                logging.info("   👉 Acesse /rental-agreement-mapper para configurar")
         
         except Exception as e:
-            logging.warning(f"⚠️  Could not extract using mapped coordinates: {e}")
-            # Continuar para método fallback (OCR/regex)
+            logging.error(f"❌ Erro ao extrair usando coordenadas: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
+            # Continuar para método fallback (padrões)
         
         # MÉTODO 2: Extração INTELIGENTE por PADRÕES (robusta para tamanhos variáveis)
         logging.info("📄 Using PATTERN-BASED intelligent extraction")
