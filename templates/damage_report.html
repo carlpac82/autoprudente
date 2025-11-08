@@ -1980,6 +1980,30 @@
                 });
                 console.log('✅ Damage photos:', damageImages.length);
                 
+                // 🔥 GARANTIA FINAL: Adicionar campos essenciais que podem faltar
+                // (Executado mesmo se código V2.0 não carregar por cache)
+                if (!data.drNumber && currentDRNumber) {
+                    data.drNumber = currentDRNumber;
+                    console.log('🔥 FALLBACK: DR Number adicionado:', currentDRNumber);
+                }
+                
+                const raInput = document.getElementById('raNumber');
+                if (raInput && raInput.value && !data.raNumber) {
+                    data.raNumber = raInput.value;
+                    console.log('🔥 FALLBACK: RA Number adicionado:', raInput.value);
+                }
+                
+                const dateInput = document.getElementById('date');
+                if (dateInput && dateInput.value && !data.date) {
+                    data.date = dateInput.value;
+                    console.log('🔥 FALLBACK: Date adicionado:', dateInput.value);
+                }
+                
+                if (damages && damages.length > 0 && !data.damageDiagramData) {
+                    data.damageDiagramData = JSON.stringify(damages);
+                    console.log('🔥 FALLBACK: Damage pins adicionado:', damages.length, 'pins');
+                }
+                
                 preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Gerando preview do PDF...</p>';
                 
                 // Enviar dados para gerar PDF preview
