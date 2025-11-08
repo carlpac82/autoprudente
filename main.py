@@ -14340,208 +14340,26 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                         if page_num < len(pdf_doc):
                             pdf_page = pdf_doc[page_num]
                             
-                            # USAR coordenadas DIRETAS (Canvas já as salvou em pontos PDF)
-                            page_height = pdf_page.rect.height
-                            page_width = pdf_page.rect.width
+                            print(f"\n📍 Campo: {field_id}")
+                            print(f"   Coords: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
                             
-                            # TESTE: Usar coordenadas diretas primeiro
-                            pdf_y = y
+                            # USAR COORDENADAS DIRETAS DO MAPEADOR - SEM CONVERSÕES
+                            rect_direct = fitz.Rect(x, y, x + width, y + height)
+                            text_extracted = pdf_page.get_text("text", clip=rect_direct).strip()
+                            text_extracted = ' '.join(text_extracted.split()) if text_extracted else ""
                             
-                            print(f"\n{'='*60}")
-                            print(f"📍 TESTANDO CAMPO: {field_id}")
-                            print(f"{'='*60}")
-                            logging.info(f"\n📍 Campo: {field_id}")
-                            logging.info(f"   📄 PDF: {page_width:.1f}x{page_height:.1f}")
-                            logging.info(f"   📐 Coords DB: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
+                            print(f"   Extraído: '{text_extracted}'")
+                            logging.info(f"📍 {field_id}: '{text_extracted}'")
                             
-                            # TESTAR MÚLTIPLOS MÉTODOS (incluindo escala do Canvas)
-                            # Canvas usa scale=2, então coords podem estar 2x maiores!
-                            scale_factor = 2.0  # Canvas viewport scale
-                            
-                            methods = {}
-                            
-                            # Sem escala
-                            methods["DIRETO"] = (x, y, width, height)
-                            methods["INVERTIDO"] = (x, page_height - y, width, height)
-                            methods["INV+HEIGHT"] = (x, page_height - y - height, width, height)
-                            
-                            # Com escala (coords / 2)
-                            methods["ESCALA_DIRETO"] = (x/scale_factor, y/scale_factor, width/scale_factor, height/scale_factor)
-                            methods["ESCALA_INV"] = (x/scale_factor, page_height - y/scale_factor, width/scale_factor, height/scale_factor)
-                            methods["ESCALA_INV+H"] = (x/scale_factor, page_height - y/scale_factor - height/scale_factor, width/scale_factor, height/scale_factor)
-                            
-                            best_text = ""
-                            best_method = "DIRETO"
-                            best_coords = (x, y, width, height)
-                            best_score = 0
-                            
-                            # Função de scoring inteligente por tipo de campo
-                            def score_text_for_field(text, field_name):
-                                """Retorna score de 0-100 baseado na adequação do texto ao campo"""
-                                import re
-                                
-                                if not text or len(text) < 2:
-                                    return 0
-                                
-                                score = 10  # Base score
-                                
-                                # contractNumber: deve ter números e possivelmente hífen
-                                if field_name == "contractNumber":
-                                    if re.search(r'\d{5}-\d{2}', text):  # XXXXX-XX
-                                        score = 100
-                                    elif re.search(r'\d{4,}', text):  # Pelo menos 4 dígitos
-                                        score = 70
-                                    elif any(c.isdigit() for c in text):
-                                        score = 40
-                                    else:
-                                        score = 5  # Penalizar se não tem números
-                                
-                                # clientName: deve ter letras, 2+ palavras, capitalizado
-                                elif field_name == "clientName":
-                                    words = text.split()
-                                    if len(words) >= 2 and all(w[0].isupper() for w in words if w):
-                                        score = 90
-                                    elif len(words) >= 2:
-                                        score = 60
-                                    elif len(words) == 1 and text[0].isupper():
-                                        score = 30
-                                    # Penalizar se parece marca de carro
-                                    if any(brand in text.upper() for brand in ['PEUGEOT', 'FIAT', 'VW', 'FORD', 'BMW']):
-                                        score = 5
-                                
-                                # vehiclePlate: XX-XX-XX ou similar
-                                elif field_name == "vehiclePlate":
-                                    if re.search(r'[A-Z]{2}-\d{2}-[A-Z]{2}', text):
-                                        score = 100
-                                    elif re.search(r'[A-Z0-9]{2,3}-[A-Z0-9]{2,3}', text):
-                                        score = 80
-                                    elif '-' in text and any(c.isalnum() for c in text):
-                                        score = 50
-                                    else:
-                                        score = 10
-                                
-                                # vehicleBrandModel: deve ter marca ou modelo
-                                elif field_name == "vehicleBrandModel":
-                                    brands = ['PEUGEOT', 'FIAT', 'VW', 'FORD', 'BMW', 'AUDI', 'SEAT', 'OPEL', 'RENAULT', 'TOYOTA']
-                                    if any(brand in text.upper() for brand in brands):
-                                        score = 90
-                                    elif '/' in text or len(text.split()) >= 2:
-                                        score = 60
-                                    else:
-                                        score = 20
-                                
-                                # pickupDate / dropoffDate: deve ter data
-                                elif 'Date' in field_name:
-                                    if re.search(r'\d{2}[-/]\d{2}[-/]\d{4}', text):
-                                        score = 100
-                                    elif re.search(r'\d{2}[-/]\d{2}', text):
-                                        score = 70
-                                    elif re.search(r'\d{4}', text):  # Ano
-                                        score = 40
-                                    else:
-                                        score = 10
-                                
-                                # pickupTime / dropoffTime: deve ter hora
-                                elif 'Time' in field_name:
-                                    if re.search(r'\d{1,2}:\d{2}', text):
-                                        score = 100
-                                    elif re.search(r'\d{1,2}\s*:\s*\d{2}', text):
-                                        score = 80
-                                    elif re.search(r'\d{1,2}', text):
-                                        score = 30
-                                    else:
-                                        score = 10
-                                
-                                # country: código 2 letras
-                                elif field_name == "country":
-                                    if len(text) == 2 and text.isalpha() and text.isupper():
-                                        score = 100
-                                    elif len(text) == 2 and text.isalpha():
-                                        score = 80
-                                    else:
-                                        score = 10
-                                
-                                # postalCodeCity: deve ter código postal
-                                elif field_name == "postalCodeCity":
-                                    if re.search(r'\d{4,5}[-\s]?\d{3}', text):  # PT: 8000-000
-                                        score = 100
-                                    elif re.search(r'\d{4,5}', text):
-                                        score = 70
-                                    else:
-                                        score = 20
-                                
-                                # clientPhone: deve ter números e possivelmente +
-                                elif field_name == "clientPhone":
-                                    if re.search(r'\+\d{2,3}\s*\d{9,}', text):
-                                        score = 100
-                                    elif re.search(r'\d{9,}', text):
-                                        score = 80
-                                    elif re.search(r'\d{6,}', text):
-                                        score = 50
-                                    else:
-                                        score = 10
-                                
-                                # address: deve ter rua/avenida/etc
-                                elif field_name == "address":
-                                    street_keywords = ['RUA', 'AVENIDA', 'STREET', 'AVENUE', 'STRASSE', 'VIA', 'CALLE']
-                                    if any(kw in text.upper() for kw in street_keywords):
-                                        score = 90
-                                    elif len(text.split()) >= 3:
-                                        score = 60
-                                    else:
-                                        score = 20
-                                
-                                # pickupLocation / dropoffLocation: nome do local
-                                elif 'Location' in field_name:
-                                    if len(text.split()) >= 2 and text.isupper():
-                                        score = 80
-                                    elif len(text.split()) >= 2:
-                                        score = 60
-                                    else:
-                                        score = 30
-                                
-                                # Outros campos: score baseado no comprimento
-                                else:
-                                    score = min(50, len(text) * 2)
-                                
-                                return score
-                            
-                            for method_name, (test_x, test_y, test_w, test_h) in methods.items():
-                                rect_test = fitz.Rect(test_x, test_y, test_x + test_w, test_y + test_h)
-                                text_test = pdf_page.get_text("text", clip=rect_test).strip()
-                                text_clean = ' '.join(text_test.split()) if text_test else ""
-                                
-                                # Calcular score do texto para este campo
-                                text_score = score_text_for_field(text_clean, field_id)
-                                
-                                print(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}' [score: {text_score}]")
-                                logging.info(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}' [score: {text_score}]")
-                                
-                                # Escolher o texto com MELHOR SCORE (não mais longo!)
-                                if text_score > best_score:
-                                    best_text = text_clean
-                                    best_method = method_name
-                                    best_coords = (test_x, test_y, test_w, test_h)
-                                    best_score = text_score
-                            
-                            print(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
-                            logging.info(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
-                            
-                            # MÉTODO 1: Usar as melhores coordenadas encontradas
-                            text_extracted = best_text
-                            
-                            # Usar best_coords para OCR (se necessário)
-                            x, pdf_y, width, height = best_coords
-                            
-                            # MÉTODO 2: Se não extraiu texto, tentar OCR
+                            # Se não extraiu texto, tentar OCR
                             if not text_extracted:
                                 try:
                                     import pytesseract
                                     from PIL import Image
                                     import io
                                     
-                                    # Renderizar área como imagem usando as melhores coordenadas
-                                    rect_ocr = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
+                                    # Renderizar área como imagem
+                                    rect_ocr = fitz.Rect(x, y, x + width, y + height)
                                     zoom = 2  # Aumentar resolução para OCR
                                     mat = fitz.Matrix(zoom, zoom)
                                     pix = pdf_page.get_pixmap(matrix=mat, clip=rect_ocr)
