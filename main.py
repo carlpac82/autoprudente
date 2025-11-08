@@ -17928,8 +17928,15 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     value = report_data.get(alias_key, '')
                     if value:
                         alias_used = alias_key
-                        if 'damage_description' in field_id:
-                            logging.info(f"   ✅ Alias usado: {field_id} → {alias_key} = '{value[:50]}...'")
+                
+                # LOG ESPECIAL para vehicle_diagram/vehicleDiagram
+                if 'diagram' in field_id.lower() and 'vehicle' in field_id.lower():
+                    logging.info(f"🔍 Processing {field_id}:")
+                    logging.info(f"   Direct lookup (field_id='{field_id}'): {'FOUND' if report_data.get(field_id) else 'NOT FOUND'}")
+                    if field_id in field_aliases:
+                        alias_key = field_aliases[field_id]
+                        logging.info(f"   Alias lookup (alias='{alias_key}'): {'FOUND' if report_data.get(alias_key) else 'NOT FOUND'}")
+                    logging.info(f"   Final value: {'FOUND (' + str(len(str(value))) + ' chars)' if value else 'NOT FOUND'}")
                 
                 # Log detalhado para campos importantes
                 is_important = any(keyword in field_id.lower() for keyword in ['diagram', 'photo', 'signature', 'dr_number', 'ra_number', 'date', 'quantity', 'pin'])
@@ -17954,14 +17961,14 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         logging.warning(f"⚠️ Skipping {field_id} - sem valor")
                     continue
                 
+                # Detectar tipo de campo (ANTES de converter coordenadas para usar nos logs)
+                field_type = _detect_field_type(field_id)
+                
                 # Converter coordenadas (PDF usa origem no canto inferior esquerdo)
                 x = coords['x']
                 y = page_height - coords['y'] - coords['height']
                 width = coords['width']
                 height = coords['height']
-                
-                # Detectar tipo de campo
-                field_type = _detect_field_type(field_id)
                 
                 if field_type == 'image' or field_type == 'signature':
                     # IMAGEM ou ASSINATURA
@@ -18460,15 +18467,25 @@ async def preview_damage_report_pdf(request: Request):
         
         # LOG: Diagrama do veículo
         vehicle_diagram = body.get('vehicleDiagram', '')
+        logging.info("🖼️ " + "="*80)
+        logging.info("🖼️ VERIFICANDO VEHICLE DIAGRAM...")
+        logging.info(f"   body.get('vehicleDiagram'): {type(vehicle_diagram).__name__}")
         if vehicle_diagram:
             has_prefix = ',' in vehicle_diagram
             data_part = vehicle_diagram.split(',')[1] if has_prefix else vehicle_diagram
-            logging.info(f"   vehicleDiagram: {len(vehicle_diagram)} chars total")
+            logging.info(f"   ✅ vehicleDiagram: RECEBIDO! {len(vehicle_diagram)} chars total")
             logging.info(f"      Prefix: {'✅ Sim (data:image/...)' if has_prefix else '❌ Não'}")
             logging.info(f"      Base64 data: {len(data_part)} chars")
             logging.info(f"      Preview: {vehicle_diagram[:70]}...")
+            logging.info(f"   ➡️ Será adicionado a report_data['vehicle_diagram']")
         else:
-            logging.info(f"   vehicleDiagram: ❌ VAZIO")
+            logging.error(f"   ❌❌❌ vehicleDiagram: VAZIO OU NÃO RECEBIDO!")
+            logging.error(f"   body keys: {list(body.keys())}")
+            logging.error(f"   Procurando variações...")
+            for key in body.keys():
+                if 'diagram' in key.lower() or 'vehicle' in key.lower():
+                    logging.error(f"      Encontrado: {key} = {len(str(body[key]))} chars")
+        logging.info("🖼️ " + "="*80)
         
         # LOG: Fotos de danos
         photos_count = 0
