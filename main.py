@@ -17971,6 +17971,13 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 height = coords['height']
                 
                 if field_type == 'image' or field_type == 'signature':
+                    # LOG CRÍTICO: Sempre que tenta desenhar imagem
+                    is_diagram_check = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
+                    if is_diagram_check:
+                        logging.error(f"🖼️🖼️🖼️ TENTANDO DESENHAR CROQUI: {field_id}")
+                        logging.error(f"   Valor tem {len(str(value))} chars")
+                        logging.error(f"   Coordenadas: x={x}, y={y}, w={width}, h={height}")
+                    
                     # IMAGEM ou ASSINATURA
                     # VALIDAÇÃO
                     if not _validate_image_data(value, field_id):
