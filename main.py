@@ -14373,20 +14373,156 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             best_text = ""
                             best_method = "DIRETO"
                             best_coords = (x, y, width, height)
+                            best_score = 0
+                            
+                            # Função de scoring inteligente por tipo de campo
+                            def score_text_for_field(text, field_name):
+                                """Retorna score de 0-100 baseado na adequação do texto ao campo"""
+                                import re
+                                
+                                if not text or len(text) < 2:
+                                    return 0
+                                
+                                score = 10  # Base score
+                                
+                                # contractNumber: deve ter números e possivelmente hífen
+                                if field_name == "contractNumber":
+                                    if re.search(r'\d{5}-\d{2}', text):  # XXXXX-XX
+                                        score = 100
+                                    elif re.search(r'\d{4,}', text):  # Pelo menos 4 dígitos
+                                        score = 70
+                                    elif any(c.isdigit() for c in text):
+                                        score = 40
+                                    else:
+                                        score = 5  # Penalizar se não tem números
+                                
+                                # clientName: deve ter letras, 2+ palavras, capitalizado
+                                elif field_name == "clientName":
+                                    words = text.split()
+                                    if len(words) >= 2 and all(w[0].isupper() for w in words if w):
+                                        score = 90
+                                    elif len(words) >= 2:
+                                        score = 60
+                                    elif len(words) == 1 and text[0].isupper():
+                                        score = 30
+                                    # Penalizar se parece marca de carro
+                                    if any(brand in text.upper() for brand in ['PEUGEOT', 'FIAT', 'VW', 'FORD', 'BMW']):
+                                        score = 5
+                                
+                                # vehiclePlate: XX-XX-XX ou similar
+                                elif field_name == "vehiclePlate":
+                                    if re.search(r'[A-Z]{2}-\d{2}-[A-Z]{2}', text):
+                                        score = 100
+                                    elif re.search(r'[A-Z0-9]{2,3}-[A-Z0-9]{2,3}', text):
+                                        score = 80
+                                    elif '-' in text and any(c.isalnum() for c in text):
+                                        score = 50
+                                    else:
+                                        score = 10
+                                
+                                # vehicleBrandModel: deve ter marca ou modelo
+                                elif field_name == "vehicleBrandModel":
+                                    brands = ['PEUGEOT', 'FIAT', 'VW', 'FORD', 'BMW', 'AUDI', 'SEAT', 'OPEL', 'RENAULT', 'TOYOTA']
+                                    if any(brand in text.upper() for brand in brands):
+                                        score = 90
+                                    elif '/' in text or len(text.split()) >= 2:
+                                        score = 60
+                                    else:
+                                        score = 20
+                                
+                                # pickupDate / dropoffDate: deve ter data
+                                elif 'Date' in field_name:
+                                    if re.search(r'\d{2}[-/]\d{2}[-/]\d{4}', text):
+                                        score = 100
+                                    elif re.search(r'\d{2}[-/]\d{2}', text):
+                                        score = 70
+                                    elif re.search(r'\d{4}', text):  # Ano
+                                        score = 40
+                                    else:
+                                        score = 10
+                                
+                                # pickupTime / dropoffTime: deve ter hora
+                                elif 'Time' in field_name:
+                                    if re.search(r'\d{1,2}:\d{2}', text):
+                                        score = 100
+                                    elif re.search(r'\d{1,2}\s*:\s*\d{2}', text):
+                                        score = 80
+                                    elif re.search(r'\d{1,2}', text):
+                                        score = 30
+                                    else:
+                                        score = 10
+                                
+                                # country: código 2 letras
+                                elif field_name == "country":
+                                    if len(text) == 2 and text.isalpha() and text.isupper():
+                                        score = 100
+                                    elif len(text) == 2 and text.isalpha():
+                                        score = 80
+                                    else:
+                                        score = 10
+                                
+                                # postalCodeCity: deve ter código postal
+                                elif field_name == "postalCodeCity":
+                                    if re.search(r'\d{4,5}[-\s]?\d{3}', text):  # PT: 8000-000
+                                        score = 100
+                                    elif re.search(r'\d{4,5}', text):
+                                        score = 70
+                                    else:
+                                        score = 20
+                                
+                                # clientPhone: deve ter números e possivelmente +
+                                elif field_name == "clientPhone":
+                                    if re.search(r'\+\d{2,3}\s*\d{9,}', text):
+                                        score = 100
+                                    elif re.search(r'\d{9,}', text):
+                                        score = 80
+                                    elif re.search(r'\d{6,}', text):
+                                        score = 50
+                                    else:
+                                        score = 10
+                                
+                                # address: deve ter rua/avenida/etc
+                                elif field_name == "address":
+                                    street_keywords = ['RUA', 'AVENIDA', 'STREET', 'AVENUE', 'STRASSE', 'VIA', 'CALLE']
+                                    if any(kw in text.upper() for kw in street_keywords):
+                                        score = 90
+                                    elif len(text.split()) >= 3:
+                                        score = 60
+                                    else:
+                                        score = 20
+                                
+                                # pickupLocation / dropoffLocation: nome do local
+                                elif 'Location' in field_name:
+                                    if len(text.split()) >= 2 and text.isupper():
+                                        score = 80
+                                    elif len(text.split()) >= 2:
+                                        score = 60
+                                    else:
+                                        score = 30
+                                
+                                # Outros campos: score baseado no comprimento
+                                else:
+                                    score = min(50, len(text) * 2)
+                                
+                                return score
                             
                             for method_name, (test_x, test_y, test_w, test_h) in methods.items():
                                 rect_test = fitz.Rect(test_x, test_y, test_x + test_w, test_y + test_h)
                                 text_test = pdf_page.get_text("text", clip=rect_test).strip()
                                 text_clean = ' '.join(text_test.split()) if text_test else ""
                                 
-                                print(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}'")
-                                logging.info(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}'")
+                                # Calcular score do texto para este campo
+                                text_score = score_text_for_field(text_clean, field_id)
                                 
-                                # Considerar o melhor = mais longo e com letras
-                                if len(text_clean) > len(best_text) and any(c.isalpha() for c in text_clean):
+                                print(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}' [score: {text_score}]")
+                                logging.info(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}' [score: {text_score}]")
+                                
+                                # Escolher o texto com MELHOR SCORE (não mais longo!)
+                                if text_score > best_score:
                                     best_text = text_clean
                                     best_method = method_name
                                     best_coords = (test_x, test_y, test_w, test_h)
+                                    best_score = text_score
                             
                             print(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
                             logging.info(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
