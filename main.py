@@ -749,61 +749,62 @@ def _ensure_rental_agreement_tables():
                     return
                 
                 print("   🔧 Creating PostgreSQL RA tables...", flush=True)
-                with conn.cursor() as cur:
-                    # Tabela de templates do RA
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS rental_agreement_templates (
-                            id SERIAL PRIMARY KEY,
-                            version INTEGER NOT NULL,
-                            filename TEXT NOT NULL,
-                            file_data BYTEA NOT NULL,
-                            num_pages INTEGER,
-                            uploaded_by TEXT,
-                            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            is_active INTEGER DEFAULT 0,
-                            notes TEXT
-                        )
-                    """)
-                    
-                    # Tabela de coordenadas do RA
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS rental_agreement_coordinates (
-                            id SERIAL PRIMARY KEY,
-                            field_id TEXT NOT NULL,
-                            x REAL NOT NULL,
-                            y REAL NOT NULL,
-                            width REAL NOT NULL,
-                            height REAL NOT NULL,
-                            page INTEGER DEFAULT 1,
-                            field_type TEXT,
-                            template_version INTEGER DEFAULT 1,
-                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    
-                    # Tabela de histórico de mapeamentos do RA
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS rental_agreement_mapping_history (
-                            id SERIAL PRIMARY KEY,
-                            template_version INTEGER NOT NULL,
-                            field_id TEXT NOT NULL,
-                            x REAL NOT NULL,
-                            y REAL NOT NULL,
-                            width REAL NOT NULL,
-                            height REAL NOT NULL,
-                            page INTEGER DEFAULT 1,
-                            field_type TEXT,
-                            mapped_by TEXT,
-                            mapped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    
-                    cur.execute("CREATE INDEX IF NOT EXISTS idx_ra_field ON rental_agreement_coordinates(field_id)")
-                    
-                    print("   ✅ rental_agreement_templates", flush=True)
-                    print("   ✅ rental_agreement_coordinates", flush=True)
-                    print("   ✅ rental_agreement_mapping_history", flush=True)
-                    
+                cur = conn.cursor()
+                # Tabela de templates do RA
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS rental_agreement_templates (
+                        id SERIAL PRIMARY KEY,
+                        version INTEGER NOT NULL,
+                        filename TEXT NOT NULL,
+                        file_data BYTEA NOT NULL,
+                        num_pages INTEGER,
+                        uploaded_by TEXT,
+                        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active INTEGER DEFAULT 0,
+                        notes TEXT
+                    )
+                """)
+                
+                # Tabela de coordenadas do RA
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS rental_agreement_coordinates (
+                        id SERIAL PRIMARY KEY,
+                        field_id TEXT NOT NULL,
+                        x REAL NOT NULL,
+                        y REAL NOT NULL,
+                        width REAL NOT NULL,
+                        height REAL NOT NULL,
+                        page INTEGER DEFAULT 1,
+                        field_type TEXT,
+                        template_version INTEGER DEFAULT 1,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Tabela de histórico de mapeamentos do RA
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS rental_agreement_mapping_history (
+                        id SERIAL PRIMARY KEY,
+                        template_version INTEGER NOT NULL,
+                        field_id TEXT NOT NULL,
+                        x REAL NOT NULL,
+                        y REAL NOT NULL,
+                        width REAL NOT NULL,
+                        height REAL NOT NULL,
+                        page INTEGER DEFAULT 1,
+                        field_type TEXT,
+                        mapped_by TEXT,
+                        mapped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_ra_field ON rental_agreement_coordinates(field_id)")
+                cur.close()
+                
+                print("   ✅ rental_agreement_templates", flush=True)
+                print("   ✅ rental_agreement_coordinates", flush=True)
+                print("   ✅ rental_agreement_mapping_history", flush=True)
+                
                 conn.commit()
             finally:
                 conn.close()
@@ -14300,6 +14301,9 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             import fitz  # PyMuPDF
             
             # Carregar coordenadas mapeadas do RA
+            print("\n" + "="*80)
+            print("🚨 EXTRAÇÃO POR COORDENADAS - INÍCIO")
+            print("="*80)
             logging.info("📍 Procurando coordenadas mapeadas...")
             with _db_lock:
                 conn = _db_connect()
@@ -14313,7 +14317,10 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                     cursor = conn.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
                     coords_rows = cursor.fetchall()
             
+            print(f"🔍 Coordenadas encontradas: {len(coords_rows)}")
+            
             if coords_rows:  # ✅ ATIVADO
+                print(f"✅ USANDO {len(coords_rows)} COORDENADAS MAPEADAS!")
                 logging.info(f"📍 Found {len(coords_rows)} mapped RA coordinates, extracting...")
                 
                 # Abrir PDF com PyMuPDF
@@ -14340,6 +14347,9 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             # TESTE: Usar coordenadas diretas primeiro
                             pdf_y = y
                             
+                            print(f"\n{'='*60}")
+                            print(f"📍 TESTANDO CAMPO: {field_id}")
+                            print(f"{'='*60}")
                             logging.info(f"\n📍 Campo: {field_id}")
                             logging.info(f"   📄 PDF: {page_width:.1f}x{page_height:.1f}")
                             logging.info(f"   📐 Coords DB: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
@@ -14369,6 +14379,7 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                                 text_test = pdf_page.get_text("text", clip=rect_test).strip()
                                 text_clean = ' '.join(text_test.split()) if text_test else ""
                                 
+                                print(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}'")
                                 logging.info(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}'")
                                 
                                 # Considerar o melhor = mais longo e com letras
@@ -14377,6 +14388,7 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                                     best_method = method_name
                                     best_coords = (test_x, test_y, test_w, test_h)
                             
+                            print(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
                             logging.info(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
                             
                             # MÉTODO 1: Usar as melhores coordenadas encontradas
@@ -14508,22 +14520,37 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                     
                     # ✅ SEMPRE retornar se extraiu QUALQUER campo das coordenadas
                     # NãO usar fallback de padrões se coordenadas estão configuradas
+                    print("\n" + "="*80)
+                    print(f"✅ EXTRAÇÃO CONCLUÍDA: {len(fields_from_mapping)} campos extraídos")
+                    print("="*80)
+                    for field_id, value in fields_from_mapping.items():
+                        print(f"   • {field_id}: {value[:50] if len(value) > 50 else value}")
+                    print("="*80)
+                    
                     logging.info(f"✅ SUCESSO: Usando {len(fields_from_mapping)} campos das coordenadas mapeadas")
                     logging.info("   ⚡ Retornando campos extraídos (SEM usar padrões)")
                     return {"ok": True, "fields": fields_from_mapping, "method": "mapped_coordinates"}
         
             else:
                 # Não tinha coordenadas mapeadas
+                print("\n⚠️  NENHUMA COORDENADA MAPEADA ENCONTRADA!")
+                print("   👉 Acesse /rental-agreement-mapper para configurar\n")
                 logging.info("⚠️  Nenhuma coordenada mapeada encontrada no banco")
                 logging.info("   👉 Acesse /rental-agreement-mapper para configurar")
         
         except Exception as e:
+            print("\n" + "="*80)
+            print(f"❌ ERRO NA EXTRAÇÃO POR COORDENADAS: {e}")
+            print("="*80)
             logging.error(f"❌ Erro ao extrair usando coordenadas: {e}")
             import traceback
             logging.error(traceback.format_exc())
             # Continuar para método fallback (padrões)
         
         # MÉTODO 2: Extração INTELIGENTE por PADRÕES (robusta para tamanhos variáveis)
+        print("\n" + "="*80)
+        print("⚠️  USANDO FALLBACK: EXTRAÇÃO POR PADRÕES")
+        print("="*80)
         logging.info("📄 Using PATTERN-BASED intelligent extraction")
         reader = PyPDF2.PdfReader(pdf_file)
         
