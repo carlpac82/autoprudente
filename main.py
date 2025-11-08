@@ -15180,24 +15180,51 @@ async def create_damage_report(request: Request):
                 """)
                 
                 # Adicionar colunas pdf_data e pdf_filename se não existirem (para tabelas antigas)
-                try:
-                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BLOB")
-                    logging.info("✅ Coluna pdf_data adicionada")
-                except Exception:
-                    pass  # Coluna já existe
+                # PostgreSQL: Verificar se colunas existem ANTES de adicionar (evita abort da transação)
+                is_postgres = conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']
                 
-                try:
-                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
-                    logging.info("✅ Coluna pdf_filename adicionada")
-                except Exception:
-                    pass  # Coluna já existe
-                
-                # Adicionar coluna is_protected para DRs que não podem ser eliminados
-                try:
-                    conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
-                    logging.info("✅ Coluna is_protected adicionada")
-                except Exception:
-                    pass  # Coluna já existe
+                if is_postgres:
+                    # PostgreSQL: Verificar colunas primeiro
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'damage_reports'
+                        """)
+                        existing_columns = [row[0] for row in cur.fetchall()]
+                        
+                        if 'pdf_data' not in existing_columns:
+                            cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BYTEA")
+                            logging.info("✅ Coluna pdf_data adicionada (PostgreSQL)")
+                        
+                        if 'pdf_filename' not in existing_columns:
+                            cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                            logging.info("✅ Coluna pdf_filename adicionada (PostgreSQL)")
+                        
+                        if 'is_protected' not in existing_columns:
+                            cur.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                            logging.info("✅ Coluna is_protected adicionada (PostgreSQL)")
+                        
+                        conn.commit()
+                else:
+                    # SQLite: Usar try/except (mais simples)
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BLOB")
+                        logging.info("✅ Coluna pdf_data adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                        logging.info("✅ Coluna pdf_filename adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                        logging.info("✅ Coluna is_protected adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
                 
                 import datetime
                 
@@ -15534,8 +15561,22 @@ async def list_damage_reports(request: Request):
             try:
                 logging.info("📋 Listando Damage Reports...")
                 
-                # Verificar se é PostgreSQL ou SQLite
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                # Verificar se é PostgreSQL ou SQLite (método robusto)
+                is_postgres = False
+                try:
+                    # Tentar detectar PostgreSQL pelo tipo de conexão
+                    if hasattr(conn, 'server_version') or conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']:
+                        is_postgres = True
+                    elif hasattr(conn, 'cursor'):
+                        # Se tem cursor(), é psycopg2 (PostgreSQL)
+                        try:
+                            with conn.cursor() as test_cur:
+                                is_postgres = True
+                        except:
+                            pass
+                except:
+                    pass
+                
                 logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 # Verificar se a coluna is_protected existe
@@ -16530,35 +16571,73 @@ async def fix_damage_reports_columns(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                # Adicionar coluna pdf_data
-                try:
-                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BLOB")
-                    conn.commit()
-                    logging.info("✅ Coluna pdf_data adicionada ao PostgreSQL")
-                    pdf_data_added = True
-                except Exception as e:
-                    pdf_data_added = False
-                    logging.info(f"Coluna pdf_data já existe: {e}")
+                # Detectar tipo de BD
+                is_postgres = conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']
                 
-                # Adicionar coluna pdf_filename
-                try:
-                    conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
-                    conn.commit()
-                    logging.info("✅ Coluna pdf_filename adicionada ao PostgreSQL")
-                    pdf_filename_added = True
-                except Exception as e:
-                    pdf_filename_added = False
-                    logging.info(f"Coluna pdf_filename já existe: {e}")
+                pdf_data_added = False
+                pdf_filename_added = False
+                is_protected_added = False
                 
-                # Adicionar coluna is_protected
-                try:
-                    conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
-                    conn.commit()
-                    logging.info("✅ Coluna is_protected adicionada ao PostgreSQL")
-                    is_protected_added = True
-                except Exception as e:
-                    is_protected_added = False
-                    logging.info(f"Coluna is_protected já existe: {e}")
+                if is_postgres:
+                    # PostgreSQL: Verificar colunas ANTES de adicionar
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'damage_reports'
+                        """)
+                        existing_columns = [row[0] for row in cur.fetchall()]
+                        
+                        if 'pdf_data' not in existing_columns:
+                            cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BYTEA")
+                            logging.info("✅ Coluna pdf_data adicionada (PostgreSQL)")
+                            pdf_data_added = True
+                        else:
+                            logging.info("ℹ️ Coluna pdf_data já existe (PostgreSQL)")
+                        
+                        if 'pdf_filename' not in existing_columns:
+                            cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                            logging.info("✅ Coluna pdf_filename adicionada (PostgreSQL)")
+                            pdf_filename_added = True
+                        else:
+                            logging.info("ℹ️ Coluna pdf_filename já existe (PostgreSQL)")
+                        
+                        if 'is_protected' not in existing_columns:
+                            cur.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                            logging.info("✅ Coluna is_protected adicionada (PostgreSQL)")
+                            is_protected_added = True
+                        else:
+                            logging.info("ℹ️ Coluna is_protected já existe (PostgreSQL)")
+                        
+                        conn.commit()
+                else:
+                    # SQLite: Usar try/except
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BLOB")
+                        conn.commit()
+                        logging.info("✅ Coluna pdf_data adicionada (SQLite)")
+                        pdf_data_added = True
+                    except Exception as e:
+                        pdf_data_added = False
+                        logging.info(f"ℹ️ Coluna pdf_data já existe: {e}")
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                        conn.commit()
+                        logging.info("✅ Coluna pdf_filename adicionada (SQLite)")
+                        pdf_filename_added = True
+                    except Exception as e:
+                        pdf_filename_added = False
+                        logging.info(f"ℹ️ Coluna pdf_filename já existe: {e}")
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                        conn.commit()
+                        logging.info("✅ Coluna is_protected adicionada (SQLite)")
+                        is_protected_added = True
+                    except Exception as e:
+                        is_protected_added = False
+                        logging.info(f"ℹ️ Coluna is_protected já existe: {e}")
                 
                 return {
                     "ok": True,
