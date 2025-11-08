@@ -1827,35 +1827,56 @@
                 const data = Object.fromEntries(formData);
                 
                 // ✅ ADICIONAR CAMPOS QUE NÃO ESTÃO NO FORM
+                console.log('🔍 INÍCIO - Adicionando campos extras ao data...');
+                console.log('   FormData original:', Object.keys(data).length, 'campos');
+                
                 // DR Number (gerado automaticamente)
+                console.log('   currentDRNumber global:', currentDRNumber);
                 if (currentDRNumber) {
                     data.drNumber = currentDRNumber;
-                    console.log('✅ DR Number:', currentDRNumber);
+                    console.log('   ✅ DR Number adicionado:', currentDRNumber);
                 } else {
-                    console.warn('⚠️ DR Number não definido - será gerado');
+                    console.warn('   ⚠️ DR Number não definido - será gerado automaticamente');
+                    // Gerar DR temporário para preview
+                    const now = new Date();
+                    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                    const year = now.getFullYear();
+                    data.drNumber = `DR ${month}/${year}`;
+                    console.log('   ⚠️ DR temporário gerado:', data.drNumber);
                 }
                 
                 // RA Number do campo (pode não existir)
                 const raField = document.getElementById('raNumber');
+                console.log('   raField elemento:', raField, '| valor:', raField?.value);
                 if (raField && raField.value) {
                     data.raNumber = raField.value;
-                    console.log('✅ RA Number:', raField.value);
+                    console.log('   ✅ RA Number adicionado:', raField.value);
+                } else {
+                    console.warn('   ⚠️ RA Number vazio ou campo não encontrado');
                 }
                 
                 // Data de inspeção (campo date)
                 const dateField = document.getElementById('date');
+                console.log('   dateField elemento:', dateField, '| valor:', dateField?.value);
                 if (dateField && dateField.value) {
                     data.date = dateField.value;
-                    console.log('✅ Date:', dateField.value);
+                    console.log('   ✅ Date adicionado:', dateField.value);
+                } else {
+                    console.warn('   ⚠️ Date vazio ou campo não encontrado');
                 }
                 
                 // Damage Diagram Data (pins JSON)
+                console.log('   damages array:', damages, '| length:', damages?.length);
                 if (damages && damages.length > 0) {
                     data.damageDiagramData = JSON.stringify(damages);
-                    console.log('✅ Damage pins:', damages.length, 'pins');
+                    console.log('   ✅ Damage pins JSON adicionado:', damages.length, 'pins');
+                    console.log('   Preview JSON:', data.damageDiagramData.substring(0, 100) + '...');
                 } else {
-                    console.warn('⚠️ Nenhum pin de dano adicionado');
+                    console.warn('   ⚠️ Nenhum pin de dano adicionado ao diagrama');
                 }
+                
+                console.log('🔍 FIM - Data completo a enviar:', Object.keys(data).length, 'campos');
+                console.log('   Campos incluídos:', Object.keys(data).join(', '));
                 
                 // Mostrar loading
                 const preview = document.getElementById('livePreview');
