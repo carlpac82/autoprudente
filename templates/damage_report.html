@@ -2022,7 +2022,7 @@
                                     <tr>
                                         <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 12px;">${item.description}</td>
                                         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${item.quantity}</td>
-                                        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${item.hours}h</td>
+                                        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${item.hours === 0 ? '-' : item.hours + 'h'}</td>
                                         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px;">${item.price.toFixed(2)} €</td>
                                         <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: bold;">${item.total.toFixed(2)} €</td>
                                     </tr>
@@ -2776,7 +2776,7 @@
                         </select>
                     </td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">
-                        <select onchange="updateRepairItem(${item.id}, 'hours', this.value === '-' ? 1 : parseInt(this.value))"
+                        <select onchange="updateRepairItem(${item.id}, 'hours', this.value === '-' ? 0 : parseInt(this.value))"
                                 style="width: 80px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; text-align: center; font-size: 13px;">
                             <option value="-" ${item.hours === '-' || item.hours === 0 ? 'selected' : ''}>-</option>
                             <option value="1" ${item.hours === 1 ? 'selected' : ''}>1h</option>
@@ -2933,8 +2933,9 @@
             }
         });
 
-        // Set today's date
-        document.getElementById('date').valueAsDate = new Date();
+        // Date field - deixar vazio para user preencher manualmente
+        // Comentado: não forçar data atual
+        // document.getElementById('date').valueAsDate = new Date();
     </script>
 </body>
 </html>

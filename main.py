@@ -18003,6 +18003,7 @@ async def preview_damage_report_pdf(request: Request):
             'ra_number': body.get('raNumber', ''),  # ✅ RA Number
             'contractNumber': body.get('contractNumber', ''),
             'date': body.get('date', ''),
+            'inspection_date': body.get('date', ''),  # ✅ Alias para compatibilidade de mapeamento
             'clientName': body.get('clientName', ''),
             'clientEmail': body.get('clientEmail', ''),
             'clientPhone': body.get('clientPhone', ''),
@@ -18251,6 +18252,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
             'dr_number': report.get('dr_number', ''),
             'contractNumber': report.get('contract_number', ''),
             'date': report.get('date', ''),
+            'inspection_date': report.get('date', ''),  # ✅ Alias para compatibilidade de mapeamento
             'clientName': report.get('client_name', ''),
             'clientEmail': report.get('client_email', ''),
             'clientPhone': report.get('client_phone', ''),
