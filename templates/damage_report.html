@@ -1808,7 +1808,7 @@
                 
                 // Capturar o diagrama da viatura com pins como imagem
                 const carDiagram = document.getElementById('carDiagram');
-                if (carDiagram && damages.length > 0) {
+                if (carDiagram) {
                     try {
                         const canvas = await html2canvas(carDiagram, {
                             backgroundColor: null,
@@ -1818,12 +1818,27 @@
                         });
                         const diagramBase64 = canvas.toDataURL('image/png');
                         data.vehicleDiagram = diagramBase64;
-                        console.log('✅ Diagrama capturado:', diagramBase64.substring(0, 50) + '...');
+                        console.log('✅ Diagrama capturado:', diagramBase64.substring(0, 50) + '...', '| Pins:', damages.length);
                     } catch (error) {
                         console.error('Erro ao capturar diagrama:', error);
                         showNotification('Aviso: Não foi possível capturar o diagrama', 'warning');
                     }
                 }
+                
+                // Adicionar descrições de danos individuais
+                damages.forEach((damage, index) => {
+                    data[`damage_${index + 1}`] = damage.description || '';
+                });
+                
+                // Adicionar itens de reparo (tabela de reparações)
+                data.repairItems = repairItems;
+                console.log('✅ Repair items:', repairItems);
+                
+                // Adicionar imagens de danos (apenas base64 data, não o objeto completo)
+                damageImages.forEach((img, index) => {
+                    data[`damagePhoto${index + 1}`] = img.data;  // ✅ Enviar apenas base64
+                });
+                console.log('✅ Damage photos:', damageImages.length);
                 
                 preview.innerHTML = '<p style="text-align: center; color: #009cb6; padding: 60px; font-size: 15px;">⏳ Gerando preview do PDF...</p>';
                 
