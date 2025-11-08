@@ -1944,30 +1944,59 @@
                         // Desenhar imagem do carro
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         
+                        // Carregar imagem do pin
+                        const pinImg = new Image();
+                        pinImg.src = '/static/pin.png';
+                        
+                        // Aguardar pin carregar
+                        await new Promise((resolve) => {
+                            if (pinImg.complete) {
+                                resolve();
+                            } else {
+                                pinImg.onload = resolve;
+                                pinImg.onerror = () => {
+                                    console.error('Failed to load pin image');
+                                    resolve(); // Continue anyway
+                                };
+                            }
+                        });
+                        
                         // Desenhar pins de danos
                         const pins = carDiagram.querySelectorAll('.damage-pin');
                         pins.forEach(pin => {
                             const rect = pin.getBoundingClientRect();
                             const containerRect = carDiagram.getBoundingClientRect();
                             
-                            // Calcular posição relativa
-                            const x = ((rect.left - containerRect.left) / containerRect.width) * canvas.width;
-                            const y = ((rect.top - containerRect.top) / containerRect.height) * canvas.height;
+                            // Calcular posição relativa ao canvas
+                            const relX = (rect.left - containerRect.left) / containerRect.width;
+                            const relY = (rect.top - containerRect.top) / containerRect.height;
                             
-                            // Desenhar pin
-                            const pinSize = 30;
-                            ctx.fillStyle = '#dc2626';
-                            ctx.beginPath();
-                            ctx.arc(x + pinSize/2, y + pinSize/2, pinSize/2, 0, Math.PI * 2);
-                            ctx.fill();
+                            // Posição no canvas
+                            const canvasX = relX * canvas.width;
+                            const canvasY = relY * canvas.height;
                             
-                            // Desenhar número
+                            // Tamanho do pin (proporcional ao canvas)
+                            const pinWidth = 40 * (canvas.width / containerRect.width) * currentPinSize;
+                            const pinHeight = 56 * (canvas.height / containerRect.height) * currentPinSize;
+                            
+                            // Desenhar imagem do pin (location icon)
+                            // Centralizado horizontalmente, ancorado na parte inferior
+                            ctx.drawImage(
+                                pinImg,
+                                canvasX - pinWidth / 2,
+                                canvasY - pinHeight,
+                                pinWidth,
+                                pinHeight
+                            );
+                            
+                            // Desenhar número dentro do pin
                             const number = pin.textContent;
-                            ctx.fillStyle = '#ffffff';
-                            ctx.font = 'bold 16px Arial';
+                            ctx.fillStyle = '#1a1a1a'; // Preto (igual ao CSS)
+                            ctx.font = `900 ${20 * currentPinSize}px Arial`; // Font weight 900 (igual ao CSS)
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText(number, x + pinSize/2, y + pinSize/2);
+                            // Número fica ligeiramente acima do centro do pin
+                            ctx.fillText(number, canvasX, canvasY - pinHeight * 0.55);
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
