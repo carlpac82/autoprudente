@@ -17369,15 +17369,22 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     """)
                     rows = cursor.fetchall()
                 
+                # Suportar mesmo field_id em múltiplas páginas usando chave composta
                 coordinates = {}
                 for row in rows:
                     field_id, x, y, width, height, page = row
-                    coordinates[field_id] = {
+                    page_num = int(page) if page else 1
+                    
+                    # Chave composta: field_id@pageN para múltiplas páginas
+                    key = f"{field_id}@page{page_num}"
+                    
+                    coordinates[key] = {
+                        'field_id': field_id,  # Original field_id para buscar valor
                         'x': float(x),
                         'y': float(y),
                         'width': float(width),
                         'height': float(height),
-                        'page': int(page) if page else 1
+                        'page': page_num
                     }
             finally:
                 conn.close()
@@ -17406,10 +17413,13 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
             can.setFont("Helvetica", 8)
             
             # Preencher campos desta página
-            for field_id, coords in coordinates.items():
+            for composite_key, coords in coordinates.items():
                 # MULTI-PAGE FILTER: Skip se campo não pertence a esta página
                 if coords['page'] != (page_num + 1):
                     continue
+                
+                # Extrair field_id original da coordenada
+                field_id = coords['field_id']
                 
                 # FIELD NAME ALIASES: Mapear snake_case (BD) → camelCase (report_data)
                 # Necessário porque coordenadas usam snake_case mas report_data tem camelCase
@@ -17512,22 +17522,25 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                                 img = background
                             elif is_diagram:
-                                # Diagrama: REMOVER fundo branco e garantir transparência
+                                # Diagrama: REMOVER fundo branco e garantir transparência (SEM NUMPY)
                                 if img.mode != 'RGBA':
                                     img = img.convert('RGBA')
                                 
-                                # Converter pixels brancos/claros em transparentes
-                                import numpy as np
-                                img_array = np.array(img)
+                                # Usar PIL para remover fundo branco (sem numpy)
+                                pixels = img.load()
+                                width_img, height_img = img.size
                                 
                                 # Threshold para considerar "branco" (RGB > 240)
-                                white_mask = (img_array[:, :, 0] > 240) & (img_array[:, :, 1] > 240) & (img_array[:, :, 2] > 240)
+                                threshold = 240
                                 
-                                # Tornar pixels brancos transparentes
-                                img_array[white_mask, 3] = 0  # Alpha = 0 (transparente)
+                                for y in range(height_img):
+                                    for x in range(width_img):
+                                        r, g, b, a = pixels[x, y]
+                                        # Se pixel é branco/claro, tornar transparente
+                                        if r > threshold and g > threshold and b > threshold:
+                                            pixels[x, y] = (r, g, b, 0)  # Alpha = 0
                                 
-                                img = Image.fromarray(img_array, 'RGBA')
-                                logging.info(f"✅ Diagrama: fundo branco removido, mantém transparência (RGBA)")
+                                logging.info(f"✅ Diagrama: fundo branco removido, mantém transparência (RGBA) - PIL only")
                             
                             # Save to BytesIO for ReportLab
                             img_buffer = BytesIO()
@@ -17539,26 +17552,26 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 img.save(img_buffer, format='JPEG', quality=85)
                             img_buffer.seek(0)
                             
-                            # CALCULAR aspect ratio para CONTAIN (caber dentro da caixa sem esticar)
+                            # CALCULAR aspect ratio para COVER (preencher caixa com zoom)
                             img_width, img_height = img.size
                             img_aspect = img_width / img_height
                             box_aspect = width / height
                             
-                            # Ajustar dimensões para caber (contain mode)
+                            # Ajustar dimensões para COVER (preencher toda a caixa mantendo aspect ratio)
                             if img_aspect > box_aspect:
-                                # Imagem mais larga: ajustar pela largura
-                                draw_width = width
-                                draw_height = width / img_aspect
-                                # Centralizar verticalmente
-                                draw_x = x
-                                draw_y = y + (height - draw_height) / 2
-                            else:
-                                # Imagem mais alta: ajustar pela altura
+                                # Imagem mais larga: ajustar pela ALTURA (zoom in na largura)
                                 draw_height = height
                                 draw_width = height * img_aspect
-                                # Centralizar horizontalmente
-                                draw_x = x + (width - draw_width) / 2
+                                # Centralizar horizontalmente (crop nas bordas)
+                                draw_x = x - (draw_width - width) / 2
                                 draw_y = y
+                            else:
+                                # Imagem mais alta: ajustar pela LARGURA (zoom in na altura)
+                                draw_width = width
+                                draw_height = width / img_aspect
+                                # Centralizar verticalmente (crop nas bordas)
+                                draw_x = x
+                                draw_y = y - (draw_height - height) / 2
                             
                             # PINS DO DIAGRAMA: Desenhar ANTES da imagem para aparecerem por cima
                             # Tentar múltiplos nomes de campo: damage_pins, damageDiagramData, damage_diagram_data
@@ -17686,9 +17699,10 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 # Description (truncated, left-aligned)
                                 can.drawString(x + 2, row_y, str(row.get('description', ''))[:30])
                                 
-                                # Quantity (number, center-aligned)
+                                # Quantity (number, center-aligned HORIZONTALMENTE)
                                 qty_value = row.get('quantity', row.get('qty', ''))
                                 qty_formatted = _format_number(qty_value) if qty_value else ''
+                                # Centro da coluna quantity
                                 qty_x = x + col_widths[0] + (col_widths[1] / 2)
                                 can.drawCentredString(qty_x, row_y, qty_formatted)
                                 
@@ -17790,8 +17804,13 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     if 'notes' not in field_id and 'observation' not in field_id:
                         text_value = text_value.upper()
                     
+                    # DR NUMBER e RA NUMBER: RIGHT-ALIGNED
+                    field_id_lower = field_id.lower()
+                    if 'dr_number' in field_id_lower or 'ra_number' in field_id_lower:
+                        text_y = _calculate_centered_y(y, height, style['size'])
+                        can.drawRightString(x + width - 5, text_y, text_value[:50])
                     # Handle multiline text for textarea fields
-                    if 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
+                    elif 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
                         # Multiline text - CADA LINHA CENTRALIZADA VERTICALMENTE
                         lines = text_value.split('\n')
                         
