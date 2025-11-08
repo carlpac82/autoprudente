@@ -103,5 +103,29 @@
     "y": 189.38878158592306,
     "width": 64.51807228915658,
     "height": 11.478107974904418
+  },
+  "date": {
+    "page": 1,
+    "x": 20,
+    "y": 750,
+    "width": 120,
+    "height": 15,
+    "comment": "Data do relatório - coordenadas aproximadas, ajustar se necessário"
+  },
+  "inspection_date": {
+    "page": 1,
+    "x": 20,
+    "y": 750,
+    "width": 120,
+    "height": 15,
+    "comment": "Alias para date - mesmas coordenadas"
+  },
+  "vehicle_diagram": {
+    "page": 1,
+    "x": 50,
+    "y": 280,
+    "width": 500,
+    "height": 400,
+    "comment": "Croqui do veículo - área grande central, ajustar posição exata"
   }
 }
