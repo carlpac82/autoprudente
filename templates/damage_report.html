@@ -1854,13 +1854,11 @@
                     data.drNumber = currentDRNumber;
                     console.log('   ✅ DR Number adicionado:', currentDRNumber);
                 } else {
-                    console.warn('   ⚠️ DR Number não definido - será gerado automaticamente');
-                    // Gerar DR temporário para preview
-                    const now = new Date();
-                    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-                    const year = now.getFullYear();
-                    data.drNumber = `DR ${month}/${year}`;
-                    console.log('   ⚠️ DR temporário gerado:', data.drNumber);
+                    console.warn('   ⚠️ DR Number não definido - será gerado ao salvar');
+                    // NÃO gerar DR temporário - deixar vazio para preview
+                    // O número DR só deve aparecer DEPOIS de salvar/criar
+                    data.drNumber = '';  // Vazio - mostra apenas "DR" no template
+                    console.log('   ℹ️ DR Number deixado vazio (será gerado ao salvar)');
                 }
                 
                 // Data de inspeção (campo date)
