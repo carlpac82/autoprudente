@@ -1820,14 +1820,14 @@
             showNotification('Caixa colada! Ajusta a posição se necessário', 'success');
         }
         
-        // Atualizar preview com PDF original preenchido
+        // Atualizar preview com PDF original preenchido (v2.0 - Fixed missing fields)
         async function updatePDFPreview() {
             try {
                 const formData = new FormData(document.getElementById('damageReportForm'));
                 const data = Object.fromEntries(formData);
                 
-                // ✅ ADICIONAR CAMPOS QUE NÃO ESTÃO NO FORM
-                console.log('🔍 INÍCIO - Adicionando campos extras ao data...');
+                // ✅ ADICIONAR CAMPOS QUE NÃO ESTÃO NO FORM - V2.0 FIXED
+                console.log('🔍🔍🔍 INÍCIO V2.0 - Adicionando campos extras ao data...');
                 console.log('   FormData original:', Object.keys(data).length, 'campos');
                 
                 // DR Number (gerado automaticamente)
