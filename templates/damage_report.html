@@ -507,32 +507,21 @@
         <!-- Tab Content: Formulário -->
         <div id="formContent" class="tab-content active">
         
-            <!-- Upload Rental Agreement -->
-            <div class="card" style="background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); color: white; margin-bottom: 30px;">
-                <div class="card-header" style="border-color: rgba(255,255,255,0.2);">
-                    <svg class="icon-mono" style="color: white;" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            <!-- Upload Rental Agreement - Compact Icon -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                <button type="button" onclick="document.getElementById('raFile').click()" 
+                        title="Upload Rental Agreement"
+                        onmouseover="this.style.background='#009cb6'; this.style.color='white';"
+                        onmouseout="this.style.background='transparent'; this.style.color='#009cb6';"
+                        style="background: transparent; border: 2px solid #009cb6; color: #009cb6; width: 50px; height: 50px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; position: relative;">
+                    <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" style="opacity: 0.5;"/>
                     </svg>
-                    <h2>Upload Rental Agreement</h2>
-                </div>
-                
-                <div style="padding: 20px;">
-                    <p style="margin-bottom: 20px; font-size: 14px; opacity: 0.95;">
-                        📄 Faça upload do PDF do Rental Agreement para extrair automaticamente os dados do cliente, veículo e contrato.
-                    </p>
-                    
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <button type="button" onclick="document.getElementById('raFile').click()" 
-                                style="background: white; color: #009cb6; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                            </svg>
-                            Selecionar Rental Agreement
-                        </button>
-                        <input type="file" id="raFile" accept=".pdf" onchange="handleRAUpload(event)" style="display: none;">
-                        <span id="raFilename" style="font-size: 13px; opacity: 0.9;"></span>
-                    </div>
-                </div>
+                    <span style="position: absolute; bottom: -24px; right: 0; font-size: 11px; white-space: nowrap; color: #009cb6; font-weight: 500;">Upload RA</span>
+                </button>
+                <input type="file" id="raFile" accept=".pdf" onchange="handleRAUpload(event)" style="display: none;">
+                <span id="raFilename" style="font-size: 12px; color: #009cb6; margin-left: 12px; align-self: center; font-weight: 500;"></span>
             </div>
         
         <form id="damageReportForm">

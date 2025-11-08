@@ -256,36 +256,37 @@
             </div>
         </div>
 
-        <!-- Rental Agreement Mapper Section -->
-        <div class="section-card" style="background: linear-gradient(135deg, #f4ad0f 0%, #e69b00 100%); color: white; margin-bottom: 30px;">
-            <div class="section-header" style="border-color: rgba(255,255,255,0.2); color: white;">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                <h3>Mapeamento de Rental Agreement</h3>
+        <!-- Rental Agreement Mapper Section - Compact Icons -->
+        <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 12px; border-left: 4px solid #f4ad0f;">
+            <div style="flex: 1;">
+                <h3 style="color: #1a1a1a; font-size: 16px; font-weight: 600; margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+                    <svg style="width: 20px; height: 20px; color: #f4ad0f;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Rental Agreement Mapper
+                </h3>
+                <p style="color: #6b7280; font-size: 13px; margin: 0;">Configure a extração automática de dados do RA</p>
             </div>
-            <div style="padding: 20px;">
-                <p style="margin-bottom: 20px; font-size: 14px; opacity: 0.95;">
-                    📋 Configure o mapeamento do Rental Agreement para extrair automaticamente dados do cliente e veículo.
-                </p>
+            
+            <div style="display: flex; gap: 12px;">
+                <button onclick="openRAMapper()" title="Abrir Mapeador RA"
+                        onmouseover="this.style.background='#f4ad0f'; this.style.color='white';"
+                        onmouseout="this.style.background='transparent'; this.style.color='#f4ad0f';"
+                        style="background: transparent; border: 2px solid #f4ad0f; color: #f4ad0f; width: 46px; height: 46px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                    <svg style="width: 22px; height: 22px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                </button>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <button onclick="openRAMapper()" style="width: 100%; background: white; color: #f4ad0f; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
-                            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                            </svg>
-                            Abrir Mapeador RA
-                        </button>
-                    </div>
-                    <div>
-                        <button onclick="uploadRATemplate()" style="width: 100%; background: white; color: #f4ad0f; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
-                            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                            </svg>
-                            Upload Template RA
-                        </button>
-                        <input type="file" id="raTemplateFile" accept=".pdf" style="display: none;" onchange="handleRATemplateUpload(event)">
+                <button onclick="uploadRATemplate()" title="Upload Template RA"
+                        onmouseover="this.style.background='#f4ad0f'; this.style.color='white';"
+                        onmouseout="this.style.background='transparent'; this.style.color='#f4ad0f';"
+                        style="background: transparent; border: 2px solid #f4ad0f; color: #f4ad0f; width: 46px; height: 46px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                    <svg style="width: 22px; height: 22px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                </button>
+                <input type="file" id="raTemplateFile" accept=".pdf" style="display: none;" onchange="handleRATemplateUpload(event)">
                     </div>
                 </div>
                 
