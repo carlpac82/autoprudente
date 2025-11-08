@@ -14343,13 +14343,41 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             print(f"\n📍 Campo: {field_id}")
                             print(f"   Coords: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
                             
-                            # USAR COORDENADAS DIRETAS DO MAPEADOR - SEM CONVERSÕES
-                            rect_direct = fitz.Rect(x, y, x + width, y + height)
-                            text_extracted = pdf_page.get_text("text", clip=rect_direct).strip()
-                            text_extracted = ' '.join(text_extracted.split()) if text_extracted else ""
+                            # TESTAR 4 VARIAÇÕES COMUNS DE COORDENADAS
+                            page_height = pdf_page.rect.height
                             
-                            print(f"   Extraído: '{text_extracted}'")
-                            logging.info(f"📍 {field_id}: '{text_extracted}'")
+                            methods = {
+                                "DIRETO": (x, y, x + width, y + height),
+                                "INVERTIDO_Y": (x, page_height - y - height, x + width, page_height - y),
+                                "ESCALA_2": (x/2, y/2, (x + width)/2, (y + height)/2),
+                                "ESCALA_INV": (x/2, page_height - y/2 - height/2, (x + width)/2, page_height - y/2),
+                            }
+                            
+                            best_text = ""
+                            best_method = "DIRETO"
+                            
+                            for method_name, coords in methods.items():
+                                rect_test = fitz.Rect(*coords)
+                                text_test = pdf_page.get_text("text", clip=rect_test).strip()
+                                text_clean = ' '.join(text_test.split()) if text_test else ""
+                                
+                                # Escolher texto mais limpo (sem números/códigos estranhos para campos de texto)
+                                if len(text_clean) > len(best_text):
+                                    # Validação básica: se campo é location, deve ter letras
+                                    if 'Location' in field_id or 'location' in field_id:
+                                        if any(c.isalpha() for c in text_clean) and not any(char in text_clean for char in ['J5V', 'H4H', '08 -']):
+                                            best_text = text_clean
+                                            best_method = method_name
+                                    else:
+                                        best_text = text_clean
+                                        best_method = method_name
+                                
+                                if text_clean:
+                                    print(f"   {method_name}: '{text_clean[:40]}'")
+                            
+                            text_extracted = best_text
+                            print(f"   ✅ Escolhido: {best_method} → '{text_extracted}'")
+                            logging.info(f"📍 {field_id}: '{text_extracted}' ({best_method})")
                             
                             # Se não extraiu texto, tentar OCR
                             if not text_extracted:
