@@ -14344,15 +14344,34 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             logging.info(f"   📄 PDF: {page_width:.1f}x{page_height:.1f}")
                             logging.info(f"   📐 Coords DB: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
                             
+                            # TESTAR 3 MÉTODOS DE CONVERSÃO
+                            methods = {
+                                "DIRETO": y,
+                                "INVERTIDO": page_height - y,
+                                "INVERTIDO+HEIGHT": page_height - y - height
+                            }
+                            
+                            best_text = ""
+                            best_method = "DIRETO"
+                            
+                            for method_name, test_y in methods.items():
+                                rect_test = fitz.Rect(x, test_y, x + width, test_y + height)
+                                text_test = pdf_page.get_text("text", clip=rect_test).strip()
+                                text_clean = ' '.join(text_test.split()) if text_test else ""
+                                
+                                logging.info(f"   🧪 {method_name}: y={test_y:.1f} → '{text_clean[:50]}'")
+                                
+                                # Considerar o melhor = mais longo e com letras
+                                if len(text_clean) > len(best_text) and any(c.isalpha() for c in text_clean):
+                                    best_text = text_clean
+                                    best_method = method_name
+                                    pdf_y = test_y
+                            
+                            logging.info(f"   ✅ MELHOR: {best_method} → '{best_text[:80]}'")
+                            
                             # MÉTODO 1: Extrair texto da área mapeada com PyMuPDF
                             rect = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
-                            text_extracted = pdf_page.get_text("text", clip=rect).strip()
-                            
-                            # Limpar texto extraído (remover quebras de linha, espaços extras)
-                            if text_extracted:
-                                # Manter quebras de linha para endereços, mas remover excessos
-                                text_extracted = ' '.join(text_extracted.split())
-                                logging.info(f"   ✅ Texto extraído de {field_id}: '{text_extracted[:80]}...'")
+                            text_extracted = best_text
                             
                             # MÉTODO 2: Se não extraiu texto, tentar OCR
                             if not text_extracted:
