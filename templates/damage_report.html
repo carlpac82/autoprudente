@@ -863,6 +863,77 @@
         </div>
     </div>
 
+    <!-- Email Modal -->
+    <div id="emailModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; backdrop-filter: blur(4px);">
+        <div style="max-width: 700px; margin: 50px auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); color: white; padding: 20px 25px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <h2 style="margin: 0; font-size: 18px; font-weight: 600;">Enviar Damage Report por Email</h2>
+                </div>
+                <button onclick="closeEmailModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Body -->
+            <div style="padding: 25px;">
+                <!-- Email do Cliente -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Email do Cliente</label>
+                    <input type="email" id="emailRecipient" style="width: 100%; padding: 10px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px; transition: all 0.2s;" placeholder="cliente@exemplo.com" onfocus="this.style.borderColor='#009cb6'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+                
+                <!-- Preview do Assunto -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Assunto</label>
+                    <div id="emailSubjectPreview" style="padding: 10px 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px; color: #6b7280;">
+                        A carregar...
+                    </div>
+                </div>
+                
+                <!-- Preview do Corpo (suporta HTML) -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Mensagem</label>
+                    <div id="emailBodyPreview" style="padding: 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 13px; color: #374151; max-height: 200px; overflow-y: auto; line-height: 1.6;">
+                        A carregar...
+                    </div>
+                </div>
+                
+                <!-- Lista de Anexos -->
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Anexos</label>
+                    <div id="emailAttachmentsList" style="padding: 12px; background: #f0f9fb; border: 2px solid #009cb6; border-radius: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #009cb6; font-size: 13px;">
+                            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                            </svg>
+                            <span id="attachmentInfo">A carregar anexos...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botões -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button onclick="closeEmailModal()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                        Cancelar
+                    </button>
+                    <button id="sendEmailBtn" onclick="sendDREmail()" style="padding: 10px 24px; background: #009cb6; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.background='#007a8f'" onmouseout="this.style.background='#009cb6'">
+                        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        <span>Enviar Email</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let damageCounter = 0;
         let damages = [];
@@ -2175,6 +2246,11 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                         </svg>
                                                     </button>
+                                                    <button onclick="openEmailModal('${report.dr_number}', '${(report.client_email || '').replace(/'/g, "\\'")}, '${(report.client_name || '').replace(/'/g, "\\'")}, '${(report.country || 'PT').replace(/'/g, "\\'")}')" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Enviar Email">
+                                                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                                        </svg>
+                                                    </button>
                                                     <button onclick="editDR('${report.dr_number}')" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Editar DR">
                                                         <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -2936,6 +3012,174 @@
         // Date field - deixar vazio para user preencher manualmente
         // Comentado: não forçar data atual
         // document.getElementById('date').valueAsDate = new Date();
+
+        // ==================== EMAIL MODAL FUNCTIONS ====================
+        let currentEmailDR = null;
+
+        async function openEmailModal(drNumber, clientEmail, clientName, country) {
+            currentEmailDR = drNumber;
+            
+            // Preencher email do cliente
+            document.getElementById('emailRecipient').value = clientEmail || '';
+            
+            // Mostrar modal
+            document.getElementById('emailModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            // Carregar template do email
+            try {
+                // Detectar idioma automaticamente do país
+                const langMap = {
+                    'PT': 'pt', 'BR': 'pt',
+                    'FR': 'fr', 'BE': 'fr', 'MC': 'fr',
+                    'DE': 'de', 'AT': 'de', 'CH': 'de', 'LU': 'de'
+                };
+                const detectedLang = langMap[country?.toUpperCase()] || 'en';
+                
+                console.log(`Loading email template for ${drNumber}, language: ${detectedLang}, country: ${country}`);
+                
+                // Carregar template do backend
+                const response = await fetch(`/api/damage-reports/email-template/${detectedLang}`);
+                const data = await response.json();
+                
+                if (data.ok && data.template) {
+                    // Substituir parâmetros no template
+                    const firstName = clientName.split(' ')[0] || clientName;
+                    
+                    let subject = data.template.subject_template
+                        .replace('{drNumber}', drNumber)
+                        .replace('{firstName}', firstName);
+                    
+                    let body = data.template.body_template
+                        .replace('{drNumber}', drNumber)
+                        .replace('{firstName}', firstName)
+                        .replace('{email}', clientEmail || '')
+                        .replace(/\\n/g, '\n'); // Converter \n para quebras de linha reais
+                    
+                    // Mostrar preview (suporta HTML)
+                    document.getElementById('emailSubjectPreview').textContent = subject;
+                    
+                    // Body: converter quebras de linha para <br> e renderizar HTML
+                    const bodyHtml = body.replace(/\n/g, '<br>');
+                    document.getElementById('emailBodyPreview').innerHTML = bodyHtml;
+                } else {
+                    // Fallback template
+                    document.getElementById('emailSubjectPreview').textContent = `Damage Report ${drNumber}`;
+                    document.getElementById('emailBodyPreview').innerHTML = `Hello ${clientName},<br><br>Please find attached the Damage Report ${drNumber}.<br><br>Best regards,<br>Auto Prudente`;
+                }
+                
+                // Info de anexos
+                document.getElementById('attachmentInfo').textContent = `Damage_Report_${drNumber.replace(/\//g, '_')}.pdf`;
+                
+            } catch (error) {
+                console.error('Error loading email template:', error);
+                document.getElementById('emailSubjectPreview').textContent = `Damage Report ${drNumber}`;
+                document.getElementById('emailBodyPreview').textContent = 'Erro ao carregar template';
+                document.getElementById('attachmentInfo').textContent = 'PDF anexado';
+            }
+        }
+
+        function closeEmailModal() {
+            document.getElementById('emailModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentEmailDR = null;
+        }
+
+        async function sendDREmail() {
+            const recipientEmail = document.getElementById('emailRecipient').value;
+            
+            if (!recipientEmail) {
+                showNotification('Por favor, insira o email do cliente', 'warning');
+                return;
+            }
+            
+            if (!currentEmailDR) {
+                showNotification('Erro: DR não identificado', 'error');
+                return;
+            }
+            
+            const sendBtn = document.getElementById('sendEmailBtn');
+            const originalContent = sendBtn.innerHTML;
+            
+            // Desabilitar botão
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = `
+                <svg style="width: 18px; height: 18px; animation: spin 1s linear infinite;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>A enviar...</span>
+            `;
+            
+            try {
+                // Obter dados do DR
+                const drResponse = await fetch(`/api/damage-reports/${encodeURIComponent(currentEmailDR)}`);
+                const drData = await drResponse.json();
+                
+                if (!drData.ok) {
+                    throw new Error('Erro ao carregar dados do DR');
+                }
+                
+                const report = drData.report;
+                
+                // Obter PDF em base64
+                const pdfResponse = await fetch(`/api/damage-reports/${encodeURIComponent(currentEmailDR)}/pdf`);
+                const pdfBlob = await pdfResponse.blob();
+                const pdfBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(pdfBlob);
+                });
+                
+                // Enviar email
+                const emailPayload = {
+                    drNumber: currentEmailDR,
+                    clientEmail: recipientEmail,
+                    clientName: report.client_name || 'Cliente',
+                    contractNumber: report.contract_number || '',
+                    vehiclePlate: report.vehicle_plate || '',
+                    date: report.date || new Date().toISOString().split('T')[0],
+                    country: report.country || 'PT',
+                    pdfData: pdfBase64,
+                    attachments: [] // Futuro: adicionar imagens extras
+                };
+                
+                const response = await fetch('/api/damage-reports/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emailPayload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    showNotification(`Email enviado com sucesso para ${recipientEmail}`, 'success');
+                    closeEmailModal();
+                } else {
+                    showNotification('Erro ao enviar email: ' + (result.error || 'Desconhecido'), 'error');
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                showNotification('Erro ao enviar email: ' + error.message, 'error');
+            } finally {
+                // Restaurar botão
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = originalContent;
+            }
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('emailModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'emailModal') {
+                closeEmailModal();
+            }
+        });
     </script>
+    
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </body>
 </html>
