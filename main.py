@@ -14344,34 +14344,46 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             logging.info(f"   📄 PDF: {page_width:.1f}x{page_height:.1f}")
                             logging.info(f"   📐 Coords DB: x={x:.1f}, y={y:.1f}, w={width:.1f}, h={height:.1f}")
                             
-                            # TESTAR 3 MÉTODOS DE CONVERSÃO
-                            methods = {
-                                "DIRETO": y,
-                                "INVERTIDO": page_height - y,
-                                "INVERTIDO+HEIGHT": page_height - y - height
-                            }
+                            # TESTAR MÚLTIPLOS MÉTODOS (incluindo escala do Canvas)
+                            # Canvas usa scale=2, então coords podem estar 2x maiores!
+                            scale_factor = 2.0  # Canvas viewport scale
+                            
+                            methods = {}
+                            
+                            # Sem escala
+                            methods["DIRETO"] = (x, y, width, height)
+                            methods["INVERTIDO"] = (x, page_height - y, width, height)
+                            methods["INV+HEIGHT"] = (x, page_height - y - height, width, height)
+                            
+                            # Com escala (coords / 2)
+                            methods["ESCALA_DIRETO"] = (x/scale_factor, y/scale_factor, width/scale_factor, height/scale_factor)
+                            methods["ESCALA_INV"] = (x/scale_factor, page_height - y/scale_factor, width/scale_factor, height/scale_factor)
+                            methods["ESCALA_INV+H"] = (x/scale_factor, page_height - y/scale_factor - height/scale_factor, width/scale_factor, height/scale_factor)
                             
                             best_text = ""
                             best_method = "DIRETO"
+                            best_coords = (x, y, width, height)
                             
-                            for method_name, test_y in methods.items():
-                                rect_test = fitz.Rect(x, test_y, x + width, test_y + height)
+                            for method_name, (test_x, test_y, test_w, test_h) in methods.items():
+                                rect_test = fitz.Rect(test_x, test_y, test_x + test_w, test_y + test_h)
                                 text_test = pdf_page.get_text("text", clip=rect_test).strip()
                                 text_clean = ' '.join(text_test.split()) if text_test else ""
                                 
-                                logging.info(f"   🧪 {method_name}: y={test_y:.1f} → '{text_clean[:50]}'")
+                                logging.info(f"   🧪 {method_name}: ({test_x:.1f},{test_y:.1f}) → '{text_clean[:40]}'")
                                 
                                 # Considerar o melhor = mais longo e com letras
                                 if len(text_clean) > len(best_text) and any(c.isalpha() for c in text_clean):
                                     best_text = text_clean
                                     best_method = method_name
-                                    pdf_y = test_y
+                                    best_coords = (test_x, test_y, test_w, test_h)
                             
-                            logging.info(f"   ✅ MELHOR: {best_method} → '{best_text[:80]}'")
+                            logging.info(f"   ✅ MELHOR: {best_method} → '{best_text[:60]}'")
                             
-                            # MÉTODO 1: Extrair texto da área mapeada com PyMuPDF
-                            rect = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
+                            # MÉTODO 1: Usar as melhores coordenadas encontradas
                             text_extracted = best_text
+                            
+                            # Usar best_coords para OCR (se necessário)
+                            x, pdf_y, width, height = best_coords
                             
                             # MÉTODO 2: Se não extraiu texto, tentar OCR
                             if not text_extracted:
@@ -14380,10 +14392,11 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                                     from PIL import Image
                                     import io
                                     
-                                    # Renderizar área como imagem
+                                    # Renderizar área como imagem usando as melhores coordenadas
+                                    rect_ocr = fitz.Rect(x, pdf_y, x + width, pdf_y + height)
                                     zoom = 2  # Aumentar resolução para OCR
                                     mat = fitz.Matrix(zoom, zoom)
-                                    pix = pdf_page.get_pixmap(matrix=mat, clip=rect)
+                                    pix = pdf_page.get_pixmap(matrix=mat, clip=rect_ocr)
                                     
                                     # Converter para PIL Image
                                     img_data = pix.tobytes("png")
