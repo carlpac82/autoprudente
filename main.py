@@ -17369,27 +17369,42 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             # Load image with PIL
                             img = Image.open(BytesIO(img_bytes))
                             
-                            # Convert to RGB if needed
-                            if img.mode in ('RGBA', 'LA', 'P'):
+                            # Convert to RGB if needed (EXCETO para diagrama - manter transparência)
+                            is_diagram = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
+                            logging.info(f"🔍 {field_id}: is_diagram={is_diagram}, mode={img.mode}, size={img.size}")
+                            
+                            if not is_diagram and img.mode in ('RGBA', 'LA', 'P'):
+                                # Fotos normais: converter para RGB com fundo branco
                                 background = Image.new('RGB', img.size, (255, 255, 255))
                                 if img.mode == 'P':
                                     img = img.convert('RGBA')
                                 background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                                 img = background
+                            elif is_diagram:
+                                # Diagrama: garantir RGBA para transparência
+                                if img.mode != 'RGBA':
+                                    img = img.convert('RGBA')
+                                logging.info(f"✅ Diagrama mantém transparência (RGBA)")
                             
                             # Save to BytesIO for ReportLab
                             img_buffer = BytesIO()
-                            img.save(img_buffer, format='JPEG', quality=85)
+                            if is_diagram and img.mode == 'RGBA':
+                                # Diagrama com transparência: usar PNG
+                                img.save(img_buffer, format='PNG')
+                            else:
+                                # Fotos normais: usar JPEG
+                                img.save(img_buffer, format='JPEG', quality=85)
                             img_buffer.seek(0)
                             
                             # Draw image on canvas
+                            # preserveAspectRatio=False → ESTICA para preencher espaço mapeado
                             can.drawImage(
                                 ImageReader(img_buffer),
                                 x, y,
                                 width=width,
                                 height=height,
-                                preserveAspectRatio=True,
-                                mask='auto'
+                                preserveAspectRatio=False,  # ✅ ESTICAR para preencher
+                                mask='auto' if is_diagram else None  # ✅ Transparência só para diagrama
                             )
                             logging.info(f"✅ Drew image for {field_id}")
                     except Exception as e:
@@ -17401,8 +17416,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                         can.setFont("Helvetica", 6)
                         can.drawString(x + 2, y + height/2, "[Image]")
                 
-                elif field_type == 'table' or 'repair' in field_id:
-                    # TABELA DE REPARAÇÕES
+                elif field_type == 'table':
+                    # TABELA DE REPARAÇÕES (só repair_items é tabela!)
                     # VALIDAÇÃO
                     if not _validate_table_data(value):
                         logging.warning(f"Invalid table data for {field_id}, drawing placeholder")
