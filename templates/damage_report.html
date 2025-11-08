@@ -2801,6 +2801,8 @@
         // Adicionar linha de reparo
         function addRepairRow() {
             const id = Date.now();
+            // Default: quantidade=1, horas=2, preço=20
+            // Cálculo correto: 1 × 2 × 20 = 40
             repairItems.push({ id, description: '', quantity: 1, hours: 2, price: 20, total: 40 });
             updateRepairTable();
         }
@@ -2897,12 +2899,14 @@
                 item[field] = value;
                 
                 // Calcular total
-                // Se horas for "-" ou 1: Quantidade × Preço
-                // Caso contrário: Quantidade × Horas × Preço
+                // Se horas for "-" ou 0: Quantidade × Preço (IGNORA horas)
+                // Caso contrário: Quantidade × Horas × Preço (INCLUI horas)
                 if (field === 'quantity' || field === 'hours' || field === 'price') {
-                    if (item.hours === '-' || item.hours === 1) {
+                    if (item.hours === '-' || item.hours === 0) {
+                        // SEM HORAS: apenas quantidade e preço
                         item.total = item.quantity * item.price;
                     } else {
+                        // COM HORAS: quantidade × horas × preço
                         item.total = item.quantity * item.hours * item.price;
                     }
                 }
