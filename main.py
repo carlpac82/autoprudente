@@ -17512,10 +17512,22 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                                 img = background
                             elif is_diagram:
-                                # Diagrama: garantir RGBA para transparência
+                                # Diagrama: REMOVER fundo branco e garantir transparência
                                 if img.mode != 'RGBA':
                                     img = img.convert('RGBA')
-                                logging.info(f"✅ Diagrama mantém transparência (RGBA)")
+                                
+                                # Converter pixels brancos/claros em transparentes
+                                import numpy as np
+                                img_array = np.array(img)
+                                
+                                # Threshold para considerar "branco" (RGB > 240)
+                                white_mask = (img_array[:, :, 0] > 240) & (img_array[:, :, 1] > 240) & (img_array[:, :, 2] > 240)
+                                
+                                # Tornar pixels brancos transparentes
+                                img_array[white_mask, 3] = 0  # Alpha = 0 (transparente)
+                                
+                                img = Image.fromarray(img_array, 'RGBA')
+                                logging.info(f"✅ Diagrama: fundo branco removido, mantém transparência (RGBA)")
                             
                             # Save to BytesIO for ReportLab
                             img_buffer = BytesIO()
@@ -17547,6 +17559,51 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 # Centralizar horizontalmente
                                 draw_x = x + (width - draw_width) / 2
                                 draw_y = y
+                            
+                            # PINS DO DIAGRAMA: Desenhar ANTES da imagem para aparecerem por cima
+                            if is_diagram and 'damage_pins' in report_data and report_data['damage_pins']:
+                                try:
+                                    # Parse damage_pins (pode ser string JSON ou lista)
+                                    import json as json_module
+                                    pins = report_data['damage_pins']
+                                    if isinstance(pins, str):
+                                        pins = json_module.loads(pins)
+                                    
+                                    if isinstance(pins, list) and len(pins) > 0:
+                                        logging.info(f"🎯 Drawing {len(pins)} damage pins on diagram")
+                                        
+                                        # Ajustar posições dos pins para o contain mode
+                                        for pin in pins:
+                                            # Pin tem: {number, x, y} onde x,y são % da imagem original
+                                            pin_number = pin.get('number', '?')
+                                            pin_x_percent = pin.get('x', 0)  # 0-100%
+                                            pin_y_percent = pin.get('y', 0)  # 0-100%
+                                            
+                                            # Converter % para coordenadas do canvas (dentro da área da imagem desenhada)
+                                            pin_x = draw_x + (pin_x_percent / 100) * draw_width
+                                            pin_y = draw_y + (pin_y_percent / 100) * draw_height
+                                            
+                                            # Desenhar círculo vermelho (pin)
+                                            pin_radius = 8  # 8 pontos de raio
+                                            can.setFillColorRGB(1, 0, 0)  # Vermelho
+                                            can.setStrokeColorRGB(1, 1, 1)  # Borda branca
+                                            can.setLineWidth(2)
+                                            can.circle(pin_x, pin_y, pin_radius, fill=1, stroke=1)
+                                            
+                                            # Desenhar número do dano (branco, centralizado)
+                                            can.setFillColorRGB(1, 1, 1)  # Branco
+                                            can.setFont("Helvetica-Bold", 10)
+                                            
+                                            # Centralizar texto no círculo
+                                            text_width = can.stringWidth(str(pin_number), "Helvetica-Bold", 10)
+                                            text_x = pin_x - (text_width / 2)
+                                            text_y = pin_y - 3.5  # Ajuste vertical para centrar
+                                            
+                                            can.drawString(text_x, text_y, str(pin_number))
+                                        
+                                        logging.info(f"✅ Drew {len(pins)} pins on diagram")
+                                except Exception as e:
+                                    logging.error(f"Error drawing pins: {e}", exc_info=True)
                             
                             # Draw image on canvas (sem preserveAspectRatio, já calculamos manualmente)
                             can.drawImage(
