@@ -21848,6 +21848,119 @@ async def test_weekly_report(request: Request):
         logging.error(f"Test weekly report error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/reports/check-automated-searches")
+async def check_automated_searches(request: Request):
+    """Verificar pesquisas automáticas configuradas e identificar testes"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsSettings'"
+                )
+                row = cursor.fetchone()
+                
+                if not row or not row[0]:
+                    return JSONResponse({
+                        "ok": True,
+                        "message": "Nenhuma configuração de relatórios automáticos encontrada",
+                        "settings": None
+                    })
+                
+                settings = json.loads(row[0])
+                
+                # Analisar configurações
+                analysis = {
+                    "dailyEnabled": settings.get('dailyEnabled', False),
+                    "weeklyEnabled": settings.get('weeklyEnabled', False),
+                    "dailyTime": settings.get('dailyTime', '09:00'),
+                    "weeklyDay": settings.get('weeklyDay', 'monday'),
+                    "weeklyTime": settings.get('weeklyTime', '09:00'),
+                    "isTest": False  # Determinar se são configurações de teste
+                }
+                
+                # Detectar se é teste (horários atípicos ou muito frequentes)
+                daily_hour = int(analysis['dailyTime'].split(':')[0])
+                weekly_hour = int(analysis['weeklyTime'].split(':')[0])
+                
+                # Considerar TESTE se:
+                # - Hora diária não é 9h (oficial)
+                # - Hora semanal não é 9h (oficial)
+                # - Dia semanal não é segunda (oficial)
+                if (daily_hour != 9 and settings.get('dailyEnabled')) or \
+                   (weekly_hour != 9 and settings.get('weeklyEnabled')) or \
+                   (settings.get('weeklyDay', '').lower() not in ['monday', 'segunda'] and settings.get('weeklyEnabled')):
+                    analysis['isTest'] = True
+                    analysis['testReason'] = f"Horários atípicos: Daily={analysis['dailyTime']}, Weekly={analysis['weeklyTime']} ({analysis['weeklyDay']})"
+                
+                return JSONResponse({
+                    "ok": True,
+                    "settings": settings,
+                    "analysis": analysis,
+                    "recommendation": "Desativar testes e usar apenas horários oficiais (9h)" if analysis['isTest'] else "Configurações parecem oficiais"
+                })
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"Check automated searches error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/reports/reset-to-official")
+async def reset_to_official_settings(request: Request):
+    """Resetar para configurações oficiais (apenas pesquisas programadas às 9h)"""
+    require_auth(request)
+    
+    try:
+        # Configurações OFICIAIS (sem testes)
+        official_settings = {
+            "dailyEnabled": True,
+            "weeklyEnabled": True,
+            "dailyTime": "09:00",  # 9h - Oficial
+            "weeklyDay": "monday",  # Segunda - Oficial
+            "weeklyTime": "09:00"   # 9h - Oficial
+        }
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Atualizar configurações
+                conn.execute(
+                    "UPDATE price_automation_settings SET setting_value = ? WHERE setting_key = 'automatedReportsSettings'",
+                    (json.dumps(official_settings),)
+                )
+                
+                # Se não existir, inserir
+                if conn.total_changes == 0:
+                    conn.execute(
+                        "INSERT INTO price_automation_settings (setting_key, setting_value) VALUES (?, ?)",
+                        ('automatedReportsSettings', json.dumps(official_settings))
+                    )
+                
+                conn.commit()
+                
+                logging.info("✅ Reset to official settings: Daily 9h, Weekly Monday 9h")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "message": "✅ Configurações resetadas para oficiais!",
+                    "settings": official_settings,
+                    "schedule": {
+                        "daily": "Todos os dias às 9h",
+                        "weekly": "Segundas-feiras às 9h"
+                    }
+                })
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"Reset to official error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/email/test-oauth")
 async def test_email_oauth(request: Request):
     """Send test email using OAuth token"""
