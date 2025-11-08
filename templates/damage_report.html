@@ -866,6 +866,14 @@
         let repairItems = [];
         let currentPinSize = 1.0; // Tamanho padrão do pin
         
+        // Função para atualizar tamanho de todos os pins em tempo real
+        function updateAllPinsSize() {
+            const pins = document.querySelectorAll('.damage-pin');
+            pins.forEach(pin => {
+                pin.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
+            });
+        }
+        
         // Atualizar valor do slider de tamanho do pin
         document.addEventListener('DOMContentLoaded', function() {
             const slider = document.getElementById('pinSizeSlider');
@@ -875,6 +883,9 @@
                 slider.addEventListener('input', function() {
                     currentPinSize = parseFloat(this.value);
                     value.textContent = Math.round(currentPinSize * 100) + '%';
+                    
+                    // ✅ ATUALIZAR TODOS OS PINS EM TEMPO REAL
+                    updateAllPinsSize();
                 });
             }
         });
