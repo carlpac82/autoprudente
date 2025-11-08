@@ -14292,28 +14292,28 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
         pdf_file = BytesIO(contents)
         
         # MÉTODO 1: Tentar usar coordenadas mapeadas (se existirem)
-        # TEMPORARIAMENTE DESATIVADO - usar apenas OCR/regex até calibrar coordenadas
+        # ✅ REATIVADO - Usar coordenadas configuradas manualmente como PRIORIDADE
         fields_from_mapping = {}
-        coords_rows = []  # ⚠️ DESATIVADO
+        coords_rows = []
         
         try:
             import fitz  # PyMuPDF
             
             # Carregar coordenadas mapeadas do RA
-            # ⚠️ COMENTADO TEMPORARIAMENTE
-            # with _db_lock:
-            #     conn = _db_connect()
-            #     is_postgres = hasattr(conn, 'cursor')
-            #     
-            #     if is_postgres:
-            #         with conn.cursor() as cur:
-            #             cur.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
-            #             coords_rows = cur.fetchall()
-            #     else:
-            #         cursor = conn.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
-            #         coords_rows = cursor.fetchall()
+            logging.info("📍 Procurando coordenadas mapeadas...")
+            with _db_lock:
+                conn = _db_connect()
+                is_postgres = hasattr(conn, 'cursor')
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
+                        coords_rows = cur.fetchall()
+                else:
+                    cursor = conn.execute("SELECT field_id, x, y, width, height, page FROM rental_agreement_coordinates")
+                    coords_rows = cursor.fetchall()
             
-            if False and coords_rows:  # ⚠️ FORÇAR False
+            if coords_rows:  # ✅ ATIVADO
                 logging.info(f"📍 Found {len(coords_rows)} mapped RA coordinates, extracting...")
                 
                 # Abrir PDF com PyMuPDF
@@ -14809,13 +14809,20 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 words = location.split()
                 has_business_keyword = re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT|STATION|PRUDENTE|CAR|CARS|HIRE', location, re.IGNORECASE)
                 
-                # REJEITA se for exatamente 2 palavras simples SEM palavra-chave de negócio (provável nome de pessoa)
-                # ACEITA se tiver palavra-chave OU mais de 2 palavras
-                if not (len(words) == 2 and not has_business_keyword):
+                # VALIDAÇÕES:
+                # 1. Rejeitar se parece código/data (ex: "DE 16", "PT 20")
+                is_code_like = bool(re.match(r'^[A-Z]{2}\s+\d+$', location))
+                # 2. Rejeitar se só tem sigla + número (menos de 6 chars)
+                is_too_short = len(location.replace(' ', '')) < 6
+                # 3. Rejeitar se for exatamente 2 palavras simples SEM palavra-chave
+                is_person_name = (len(words) == 2 and not has_business_keyword)
+                
+                if not (is_code_like or is_too_short or is_person_name):
                     fields['pickupLocation'] = location
                     logging.info(f"   📍 Local Levantamento: {location}")
                 else:
-                    logging.info(f"   ⚠️  Local rejeitado (provável nome): {location}")
+                    reason = "código/sigla" if is_code_like else "muito curto" if is_too_short else "provável nome"
+                    logging.info(f"   ⚠️  Local rejeitado ({reason}): {location}")
         
         # === DEVOLUÇÃO (DROPOFF) ===
         if dropoff_context is not None:
@@ -14847,13 +14854,20 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                 words = location.split()
                 has_business_keyword = re.search(r'AEROPORTO|AIRPORT|FLUGHAFEN|AUTO|RENT|STATION|PRUDENTE|CAR|CARS|HIRE', location, re.IGNORECASE)
                 
-                # REJEITA se for exatamente 2 palavras simples SEM palavra-chave de negócio (provável nome de pessoa)
-                # ACEITA se tiver palavra-chave OU mais de 2 palavras
-                if not (len(words) == 2 and not has_business_keyword):
+                # VALIDAÇÕES:
+                # 1. Rejeitar se parece código/data (ex: "DE 16", "PT 20")
+                is_code_like = bool(re.match(r'^[A-Z]{2}\s+\d+$', location))
+                # 2. Rejeitar se só tem sigla + número (menos de 6 chars)
+                is_too_short = len(location.replace(' ', '')) < 6
+                # 3. Rejeitar se for exatamente 2 palavras simples SEM palavra-chave
+                is_person_name = (len(words) == 2 and not has_business_keyword)
+                
+                if not (is_code_like or is_too_short or is_person_name):
                     fields['dropoffLocation'] = location
                     logging.info(f"   📍 Local Devolução: {location}")
                 else:
-                    logging.info(f"   ⚠️  Local rejeitado (provável nome): {location}")
+                    reason = "código/sigla" if is_code_like else "muito curto" if is_too_short else "provável nome"
+                    logging.info(f"   ⚠️  Local rejeitado ({reason}): {location}")
         
         # === 12. FALLBACK PARA LOCAIS ===
         # Se não foram encontrados locais por contexto, tentar método antigo
@@ -14871,8 +14885,13 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             words = prev_line.split()
                             has_business_keyword = re.search(r'AEROPORTO|AIRPORT|AUTO|RENT|STATION|PRUDENTE|CAR|CARS|HIRE', prev_line, re.IGNORECASE)
                             
-                            # ACEITA se NÃO for exatamente 2 palavras simples sem palavra-chave
-                            if not (len(words) == 2 and not has_business_keyword):
+                            # VALIDAÇÕES:
+                            is_code_like = bool(re.match(r'^[A-Z]{2}\s+\d+', prev_line))
+                            is_too_short = len(prev_line.replace(' ', '')) < 6
+                            is_person_name = (len(words) == 2 and not has_business_keyword)
+                            
+                            # ACEITA se NÃO for código, muito curto ou nome de pessoa
+                            if not (is_code_like or is_too_short or is_person_name):
                                 locations_found.append(prev_line)
             
             if len(locations_found) >= 2:
