@@ -15185,19 +15185,26 @@ async def debug_rental_agreement_lines(request: Request, file: UploadFile = File
 @app.post("/api/damage-reports/create")
 async def create_damage_report(request: Request):
     """Cria um novo Damage Report"""
+    logging.error("💾💾💾 CREATE DAMAGE REPORT - INÍCIO")
     require_auth(request)
     
     try:
+        logging.error("💾 Recebendo JSON...")
         data = await request.json()
+        logging.error(f"💾 JSON recebido: {len(data)} campos")
         
+        logging.error("💾 Entrando no _db_lock...")
         with _db_lock:
+            logging.error("💾 Lock adquirido, conectando BD...")
             conn = _db_connect()
             try:
                 # Detectar tipo de BD para CREATE TABLE correto
                 is_postgres = conn.__class__.__module__ in ['psycopg2.extensions', 'psycopg2._psycopg']
+                logging.error(f"💾 BD detectado: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 if is_postgres:
                     # PostgreSQL - Usar SERIAL, BYTEA, TIMESTAMP
+                    logging.error("💾 Executando CREATE TABLE (PostgreSQL)...")
                     with conn.cursor() as cur:
                         cur.execute("""
                             CREATE TABLE IF NOT EXISTS damage_reports (
@@ -15245,6 +15252,7 @@ async def create_damage_report(request: Request):
                                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
                         """)
+                        logging.error("💾 CREATE TABLE completado!")
                 else:
                     # SQLite - Usar AUTOINCREMENT, BLOB, DATETIME
                     conn.execute("""
@@ -15582,6 +15590,7 @@ async def create_damage_report(request: Request):
                         return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully (recycled number)"}
                     else:
                         # INSERT - Criar novo registo
+                        logging.error(f"💾 Preparando INSERT para DR: {dr_number}")
                         insert_values = (
                             dr_number,
                             data.get('ra_number'),
@@ -15636,7 +15645,9 @@ async def create_damage_report(request: Request):
                                         created_by
                                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 """, insert_values)
+                                logging.error("💾 INSERT executado, fazendo COMMIT...")
                             conn.commit()
+                            logging.error("💾 COMMIT completado!")
                         else:
                             # SQLite
                             conn.execute("""
@@ -15657,6 +15668,7 @@ async def create_damage_report(request: Request):
                             """, insert_values)
                             conn.commit()
                         
+                        logging.error(f"💾 DR {dr_number} criado! Retornando sucesso...")
                         logging.info(f"✅ DR {dr_number} criado com sucesso - novo número")
                         return {"ok": True, "dr_number": dr_number, "message": "Damage Report created successfully"}
             finally:
