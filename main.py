@@ -17078,12 +17078,51 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 if coords['page'] != (page_num + 1):
                     continue
                 
-                # Obter valor do campo
-                value = report_data.get(field_id, '')
+                # FIELD NAME ALIASES: Mapear snake_case (BD) → camelCase (report_data)
+                # Necessário porque coordenadas usam snake_case mas report_data tem camelCase
+                field_aliases = {
+                    'contract_number': 'contractNumber',
+                    'customer_name': 'clientName',
+                    'customer_email': 'clientEmail',
+                    'customer_phone': 'clientPhone',
+                    'customer_address': 'address',
+                    'customer_postal': 'postalCode',
+                    'customer_city': 'city',
+                    'customer_country': 'country',
+                    'vehicle_plate': 'vehiclePlate',
+                    'vehicle_brand': 'vehicleBrand',
+                    'vehicle_model': 'vehicleModel',
+                    'vehicle_color': 'vehicleColor',
+                    'vehicle_km': 'vehicleKm',
+                    'pickup_date': 'pickupDate',
+                    'pickup_time': 'pickupTime',
+                    'pickup_location': 'pickupLocation',
+                    'return_date': 'returnDate',
+                    'return_time': 'returnTime',
+                    'return_location': 'returnLocation',
+                    'inspector_name': 'inspector_name',
+                    'inspection_date': 'inspection_date',
+                }
                 
-                # Log para debugar vehicle_diagram
-                if 'diagram' in field_id.lower() or 'vehicleDiagram' in field_id:
-                    logging.info(f"🔍 Processando {field_id}: tem valor? {bool(value)}, tamanho: {len(value) if value else 0}")
+                # Obter valor do campo (tentar field_id direto primeiro, depois alias)
+                value = report_data.get(field_id, '')
+                alias_used = None
+                if not value and field_id in field_aliases:
+                    alias_key = field_aliases[field_id]
+                    value = report_data.get(alias_key, '')
+                    if value:
+                        alias_used = alias_key
+                
+                # Log detalhado para debugar campos
+                if 'diagram' in field_id.lower() or 'photo' in field_id.lower() or 'signature' in field_id.lower():
+                    logging.info(f"🔍 Campo: {field_id}")
+                    logging.info(f"   Alias usado: {alias_used if alias_used else 'N/A'}")
+                    logging.info(f"   Tem valor? {bool(value)}")
+                    logging.info(f"   Tamanho: {len(value) if value else 0}")
+                    if not value:
+                        # Verificar se existe em report_data com outro nome
+                        possible_keys = [k for k in report_data.keys() if 'diagram' in k.lower() or 'photo' in k.lower()]
+                        logging.info(f"   Chaves possíveis em report_data: {possible_keys}")
                 
                 if not value:
                     continue
@@ -17205,8 +17244,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 # Description (truncated)
                                 can.drawString(x + 2, row_y, str(row.get('description', ''))[:30])
                                 
-                                # Quantity (number)
-                                qty_formatted = _format_number(row.get('qty', '')) if row.get('qty') else ''
+                                # Quantity (number) - aceita 'quantity' ou 'qty'
+                                qty_value = row.get('quantity', row.get('qty', ''))
+                                qty_formatted = _format_number(qty_value) if qty_value else ''
                                 can.drawString(x + col_widths[0] + 2, row_y, qty_formatted)
                                 
                                 # Price (currency)
