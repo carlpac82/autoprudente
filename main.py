@@ -17919,6 +17919,64 @@ async def debug_rental_agreement_status(request: Request):
             "error": str(e)
         }
 
+@app.get("/api/rental-agreements/debug-coords")
+async def debug_ra_coordinates(request: Request):
+    """DEBUG: Verificar coordenadas no banco"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            is_postgres = hasattr(conn, 'cursor')
+            
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM rental_agreement_coordinates")
+                    count = cur.fetchone()[0]
+                    
+                    cur.execute("""
+                        SELECT field_id, x, y, width, height, page 
+                        FROM rental_agreement_coordinates 
+                        ORDER BY field_id
+                    """)
+                    coords = cur.fetchall()
+            else:
+                cursor = conn.execute("SELECT COUNT(*) FROM rental_agreement_coordinates")
+                count = cursor.fetchone()[0]
+                
+                cursor = conn.execute("""
+                    SELECT field_id, x, y, width, height, page 
+                    FROM rental_agreement_coordinates 
+                    ORDER BY field_id
+                """)
+                coords = cursor.fetchall()
+            
+            result = {
+                "ok": True,
+                "total": count,
+                "coordinates": [
+                    {
+                        "field_id": row[0],
+                        "x": row[1],
+                        "y": row[2],
+                        "width": row[3],
+                        "height": row[4],
+                        "page": row[5]
+                    }
+                    for row in coords
+                ]
+            }
+            
+            conn.close()
+            return result
+    except Exception as e:
+        import traceback
+        return {
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
 @app.get("/api/rental-agreements/get-coordinates")
 async def get_rental_agreement_coordinates(request: Request):
     """Obter coordenadas dos campos do RA"""
