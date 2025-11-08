@@ -16918,20 +16918,30 @@ async def save_damage_report_coordinates(request: Request):
         
         # Receber coordenadas (suporta objeto OU array)
         data = await request.json()
-        raw_coordinates = data.get('coordinates', data)
         
-        # Converter para array se for objeto (compatibilidade)
-        if isinstance(raw_coordinates, dict):
-            # Formato antigo: { "field_id": {x, y, ...}, ... }
-            # Converter para array: [ {field_id, x, y, page, ...}, ... ]
-            coordinates = []
-            for field_id, coord in raw_coordinates.items():
-                coord_copy = coord.copy() if isinstance(coord, dict) else {}
-                coord_copy['field_id'] = field_id
-                coordinates.append(coord_copy)
+        # Detectar se data é array direto ou objeto com 'coordinates'
+        if isinstance(data, list):
+            # Formato: [ {field_id, x, y, ...}, ... ]
+            coordinates = data
+        elif isinstance(data, dict):
+            # Formato: { coordinates: [...] } ou { "field_id": {...}, ... }
+            raw_coordinates = data.get('coordinates', data)
+            
+            if isinstance(raw_coordinates, list):
+                # Já é array
+                coordinates = raw_coordinates
+            elif isinstance(raw_coordinates, dict):
+                # Formato antigo: { "field_id": {x, y, ...}, ... }
+                # Converter para array: [ {field_id, x, y, page, ...}, ... ]
+                coordinates = []
+                for field_id, coord in raw_coordinates.items():
+                    coord_copy = coord.copy() if isinstance(coord, dict) else {}
+                    coord_copy['field_id'] = field_id
+                    coordinates.append(coord_copy)
+            else:
+                coordinates = []
         else:
-            # Formato novo: array já pronto
-            coordinates = raw_coordinates
+            coordinates = []
         
         # Obter usuário atual
         username = request.session.get('username', 'system')
@@ -17249,7 +17259,7 @@ def _get_field_style(field_id: str) -> dict:
 def _detect_field_type(field_id: str) -> str:
     """
     Detecta o tipo de campo baseado no field_id
-    Retorna: 'text', 'image', 'signature', 'table', 'images', 'currency', 'date', 'number'
+    Retorna: 'text', 'image', 'signature', 'table', 'images', 'currency', 'date', 'number', 'hours'
     """
     field_id_lower = field_id.lower()
     
@@ -17262,7 +17272,9 @@ def _detect_field_type(field_id: str) -> str:
         return 'table'
     elif 'images' in field_id_lower:
         return 'images'
-    elif any(word in field_id_lower for word in ['cost', 'price', 'total', 'subtotal', 'hours']):
+    elif 'hours' in field_id_lower or 'hour' in field_id_lower:
+        return 'hours'  # ✅ TIPO SEPARADO para horas (sem decimais)
+    elif any(word in field_id_lower for word in ['cost', 'price', 'total', 'subtotal']):
         return 'currency'
     elif 'date' in field_id_lower:
         return 'date'
@@ -17515,17 +17527,36 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 img.save(img_buffer, format='JPEG', quality=85)
                             img_buffer.seek(0)
                             
-                            # Draw image on canvas
-                            # preserveAspectRatio=True → PRESERVAR proporção (não deformar)
+                            # CALCULAR aspect ratio para CONTAIN (caber dentro da caixa sem esticar)
+                            img_width, img_height = img.size
+                            img_aspect = img_width / img_height
+                            box_aspect = width / height
+                            
+                            # Ajustar dimensões para caber (contain mode)
+                            if img_aspect > box_aspect:
+                                # Imagem mais larga: ajustar pela largura
+                                draw_width = width
+                                draw_height = width / img_aspect
+                                # Centralizar verticalmente
+                                draw_x = x
+                                draw_y = y + (height - draw_height) / 2
+                            else:
+                                # Imagem mais alta: ajustar pela altura
+                                draw_height = height
+                                draw_width = height * img_aspect
+                                # Centralizar horizontalmente
+                                draw_x = x + (width - draw_width) / 2
+                                draw_y = y
+                            
+                            # Draw image on canvas (sem preserveAspectRatio, já calculamos manualmente)
                             can.drawImage(
                                 ImageReader(img_buffer),
-                                x, y,
-                                width=width,
-                                height=height,
-                                preserveAspectRatio=True,  # ✅ PRESERVAR proporção
+                                draw_x, draw_y,
+                                width=draw_width,
+                                height=draw_height,
                                 mask='auto' if is_diagram else None  # ✅ Transparência só para diagrama
                             )
-                            logging.info(f"✅ Drew image for {field_id} (preserving aspect ratio)")
+                            logging.info(f"✅ Drew image for {field_id} (contain mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box)")
                     except Exception as e:
                         logging.error(f"Error drawing image {field_id}: {e}")
                         # Fallback: draw placeholder
@@ -17669,6 +17700,21 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     text_y = _calculate_centered_y(y, height, style['size'])
                     can.drawString(x + 2, text_y, formatted_value)
                 
+                elif field_type == 'hours':
+                    # HORAS SEM DECIMAIS (center-aligned)
+                    formatted_value = _format_hours(value)
+                    style = _get_field_style(field_id)
+                    
+                    # Apply style
+                    font_name = f"{style['font']}-Bold" if style['bold'] else style['font']
+                    font_name = f"{font_name}-Oblique" if style['italic'] and not style['bold'] else font_name
+                    can.setFont(font_name, style['size'])
+                    can.setFillColorRGB(*style['color'])
+                    
+                    text_y = _calculate_centered_y(y, height, style['size'])
+                    # Center-align para horas (como na tabela)
+                    can.drawCentredString(x + width / 2, text_y, formatted_value)
+                
                 else:
                     # TEXTO SIMPLES COM ESTILO
                     style = _get_field_style(field_id)
@@ -17686,15 +17732,28 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     
                     # Handle multiline text for textarea fields
                     if 'description' in field_id or 'notes' in field_id or 'damage' in field_id:
-                        # Multiline text
+                        # Multiline text - CADA LINHA CENTRALIZADA VERTICALMENTE
                         lines = text_value.split('\n')
-                        line_height = style['size'] + 2  # Dynamic line height based on font size
-                        current_y = y + height - line_height
                         
-                        for line in lines[:int(height / line_height)]:
-                            if current_y > y:
-                                can.drawString(x + 2, current_y, line[:int(width / 5)])
-                                current_y -= line_height
+                        # Se for apenas 1 linha, centralizar verticalmente
+                        if len(lines) == 1:
+                            text_y = _calculate_centered_y(y, height, style['size'])
+                            can.drawString(x + 2, text_y, lines[0][:int(width / 5)])
+                        else:
+                            # Múltiplas linhas: distribuir uniformemente
+                            line_height = style['size'] + 2
+                            max_lines = int(height / line_height)
+                            lines_to_draw = lines[:max_lines]
+                            
+                            # Calcular espaçamento vertical total
+                            total_text_height = len(lines_to_draw) * line_height
+                            start_y = y + (height - total_text_height) / 2 + total_text_height - line_height
+                            
+                            for i, line in enumerate(lines_to_draw):
+                                if start_y - (i * line_height) > y:
+                                    # Centralizar cada linha verticalmente na sua própria área
+                                    line_y = start_y - (i * line_height) + (line_height - style['size']) / 2
+                                    can.drawString(x + 2, line_y, line[:int(width / 5)])
                     else:
                         # Single line text - centralizado verticalmente
                         text_y = _calculate_centered_y(y, height, style['size'])
