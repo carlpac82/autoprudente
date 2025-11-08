@@ -16890,6 +16890,24 @@ async def update_dr_numbering(request: Request):
                 conn.commit()
                 logging.info(f"💾 [DR-NUMBERING] COMMIT executed successfully")
                 
+                # VERIFICAÇÃO CRÍTICA: Ler de novo para confirmar persistência
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT current_number, prefix FROM damage_report_numbering WHERE id = 1")
+                        verification = cur.fetchone()
+                else:
+                    cursor = conn.execute("SELECT current_number, prefix FROM damage_report_numbering WHERE id = 1")
+                    verification = cursor.fetchone()
+                
+                if verification and verification[0] == current_number:
+                    logging.info(f"✅ [DR-NUMBERING] VERIFIED: Value persisted correctly: {verification[0]}")
+                else:
+                    logging.error(f"❌ [DR-NUMBERING] PERSISTENCE FAILED! Expected {current_number}, found {verification[0] if verification else 'NULL'}")
+                    return {
+                        "ok": False,
+                        "error": f"Persistência falhou! Esperado {current_number}, encontrado {verification[0] if verification else 'NULL'}"
+                    }
+                
                 next_number = f"{prefix}{(current_number + 1):02d}/{current_year}"
                 logging.info(f"✅ [DR-NUMBERING] Numeração atualizada: current={current_number}, next={next_number}")
                 
