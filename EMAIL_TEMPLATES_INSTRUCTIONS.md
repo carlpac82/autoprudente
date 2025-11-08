@@ -199,9 +199,9 @@ Se quiseres alterar:
 
 1. **Logo URL:**
    ```
-   https://carrental-api-5f8q.onrender.com/static/logos/logo_AUP.png
+   https://carrental-api-5f8q.onrender.com/static/logos/logo_autoprudente_header.png
    ```
-   Se alterares o logo, atualiza este URL
+   Se alterares o logo, atualiza este URL nos 4 templates
 
 2. **Responsive:**
    - Templates adaptam-se a mobile/desktop
