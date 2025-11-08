@@ -18026,56 +18026,90 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 img.save(img_buffer, format='JPEG', quality=85)
                             img_buffer.seek(0)
                             
-                            # CALCULAR aspect ratio para COVER (preencher caixa com zoom)
+                            # DIAGRAMA: usar CONTAIN (sem crop) | FOTOS: usar COVER (com crop)
                             img_width, img_height = img.size
-                            img_aspect = img_width / img_height
-                            box_aspect = width / height
                             
-                            # COVER MODE: Redimensionar imagem para preencher TODA a caixa
-                            if img_aspect > box_aspect:
-                                # Imagem mais larga: ajustar pela ALTURA
-                                new_height = height
-                                new_width = height * img_aspect
+                            # Variáveis para posição final do diagrama (para pins)
+                            diagram_final_x, diagram_final_y = x, y
+                            diagram_final_width, diagram_final_height = width, height
+                            
+                            if is_diagram:
+                                # DIAGRAMA: CONTAIN mode (ajustar SEM cortar, manter proporções)
+                                img_aspect = img_width / img_height
+                                box_aspect = width / height
+                                
+                                if img_aspect > box_aspect:
+                                    # Imagem mais larga: ajustar pela LARGURA
+                                    draw_width = width
+                                    draw_height = width / img_aspect
+                                    draw_x = x
+                                    draw_y = y + (height - draw_height) / 2  # Centrar verticalmente
+                                else:
+                                    # Imagem mais alta: ajustar pela ALTURA
+                                    draw_height = height
+                                    draw_width = height * img_aspect
+                                    draw_x = x + (width - draw_width) / 2  # Centrar horizontalmente
+                                    draw_y = y
+                                
+                                # Guardar posição final para os pins
+                                diagram_final_x, diagram_final_y = draw_x, draw_y
+                                diagram_final_width, diagram_final_height = draw_width, draw_height
+                                
+                                # Desenhar diagrama SEM crop, mantendo proporções originais
+                                img_buffer = BytesIO()
+                                img.save(img_buffer, format='PNG')
+                                img_buffer.seek(0)
+                                
+                                can.drawImage(
+                                    ImageReader(img_buffer),
+                                    draw_x, draw_y,
+                                    width=draw_width,
+                                    height=draw_height,
+                                    mask='auto'
+                                )
+                                logging.info(f"✅ Drew diagram {field_id} (CONTAIN mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box, NO CROP)")
                             else:
-                                # Imagem mais alta: ajustar pela LARGURA
-                                new_width = width
-                                new_height = width / img_aspect
-                            
-                            # Redimensionar imagem ANTES de desenhar (crop automático)
-                            img_resized = img.resize((int(new_width), int(new_height)), Image.Resampling.LANCZOS)
-                            
-                            # Crop para caixa exata (center crop)
-                            if new_width > width:
-                                # Crop horizontal
-                                left = (new_width - width) / 2
-                                img_cropped = img_resized.crop((int(left), 0, int(left + width), int(new_height)))
-                            else:
-                                # Crop vertical
-                                top = (new_height - height) / 2
-                                img_cropped = img_resized.crop((0, int(top), int(new_width), int(top + height)))
-                            
-                            # Save cropped image
-                            img_buffer = BytesIO()
-                            if is_diagram and img_cropped.mode == 'RGBA':
-                                img_cropped.save(img_buffer, format='PNG')
-                            else:
+                                # FOTOS: COVER mode (preencher com crop)
+                                img_aspect = img_width / img_height
+                                box_aspect = width / height
+                                
+                                if img_aspect > box_aspect:
+                                    # Imagem mais larga: ajustar pela ALTURA
+                                    new_height = height
+                                    new_width = height * img_aspect
+                                else:
+                                    # Imagem mais alta: ajustar pela LARGURA
+                                    new_width = width
+                                    new_height = width / img_aspect
+                                
+                                # Redimensionar
+                                img_resized = img.resize((int(new_width), int(new_height)), Image.Resampling.LANCZOS)
+                                
+                                # Crop para caixa exata (center crop)
+                                if new_width > width:
+                                    left = (new_width - width) / 2
+                                    img_cropped = img_resized.crop((int(left), 0, int(left + width), int(new_height)))
+                                else:
+                                    top = (new_height - height) / 2
+                                    img_cropped = img_resized.crop((0, int(top), int(new_width), int(top + height)))
+                                
+                                # Save
+                                img_buffer = BytesIO()
                                 if img_cropped.mode == 'RGBA':
-                                    # Converter para RGB se não for diagrama
                                     background = Image.new('RGB', img_cropped.size, (255, 255, 255))
                                     background.paste(img_cropped, mask=img_cropped.split()[-1])
                                     img_cropped = background
                                 img_cropped.save(img_buffer, format='JPEG', quality=90)
-                            img_buffer.seek(0)
-                            
-                            # Desenhar imagem PRIMEIRO (já no tamanho exato da caixa)
-                            can.drawImage(
-                                ImageReader(img_buffer),
-                                x, y,
-                                width=width,
-                                height=height,
-                                mask='auto' if is_diagram else None
-                            )
-                            logging.info(f"✅ Drew image for {field_id} (COVER mode: filled {int(width)}x{int(height)} box)")
+                                img_buffer.seek(0)
+                                
+                                # Desenhar foto
+                                can.drawImage(
+                                    ImageReader(img_buffer),
+                                    x, y,
+                                    width=width,
+                                    height=height
+                                )
+                                logging.info(f"✅ Drew photo {field_id} (COVER mode: filled {int(width)}x{int(height)} box with crop)")
                             
                             # PINS DO DIAGRAMA: Desenhar DEPOIS da imagem para aparecerem por cima
                             if is_diagram:
@@ -18100,15 +18134,16 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                         
                                         if isinstance(pins, list) and len(pins) > 0:
                                             logging.info(f"🎯 Drawing {len(pins)} damage pins on diagram")
+                                            logging.info(f"   Diagram area for pins: x={diagram_final_x}, y={diagram_final_y}, w={diagram_final_width}, h={diagram_final_height}")
                                             
                                             for pin in pins:
                                                 pin_number = pin.get('number', '?')
                                                 pin_x_percent = pin.get('x', 0)
                                                 pin_y_percent = pin.get('y', 0)
                                                 
-                                                # Coordenadas dos pins são % da caixa original
-                                                pin_x = x + (pin_x_percent / 100) * width
-                                                pin_y = y + (pin_y_percent / 100) * height
+                                                # Coordenadas dos pins são % da área do diagrama final (após CONTAIN mode)
+                                                pin_x = diagram_final_x + (pin_x_percent / 100) * diagram_final_width
+                                                pin_y = diagram_final_y + (pin_y_percent / 100) * diagram_final_height
                                                 
                                                 # Círculo vermelho
                                                 pin_radius = 8
