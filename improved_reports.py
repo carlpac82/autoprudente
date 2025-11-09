@@ -298,7 +298,7 @@ def generate_daily_report_html_by_location(search_data, location):
             
             if ap_position == 1:
                 ap_best_price += 1
-                position_bg = COLOR_GREEN
+                position_bg = COLOR_PRIMARY  # AZUL do website em vez de verde
                 position_text = "1º"
                 position_icon = icon_trophy
             elif ap_position == 2:
@@ -354,12 +354,27 @@ def generate_daily_report_html_by_location(search_data, location):
                 price = float(car.get('price_num', 0))
                 is_ap = 'autoprudente' in supplier.lower()
                 
+                # Imagem real do carro (extraída do CarJet)
+                car_image = car.get('car_image', '')
+                car_name = car.get('car', 'Unknown')
+                
+                # Se não tiver imagem, usa ícone SVG
+                if car_image and car_image.startswith('http'):
+                    car_visual = f'<img src="{car_image}" alt="{car_name}" style="width: 60px; height: auto; border-radius: 4px; border: 1px solid #e2e8f0;" onerror="this.style.display=\'none\'">'
+                else:
+                    car_visual = icon_car
+                
                 content_html += f"""
                 <div class="competitor {'autoprudente' if is_ap else ''}">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        {icon_car}
-                        <div style="font-weight: {'bold' if is_ap else '500'}; color: {'#009cb6' if is_ap else '#1e293b'};">
-                            {idx}. {supplier}
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        {car_visual}
+                        <div>
+                            <div style="font-weight: {'bold' if is_ap else '500'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px;">
+                                {idx}. {supplier}
+                            </div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                                {car_name}
+                            </div>
                         </div>
                     </div>
                     <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'};">
@@ -380,11 +395,11 @@ def generate_daily_report_html_by_location(search_data, location):
     stats_html = f"""
     <div class="stats-box">
         <div class="stat">
-            <div class="stat-value" style="color: {COLOR_GREEN};">{ap_best_price}</div>
+            <div class="stat-value" style="color: {COLOR_PRIMARY};">{ap_best_price}</div>
             <div class="stat-label">Melhores Preços</div>
         </div>
         <div class="stat">
-            <div class="stat-value" style="color: {COLOR_YELLOW}; color: #92400e;">{ap_competitive}</div>
+            <div class="stat-value" style="color: #92400e;">{ap_competitive}</div>
             <div class="stat-label">Competitivos</div>
         </div>
         <div class="stat">
