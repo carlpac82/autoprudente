@@ -2262,7 +2262,7 @@
                         ${damages.sort((a, b) => a.number - b.number).map(d => `
                             <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; padding: 8px; background: white; border-radius: 6px;">
                                 <div style="width: 28px; height: 28px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">${d.number}</div>
-                                <p style="margin: 0; font-size: 13px; color: #1f2937; line-height: 1.6;">${d.description || 'Sem descrição'}</p>
+                                <p style="margin: 0; font-size: 13px; color: #1f2937; line-height: 1.6;"><strong>${d.number}.</strong> ${d.description || 'Sem descrição'}</p>
                             </div>
                         `).join('')}
                     </div>
