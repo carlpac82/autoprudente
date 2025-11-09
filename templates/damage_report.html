@@ -2097,8 +2097,15 @@
                             ctx.font = `900 ${24 * currentPinSize}px Arial`; // MAIOR: 24px (era 20px)
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            // ✅ Número mais BAIXO na bola (ajustado para 0.35 - desceu mais)
-                            ctx.fillText(number, canvasX, canvasY - pinHeight * 0.35);
+                            
+                            // ✅ REPLICAR CSS EXATAMENTE: padding-top: 12px, height: 56px
+                            // Centro do texto no CSS: 12px (padding) + 12px (metade line-height) = 24px do topo
+                            // 24px / 56px = 0.4286 (42.86% do topo)
+                            // No canvas Y cresce para baixo, então: canvasY - pinHeight + (24px em escala)
+                            const paddingTopScaled = (12 / 56) * pinHeight;  // 12px escalado
+                            const lineHeightScaled = (24 / 56) * pinHeight;  // 24px escalado
+                            const textCenterFromTop = paddingTopScaled + (lineHeightScaled / 2);
+                            ctx.fillText(number, canvasX, canvasY - pinHeight + textCenterFromTop);
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
