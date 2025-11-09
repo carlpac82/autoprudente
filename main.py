@@ -16306,9 +16306,17 @@ async def get_damage_report(request: Request, dr_number: str):
                 
                 report = dict(zip(columns, row))
                 
-                # Converter bytes/memoryview para None (não enviar PDFs grandes)
-                if 'pdf_data' in report and report['pdf_data']:
-                    report['pdf_data'] = None  # Não enviar o PDF completo
+                # Converter tipos não-serializáveis para JSON
+                for key, value in report.items():
+                    # Bytes/memoryview/buffer -> None
+                    if isinstance(value, (bytes, memoryview, bytearray)):
+                        report[key] = None
+                    # Decimal -> float
+                    elif hasattr(value, '__class__') and 'Decimal' in value.__class__.__name__:
+                        report[key] = float(value)
+                    # Date/datetime -> string ISO
+                    elif hasattr(value, 'isoformat'):
+                        report[key] = value.isoformat()
                 
                 return {"ok": True, "report": report}
             finally:
