@@ -416,7 +416,7 @@ async def _do_carjet_search(locations, days, pickup_date):
                 request = MockRequest({
                     'location': location,
                     'start_date': pickup_date,
-                    'start_time': '10:00',
+                    'start_time': '15:00',  # Same as Automated Pricing
                     'days': day,
                     'lang': 'pt',
                     'currency': 'EUR'
