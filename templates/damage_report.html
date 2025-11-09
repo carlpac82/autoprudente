@@ -3271,10 +3271,20 @@
             try {
                 const canvas = document.getElementById('carDiagram');
                 if (canvas && damages.length > 0) {
+                    // ✅ Obter dimensões reais do container incluindo pins nas bordas
+                    const rect = canvas.getBoundingClientRect();
+                    const padding = 80; // Margem extra para pins nas bordas (altura do pin ~56px)
+                    
                     const diagramBase64 = await html2canvas(canvas, {
                         backgroundColor: '#ffffff',
                         scale: 2,
-                        logging: false
+                        logging: false,
+                        x: -padding,
+                        y: -padding,
+                        width: rect.width + (padding * 2),
+                        height: rect.height + (padding * 2),
+                        windowWidth: rect.width + (padding * 2),
+                        windowHeight: rect.height + (padding * 2)
                     }).then(canvas => canvas.toDataURL('image/png'));
                     
                     data.vehicleDiagram = diagramBase64;
