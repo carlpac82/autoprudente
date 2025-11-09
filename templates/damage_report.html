@@ -3234,14 +3234,38 @@
             data.damageDescription = damageDescriptions;
             console.log('   Descrição danos:', damageDescriptions.substring(0, 100) + '...');
             
+            // ✅ ADICIONAR DESCRIÇÕES INDIVIDUAIS (damage_1, damage_2, ...)
+            damages.forEach(damage => {
+                data[`damage_${damage.number}`] = damage.description || '';
+            });
+            console.log('   Descrições individuais:', damages.length, 'campos (damage_1 a damage_' + damages.length + ')');
+            
             // Adicionar itens de reparo
             data.repairItems = JSON.stringify(repairItems);
             const repairTotal = repairItems.reduce((sum, item) => sum + item.total, 0);
             data.repairTotal = repairTotal.toFixed(2);
             data.totalCost = repairTotal.toFixed(2);  // Para compatibilidade com BD
+            data.totalRepairCost = repairTotal.toFixed(2);  // Para o PDF
+            
+            // ✅ ADICIONAR ITENS DE REPARAÇÃO INDIVIDUAIS (repair_line_1, repair_line_2, ...)
+            repairItems.forEach((item, index) => {
+                const lineNum = index + 1;
+                data[`repair_line_${lineNum}`] = item.description || '';
+                data[`repair_line_${lineNum}_qty`] = item.quantity || '';
+                data[`repair_line_${lineNum}_hours`] = item.hours || '';
+                data[`repair_line_${lineNum}_price`] = item.price || '';
+                data[`repair_line_${lineNum}_subtotal`] = item.total || '';
+            });
+            console.log('   Itens reparação individuais:', repairItems.length, 'linhas');
             
             // Adicionar imagens
             data.damageImages = JSON.stringify(damageImages);
+            
+            // ✅ ADICIONAR FOTOS INDIVIDUAIS (damagePhoto1, damagePhoto2, ...)
+            damageImages.forEach((image, index) => {
+                data[`damagePhoto${index + 1}`] = image.data || '';
+            });
+            console.log('   Fotos individuais:', damageImages.length, 'campos (damagePhoto1 a damagePhoto' + damageImages.length + ')');
             
             // ✅ GERAR CROQUI COM PINS DESENHADOS (vehicle_diagram)
             console.log('   🚗 Gerando croqui com pins...');
