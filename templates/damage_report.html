@@ -2769,9 +2769,9 @@
             window.open(endpoint, '_blank');
         }
         
-        // Download PDF original do DR (função antiga)
+        // Download PDF do DR (gerado com template mapeado)
         async function downloadDRPDF(drNumber) {
-            window.open(`/api/damage-reports/${drNumber}/pdf-original`, '_blank');
+            window.open(`/api/damage-reports/${encodeURIComponent(drNumber)}/pdf`, '_blank');
         }
 
         function downloadPDF() {
