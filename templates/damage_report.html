@@ -2700,6 +2700,12 @@
                 if (result.ok && result.report) {
                     const report = result.report;
                     console.log('[EDIT-DR] Report fields:', Object.keys(report));
+                    console.log('[EDIT-DR] ALL FIELD VALUES:');
+                    Object.keys(report).forEach(key => {
+                        if (report[key] && !key.includes('image') && !key.includes('data') && !key.includes('blob')) {
+                            console.log(`  ${key}: ${report[key]}`);
+                        }
+                    });
                     
                     // Preencher formulário - com tratamento de erros individual
                     try {
