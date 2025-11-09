@@ -18709,26 +18709,27 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                                 font_size = max(10, int(pin_width_pdf * 0.58))
                                                 can.setFont("Helvetica-Bold", font_size)  # BOLD
                                                 
-                                                # ✅ POSICIONAR NÚMERO NO CENTRO DA BOLA DO PIN
+                                                # ✅ POSICIONAR NÚMERO IGUAL AO HTML (padding-top: 12px)
                                                 text_x = pin_x_scaled
                                                 
-                                                # A bola do pin fica no TOPO do pin (primeiros ~40% da altura)
-                                                # O centro da bola fica a aproximadamente 75-80% da altura total do pin
-                                                # (medido a partir do FUNDO/ponta do pin)
+                                                # CSS do HTML: padding-top: 12px significa que o número
+                                                # começa a 12px do TOPO do pin (height: 56px)
+                                                #
+                                                # No PDF, Y cresce de BAIXO para CIMA (invertido!)
+                                                # 12px do topo = (56px - 12px) = 44px do fundo
+                                                # 
+                                                # Mas padding-top é onde o TEXTO COMEÇA, não o centro!
+                                                # Com line-height: 24px, o centro fica a 12 + 12 = 24px do topo
+                                                # 24px do topo = 56 - 24 = 32px do fundo
+                                                # 
+                                                # Proporção: 32/56 = 0.5714 ESTÁ MUITO ALTO!
+                                                # Na prática visual, o centro da bola está mais baixo (~40%)
                                                 
-                                                # No PDF, Y cresce de baixo para cima:
-                                                # - pin_y_final = posição do fundo/ponta do pin
-                                                # - pin_y_final + pin_height_pdf = topo do pin
-                                                # - Centro da bola = 75% da altura a partir do fundo
+                                                # Testar 40% da altura (entre topo e meio)
+                                                text_y_base = pin_y_final + (pin_height_pdf * 0.40)
                                                 
-                                                centro_bola_y = pin_y_final + (pin_height_pdf * 0.75)
-                                                
-                                                # drawCentredString usa BASELINE (não centro visual)
-                                                # Para números, baseline fica ~35% da altura do caractere ABAIXO do centro
-                                                # Precisamos SUBTRAIR esse offset para o número ficar centrado visualmente
-                                                baseline_offset = font_size * 0.35
-                                                
-                                                text_y = centro_bola_y - baseline_offset
+                                                # drawCentredString usa BASELINE, ajustar para cima
+                                                text_y = text_y_base + (font_size * 0.25)
                                                 
                                                 can.drawCentredString(text_x, text_y, str(pin_number))
                                                 
