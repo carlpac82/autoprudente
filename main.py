@@ -16214,7 +16214,8 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
                     line_num = idx + 1
                     report_data[f'repair_line_{line_num}'] = item.get('description', '')
                     report_data[f'repair_line_{line_num}_qty'] = str(item.get('quantity', ''))
-                    report_data[f'repair_line_{line_num}_hours'] = str(item.get('hours', ''))
+                    hours_val = item.get('hours', '')
+                    report_data[f'repair_line_{line_num}_hours'] = '-' if hours_val == 0 or hours_val == '0' else str(hours_val)
                     report_data[f'repair_line_{line_num}_price'] = str(item.get('price', ''))
                     report_data[f'repair_line_{line_num}_subtotal'] = str(item.get('total', ''))
                 logging.info(f"✅ Extraídos {len(repair_items)} itens de reparação")
@@ -19188,7 +19189,8 @@ async def preview_damage_report_pdf(request: Request):
                 # Cada item tem: description, quantity, hours, price, total
                 report_data[f'repair_line_{idx}'] = item.get('description', '')
                 report_data[f'repair_line_{idx}_qty'] = str(item.get('quantity', ''))
-                report_data[f'repair_line_{idx}_hours'] = str(item.get('hours', ''))
+                hours_val = item.get('hours', '')
+                report_data[f'repair_line_{idx}_hours'] = '-' if hours_val == 0 or hours_val == '0' else str(hours_val)
                 report_data[f'repair_line_{idx}_price'] = str(item.get('price', ''))
                 report_data[f'repair_line_{idx}_subtotal'] = str(item.get('total', ''))
                 logging.info(f"   L{idx}: {item.get('description', '')[:30]} | Qty:{item.get('quantity','')} | Hours:{item.get('hours','')} | €{item.get('price','')} | Total:€{item.get('total','')}")
@@ -19471,7 +19473,8 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
                     line_num = idx + 1
                     report_data[f'repair_line_{line_num}'] = item.get('description', '')
                     report_data[f'repair_line_{line_num}_qty'] = str(item.get('quantity', ''))
-                    report_data[f'repair_line_{line_num}_hours'] = str(item.get('hours', ''))
+                    hours_val = item.get('hours', '')
+                    report_data[f'repair_line_{line_num}_hours'] = '-' if hours_val == 0 or hours_val == '0' else str(hours_val)
                     report_data[f'repair_line_{line_num}_price'] = str(item.get('price', ''))
                     report_data[f'repair_line_{line_num}_subtotal'] = str(item.get('total', ''))
                 logging.info(f"✅ Extraídos {len(repair_items)} itens de reparação")
