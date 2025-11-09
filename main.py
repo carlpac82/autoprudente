@@ -15479,7 +15479,7 @@ async def create_damage_report(request: Request):
                         vehicle_damage_image_blob = base64.b64decode(image_data)
                     
                     update_values = (
-                        data.get('ra_number'),
+                        data.get('raNumber'),  # ✅ Frontend envia raNumber (camelCase)
                         data.get('contractNumber'),
                         data.get('date'),
                         data.get('clientName'),
@@ -15607,7 +15607,7 @@ async def create_damage_report(request: Request):
                     if is_recycled:
                         # UPDATE - Reutilizar registo eliminado e resetar flags de eliminação
                         update_values = (
-                            data.get('ra_number'),
+                            data.get('raNumber'),  # ✅ Frontend envia raNumber (camelCase)
                             data.get('contractNumber'),
                             data.get('date'),
                             data.get('clientName'),
@@ -15701,7 +15701,7 @@ async def create_damage_report(request: Request):
                         logging.error(f"💾 Preparando INSERT para DR: {dr_number}")
                         insert_values = (
                             dr_number,
-                            data.get('ra_number'),
+                            data.get('raNumber'),  # ✅ Frontend envia raNumber (camelCase)
                             data.get('contractNumber'),
                             data.get('date'),
                             data.get('clientName'),
