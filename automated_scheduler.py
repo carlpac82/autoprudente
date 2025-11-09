@@ -317,7 +317,7 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                 print(f"   [DEBUG] supplier_data days: {list(supplier_data.keys())}", flush=True)
                 
                 # Send ALL cars from supplier_data (not just 1 per group)
-                # Filter duplicates: same supplier + car + price = duplicate
+                # Filter duplicates: same supplier + car + price + day = duplicate
                 seen_cars = set()
                 total_before = 0
                 
@@ -328,8 +328,9 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                         car = item.get('car', 'Unknown')
                         price = item.get('price_num', 0)
                         
-                        # Create unique key
-                        unique_key = f"{supplier}|{car}|{price:.2f}"
+                        # Create unique key INCLUDING day
+                        # This allows same car to appear in different days
+                        unique_key = f"{day_str}|{supplier}|{car}|{price:.2f}"
                         
                         # Skip if already seen
                         if unique_key in seen_cars:

@@ -238,9 +238,6 @@ def generate_daily_report_html_by_location(search_data, location):
         html += generate_report_footer()
         return html
     
-    # Find the absolute lowest price across ALL results
-    lowest_price = min([float(car.get('price_num', 999999)) for car in results]) if results else 999999
-    
     # Group by DAYS first, then by GROUP
     data_by_days = {}
     for car in results:
@@ -254,6 +251,15 @@ def generate_daily_report_html_by_location(search_data, location):
             data_by_days[days][group] = []
         
         data_by_days[days][group].append(car)
+    
+    # Find the lowest price PER DAY (not global)
+    lowest_price_per_day = {}
+    for days, groups in data_by_days.items():
+        all_prices_for_day = []
+        for group, cars in groups.items():
+            for car in cars:
+                all_prices_for_day.append(float(car.get('price_num', 999999)))
+        lowest_price_per_day[days] = min(all_prices_for_day) if all_prices_for_day else 999999
     
     # Stats
     ap_best_price = 0
@@ -368,8 +374,8 @@ def generate_daily_report_html_by_location(search_data, location):
                     # Fallback: ícone SVG pequeno
                     car_visual = icon_car
                 
-                # Check if this is the absolute lowest price
-                is_lowest = abs(price - lowest_price) < 0.01
+                # Check if this is the lowest price FOR THIS DAY
+                is_lowest = abs(price - lowest_price_per_day[days]) < 0.01
                 
                 # Badge for lowest price
                 price_badge = ''
@@ -464,9 +470,6 @@ def generate_weekly_report_html_by_location(search_data, location):
         html += generate_report_footer()
         return html
     
-    # Find the absolute lowest price across ALL results
-    lowest_price = min([float(car.get('price_num', 999999)) for car in results]) if results else 999999
-    
     # Group by MONTH first, then by DAYS, then by GROUP
     # Estrutura: MÊS → dias → grupos (igual ao diário mas com mês no topo)
     from collections import defaultdict
@@ -488,6 +491,16 @@ def generate_weekly_report_html_by_location(search_data, location):
             data_by_month[month_key][days][group] = []
         
         data_by_month[month_key][days][group].append(car)
+    
+    # Find the lowest price PER DAY (not global)
+    lowest_price_per_day = {}
+    for month, days_data in data_by_month.items():
+        for days, groups in days_data.items():
+            all_prices_for_day = []
+            for group, cars in groups.items():
+                for car in cars:
+                    all_prices_for_day.append(float(car.get('price_num', 999999)))
+            lowest_price_per_day[days] = min(all_prices_for_day) if all_prices_for_day else 999999
     
     # Stats
     ap_best_price = 0
@@ -610,8 +623,8 @@ def generate_weekly_report_html_by_location(search_data, location):
                     else:
                         car_visual = icon_car
                     
-                    # Check if this is the absolute lowest price
-                    is_lowest = abs(price - lowest_price) < 0.01
+                    # Check if this is the lowest price FOR THIS DAY
+                    is_lowest = abs(price - lowest_price_per_day[days]) < 0.01
                     
                     # Badge for lowest price
                     price_badge = ''
