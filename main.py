@@ -22800,11 +22800,12 @@ async def test_daily_report(request: Request):
         username = request.session.get('username')
         logging.info(f"Test daily report requested by {username} for {len(report_recipients)} recipient(s)")
         
-        # Load REAL search data from today 07h00
+        # Load search data - try today first, then last 7 days
         search_data = {'results': []}
         with _db_lock:
             conn = _db_connect()  
             try:
+                # Try today first
                 cursor = conn.execute(
                     """
                     SELECT location, start_date, days, results_data, timestamp
@@ -22814,6 +22815,20 @@ async def test_daily_report(request: Request):
                     """
                 )
                 rows = cursor.fetchall()
+                
+                # If no data today, get most recent from last 7 days
+                if not rows:
+                    logging.info("📭 No data from today, fetching most recent from last 7 days...")
+                    cursor = conn.execute(
+                        """
+                        SELECT location, start_date, days, results_data, timestamp
+                        FROM recent_searches
+                        WHERE timestamp >= datetime('now', '-7 days')
+                        ORDER BY timestamp DESC
+                        LIMIT 50
+                        """
+                    )
+                    rows = cursor.fetchall()
                 
                 all_results = []
                 for row in rows:
@@ -22826,14 +22841,14 @@ async def test_daily_report(request: Request):
                         all_results.extend(results)
                 
                 search_data = {'results': all_results}
-                logging.info(f"📊 Found {len(all_results)} total results from today")
+                logging.info(f"📊 Found {len(all_results)} total results for test report")
             finally:
                 conn.close()
         
         if not search_data['results']:
             return JSONResponse({
                 "ok": False,
-                "error": "Sem dados de pesquisa de hoje. Execute uma pesquisa primeiro."
+                "error": "Sem dados de pesquisa disponíveis. Execute uma pesquisa primeiro ou aguarde a pesquisa automática."
             })
         
         # Build Gmail service
@@ -23636,11 +23651,12 @@ async def test_weekly_report(request: Request):
         # Usar email de configuração como destinatário
         report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
-        # Load REAL search data from today
+        # Load search data - try today first, then last 7 days
         search_data = {'results': []}
         with _db_lock:
             conn = _db_connect()  
             try:
+                # Try today first
                 cursor = conn.execute(
                     """
                     SELECT location, start_date, days, results_data, timestamp
@@ -23650,6 +23666,20 @@ async def test_weekly_report(request: Request):
                     """
                 )
                 rows = cursor.fetchall()
+                
+                # If no data today, get most recent from last 7 days
+                if not rows:
+                    logging.info("📭 No data from today, fetching most recent from last 7 days...")
+                    cursor = conn.execute(
+                        """
+                        SELECT location, start_date, days, results_data, timestamp
+                        FROM recent_searches
+                        WHERE timestamp >= datetime('now', '-7 days')
+                        ORDER BY timestamp DESC
+                        LIMIT 50
+                        """
+                    )
+                    rows = cursor.fetchall()
                 
                 all_results = []
                 for row in rows:
@@ -23662,14 +23692,14 @@ async def test_weekly_report(request: Request):
                         all_results.extend(results)
                 
                 search_data = {'results': all_results}
-                logging.info(f"📊 Found {len(all_results)} total results for weekly report")
+                logging.info(f"📊 Found {len(all_results)} total results for weekly test report")
             finally:
                 conn.close()
         
         if not search_data['results']:
             return JSONResponse({
                 "ok": False,
-                "error": "Sem dados de pesquisa de hoje. Execute uma pesquisa primeiro."
+                "error": "Sem dados de pesquisa disponíveis. Execute uma pesquisa primeiro ou aguarde a pesquisa automática."
             })
         
         # Build Gmail service with complete credentials
