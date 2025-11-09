@@ -20,6 +20,8 @@ uploads/
 backups/*.tar.gz
 backups/backup_*/
 !backups/README.md
+backups_local/
+backup_FULL_10_*.json
 
 # Logs
 logs/
@@ -29,4 +31,3 @@ logs/
 cache/
 __pycache__/
 backups/
-backup_FULL_10_*.json
