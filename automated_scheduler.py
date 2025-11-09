@@ -435,18 +435,41 @@ async def _do_carjet_search(locations, days, pickup_date):
                 })
                 
                 # Call track_by_params (includes Anti-WAF with devices, timezones, etc)
+                print(f"      [CALLING] track_by_params with location={location}, date={pickup_date}, days={day}", flush=True)
+                
                 response = await track_by_params(request)
+                
+                print(f"      [RESPONSE] Type: {type(response)}", flush=True)
+                print(f"      [RESPONSE] Has body: {hasattr(response, 'body')}", flush=True)
                 
                 # Extract items from response
                 if hasattr(response, 'body'):
                     import json
-                    data = json.loads(response.body.decode())
+                    body_str = response.body.decode()
+                    print(f"      [RESPONSE] Body length: {len(body_str)} chars", flush=True)
+                    data = json.loads(body_str)
+                    print(f"      [RESPONSE] Data keys: {list(data.keys())}", flush=True)
+                    
                     items = data.get('items', [])
                     print(f"      ✅ {len(items)} cars found", flush=True)
+                    
+                    if len(items) == 0:
+                        print(f"      ⚠️ WARNING: Empty items list!", flush=True)
+                        print(f"      [DEBUG] Full response data: {json.dumps(data, indent=2)}", flush=True)
+                    else:
+                        # Show first car as example
+                        print(f"      [EXAMPLE] First car: {items[0].get('car', 'N/A')}, {items[0].get('supplier', 'N/A')}, {items[0].get('price', 'N/A')}", flush=True)
+                    
                     location_results[day] = items
+                else:
+                    print(f"      ⚠️ Response has no body attribute!", flush=True)
+                    print(f"      [DEBUG] Response: {response}", flush=True)
+                    location_results[day] = []
                     
             except Exception as e:
                 print(f"      ❌ Error: {str(e)}", flush=True)
+                import traceback
+                print(f"      [TRACEBACK] {traceback.format_exc()}", flush=True)
                 location_results[day] = []
         
         all_results[location] = location_results
