@@ -386,99 +386,67 @@ def execute_search_for_schedule(schedule, schedule_index):
 
 async def _do_carjet_search(locations, days, pickup_date):
     """
-    Execute CarJet search using Playwright - internal async function
-    WITH TIME ROTATION AND ANTI-WAF PROTECTION (same as Automated Pricing)
+    Execute CarJet search using HTTP request to own API (same as manual search)
+    This ensures IDENTICAL behavior to manual searches
     """
-    from playwright.async_api import async_playwright
-    import sys
+    import aiohttp
     import os
-    import random
     
-    # Import track_by_params from main
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from main import track_by_params
+    print(f"\n🛡️ Using HTTP API call (same as manual search)", flush=True)
     
-    # NOTE: Anti-WAF settings (device rotation, timezone, referrer) are handled by track_by_params
-    # Date rotation is ALSO handled by track_by_params automatically
-    # We don't need to apply it here to avoid DOUBLE rotation!
-    print(f"\n🛡️ Anti-WAF Protection enabled (handled by track_by_params)", flush=True)
+    # Get the service URL (Render provides RENDER_EXTERNAL_URL)
+    service_url = os.getenv('RENDER_EXTERNAL_URL', 'http://localhost:10000')
+    api_url = f"{service_url}/api/track-by-params"
+    
+    print(f"   API URL: {api_url}", flush=True)
     
     all_results = {}
     
-    for location in locations:
-        print(f"\n📍 Searching {location}...", flush=True)
-        location_results = {}
-        
-        for day in days:
-            print(f"   → {day} days...", flush=True)
+    async with aiohttp.ClientSession() as session:
+        for location in locations:
+            print(f"\n📍 Searching {location}...", flush=True)
+            location_results = {}
             
-            try:
-                # Mock request object (complete with all FastAPI Request attributes)
-                # NOTE: NO rotation here - track_by_params does all rotations internally!
-                class MockHeaders(dict):
-                    """Mock headers object with .get() method"""
-                    def get(self, key, default=None):
-                        return super().get(key, default)
+            for day in days:
+                print(f"   → {day} days...", flush=True)
                 
-                class MockRequest:
-                    def __init__(self, data):
-                        self._data = data
-                        # Special header to bypass authentication (see require_auth in main.py line 3173)
-                        self.headers = MockHeaders({'X-Internal-Request': 'scheduler'})
-                        self.session = {'username': 'automated', 'user_email': 'automated'}  # Session data
-                        self.client = type('obj', (object,), {'host': '127.0.0.1'})()  # Mock client
+                try:
+                    payload = {
+                        'location': location,
+                        'start_date': pickup_date,
+                        'start_time': '15:00',
+                        'days': day,
+                        'lang': 'pt',
+                        'currency': 'EUR'
+                    }
                     
-                    async def json(self):
-                        return self._data
-                
-                request = MockRequest({
-                    'location': location,
-                    'start_date': pickup_date,  # Original date (track_by_params will rotate)
-                    'start_time': '15:00',      # Fixed time (track_by_params will rotate)
-                    'days': day,
-                    'lang': 'pt',
-                    'currency': 'EUR'
-                })
-                
-                # Call track_by_params (includes Anti-WAF with devices, timezones, etc)
-                print(f"      [CALLING] track_by_params with location={location}, date={pickup_date}, days={day}", flush=True)
-                
-                response = await track_by_params(request)
-                
-                print(f"      [RESPONSE] Type: {type(response)}", flush=True)
-                print(f"      [RESPONSE] Has body: {hasattr(response, 'body')}", flush=True)
-                
-                # Extract items from response
-                if hasattr(response, 'body'):
-                    import json
-                    body_str = response.body.decode()
-                    print(f"      [RESPONSE] Body length: {len(body_str)} chars", flush=True)
-                    data = json.loads(body_str)
-                    print(f"      [RESPONSE] Data keys: {list(data.keys())}", flush=True)
+                    print(f"      [HTTP POST] Calling API...", flush=True)
                     
-                    items = data.get('items', [])
-                    print(f"      ✅ {len(items)} cars found", flush=True)
-                    
-                    if len(items) == 0:
-                        print(f"      ⚠️ WARNING: Empty items list!", flush=True)
-                        print(f"      [DEBUG] Full response data: {json.dumps(data, indent=2)}", flush=True)
-                    else:
-                        # Show first car as example
-                        print(f"      [EXAMPLE] First car: {items[0].get('car', 'N/A')}, {items[0].get('supplier', 'N/A')}, {items[0].get('price', 'N/A')}", flush=True)
-                    
-                    location_results[day] = items
-                else:
-                    print(f"      ⚠️ Response has no body attribute!", flush=True)
-                    print(f"      [DEBUG] Response: {response}", flush=True)
+                    async with session.post(api_url, json=payload, timeout=aiohttp.ClientTimeout(total=600)) as response:
+                        print(f"      [HTTP] Status: {response.status}", flush=True)
+                        
+                        if response.status == 200:
+                            data = await response.json()
+                            items = data.get('items', [])
+                            
+                            print(f"      ✅ {len(items)} cars found", flush=True)
+                            
+                            if len(items) > 0:
+                                print(f"      [EXAMPLE] First car: {items[0].get('car', 'N/A')}, {items[0].get('supplier', 'N/A')}, {items[0].get('price', 'N/A')}", flush=True)
+                            
+                            location_results[day] = items
+                        else:
+                            error_text = await response.text()
+                            print(f"      ❌ HTTP Error {response.status}: {error_text[:200]}", flush=True)
+                            location_results[day] = []
+                            
+                except Exception as e:
+                    print(f"      ❌ Error: {str(e)}", flush=True)
+                    import traceback
+                    print(f"      [TRACEBACK] {traceback.format_exc()}", flush=True)
                     location_results[day] = []
-                    
-            except Exception as e:
-                print(f"      ❌ Error: {str(e)}", flush=True)
-                import traceback
-                print(f"      [TRACEBACK] {traceback.format_exc()}", flush=True)
-                location_results[day] = []
-        
-        all_results[location] = location_results
+            
+            all_results[location] = location_results
     
     return all_results
 
