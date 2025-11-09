@@ -238,6 +238,9 @@ def generate_daily_report_html_by_location(search_data, location):
         html += generate_report_footer()
         return html
     
+    # Find the absolute lowest price across ALL results
+    lowest_price = min([float(car.get('price_num', 999999)) for car in results]) if results else 999999
+    
     # Group by DAYS first, then by GROUP
     data_by_days = {}
     for car in results:
@@ -365,6 +368,14 @@ def generate_daily_report_html_by_location(search_data, location):
                     # Fallback: ícone SVG pequeno
                     car_visual = icon_car
                 
+                # Check if this is the absolute lowest price
+                is_lowest = abs(price - lowest_price) < 0.01
+                
+                # Badge for lowest price
+                price_badge = ''
+                if is_lowest:
+                    price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">MELHOR PREÇO</span>'
+                
                 content_html += f"""
                 <div class="competitor {'autoprudente' if is_ap else ''}">
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -378,8 +389,9 @@ def generate_daily_report_html_by_location(search_data, location):
                             </div>
                         </div>
                     </div>
-                    <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'};">
+                    <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; display: flex; align-items: center;">
                         {price:.2f}€
+                        {price_badge}
                     </div>
                 </div>
                 """
@@ -451,6 +463,9 @@ def generate_weekly_report_html_by_location(search_data, location):
         """
         html += generate_report_footer()
         return html
+    
+    # Find the absolute lowest price across ALL results
+    lowest_price = min([float(car.get('price_num', 999999)) for car in results]) if results else 999999
     
     # Group by MONTH first, then by DAYS, then by GROUP
     # Estrutura: MÊS → dias → grupos (igual ao diário mas com mês no topo)
@@ -595,6 +610,14 @@ def generate_weekly_report_html_by_location(search_data, location):
                     else:
                         car_visual = icon_car
                     
+                    # Check if this is the absolute lowest price
+                    is_lowest = abs(price - lowest_price) < 0.01
+                    
+                    # Badge for lowest price
+                    price_badge = ''
+                    if is_lowest:
+                        price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">MELHOR PREÇO</span>'
+                    
                     content_html += f"""
                     <div class="competitor {'autoprudente' if is_ap else ''}">
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -608,8 +631,9 @@ def generate_weekly_report_html_by_location(search_data, location):
                                 </div>
                             </div>
                         </div>
-                        <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'};">
+                        <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; display: flex; align-items: center;">
                             {price:.2f}€
+                            {price_badge}
                         </div>
                     </div>
                     """
