@@ -2777,8 +2777,24 @@
                                 console.log('[EDIT-DR] Car diagram container:', carDiagram ? 'FOUND ✅' : 'NOT FOUND ❌');
                                 
                                 if (carDiagram) {
+                                    // Log dimensões do container para debug
+                                    const rect = carDiagram.getBoundingClientRect();
+                                    console.log('[EDIT-DR] Container dimensions:', {
+                                        width: rect.width,
+                                        height: rect.height,
+                                        left: rect.left,
+                                        top: rect.top
+                                    });
+                                    
                                     damages.forEach((d, idx) => {
-                                        console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, d);
+                                        console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, {
+                                            id: d.id,
+                                            number: d.number,
+                                            x: d.x,
+                                            y: d.y,
+                                            view: d.view,
+                                            size: d.size
+                                        });
                                         
                                         const pin = document.createElement('div');
                                         pin.className = 'damage-pin';
@@ -2803,7 +2819,7 @@
                                             removeDamagePin(d.id);
                                         };
                                         carDiagram.appendChild(pin);
-                                        console.log(`[EDIT-DR]   ✅ Pin #${d.number} created at (${d.x}, ${d.y})`);
+                                        console.log(`[EDIT-DR]   ✅ Pin #${d.number} appended to container`);
                                     });
                                 } else {
                                     console.error('[EDIT-DR] ❌ Car diagram container (#carDiagram) not found!');
@@ -2854,16 +2870,27 @@
                             console.log('[EDIT-DR] Is array?', Array.isArray(imagesData));
                             
                             if (Array.isArray(imagesData) && imagesData.length > 0) {
-                                damageImages = imagesData;
+                                // ✅ Converter strings base64 para objetos {id, data, name}
+                                damageImages = imagesData.map((img, idx) => {
+                                    if (typeof img === 'string') {
+                                        // String base64 → converter para objeto
+                                        return {
+                                            id: Date.now() + idx,
+                                            data: img,
+                                            name: `Foto ${idx + 1}.jpg`
+                                        };
+                                    } else {
+                                        // Já é objeto, usar diretamente
+                                        return img;
+                                    }
+                                });
                                 console.log(`[EDIT-DR] ✅ Loaded ${damageImages.length} damage images`);
                                 damageImages.forEach((img, idx) => {
-                                    const preview = typeof img === 'string' 
-                                        ? img.substring(0, 50) + '...' 
-                                        : `Object (${Object.keys(img).join(', ')})`;
+                                    const preview = img.data ? img.data.substring(0, 50) + '...' : 'No data';
                                     console.log(`[EDIT-DR]   Image ${idx + 1}:`, preview);
                                 });
-                                updateImageList();
-                                console.log('[EDIT-DR] ✅ Image list updated');
+                                updateImageGallery();  // ✅ CORRIGIDO: era updateImageList()
+                                console.log('[EDIT-DR] ✅ Image gallery updated');
                             } else {
                                 console.warn('[EDIT-DR] ⚠️  No damage images to load (empty or not array)');
                             }
