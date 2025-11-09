@@ -173,25 +173,22 @@ def generate_report_header(title, subtitle=""):
     """
 
 def generate_report_footer():
-    """Footer padrão - BARRA AZUL + texto DEPOIS da barra (igual ao DR)"""
+    """Footer padrão - BARRA AZUL + texto ABAIXO (fora da barra)"""
     return f"""
             </div>
-            <!-- Footer com barra azul (igual ao DR) -->
+            <!-- Footer: Barra azul -->
             <div style="background: {COLOR_PRIMARY}; padding: 20px; text-align: center;">
                 <p style="margin: 0; font-size: 14px; color: #fff; font-weight: 500;">
                     Auto Prudente © {datetime.now().year}
                 </p>
-                <p style="margin: 8px 0 0 0; font-size: 12px; color: #e0f7fa;">
+            </div>
+            <!-- Texto ABAIXO da barra azul (fora) -->
+            <div style="background: #f8fafc; padding: 20px; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 500;">
                     Sistema de Monitorização de Preços
                 </p>
-            </div>
-            <!-- Texto APÓS a barra azul (igual ao DR) -->
-            <div style="background: #f8fafc; padding: 20px; text-align: center;">
-                <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8;">
                     Dados baseados na última pesquisa • Atualizado automaticamente
-                </p>
-                <p style="margin: 8px 0 0 0; font-size: 11px; color: #cbd5e1;">
-                    Este email foi enviado automaticamente pelo sistema
                 </p>
             </div>
         </div>
