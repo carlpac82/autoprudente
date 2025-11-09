@@ -2764,19 +2764,21 @@
                                 damageCounter = Math.max(...damages.map(d => d.number), 0);
                                 console.log(`[EDIT-DR] ✅ Loaded ${damages.length} damage pins, counter at ${damageCounter}`);
                                 
-                                // Recriar pins
-                                damages.forEach((d, idx) => {
-                                    console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, d);
-                                    const container = document.querySelector(`[data-view="${d.view}"]`);
-                                    console.log(`[EDIT-DR]   Container for view "${d.view}":`, container ? 'FOUND' : 'NOT FOUND');
-                                    
-                                    if (container) {
+                                // Recriar pins no diagrama
+                                const carDiagram = document.getElementById('carDiagram');
+                                console.log('[EDIT-DR] Car diagram container:', carDiagram ? 'FOUND ✅' : 'NOT FOUND ❌');
+                                
+                                if (carDiagram) {
+                                    damages.forEach((d, idx) => {
+                                        console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, d);
+                                        
                                         const pin = document.createElement('div');
                                         pin.className = 'damage-pin';
                                         pin.id = d.id;
                                         pin.textContent = d.number;
                                         pin.style.left = d.x + 'px';
                                         pin.style.top = d.y + 'px';
+                                        pin.style.position = 'absolute';
                                         // Aplicar tamanho salvo (default 0.5 se não existir)
                                         const pinSize = d.size || 0.5;
                                         pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
@@ -2792,12 +2794,12 @@
                                             e.stopPropagation();
                                             removeDamagePin(d.id);
                                         };
-                                        container.appendChild(pin);
+                                        carDiagram.appendChild(pin);
                                         console.log(`[EDIT-DR]   ✅ Pin #${d.number} created at (${d.x}, ${d.y})`);
-                                    } else {
-                                        console.error(`[EDIT-DR]   ❌ Container not found for view: ${d.view}`);
-                                    }
-                                });
+                                    });
+                                } else {
+                                    console.error('[EDIT-DR] ❌ Car diagram container (#carDiagram) not found!');
+                                }
                                 updateDamageList();
                                 console.log('[EDIT-DR] ✅ All pins recreated and damage list updated');
                             } else {
@@ -2847,7 +2849,10 @@
                                 damageImages = imagesData;
                                 console.log(`[EDIT-DR] ✅ Loaded ${damageImages.length} damage images`);
                                 damageImages.forEach((img, idx) => {
-                                    console.log(`[EDIT-DR]   Image ${idx + 1}:`, img.substring(0, 50) + '...');
+                                    const preview = typeof img === 'string' 
+                                        ? img.substring(0, 50) + '...' 
+                                        : `Object (${Object.keys(img).join(', ')})`;
+                                    console.log(`[EDIT-DR]   Image ${idx + 1}:`, preview);
                                 });
                                 updateImageList();
                                 console.log('[EDIT-DR] ✅ Image list updated');
