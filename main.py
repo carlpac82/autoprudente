@@ -742,7 +742,7 @@ def _ensure_damage_reports_tables():
                         INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
                         SELECT 'pt', 'Português',
                             'Relatório de Danos {drNumber} - {vehiclePlate}',
-                            E'Olá {firstName},\n\nSegue em anexo o Relatório de Danos nº {drNumber} referente ao contrato {contractNumber}.\n\n**Detalhes:**\n- Matrícula: {vehiclePlate}\n- Data: {date}\n\nCumprimentos,\nAuto Prudente'
+                            E'Olá {firstName},\n\nSegue em anexo o Relatório de Danos nº {drNumber} referente ao contrato {raNumber}.\n\n**Detalhes:**\n- Matrícula: {vehiclePlate}\n- Data: {date}\n\nCumprimentos,\nAuto Prudente'
                         WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'pt')
                     """)
                     
@@ -750,7 +750,7 @@ def _ensure_damage_reports_tables():
                         INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
                         SELECT 'en', 'English',
                             'Damage Report {drNumber} - {vehiclePlate}',
-                            E'Hello {firstName},\n\nPlease find attached the Damage Report nº {drNumber} for contract {contractNumber}.\n\n**Details:**\n- Vehicle: {vehiclePlate}\n- Date: {date}\n\nBest regards,\nAuto Prudente'
+                            E'Hello {firstName},\n\nPlease find attached the Damage Report nº {drNumber} for contract {raNumber}.\n\n**Details:**\n- Vehicle: {vehiclePlate}\n- Date: {date}\n\nBest regards,\nAuto Prudente'
                         WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'en')
                     """)
                     
@@ -758,7 +758,7 @@ def _ensure_damage_reports_tables():
                         INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
                         SELECT 'fr', 'Français',
                             'Rapport de Dommages {drNumber} - {vehiclePlate}',
-                            E'Bonjour {firstName},\n\nVeuillez trouver ci-joint le Rapport de Dommages nº {drNumber} pour le contrat {contractNumber}.\n\n**Détails:**\n- Véhicule: {vehiclePlate}\n- Date: {date}\n\nCordialement,\nAuto Prudente'
+                            E'Bonjour {firstName},\n\nVeuillez trouver ci-joint le Rapport de Dommages nº {drNumber} pour le contrat {raNumber}.\n\n**Détails:**\n- Véhicule: {vehiclePlate}\n- Date: {date}\n\nCordialement,\nAuto Prudente'
                         WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'fr')
                     """)
                     
@@ -766,7 +766,7 @@ def _ensure_damage_reports_tables():
                         INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template)
                         SELECT 'de', 'Deutsch',
                             'Schadensbericht {drNumber} - {vehiclePlate}',
-                            E'Hallo {firstName},\n\nAnbei finden Sie den Schadensbericht Nr. {drNumber} für Vertrag {contractNumber}.\n\n**Details:**\n- Fahrzeug: {vehiclePlate}\n- Datum: {date}\n\nMit freundlichen Grüßen,\nAuto Prudente'
+                            E'Hallo {firstName},\n\nAnbei finden Sie den Schadensbericht Nr. {drNumber} für Vertrag {raNumber}.\n\n**Details:**\n- Fahrzeug: {vehiclePlate}\n- Datum: {date}\n\nMit freundlichen Grüßen,\nAuto Prudente'
                         WHERE NOT EXISTS (SELECT 1 FROM dr_email_templates WHERE language_code = 'de')
                     """)
                     
@@ -16625,6 +16625,7 @@ async def send_damage_report_email(request: Request):
         
         # Dados do DR
         dr_number = data.get('drNumber', '')
+        ra_number = data.get('raNumber', '')  # ✅ RA Number do frontend
         client_email = data.get('clientEmail', '')
         client_name = data.get('clientName', '')
         first_name = client_name.split()[0] if client_name else ''
@@ -16693,6 +16694,7 @@ async def send_damage_report_email(request: Request):
         # 3. Substituir parâmetros nos templates
         params = {
             'drNumber': dr_number,
+            'raNumber': ra_number,  # ✅ RA Number para template de email
             'firstName': first_name,
             'contractNumber': contract_number,
             'vehiclePlate': vehicle_plate,
@@ -16758,8 +16760,10 @@ async def send_damage_report_email(request: Request):
                 part = MIMEBase('application', 'pdf')
                 part.set_payload(pdf_bytes)
                 encoders.encode_base64(part)
-                # Nome do ficheiro: DR43_2025.pdf (sem "Damage_Report_" prefix)
-                part.add_header('Content-Disposition', f'attachment; filename="{dr_number.replace("/", "_")}.pdf"')
+                # ✅ Nome do ficheiro: Usa RA Number se disponível, senão DR Number
+                filename_base = ra_number if ra_number else dr_number
+                pdf_filename = f"Damage_Report_{filename_base.replace('/', '_')}.pdf"
+                part.add_header('Content-Disposition', f'attachment; filename="{pdf_filename}"')
                 message.attach(part)
                 
                 logging.info(f"📎 PDF attached: {len(pdf_bytes)} bytes")
@@ -18387,18 +18391,14 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 width = coords['width']
                 height = coords['height']
                 
-                # ✅ EXPANDIR BOX para diagramas (acomodar padding de 80px do html2canvas)
+                # ✅ NÃO EXPANDIR DIAGRAMA - usar tamanho EXATO do mapeamento (preview)
+                # Os pins já estão na imagem capturada pelo html2canvas
                 is_diagram = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
-                if is_diagram and field_type == 'image':
-                    expansion_factor = 1.20  # 20% maior para garantir espaço para pins nas bordas
-                    original_width = width
-                    original_height = height
-                    width = width * expansion_factor
-                    height = height * expansion_factor
-                    # Recentrar a box expandida
-                    x = x - (width - original_width) / 2
-                    y = y - (height - original_height) / 2
-                    logging.error(f"🖼️ EXPANDINDO BOX DO DIAGRAMA: {original_width:.0f}x{original_height:.0f} → {width:.0f}x{height:.0f}")
+                # EXPANSÃO DESATIVADA - causar desalinhamento dos pins
+                # if is_diagram and field_type == 'image':
+                #     expansion_factor = 1.20
+                #     ...
+                # Usar coordenadas EXATAS do mapeamento
                 
                 # LOG PRÉ-TRANSFORMAÇÃO (para diagrama)
                 is_diagram_check = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
@@ -18512,40 +18512,33 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             
                             # ✅ is_diagram já foi definido acima (linha 18391)
                             if is_diagram:
-                                # DIAGRAMA: CONTAIN mode PRESERVANDO aspect ratio (não distorcer)
-                                # A imagem capturada tem padding de 80px do html2canvas
-                                # Precisamos desenhar SEM cortar e SEM distorcer
+                                # DIAGRAMA: ESCALAR PARA TAMANHO CORRETO
+                                # Imagem original Croqui.png: 986×700px
+                                # Box mapeada: ~256×201px (muito pequena!)
+                                # Solução: Multiplicar por fator para ficar igual ao preview
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ MODO DIAGRAMA - CONTAIN (manter proporções)")
-                                    logging.error(f"🖼️ Box: x={x}, y={y}, w={width}, h={height}")
-                                    logging.error(f"🖼️ Imagem: {img_width}x{img_height}")
+                                    logging.error(f"🖼️ MODO DIAGRAMA - ESCALAR PARA PREVIEW SIZE")
+                                    logging.error(f"🖼️ Box mapeada: x={x}, y={y}, w={width}, h={height}")
+                                    logging.error(f"🖼️ Imagem capturada: {img_width}x{img_height}")
                                 
-                                img_aspect = img_width / img_height
-                                box_aspect = width / height
+                                # ✅ CALCULAR FATOR DE ESCALA baseado no tamanho real da imagem
+                                # Imagem Croqui.png original: 986×700px
+                                # Se a imagem capturada for diferente, ajustar proporcionalmente
+                                scale_factor = img_width / width  # Quanto precisa crescer
                                 
-                                if img_aspect > box_aspect:
-                                    # Imagem mais larga: ajustar pela LARGURA
-                                    draw_width = width
-                                    draw_height = width / img_aspect
-                                    draw_x = x
-                                    draw_y = y + (height - draw_height) / 2  # Centrar verticalmente
-                                else:
-                                    # Imagem mais alta: ajustar pela ALTURA
-                                    draw_height = height
-                                    draw_width = height * img_aspect
-                                    draw_x = x + (width - draw_width) / 2  # Centrar horizontalmente
-                                    draw_y = y
+                                # ✅ APLICAR ESCALA À BOX
+                                draw_width = width * scale_factor
+                                draw_height = height * scale_factor
+                                # Manter X,Y mas centralizar se necessário
+                                draw_x = x
+                                draw_y = y - (draw_height - height) / 2  # Centralizar verticalmente
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ CONTAIN: aspect_img={img_aspect:.3f} aspect_box={box_aspect:.3f}")
-                                    logging.error(f"🖼️ Desenhar: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)}")
+                                    logging.error(f"🖼️ Fator de escala: {scale_factor:.2f}x")
+                                    logging.error(f"🖼️ Desenhar ESCALADO: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)} (original: {int(width)}x{int(height)})")
                                 
-                                # Guardar posição final para os pins
-                                diagram_final_x, diagram_final_y = draw_x, draw_y
-                                diagram_final_width, diagram_final_height = draw_width, draw_height
-                                
-                                # Desenhar diagrama SEM crop, mantendo proporções originais
+                                # Desenhar diagrama EXATAMENTE no tamanho mapeado
                                 logging.error(f"🖼️ Preparando buffer PNG para {field_id}...")
                                 img_buffer = BytesIO()
                                 img.save(img_buffer, format='PNG')
@@ -18560,7 +18553,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     mask='auto'
                                 )
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
-                                logging.info(f"✅ Drew diagram {field_id} (CONTAIN mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box - expanded 20%, NO CROP)")
+                                logging.info(f"✅ Drew diagram {field_id} (SCALED {scale_factor:.2f}x: {int(draw_width)}x{int(draw_height)} - PREVIEW SIZE)")
                                 
                                 # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
                                 # O html2canvas captura o canvas com os pins já visíveis
