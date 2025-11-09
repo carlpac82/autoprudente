@@ -38,7 +38,7 @@ def generate_report_header(title, subtitle=""):
             }}
             .header {{
                 background-color: {COLOR_PRIMARY};
-                padding: 20px;
+                padding: 15px 20px;
             }}
             .header-content {{
                 display: flex;
@@ -46,19 +46,19 @@ def generate_report_header(title, subtitle=""):
                 align-items: center;
             }}
             .logo img {{
-                height: 50px;
+                height: 35px;
             }}
             .header-info {{
                 text-align: right;
                 color: #fff;
             }}
             .header-title {{
-                font-size: 20px;
+                font-size: 16px;
                 font-weight: bold;
                 margin: 0;
             }}
             .header-subtitle {{
-                font-size: 14px;
+                font-size: 12px;
                 margin: 5px 0 0 0;
                 opacity: 0.9;
             }}
@@ -161,7 +161,7 @@ def generate_report_header(title, subtitle=""):
             <div class="header">
                 <div class="header-content">
                     <div class="logo">
-                        <img src="https://carrental-api-5f8q.onrender.com/static/ap-heather.png" alt="Auto Prudente" style="height:50px"/>
+                        <img src="https://carrental-api-5f8q.onrender.com/static/ap-heather.png" alt="Auto Prudente" style="height:35px"/>
                     </div>
                     <div class="header-info">
                         <div class="header-title">{title}</div>
