@@ -341,23 +341,44 @@
             background-image: url('/static/pin.png');
             background-size: contain;
             background-repeat: no-repeat;
-            background-position: center;
+            background-position: center bottom;  /* ✅ Pin alinhado ao fundo */
             display: flex;
-            align-items: center;
+            align-items: flex-start;  /* ✅ Número no topo (bola do pin) */
             justify-content: center;
-            padding-top: 0px;
-            padding-bottom: 12px;
-            color: #1a1a1a;
+            padding-top: 16px;  /* ✅ Ajustado para 16px (número mais BAIXO, correspondendo a 35% = ~20px do fundo) */
+            color: #000000;  /* ✅ PRETO PURO (não cinza) */
             font-weight: 900;
-            font-size: 20px;
+            font-size: 24px;  /* ✅ MAIOR: 24px (era 20px) */
             cursor: pointer;
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
-            transform: translate(-50%, -100%);
+            transform: translate(-50%, -100%);  /* ✅ Ponta do pin na posição clicada */
+            transform-origin: bottom center;  /* ✅ Ponto de referência na ponta do pin */
             transition: all 0.2s;
+            pointer-events: auto;  /* ✅ Garantir clique em toda área */
         }
         
         .damage-pin:hover {
-            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 4px 16px rgba(255, 0, 0, 0.4));  /* Sombra vermelha no hover */
+        }
+        
+        /* ✅ Ponto visual na ponta do pin (hover) para confirmar posicionamento */
+        .damage-pin::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 0, 0, 0);  /* Invisível por padrão */
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        .damage-pin:hover::after {
+            background: rgba(255, 0, 0, 0.8);  /* Ponto vermelho visível no hover */
+            width: 6px;
+            height: 6px;
         }
         
         .action-buttons {
@@ -2008,12 +2029,13 @@
                             
                             // Desenhar número dentro do pin
                             const number = pin.textContent;
-                            ctx.fillStyle = '#1a1a1a'; // Preto (igual ao CSS)
-                            ctx.font = `900 ${20 * currentPinSize}px Arial`; // Font weight 900 (igual ao CSS)
+                            ctx.fillStyle = '#000000'; // PRETO (não vermelho!)
+                            ctx.font = `900 ${24 * currentPinSize}px Arial`; // MAIOR: 24px (era 20px)
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            // Número fica ligeiramente acima do centro do pin
-                            ctx.fillText(number, canvasX, canvasY - pinHeight * 0.55);
+                            // ✅ Número mais BAIXO na bola (ajustado para 0.35 - desceu mais)
+                            // Valor menor = número mais para BAIXO (menos subtração do Y)
+                            ctx.fillText(number, canvasX, canvasY - pinHeight * 0.35);
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
@@ -2852,10 +2874,29 @@
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             
+            // ✅ CONVERTER para coordenadas do CANVAS (986x700)
+            // O container pode estar renderizado com tamanho diferente do canvas!
+            const img = container.querySelector('img');
+            const canvasWidth = img.naturalWidth || 986;
+            const canvasHeight = img.naturalHeight || 700;
+            
+            // Coordenadas em proporção (0.0 a 1.0)
+            const relX = x / rect.width;
+            const relY = y / rect.height;
+            
+            // Coordenadas no canvas (usadas pelo backend)
+            const canvasX = relX * canvasWidth;
+            const canvasY = relY * canvasHeight;
+            
             damageCounter++;
             const damageId = `damage-${view}-${damageCounter}`;
             
-            // Criar pin
+            console.log(`🎯 Adicionando pin #${damageCounter}`);
+            console.log(`   Clique renderizado: (${Math.round(x)}, ${Math.round(y)})`);
+            console.log(`   Container renderizado: ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+            console.log(`   ✅ Coordenadas canvas: (${Math.round(canvasX)}, ${Math.round(canvasY)}) [${canvasWidth}x${canvasHeight}]`);
+            
+            // Criar pin (usar coordenadas renderizadas para display)
             const pin = document.createElement('div');
             pin.className = 'damage-pin';
             pin.id = damageId;
@@ -2870,13 +2911,13 @@
             
             container.appendChild(pin);
             
-            // Adicionar à lista
+            // ✅ Adicionar à lista (usar coordenadas do CANVAS)
             damages.push({
                 id: damageId,
                 number: damageCounter,
                 view: view,
-                x: x,
-                y: y,
+                x: canvasX,  // ← Coordenadas do canvas!
+                y: canvasY,  // ← Coordenadas do canvas!
                 size: currentPinSize
             });
             
@@ -2888,7 +2929,24 @@
             const pin = document.getElementById(damageId);
             if (pin) pin.remove();
             
+            // Remover do array
             damages = damages.filter(d => d.id !== damageId);
+            
+            // ✅ RENUMERAR todos os pins restantes
+            damages.forEach((damage, index) => {
+                damage.number = index + 1;  // Renumerar sequencialmente
+                
+                // Atualizar o número visual no pin
+                const pinElement = document.getElementById(damage.id);
+                if (pinElement) {
+                    pinElement.textContent = damage.number;  // Atualizar texto do pin
+                }
+            });
+            
+            // ✅ RESETAR CONTADOR para o próximo número disponível
+            damageCounter = damages.length;  // Se tinha 3 e removeu 1, fica com 2, próximo será 3
+            console.log(`✅ Pin removido. Total pins: ${damages.length}, próximo número: ${damageCounter + 1}`);
+            
             updateDamageList();
         }
 

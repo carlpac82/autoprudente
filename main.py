@@ -15255,6 +15255,7 @@ async def create_damage_report(request: Request):
                         logging.error("💾 CREATE TABLE completado!")
                 else:
                     # SQLite - Usar AUTOINCREMENT, BLOB, DATETIME
+                    logging.error("💾 Executando CREATE TABLE (SQLite)...")
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS damage_reports (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15301,6 +15302,7 @@ async def create_damage_report(request: Request):
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    logging.error("💾 CREATE TABLE completado (SQLite)!")
                 
                 # Adicionar colunas pdf_data e pdf_filename se não existirem (para tabelas antigas)
                 # PostgreSQL: Verificar se colunas existem ANTES de adicionar (evita abort da transação)
@@ -17979,6 +17981,12 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 # Detectar tipo de campo (ANTES de converter coordenadas para usar nos logs)
                 field_type = _detect_field_type(field_id)
                 
+                # ✅ EXTRAIR COORDENADAS DO DICIONÁRIO
+                x = coords['x']
+                y = page_height - coords['y'] - coords['height']  # Transform Y coordinate
+                width = coords['width']
+                height = coords['height']
+                
                 # LOG PRÉ-TRANSFORMAÇÃO (para diagrama)
                 is_diagram_check = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
                 if is_diagram_check:
@@ -17986,18 +17994,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     logging.error(f"   Valor tem {len(str(value))} chars")
                     logging.error(f"   Coords ORIGINAIS (DB): x={coords['x']}, y={coords['y']}, w={coords['width']}, h={coords['height']}")
                     logging.error(f"   page_height={page_height}")
-                
-                # Converter coordenadas (PDF usa origem no canto inferior esquerdo)
-                x = coords['x']
-                y = page_height - coords['y'] - coords['height']
-                width = coords['width']
-                height = coords['height']
-                
-                # LOG PÓS-TRANSFORMAÇÃO
-                if is_diagram_check:
                     logging.error(f"   Coords TRANSFORMADAS: x={x}, y={y}, w={width}, h={height}")
-                
-                if field_type == 'image' or field_type == 'signature':
                     
                     # IMAGEM ou ASSINATURA
                     # VALIDAÇÃO
@@ -18069,12 +18066,13 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 # Threshold para considerar "branco" (RGB > 240)
                                 threshold = 240
                                 
-                                for y in range(height_img):
-                                    for x in range(width_img):
-                                        r, g, b, a = pixels[x, y]
+                                # ✅ FIX: Usar nomes diferentes (px_x, px_y) para não sobrescrever as coordenadas do campo
+                                for px_y in range(height_img):
+                                    for px_x in range(width_img):
+                                        r, g, b, a = pixels[px_x, px_y]
                                         # Se pixel é branco/claro, tornar transparente
                                         if r > threshold and g > threshold and b > threshold:
-                                            pixels[x, y] = (r, g, b, 0)  # Alpha = 0
+                                            pixels[px_x, px_y] = (r, g, b, 0)  # Alpha = 0
                                 
                                 if is_diagram_check:
                                     logging.error(f"🖼️ Fundo branco removido!")
@@ -18148,6 +18146,148 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 )
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
                                 logging.info(f"✅ Drew diagram {field_id} (CONTAIN mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box, NO CROP)")
+                                
+                                # 🎯 DESENHAR PINS DOS DANOS sobre o diagrama
+                                pins_data = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
+                                if pins_data:
+                                    try:
+                                        # Parse JSON se necessário
+                                        if isinstance(pins_data, str):
+                                            pins_array = json.loads(pins_data) if pins_data.startswith('[') else []
+                                        else:
+                                            pins_array = pins_data if isinstance(pins_data, list) else []
+                                        
+                                        if pins_array:
+                                            # ✅ FILTRAR pins desta vista (ou todos se view='all')
+                                            # Verificar se há pins com view específica (top/side) ou genérica (all)
+                                            has_view_filter = any(p.get('view') in ['top', 'side'] for p in pins_array)
+                                            
+                                            if has_view_filter:
+                                                # Sistema com múltiplas vistas - filtrar por vista
+                                                current_view = 'top' if field_id == 'vehicleDiagram' else 'side'
+                                                pins_for_this_view = [p for p in pins_array if p.get('view') == current_view]
+                                            else:
+                                                # Sistema com vista única 'all' - usar todos os pins
+                                                current_view = 'all'
+                                                pins_for_this_view = pins_array
+                                            
+                                            # ✅ CALCULAR ESCALA: Frontend → PDF
+                                            # Frontend: Container com imagem 986x700
+                                            # PDF: Desenho em draw_width x draw_height
+                                            scale_x = draw_width / img_width
+                                            scale_y = draw_height / img_height
+                                            
+                                            logging.error(f"🎯 DESENHANDO PINS PARA VISTA '{current_view}' (field_id={field_id})...")
+                                            logging.error(f"   📊 TOTAL PINS RECEBIDOS: {len(pins_array)}")
+                                            logging.error(f"   ✅ PINS DESTA VISTA ({current_view}): {len(pins_for_this_view)}")
+                                            for idx, p in enumerate(pins_for_this_view):
+                                                logging.error(f"      Pin {idx}: number={p.get('number')}, x={p.get('x')}, y={p.get('y')}, view={p.get('view')}, size={p.get('size')}")
+                                            logging.error(f"   📐 Diagrama PDF: x={draw_x:.1f}, y={draw_y:.1f}, w={draw_width:.1f}, h={draw_height:.1f}")
+                                            logging.error(f"   📐 Imagem original: {img_width}x{img_height}")
+                                            logging.error(f"   📐 Escala: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
+                                            logging.error(f"   📐 Container frontend: {img_width}x{img_height} (onde os pins foram clicados)")
+                                            
+                                            # Carregar imagem do pin (40x56px no frontend)
+                                            pin_img_path = 'static/pin.png'
+                                            pin_img = Image.open(pin_img_path)
+                                            
+                                            # ✅ USAR APENAS PINS DESTA VISTA
+                                            for pin in pins_for_this_view:
+                                                pin_x_original = pin.get('x', 0)
+                                                pin_y_original = pin.get('y', 0)
+                                                pin_number = pin.get('number', 1)
+                                                pin_size = pin.get('size', 1)
+                                                
+                                                # ✅ TAMANHO DO PIN: Escalar com diagrama MAS garantir mínimo visível
+                                                # Frontend: 40x56px base × slider do utilizador
+                                                # PDF: Escalar pela mesma proporção do diagrama + mínimo de 20pt
+                                                pin_width_original = 40 * pin_size
+                                                pin_height_original = 56 * pin_size
+                                                
+                                                # ✅ Escalar com diagrama mas com MÍNIMO de 20pt largura (visibilidade)
+                                                pin_width_pdf = max(20, pin_width_original * scale_x)
+                                                pin_height_pdf = max(28, pin_height_original * scale_y)  # Manter aspect ratio 40:56
+                                                
+                                                # ✅ COORDENADAS DO CANVAS (986x700):
+                                                # Canvas JavaScript: Y=0 no TOPO, Y cresce para BAIXO
+                                                # PDF: Y=0 no FUNDO, Y cresce para CIMA
+                                                # As coordenadas do canvas já são convertidas no frontend!
+                                                
+                                                pin_x_scaled = draw_x + (pin_x_original * scale_x)
+                                                # ✅ INVERTER Y! 
+                                                # Canvas: Y=0 topo, cresce para baixo
+                                                # PDF: Y=0 fundo, cresce para cima
+                                                # draw_y = fundo do diagrama no PDF
+                                                # draw_y + draw_height = topo do diagrama no PDF
+                                                # Fórmula: bottom - offset_from_top
+                                                pin_y_scaled = draw_y + draw_height - (pin_y_original * scale_y)
+                                                
+                                                # 🔍 DEBUG: Verificar se pin está dentro do diagrama
+                                                logging.error(f"   🔍 Pin #{pin_number} DEBUG:")
+                                                logging.error(f"      Canvas: ({pin_x_original:.1f}, {pin_y_original:.1f})")
+                                                logging.error(f"      Escalado: ({pin_x_original * scale_x:.1f}, {pin_y_original * scale_y:.1f})")
+                                                logging.error(f"      PDF scaled: ({pin_x_scaled:.1f}, {pin_y_scaled:.1f})")
+                                                logging.error(f"      Diagrama range: X[{draw_x:.1f}, {draw_x + draw_width:.1f}] Y[{draw_y:.1f}, {draw_y + draw_height:.1f}]")
+                                                
+                                                # ✅ AJUSTE PARA MANTER PONTA DO PIN NA COORDENADA
+                                                # Imagem original: 165x219px
+                                                # Ponta visual está aproximadamente a 2% da altura a partir do fundo
+                                                # (pequena margem/transparência inferior)
+                                                pin_x_final = pin_x_scaled - (pin_width_pdf / 2)  # Centralizar horizontalmente
+                                                
+                                                # ✅ Subtrair margem inferior proporcional ao tamanho do pin
+                                                # Isto garante que a PONTA VISUAL fica sempre na mesma coordenada
+                                                # independentemente do tamanho do pin
+                                                pin_tip_offset = pin_height_pdf * 0.02  # 2% margem inferior
+                                                pin_y_final = pin_y_scaled - pin_tip_offset
+                                                
+                                                logging.error(f"      Final pos: ({pin_x_final:.1f}, {pin_y_final:.1f}) ← Ponta do pin (offset={pin_tip_offset:.1f})")
+                                                
+                                                # Desenhar imagem do pin
+                                                pin_buffer = BytesIO()
+                                                pin_img.save(pin_buffer, format='PNG')
+                                                pin_buffer.seek(0)
+                                                
+                                                can.drawImage(
+                                                    ImageReader(pin_buffer),
+                                                    pin_x_final, pin_y_final,
+                                                    width=pin_width_pdf,
+                                                    height=pin_height_pdf,
+                                                    mask='auto'
+                                                )
+                                                
+                                                # ✅ DESENHAR NÚMERO PRETO CENTRALIZADO NA BOLA DO PIN
+                                                can.setFillColorRGB(0, 0, 0)  # PRETO
+                                                
+                                                # Fonte proporcional ao pin (58% da largura - MAIOR, mínimo 10pt)
+                                                font_size = max(10, int(pin_width_pdf * 0.58))
+                                                can.setFont("Helvetica-Bold", font_size)  # BOLD
+                                                
+                                                # ✅ Número CENTRALIZADO na bola (45% da altura para descer mais)
+                                                # drawCentredString usa Y como BASELINE do texto (não centro!)
+                                                # Baseline fica na parte inferior do texto
+                                                text_x = pin_x_scaled
+                                                # 45% da altura do pin para centralizar na bola
+                                                text_y_base = pin_y_final + (pin_height_pdf * 0.45)
+                                                # Adicionar compensação da baseline (25% da fonte - reduzido)
+                                                text_y = text_y_base + (font_size * 0.25)
+                                                
+                                                can.drawCentredString(text_x, text_y, str(pin_number))
+                                                
+                                                logging.error(f"   📍 Pin #{pin_number}:")
+                                                logging.error(f"      Frontend: ({pin_x_original:.0f}, {pin_y_original:.0f})  [clique do rato]")
+                                                logging.error(f"      Escalado: ({pin_x_original * scale_x:.1f}, {pin_y_original * scale_y:.1f})")
+                                                logging.error(f"      PDF pos:  ({pin_x_scaled:.1f}, {pin_y_scaled:.1f})  [após offset + inversão Y]")
+                                                logging.error(f"      Final:    ({pin_x_final:.1f}, {pin_y_final:.1f})  [ponta do pin]")
+                                                logging.error(f"      Size:     {pin_width_pdf:.1f}x{pin_height_pdf:.1f}  Font: {font_size}pt")
+                                            
+                                            logging.error(f"🎯✅ {len(pins_for_this_view)} PINS DESENHADOS PARA VISTA '{current_view}'!")
+                                        else:
+                                            logging.error("⚠️ Pins array está vazio")
+                                    except Exception as e:
+                                        logging.error(f"❌ Erro ao desenhar pins: {e}", exc_info=True)
+                                else:
+                                    logging.error("⚠️ Nenhum pin data encontrado")
                             else:
                                 # FOTOS: COVER mode (preencher com crop)
                                 img_aspect = img_width / img_height
@@ -18190,14 +18330,6 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     height=height
                                 )
                                 logging.info(f"✅ Drew photo {field_id} (COVER mode: filled {int(width)}x{int(height)} box with crop)")
-                            
-                            # PINS JÁ INCLUÍDOS NA IMAGEM DO FRONTEND!
-                            # O frontend captura a imagem do carro COM os pins já desenhados
-                            # Não é necessário desenhar pins aqui - evita duplicação
-                            if is_diagram:
-                                logging.info(f"🖼️ DIAGRAM DETECTED: {field_id}")
-                                logging.info(f"   ✅ Pins already included in the captured image from frontend")
-                                logging.info(f"   ℹ️ No need to redraw pins - avoiding duplication")
                     except Exception as e:
                         logging.error(f"Error drawing image {field_id}: {e}")
                         # Fallback: draw placeholder
@@ -18684,10 +18816,18 @@ async def preview_damage_report_pdf(request: Request):
         # Usar função de overlay para preencher template
         pdf_data = _fill_template_pdf_with_data(report_data)
         
+        import time
+        timestamp = int(time.time())
         return Response(
             content=pdf_data,
             media_type="application/pdf",
-            headers={"Content-Disposition": "inline; filename=damage_report_preview.pdf"}
+            headers={
+                "Content-Disposition": f"inline; filename=damage_report_preview_{timestamp}.pdf",
+                "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0",
+                "X-Timestamp": str(timestamp)
+            }
         )
     except Exception as e:
         logging.error(f"Error generating preview PDF: {e}")
