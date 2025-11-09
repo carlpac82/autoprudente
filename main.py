@@ -16153,6 +16153,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             'vehiclePlate': report.get('vehicle_plate', ''),
             'vehicleBrand': report.get('vehicle_brand', ''),
             'vehicleModel': report.get('vehicle_model', ''),
+            'vehicleBrandModel': ' / '.join(filter(None, [report.get('vehicle_brand', ''), report.get('vehicle_model', '')])),
             'vehicleColor': report.get('vehicle_color', ''),
             'vehicleKm': report.get('vehicle_km', ''),
             'pickupDate': format_date(report.get('pickup_date', '')),
@@ -16168,7 +16169,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             'total_amount': report.get('total_amount', ''),
             'inspector_name': report.get('issued_by', ''),
             'issued_by': report.get('issued_by', ''),
-            'inspection_date': report.get('inspection_date', ''),
+            'inspection_date': format_date(report.get('date', '')),
             'damage_diagram_data': report.get('damage_diagram_data', ''),
             'damageDiagramData': report.get('damage_diagram_data', '')
         }
@@ -18290,6 +18291,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'vehicle_plate': 'vehiclePlate',
                     'vehicle_brand': 'vehicleBrand',
                     'vehicle_model': 'vehicleModel',
+                    'vehicle_brand_model': 'vehicleBrandModel',  # ✅ Campo combinado Marca / Modelo
+                    'vehicleBrandModel': 'vehicleBrandModel',  # ✅ Alias direto
                     'vehicle_color': 'vehicleColor',
                     'vehicle_km': 'vehicleKm',
                     'pickup_date': 'pickupDate',
@@ -18298,6 +18301,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'return_date': 'returnDate',
                     'return_time': 'returnTime',
                     'return_location': 'returnLocation',
+                    'total_amount': 'total_amount',  # ✅ Total da reparação
+                    'total_repair_cost': 'total_amount',  # ✅ Alias
+                    'totalRepairCost': 'total_amount',  # ✅ Alias camelCase
                     'inspector_name': 'inspector_name',  # ✅ Mantido para compatibilidade
                     'issued_by': 'issued_by',  # ✅ Colaborador (alias)
                     'inspection_date': 'inspection_date',
@@ -19399,6 +19405,7 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
             'vehiclePlate': report.get('vehicle_plate', ''),
             'vehicleBrand': report.get('vehicle_brand', ''),
             'vehicleModel': report.get('vehicle_model', ''),
+            'vehicleBrandModel': ' / '.join(filter(None, [report.get('vehicle_brand', ''), report.get('vehicle_model', '')])),
             'vehicleKm': report.get('mileage', ''),
             'pickupDate': format_date(report.get('pickup_date', '')),
             'pickupTime': report.get('pickup_time', ''),
@@ -19413,7 +19420,7 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
             'total_amount': report.get('total_amount', ''),
             'inspector_name': report.get('issued_by', ''),
             'issued_by': report.get('issued_by', ''),
-            'inspection_date': report.get('date', ''),
+            'inspection_date': format_date(report.get('date', '')),
             'damage_diagram_data': report.get('damage_diagram_data', ''),
             'damageDiagramData': report.get('damage_diagram_data', '')
         }
