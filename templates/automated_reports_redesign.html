@@ -206,12 +206,6 @@
                     </svg>
                     Status Scheduler
                 </button>
-                <button onclick="testSaveToHistory()" class="inline-flex items-center gap-2 px-6 py-3 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Testar Histórico
-                </button>
             </div>
 
             <!-- Summary -->
@@ -526,63 +520,6 @@
                 }
             } catch (error) {
                 showNotification('Erro ao verificar status do scheduler', 'error');
-                console.error(error);
-            }
-        }
-
-        // Test save to history
-        async function testSaveToHistory() {
-            if (!confirm('Isto vai salvar pesquisas de teste (Albufeira, dias 1-3-7) no histórico. Continuar?')) {
-                return;
-            }
-            
-            try {
-                showNotification('🧪 Testando salvamento no histórico...', 'info');
-                
-                const response = await fetch('/api/scheduler/test-automated-search', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        location: 'Albufeira',
-                        days: [1, 3, 7]
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.ok) {
-                    showNotification(result.message, 'success');
-                    
-                    // Show instructions
-                    const summary = document.getElementById('scheduleSummary');
-                    const content = document.getElementById('scheduleSummaryContent');
-                    
-                    let html = `<div class="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">`;
-                    html += `<div class="font-semibold text-green-700 mb-2">✅ Pesquisas Salvas no Histórico!</div>`;
-                    html += `<div class="text-green-600 text-sm mb-2">3 pesquisas foram guardadas:</div>`;
-                    html += `<div class="text-sm text-gray-700 ml-4">`;
-                    html += `• Albufeira - 1 dia<br>`;
-                    html += `• Albufeira - 3 dias<br>`;
-                    html += `• Albufeira - 7 dias<br>`;
-                    html += `</div>`;
-                    html += `</div>`;
-                    html += `<div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">`;
-                    html += `<div class="font-semibold text-blue-700 mb-2">🔍 Como Verificar:</div>`;
-                    html += `<div class="text-sm text-gray-700">`;
-                    html += `1. Vai a <strong>Automated Pricing</strong><br>`;
-                    html += `2. Clica no tab <strong>Histórico de Pesquisas</strong><br>`;
-                    html += `3. Deves ver as 3 pesquisas com <strong>source: automated</strong><br>`;
-                    html += `4. Timestamp de agora (${new Date().toLocaleString('pt-PT')})`;
-                    html += `</div>`;
-                    html += `</div>`;
-                    
-                    content.innerHTML = html;
-                    summary.style.display = 'block';
-                } else {
-                    showNotification('Erro: ' + (result.error || 'Desconhecido'), 'error');
-                }
-            } catch (error) {
-                showNotification('Erro ao testar salvamento', 'error');
                 console.error(error);
             }
         }

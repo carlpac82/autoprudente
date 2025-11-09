@@ -329,43 +329,124 @@ def send_daily_report_for_schedule(schedule, schedule_index):
 
 def execute_search_for_schedule(schedule, schedule_index):
     """
-    Execute ONLY the searches for a schedule (no email sending)
+    Execute REAL CarJet searches for a schedule
     This runs at searchTime
     """
     print(f"\n{'='*80}", flush=True)
-    print(f"🔍 EXECUTING SEARCHES - SCHEDULE #{schedule_index + 1}", flush=True)
+    print(f"🔍 EXECUTING REAL CARJET SEARCHES - SCHEDULE #{schedule_index + 1}", flush=True)
     print(f"{'='*80}", flush=True)
     print(f"   Search Time: {schedule.get('searchTime')}", flush=True)
     print(f"   Days: {schedule.get('days')}", flush=True)
     print(f"   Locations: {schedule.get('locations')}", flush=True)
     
-    # EXECUTAR PESQUISAS AUTOMÁTICAS
-    days = schedule.get('days', [])
-    locations_config = schedule.get('locations', {})
-    
-    if days and (locations_config.get('albufeira') or locations_config.get('faro')):
-        print(f"\n🔍 EXECUTING AUTOMATED SEARCHES...", flush=True)
+    try:
+        from datetime import datetime, timedelta
+        import requests
+        import json
         
+        # Obter configurações
+        days = schedule.get('days', [])
+        locations_config = schedule.get('locations', {})
+        
+        if not days or not (locations_config.get('albufeira') or locations_config.get('faro')):
+            print(f"   ⚠️ No days or locations configured!", flush=True)
+            return
+        
+        # Preparar localizações para a pesquisa
+        locations_to_search = []
         if locations_config.get('albufeira'):
-            print(f"   → Saving Albufeira searches to database...", flush=True)
-            result = save_automated_search_placeholder('Albufeira', days)
-            if result:
-                print(f"   ✅ Albufeira searches SAVED to history!", flush=True)
-            else:
-                print(f"   ❌ Albufeira searches FAILED to save!", flush=True)
-        
+            locations_to_search.append({"name": "Albufeira", "template": "pt"})
         if locations_config.get('faro'):
-            print(f"   → Saving Aeroporto de Faro searches to database...", flush=True)
-            result = save_automated_search_placeholder('Aeroporto de Faro', days)
-            if result:
-                print(f"   ✅ Aeroporto de Faro searches SAVED to history!", flush=True)
-            else:
-                print(f"   ❌ Aeroporto de Faro searches FAILED to save!", flush=True)
+            locations_to_search.append({"name": "Aeroporto de Faro", "template": "faro"})
         
-        print(f"\n✅ SEARCH EXECUTION COMPLETED!", flush=True)
-        print(f"{'='*80}\n", flush=True)
-    else:
-        print(f"   ⚠️ No days or locations configured for this schedule!", flush=True)
+        # Data de pickup (amanhã)
+        pickup_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        print(f"\n🚗 Preparing CarJet search...", flush=True)
+        print(f"   Pickup Date: {pickup_date}", flush=True)
+        print(f"   Durations: {days}", flush=True)
+        print(f"   Locations: {[loc['name'] for loc in locations_to_search]}", flush=True)
+        
+        # Fazer chamada interna ao endpoint /api/track-carjet
+        payload = {
+            "pickupDate": pickup_date,
+            "pickupTime": "10:00",
+            "durations": days,
+            "locations": locations_to_search,
+            "lang": "pt",
+            "currency": "EUR"
+        }
+        
+        print(f"\n🌐 Calling CarJet API endpoint...", flush=True)
+        
+        # Chamada HTTP interna (localhost)
+        response = requests.post(
+            "http://localhost:8000/api/track-carjet",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=600  # 10 minutos timeout (pesquisas podem demorar)
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('ok'):
+                search_results = result.get('results', [])
+                print(f"✅ CarJet search SUCCESSFUL!", flush=True)
+                print(f"   Results: {len(search_results)} locations", flush=True)
+                
+                # AGORA SALVAR NA BD (recent_searches)
+                print(f"\n💾 Saving results to database...", flush=True)
+                
+                searches_to_save = []
+                for loc_result in search_results:
+                    location_name = loc_result.get('location', '')
+                    for duration_result in loc_result.get('durations', []):
+                        days_num = duration_result.get('days')
+                        items = duration_result.get('items', [])
+                        
+                        if items:  # Só salvar se tiver resultados
+                            # Data de pickup
+                            start_date = (datetime.now() + timedelta(days=1 + days_num)).strftime('%Y-%m-%d')
+                            
+                            searches_to_save.append({
+                                'location': location_name,
+                                'start_date': start_date,
+                                'days': days_num,
+                                'results_data': json.dumps(items),
+                                'timestamp': datetime.now().isoformat(),
+                                'user': 'automated',
+                                'source': 'automated'
+                            })
+                            
+                            print(f"   → {location_name} | {days_num}d | {len(items)} cars", flush=True)
+                
+                # Salvar na BD
+                if searches_to_save:
+                    save_payload = {'searches': searches_to_save}
+                    save_response = requests.post(
+                        "http://localhost:8000/api/recent-searches/save",
+                        json=save_payload,
+                        headers={"Content-Type": "application/json"},
+                        timeout=30
+                    )
+                    
+                    if save_response.status_code == 200:
+                        print(f"\n✅ {len(searches_to_save)} searches SAVED to database!", flush=True)
+                        print(f"✅ SEARCH EXECUTION COMPLETED!", flush=True)
+                        print(f"{'='*80}\n", flush=True)
+                    else:
+                        print(f"❌ Failed to save to database: {save_response.status_code}", flush=True)
+                else:
+                    print(f"⚠️ No results to save", flush=True)
+            else:
+                print(f"❌ CarJet search failed: {result.get('error')}", flush=True)
+        else:
+            print(f"❌ HTTP error: {response.status_code}", flush=True)
+            
+    except Exception as e:
+        print(f"\n❌ SEARCH ERROR: {str(e)}", flush=True)
+        import traceback
+        print(traceback.format_exc(), flush=True)
 
 def send_weekly_report():
     """Send weekly report"""
