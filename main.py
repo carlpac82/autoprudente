@@ -15562,7 +15562,11 @@ async def create_damage_report(request: Request):
                     dr_number = _get_next_dr_number(existing_conn=conn)  # Usar versão que recebe conn
                     
                     # Verificar se é um número reciclado (já existe na tabela com is_deleted = 1)
-                    is_postgres = isinstance(conn, PostgreSQLConnectionWrapper) or conn.__class__.__module__ == 'psycopg2.extensions'
+                    is_postgres = (
+                        isinstance(conn, PostgreSQLConnectionWrapper) or 
+                        conn.__class__.__module__ == 'psycopg2.extensions' or
+                        type(conn).__name__ == 'PostgreSQLConnectionWrapper'
+                    )
                     is_recycled = False
                     logging.error(f"💾 Verificando reciclagem do DR {dr_number}... is_postgres={is_postgres}")
                     
@@ -16046,8 +16050,12 @@ def _get_next_dr_number(existing_conn=None):
     
     try:
         current_year = datetime.now().year
-        # ✅ DETECÇÃO CORRETA: PostgreSQLConnectionWrapper ou psycopg2
-        is_postgres = isinstance(conn, PostgreSQLConnectionWrapper) or conn.__class__.__module__ == 'psycopg2.extensions'
+        # ✅ DETECÇÃO CORRETA: PostgreSQLConnectionWrapper ou psycopg2 (nome da classe também)
+        is_postgres = (
+            isinstance(conn, PostgreSQLConnectionWrapper) or 
+            conn.__class__.__module__ == 'psycopg2.extensions' or
+            type(conn).__name__ == 'PostgreSQLConnectionWrapper'
+        )
         
         logging.error(f"🔢 _get_next_dr_number: is_postgres={is_postgres}, conn type={type(conn).__name__}")
         
