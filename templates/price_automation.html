@@ -4836,7 +4836,16 @@
         
         function markCellsWithoutRules() {
             // Carregar regras configuradas
-            const strategiesData = JSON.parse(localStorage.getItem('pricingStrategies') || '{}');
+            let strategiesData = {};
+            try {
+                const stored = localStorage.getItem('pricingStrategies');
+                if (stored && stored !== 'undefined' && stored !== 'null' && stored !== '[object Object]') {
+                    strategiesData = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.warn('[markCellsWithoutRules] Error parsing pricingStrategies:', e);
+                strategiesData = {};
+            }
             const currentLocation = document.getElementById('locationSelectAuto')?.value || 'Albufeira';
             
             // Para cada grupo e dia, verificar se há regras
