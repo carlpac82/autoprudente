@@ -5199,78 +5199,9 @@ async def track_by_params(request: Request):
         # Usar POST direto ou Selenium em vez disso
         
         # ═══════════════════════════════════════════════════════════════════════════
-        # MÉTODO 1: POST DIRETO (Rápido mas menos confiável)
+        # POST DIRETO REMOVIDO - Ir sempre diretamente para SELENIUM (mais rápido e fiável)
+        # SELENIUM headless funciona sempre e poupa 5-10s de tentativas falhadas
         # ═══════════════════════════════════════════════════════════════════════════
-        try:
-            import sys
-            import asyncio
-            print(f"[POST_DIRETO] Tentando POST direto ao Carjet...", file=sys.stderr, flush=True)
-            
-            # Usar try_direct_carjet primeiro (POST direto) - NÃO BLOQUEANTE
-            html = await asyncio.to_thread(
-                try_direct_carjet, location, start_dt, end_dt, lang=lang, currency=currency
-            )
-            final_url = "https://www.carjet.com/do/list"
-            
-            # Se POST direto retornar resultados, usar
-            if html and len(parse_prices(html, final_url)) > 0:
-                print(f"[POST_DIRETO] ✅ Sucesso com POST direto!", file=sys.stderr, flush=True)
-            else:
-                print(f"[POST_DIRETO] ⚠️ Falhou ou retornou 0 items, continuando para SELENIUM...", file=sys.stderr, flush=True)
-                html = ""  # Limpar para forçar Selenium
-                
-            # DESATIVADO: Playwright mobile (usar Selenium como principal)
-            if False:
-                from playwright.async_api import async_playwright
-                
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
-                    
-                    # Dispositivos mobile
-                    devices = [
-                        {"name": "iPhone 13 Pro", "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1", "viewport": {"width": 390, "height": 844}, "scale": 3},
-                        {"name": "Samsung Galaxy S21", "user_agent": "Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36", "viewport": {"width": 360, "height": 800}, "scale": 3},
-                    ]
-                    device = random.choice(devices)
-                    
-                    context = await browser.new_context(
-                        user_agent=device["user_agent"],
-                        viewport=device["viewport"],
-                        device_scale_factor=device["scale"],
-                        is_mobile=True,
-                        has_touch=True,
-                        locale="pt-PT"
-                    )
-                    
-                    page = await context.new_page()
-                    html, final_url = await fetch_carjet_results(page, location, start_dt, end_dt, lang, currency, "")
-                    await browser.close()
-            
-            # Parse results
-            # Parse resultados do POST direto
-            post_items = parse_prices(html, final_url) if html else []
-            
-            if post_items and len(post_items) > 0:
-                print(f"[POST_DIRETO] ✅ {len(post_items)} carros encontrados!", file=sys.stderr, flush=True)
-                items = normalize_and_sort(post_items, supplier_priority=None)
-                return _no_store_json({
-                    "ok": True,
-                    "items": items,
-                    "location": location,
-                    "start_date": start_dt.date().isoformat(),
-                    "start_time": start_dt.strftime("%H:%M"),
-                    "end_date": end_dt.date().isoformat(),
-                    "end_time": end_dt.strftime("%H:%M"),
-                    "days": days,
-                    "method": "post_direto",
-                })
-            else:
-                print(f"[POST_DIRETO] ⚠️ Retornou 0 items, continuando para SELENIUM...", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"[POST_DIRETO] ❌ Erro: {e}", file=sys.stderr, flush=True)
-            import traceback
-            traceback.print_exc()
-            print(f"[POST_DIRETO] Continuando para SELENIUM...", file=sys.stderr, flush=True)
         
         # ═══════════════════════════════════════════════════════════════════════════
         # MÉTODO DESATIVADO: ScraperAPI (NÃO USAR - Bloqueado)
