@@ -15208,10 +15208,10 @@ async def create_damage_report(request: Request):
                 if is_postgres:
                     # PostgreSQL - Usar SERIAL, BYTEA, TIMESTAMP
                     logging.error("💾 Executando CREATE TABLE (PostgreSQL)...")
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            CREATE TABLE IF NOT EXISTS damage_reports (
-                                id SERIAL PRIMARY KEY,
+                    cur = conn.cursor()
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS damage_reports (
+                            id SERIAL PRIMARY KEY,
                                 dr_number TEXT UNIQUE,
                                 ra_number TEXT,
                                 contract_number TEXT,
@@ -15255,7 +15255,9 @@ async def create_damage_report(request: Request):
                                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
                         """)
-                        logging.error("💾 CREATE TABLE completado!")
+                    conn.commit()
+                    cur.close()
+                    logging.error("💾 CREATE TABLE completado!")
                 else:
                     # SQLite - Usar AUTOINCREMENT, BLOB, DATETIME
                     logging.error("💾 Executando CREATE TABLE (SQLite)...")
@@ -15313,27 +15315,40 @@ async def create_damage_report(request: Request):
                 
                 if is_postgres:
                     # PostgreSQL: Verificar colunas primeiro
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            SELECT column_name 
-                            FROM information_schema.columns 
-                            WHERE table_name = 'damage_reports'
-                        """)
-                        existing_columns = [row[0] for row in cur.fetchall()]
-                        
-                        if 'pdf_data' not in existing_columns:
-                            cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BYTEA")
-                            logging.info("✅ Coluna pdf_data adicionada (PostgreSQL)")
-                        
-                        if 'pdf_filename' not in existing_columns:
-                            cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
-                            logging.info("✅ Coluna pdf_filename adicionada (PostgreSQL)")
-                        
-                        if 'is_protected' not in existing_columns:
-                            cur.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
-                            logging.info("✅ Coluna is_protected adicionada (PostgreSQL)")
-                        
-                        conn.commit()
+                    cur = conn.cursor()
+                    cur.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'damage_reports'
+                    """)
+                    existing_columns = [row[0] for row in cur.fetchall()]
+                    
+                    if 'pdf_data' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_data BYTEA")
+                        logging.info("✅ Coluna pdf_data adicionada (PostgreSQL)")
+                    
+                    if 'pdf_filename' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN pdf_filename TEXT")
+                        logging.info("✅ Coluna pdf_filename adicionada (PostgreSQL)")
+                    
+                    if 'is_protected' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
+                        logging.info("✅ Coluna is_protected adicionada (PostgreSQL)")
+                    
+                    if 'is_deleted' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN is_deleted INTEGER DEFAULT 0")
+                        logging.info("✅ Coluna is_deleted adicionada (PostgreSQL)")
+                    
+                    if 'deleted_at' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN deleted_at TIMESTAMP")
+                        logging.info("✅ Coluna deleted_at adicionada (PostgreSQL)")
+                    
+                    if 'deleted_by' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN deleted_by TEXT")
+                        logging.info("✅ Coluna deleted_by adicionada (PostgreSQL)")
+                    
+                    conn.commit()
+                    cur.close()
                 else:
                     # SQLite: Usar try/except (mais simples)
                     try:
@@ -15351,6 +15366,24 @@ async def create_damage_report(request: Request):
                     try:
                         conn.execute("ALTER TABLE damage_reports ADD COLUMN is_protected INTEGER DEFAULT 0")
                         logging.info("✅ Coluna is_protected adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN is_deleted INTEGER DEFAULT 0")
+                        logging.info("✅ Coluna is_deleted adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN deleted_at TIMESTAMP")
+                        logging.info("✅ Coluna deleted_at adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN deleted_by TEXT")
+                        logging.info("✅ Coluna deleted_by adicionada (SQLite)")
                     except Exception:
                         pass  # Coluna já existe
                 
