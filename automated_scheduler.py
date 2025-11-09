@@ -387,14 +387,50 @@ def execute_search_for_schedule(schedule, schedule_index):
 async def _do_carjet_search(locations, days, pickup_date):
     """
     Execute CarJet search using Playwright - internal async function
+    WITH TIME ROTATION AND ANTI-WAF PROTECTION (same as Automated Pricing)
     """
     from playwright.async_api import async_playwright
     import sys
     import os
+    import random
     
     # Import track_by_params from main
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from main import track_by_params
+    
+    # Load Anti-WAF and rotation settings from database
+    print(f"\n🛡️ Loading Anti-WAF and rotation settings...", flush=True)
+    date_rotation_enabled = True
+    date_rotation_max_days = 4
+    
+    conn = _get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT setting_value FROM price_automation_settings WHERE setting_key = %s",
+                ("date_rotation_enabled",)
+            )
+            row = cursor.fetchone()
+            if row:
+                date_rotation_enabled = row[0].lower() in ('true', '1', 'yes')
+                print(f"   Date Rotation: {date_rotation_enabled}", flush=True)
+            
+            cursor.execute(
+                "SELECT setting_value FROM price_automation_settings WHERE setting_key = %s",
+                ("date_rotation_max_days",)
+            )
+            row = cursor.fetchone()
+            if row:
+                date_rotation_max_days = int(row[0])
+                print(f"   Max Days Offset: {date_rotation_max_days}", flush=True)
+            
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            print(f"   ⚠️ Could not load settings: {str(e)}", flush=True)
+            if conn:
+                conn.close()
     
     all_results = {}
     
@@ -406,6 +442,28 @@ async def _do_carjet_search(locations, days, pickup_date):
             print(f"   → {day} days...", flush=True)
             
             try:
+                # RANDOMIZE PICKUP TIME between 15:00 and 17:30 (half hour intervals)
+                # Same logic as Automated Pricing
+                hour = random.randint(15, 17)
+                if hour == 17:
+                    minute = random.choice([0, 30])  # 17:00 or 17:30
+                else:
+                    minute = random.choice([0, 30])  # 15:00, 15:30, 16:00, 16:30
+                
+                rotated_pickup_time = f"{hour:02d}:{minute:02d}"
+                print(f"      [TIME_ROTATION] {rotated_pickup_time}", flush=True)
+                
+                # DATE ROTATION (optional, based on settings)
+                from datetime import datetime, timedelta
+                rotated_pickup_date = pickup_date
+                if date_rotation_enabled:
+                    date_offset = random.randint(0, date_rotation_max_days)
+                    if date_offset > 0:
+                        date_obj = datetime.fromisoformat(pickup_date)
+                        date_obj = date_obj + timedelta(days=date_offset)
+                        rotated_pickup_date = date_obj.strftime('%Y-%m-%d')
+                        print(f"      [DATE_ROTATION] +{date_offset} days → {rotated_pickup_date}", flush=True)
+                
                 # Mock request object
                 class MockRequest:
                     def __init__(self, data):
@@ -415,14 +473,14 @@ async def _do_carjet_search(locations, days, pickup_date):
                 
                 request = MockRequest({
                     'location': location,
-                    'start_date': pickup_date,
-                    'start_time': '15:00',  # Same as Automated Pricing
+                    'start_date': rotated_pickup_date,  # With rotation
+                    'start_time': rotated_pickup_time,   # With rotation (15:00-17:30)
                     'days': day,
                     'lang': 'pt',
                     'currency': 'EUR'
                 })
                 
-                # Call track_by_params
+                # Call track_by_params (includes Anti-WAF with devices, timezones, etc)
                 response = await track_by_params(request)
                 
                 # Extract items from response
