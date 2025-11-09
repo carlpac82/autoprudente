@@ -12383,6 +12383,50 @@ async def startup_migrate_automated_reports():
 #     # FUNÇÃO DESATIVADA - Numeração gerida manualmente
 #     pass
 
+@app.on_event("startup")
+async def startup_automated_scheduler():
+    """🤖 Iniciar sistema de agendamento automático de relatórios"""
+    try:
+        logging.info("🤖 Starting automated reports scheduler...")
+        from automated_scheduler import setup_scheduled_tasks
+        setup_scheduled_tasks()
+        logging.info("✅ Automated scheduler initialized successfully")
+    except Exception as e:
+        logging.error(f"❌ Failed to initialize automated scheduler: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+
+@app.on_event("shutdown")
+async def shutdown_automated_scheduler():
+    """🛑 Desligar scheduler ao parar aplicação"""
+    try:
+        logging.info("🛑 Shutting down automated scheduler...")
+        from automated_scheduler import shutdown_scheduler
+        shutdown_scheduler()
+        logging.info("✅ Automated scheduler stopped")
+    except Exception as e:
+        logging.error(f"❌ Error stopping scheduler: {str(e)}")
+
+@app.post("/api/scheduler/reload")
+async def reload_scheduler(request: Request):
+    """🔄 Recarregar configurações do scheduler (quando user salva settings)"""
+    require_auth(request)
+    
+    try:
+        logging.info("🔄 Reloading scheduler configuration...")
+        from automated_scheduler import setup_scheduled_tasks
+        setup_scheduled_tasks()
+        return JSONResponse({
+            "ok": True,
+            "message": "Scheduler recarregado com sucesso"
+        })
+    except Exception as e:
+        logging.error(f"❌ Error reloading scheduler: {str(e)}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
 @app.post("/api/vehicles/{vehicle_name}/photo/upload")
 async def upload_vehicle_photo(vehicle_name: str, request: Request, file: UploadFile = File(...)):
     """Upload de foto para um veículo"""

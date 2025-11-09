@@ -406,6 +406,17 @@
                 if (result.ok) {
                     showNotification('Configurações guardadas com sucesso', 'success');
                     viewScheduleSummary();
+                    
+                    // Reload scheduler to apply new settings
+                    try {
+                        await fetch('/api/scheduler/reload', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'}
+                        });
+                        console.log('Scheduler reloaded');
+                    } catch (e) {
+                        console.error('Failed to reload scheduler:', e);
+                    }
                 } else {
                     showNotification('Erro: ' + (result.error || 'Desconhecido'), 'error');
                 }
