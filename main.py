@@ -16466,9 +16466,8 @@ async def send_damage_report_email(request: Request):
         message['To'] = client_email
         message['Subject'] = subject
         
-        # Corpo do email (HTML com quebras de linha)
-        html_body = body.replace('\n', '<br>')
-        message.attach(MIMEText(html_body, 'html'))
+        # Corpo do email (HTML template já formatado da BD)
+        message.attach(MIMEText(body, 'html'))
         
         # 6. Anexar PDF do DR
         if pdf_data_base64:
