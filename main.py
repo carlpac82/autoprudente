@@ -16124,9 +16124,10 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
         # Mapear campos da BD para IDs do mapeador (camelCase)
         report_data = {
             'dr_number': report.get('dr_number', ''),
+            'ra_number': report.get('ra_number', ''),
             'contractNumber': report.get('contract_number', ''),
             'date': report.get('date', ''),
-            'inspection_date': report.get('date', ''),  # ✅ Alias para compatibilidade de mapeamento
+            'inspection_date': report.get('date', ''),
             'clientName': report.get('client_name', ''),
             'clientEmail': report.get('client_email', ''),
             'clientPhone': report.get('client_phone', ''),
@@ -16148,12 +16149,67 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             'fuel_level_pickup': report.get('fuel_pickup', ''),
             'fuel_level_return': report.get('fuel_return', ''),
             'total_repair_cost': report.get('total_cost', ''),
-            'inspector_name': report.get('inspector_name', ''),
+            'totalRepairCost': report.get('total_cost', ''),
+            'inspector_name': report.get('issued_by', ''),
+            'issued_by': report.get('issued_by', ''),
             'inspection_date': report.get('inspection_date', ''),
-            # Adicionar pins do diagrama (JSON array de danos)
             'damage_diagram_data': report.get('damage_diagram_data', ''),
-            'damageDiagramData': report.get('damage_diagram_data', '')  # Alias para compatibilidade
+            'damageDiagramData': report.get('damage_diagram_data', '')
         }
+        
+        # ✅ EXTRAIR DESCRIÇÕES INDIVIDUAIS DOS DANOS (damage_1, damage_2, ...)
+        damages_json = report.get('damage_diagram_data', '')
+        if damages_json:
+            try:
+                damages = json.loads(damages_json)
+                for damage in damages:
+                    num = damage.get('number')
+                    desc = damage.get('description', '')
+                    if num:
+                        report_data[f'damage_{num}'] = desc
+                logging.info(f"✅ Extraídas {len(damages)} descrições de danos")
+            except:
+                logging.warning("⚠️ Erro ao parsear damage_diagram_data")
+        
+        # ✅ EXTRAIR FOTOS INDIVIDUAIS (damagePhoto1, damagePhoto2, ...)
+        images_json = report.get('damage_images', '')
+        if images_json:
+            try:
+                images = json.loads(images_json)
+                for idx, image in enumerate(images):
+                    photo_data = image.get('data', '')
+                    report_data[f'damagePhoto{idx + 1}'] = photo_data
+                    report_data[f'damage_photo_{idx + 1}'] = photo_data
+                logging.info(f"✅ Extraídas {len(images)} fotos")
+            except:
+                logging.warning("⚠️ Erro ao parsear damage_images")
+        
+        # ✅ EXTRAIR ITENS DE REPARAÇÃO (repair_line_1, repair_line_2, ...)
+        repair_json = report.get('repair_items', '')
+        if repair_json:
+            try:
+                repair_items = json.loads(repair_json)
+                for idx, item in enumerate(repair_items):
+                    line_num = idx + 1
+                    report_data[f'repair_line_{line_num}'] = item.get('description', '')
+                    report_data[f'repair_line_{line_num}_qty'] = str(item.get('quantity', ''))
+                    report_data[f'repair_line_{line_num}_hours'] = str(item.get('hours', ''))
+                    report_data[f'repair_line_{line_num}_price'] = str(item.get('price', ''))
+                    report_data[f'repair_line_{line_num}_subtotal'] = str(item.get('total', ''))
+                logging.info(f"✅ Extraídos {len(repair_items)} itens de reparação")
+            except:
+                logging.warning("⚠️ Erro ao parsear repair_items")
+        
+        # ✅ ADICIONAR CROQUI COM PINS
+        vehicle_diagram_blob = report.get('vehicle_damage_image')
+        if vehicle_diagram_blob:
+            import base64
+            try:
+                diagram_base64 = base64.b64encode(vehicle_diagram_blob).decode('utf-8')
+                report_data['vehicle_diagram'] = f'data:image/png;base64,{diagram_base64}'
+                logging.info("✅ Croqui com pins adicionado")
+            except:
+                logging.warning("⚠️ Erro ao converter vehicle_damage_image")
         
         # Usar função de overlay para preencher template
         logging.error(f"🔧 Calling _fill_template_pdf_with_data...")
