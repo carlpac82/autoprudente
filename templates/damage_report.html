@@ -2861,12 +2861,21 @@
                                     }; // Fim createPinsWithScale
                                     
                                     // ✅ Tentar criar pins, com retry se imagem não carregou
-                                    if (!createPinsWithScale()) {
+                                    const result = createPinsWithScale();
+                                    console.log('[EDIT-DR] First attempt result:', result);
+                                    
+                                    if (!result) {
                                         console.log('[EDIT-DR] 🔄 Imagem ainda não carregou, aguardando 500ms...');
                                         setTimeout(() => {
-                                            if (!createPinsWithScale()) {
-                                                console.log('[EDIT-DR] 🔄 Retry após 1s...');
-                                                setTimeout(createPinsWithScale, 500);
+                                            const result2 = createPinsWithScale();
+                                            console.log('[EDIT-DR] Second attempt result:', result2);
+                                            
+                                            if (!result2) {
+                                                console.log('[EDIT-DR] 🔄 Retry após 1s total...');
+                                                setTimeout(() => {
+                                                    const result3 = createPinsWithScale();
+                                                    console.log('[EDIT-DR] Third attempt result:', result3);
+                                                }, 500);
                                             }
                                         }, 500);
                                     }
