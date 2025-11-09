@@ -17993,8 +17993,9 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     logging.error(f"   Coords ORIGINAIS (DB): x={coords['x']}, y={coords['y']}, w={coords['width']}, h={coords['height']}")
                     logging.error(f"   page_height={page_height}")
                     logging.error(f"   Coords TRANSFORMADAS: x={x}, y={y}, w={width}, h={height}")
-                    
-                    # IMAGEM ou ASSINATURA
+                
+                # IMAGEM ou ASSINATURA - processar TODOS os campos do tipo 'image'
+                if field_type == 'image' or field_type == 'signature':
                     # VALIDAÇÃO
                     if is_diagram_check:
                         logging.error("🖼️ Chamando validação...")
