@@ -18289,7 +18289,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'customer_city': 'city',
                     'customer_country': 'country',
                     'vehicle_plate': 'vehiclePlate',
-                    'vehicle_brand': 'vehicleBrandModel',  # ✅ Mapeia para campo COMBINADO Marca / Modelo
+                    'vehicle_brand': 'vehicleBrand',
                     'vehicle_model': 'vehicleModel',
                     'vehicle_brand_model': 'vehicleBrandModel',  # ✅ Campo combinado Marca / Modelo
                     'vehicleBrandModel': 'vehicleBrandModel',  # ✅ Alias direto
