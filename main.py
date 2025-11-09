@@ -16618,7 +16618,8 @@ async def send_damage_report_email(request: Request):
                 part = MIMEBase('application', 'pdf')
                 part.set_payload(pdf_bytes)
                 encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f'attachment; filename="Damage_Report_{dr_number.replace("/", "_")}.pdf"')
+                # Nome do ficheiro: DR43_2025.pdf (sem "Damage_Report_" prefix)
+                part.add_header('Content-Disposition', f'attachment; filename="{dr_number.replace("/", "_")}.pdf"')
                 message.attach(part)
                 
                 logging.info(f"📎 PDF attached: {len(pdf_bytes)} bytes")

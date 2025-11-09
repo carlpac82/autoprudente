@@ -3533,7 +3533,23 @@
                 
                 // Obter PDF em base64
                 const pdfResponse = await fetch(`/api/damage-reports/${encodeURIComponent(currentEmailDR)}/pdf`);
+                
+                // Validar se a resposta é realmente um PDF
+                const contentType = pdfResponse.headers.get('Content-Type');
+                if (!contentType || !contentType.includes('application/pdf')) {
+                    // Se não é PDF, é provável que seja um erro JSON
+                    const errorText = await pdfResponse.text();
+                    console.error('❌ PDF endpoint returned non-PDF:', errorText);
+                    throw new Error('PDF não disponível. Por favor, tente novamente.');
+                }
+                
                 const pdfBlob = await pdfResponse.blob();
+                
+                // Validar tamanho do PDF (deve ser > 1KB)
+                if (pdfBlob.size < 1000) {
+                    throw new Error('PDF inválido (muito pequeno). Por favor, regenere o DR.');
+                }
+                
                 const pdfBase64 = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onloadend = () => resolve(reader.result);
