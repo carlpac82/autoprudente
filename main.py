@@ -18689,22 +18689,24 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                                 font_size = max(10, int(pin_width_pdf * 0.58))
                                                 can.setFont("Helvetica-Bold", font_size)  # BOLD
                                                 
-                                                # ✅ REPLICAR EXATAMENTE O HTML: padding-top: 12px em pin 56px
+                                                # ✅ REPLICAR EXATAMENTE O HTML: 
+                                                # CSS: width: 40px, height: 56px, font-size: 24px, line-height: 24px, padding-top: 12px
                                                 text_x = pin_x_scaled
                                                 
-                                                # HTML: padding-top: 12px do TOPO em pin de 56px de altura
-                                                # Converter proporcionalmente para o PDF
-                                                padding_top_ratio = 12.0 / 56.0  # = 0.214 (21.4%)
+                                                # MATEMÁTICA EXATA DO HTML:
+                                                # 1. padding-top: 12px empurra o conteúdo para baixo
+                                                # 2. line-height: 24px cria uma box de 24px de altura para o texto
+                                                # 3. Dentro dessa box, o texto é verticalmente centrado
+                                                # 4. Centro visual do texto: 12px (padding) + 12px (metade da box) = 24px do topo
+                                                # 5. 24px do topo = 56px - 24px = 32px do fundo
+                                                # 6. Percentagem: 32/56 = 57.14% do fundo
                                                 
                                                 # No PDF, Y cresce de baixo para cima
-                                                # Topo do pin = pin_y_final + pin_height_pdf
-                                                # Posição do topo do texto = topo do pin - padding
-                                                text_top_y = (pin_y_final + pin_height_pdf) - (pin_height_pdf * padding_top_ratio)
+                                                # drawCentredString coloca a BASELINE (não o centro!) na coordenada Y
+                                                # Para números, baseline está ~30% da altura do caractere abaixo do centro visual
                                                 
-                                                # drawCentredString coloca a BASELINE na coordenada Y
-                                                # Baseline está ~75% abaixo do topo do texto (ascender)
-                                                baseline_offset = font_size * 0.75
-                                                text_y = text_top_y - baseline_offset
+                                                # Centro visual a 57.14% + ajuste de baseline (~15% adicional)
+                                                text_y = pin_y_final + (pin_height_pdf * 0.57) + (font_size * 0.15)
                                                 
                                                 can.drawCentredString(text_x, text_y, str(pin_number))
                                                 
