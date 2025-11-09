@@ -18512,21 +18512,48 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             
                             # ✅ is_diagram já foi definido acima (linha 18391)
                             if is_diagram:
-                                # DIAGRAMA: USAR TAMANHO EXATO DA BOX MAPEADA
+                                # DIAGRAMA: CROP padding branco e escalar para box
                                 # Box: X=25, Y=254, W=256, H=201 (página 1)
-                                # Limite direito: X=318 (início das descrições)
-                                # SOLUÇÃO: Desenhar EXATAMENTE no tamanho mapeado
+                                # Frontend adiciona padding (56px topo, 20px laterais) para pins
+                                # Backend remove padding branco antes de escalar
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ MODO DIAGRAMA - TAMANHO EXATO DA BOX")
+                                    logging.error(f"🖼️ MODO DIAGRAMA - CROP E ESCALA")
                                     logging.error(f"🖼️ Box mapeada: x={x}, y={y}, w={width}, h={height}")
-                                    logging.error(f"🖼️ Imagem capturada: {img_width}x{img_height}")
+                                    logging.error(f"🖼️ Imagem capturada (com padding): {img_width}x{img_height}")
                                 
-                                # ✅ ESCALAR IMAGEM CAPTURADA PARA CABER NA BOX
-                                # Frontend captura em ~500px (boa qualidade)
-                                # Backend escala para 256×201px mantendo aspect ratio
+                                # ✅ CROP AUTOMÁTICO: Remover bordas brancas (padding do frontend)
+                                # Converte para numpy array para análise
+                                import numpy as np
+                                img_array = np.array(img)
                                 
-                                # Calcular escala para caber na box mantendo proporção
+                                # Detectar onde NÃO é branco puro (threshold 250 para margem)
+                                # Considera canal alpha se existir
+                                if img_array.shape[2] == 4:  # RGBA
+                                    non_white = np.any(img_array[:, :, :3] < 250, axis=2) | (img_array[:, :, 3] > 5)
+                                else:  # RGB
+                                    non_white = np.any(img_array < 250, axis=2)
+                                
+                                # Encontrar bounding box do conteúdo
+                                rows = np.any(non_white, axis=1)
+                                cols = np.any(non_white, axis=0)
+                                
+                                if rows.any() and cols.any():
+                                    ymin, ymax = np.where(rows)[0][[0, -1]]
+                                    xmin, xmax = np.where(cols)[0][[0, -1]]
+                                    
+                                    # Crop imagem
+                                    img = img.crop((xmin, ymin, xmax + 1, ymax + 1))
+                                    img_width, img_height = img.size
+                                    
+                                    if is_diagram_check:
+                                        logging.error(f"🖼️ Após crop: {img_width}x{img_height} (padding removido)")
+                                else:
+                                    if is_diagram_check:
+                                        logging.error(f"⚠️ Não foi possível fazer crop (imagem toda branca?)")
+                                
+                                # ✅ ESCALAR IMAGEM PARA CABER NA BOX
+                                # Calcular escala mantendo proporção
                                 img_ratio = img_width / img_height
                                 box_ratio = width / height
                                 
