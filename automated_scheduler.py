@@ -254,23 +254,28 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         conn = _get_db_connection()
         cursor = conn.cursor()
         
-        # Get today's date for comparison (search_date is TEXT in format YYYY-MM-DD)
+        # Get dates for last 24 hours (search_date is ISO timestamp)
         from datetime import datetime, timedelta
-        today = datetime.now().date()
-        yesterday = today - timedelta(days=1)
-        date_filter = yesterday.strftime('%Y-%m-%d')
+        now = datetime.now()
+        yesterday = now - timedelta(days=1)
+        
+        # Query for records from last 24 hours (use month_key for better filtering)
+        current_month = now.strftime('%Y-%m')
         
         cursor.execute(
             """
             SELECT location, search_date, dias, prices_data
             FROM automated_search_history
-            WHERE search_date >= %s
+            WHERE month_key = %s
             ORDER BY search_date DESC, id DESC
             LIMIT 100
             """,
-            (date_filter,)
+            (current_month,)
         )
         rows = cursor.fetchall()
+        
+        print(f"   📊 Query: month_key = '{current_month}'", flush=True)
+        print(f"   📊 Found {len(rows)} search records", flush=True)
         
         all_results = []
         for row in rows:
