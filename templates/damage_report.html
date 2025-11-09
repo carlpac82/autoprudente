@@ -3704,8 +3704,8 @@
                     iframeDoc.close();
                 }
                 
-                // Info de anexos - Usar RA number se disponível, senão DR number
-                const pdfFilename = raNumber ? `Damage_Report_${raNumber.replace(/\//g, '_')}.pdf` : `Damage_Report_${drNumber.replace(/\//g, '_')}.pdf`;
+                // Info de anexos - Usar DR number formatado (sem prefixo)
+                const pdfFilename = `${drNumber.replace(/\//g, '_')}.pdf`;
                 document.getElementById('attachmentInfo').textContent = pdfFilename;
                 
             } catch (error) {

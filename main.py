@@ -16760,9 +16760,8 @@ async def send_damage_report_email(request: Request):
                 part = MIMEBase('application', 'pdf')
                 part.set_payload(pdf_bytes)
                 encoders.encode_base64(part)
-                # ✅ Nome do ficheiro: Usa RA Number se disponível, senão DR Number
-                filename_base = ra_number if ra_number else dr_number
-                pdf_filename = f"Damage_Report_{filename_base.replace('/', '_')}.pdf"
+                # ✅ Nome do ficheiro: DR number formatado (ex: DR41_2025.pdf)
+                pdf_filename = f"{dr_number.replace('/', '_')}.pdf"
                 part.add_header('Content-Disposition', f'attachment; filename="{pdf_filename}"')
                 message.attach(part)
                 
