@@ -15791,6 +15791,107 @@ async def list_damage_reports(request: Request):
         logging.error(f"Error listing damage reports: {e}")
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/damage-reports/numbering/get")
+async def get_dr_numbering(request: Request):
+    """Obter configuração de numeração atual"""
+    require_auth(request)
+    
+    try:
+        from datetime import datetime
+        import psycopg2
+        
+        logging.info(f"📖 [DR-NUMBERING] GET Request received")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Detectar tipo de BD
+                is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                db_type = "PostgreSQL" if is_postgres else "SQLite"
+                logging.info(f"📊 [DR-NUMBERING] Database: {db_type}")
+                
+                row = None
+                
+                if is_postgres:
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT current_year, current_number, prefix, updated_at
+                        FROM damage_report_numbering
+                        WHERE id = 1
+                    """)
+                    row = cursor.fetchone()
+                    cursor.close()
+                else:
+                    # SQLite
+                    cursor = conn.execute("""
+                        SELECT current_year, current_number, prefix, updated_at
+                        FROM damage_report_numbering
+                        WHERE id = 1
+                    """)
+                    row = cursor.fetchone()
+                
+                if row:
+                    current_year, current_number, prefix, updated_at = row
+                    next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
+                    logging.info(f"✅ [DR-NUMBERING] GET Success: current={current_number}, prefix={prefix}, next={next_number}")
+                    return {
+                        "ok": True,
+                        "current_year": current_year,
+                        "current_number": current_number,
+                        "prefix": prefix,
+                        "next_number": next_number,
+                        "updated_at": updated_at,
+                        "database": db_type
+                    }
+                else:
+                    # Criar registro inicial se não existir
+                    logging.warning("⚠️ [DR-NUMBERING] Not found in DB, creating initial record...")
+                    current_year = datetime.now().year
+                    current_number = 0
+                    prefix = 'DR'
+                    
+                    if is_postgres:
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                                SELECT 1, %s, %s, %s
+                                WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
+                            """, (current_year, current_number, prefix))
+                            rows_affected = cur.rowcount
+                            logging.info(f"📝 [DR-NUMBERING] INSERT: {rows_affected} row(s) inserted")
+                    else:
+                        # SQLite
+                        cursor = conn.execute("""
+                            INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                            SELECT 1, ?, ?, ?
+                            WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
+                        """, (current_year, current_number, prefix))
+                        rows_affected = cursor.rowcount
+                        logging.info(f"📝 [DR-NUMBERING] INSERT: {rows_affected} row(s) inserted")
+                    
+                    conn.commit()
+                    logging.info(f"💾 [DR-NUMBERING] COMMIT executed")
+                    
+                    next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
+                    logging.info(f"✅ [DR-NUMBERING] Created initial: next={next_number}")
+                    
+                    return {
+                        "ok": True,
+                        "current_year": current_year,
+                        "current_number": current_number,
+                        "prefix": prefix,
+                        "next_number": next_number,
+                        "updated_at": datetime.now().isoformat(),
+                        "database": db_type
+                    }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ [DR-NUMBERING] GET Error: {e}", exc_info=True)
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/damage-reports/{dr_number:path}")
 async def get_damage_report(request: Request, dr_number: str):
     """Obtém um Damage Report específico"""
@@ -17150,107 +17251,6 @@ async def fix_damage_reports_columns(request: Request):
                 conn.close()
     except Exception as e:
         logging.error(f"Error fixing columns: {e}")
-        return {"ok": False, "error": str(e)}
-
-@app.get("/api/damage-reports/numbering/get")
-async def get_dr_numbering(request: Request):
-    """Obter configuração de numeração atual"""
-    require_auth(request)
-    
-    try:
-        from datetime import datetime
-        import psycopg2
-        
-        logging.info(f"📖 [DR-NUMBERING] GET Request received")
-        
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                # Detectar tipo de BD
-                is_postgres = isinstance(conn, psycopg2.extensions.connection)
-                db_type = "PostgreSQL" if is_postgres else "SQLite"
-                logging.info(f"📊 [DR-NUMBERING] Database: {db_type}")
-                
-                row = None
-                
-                if is_postgres:
-                    # PostgreSQL
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT current_year, current_number, prefix, updated_at
-                        FROM damage_report_numbering
-                        WHERE id = 1
-                    """)
-                    row = cursor.fetchone()
-                    cursor.close()
-                else:
-                    # SQLite
-                    cursor = conn.execute("""
-                        SELECT current_year, current_number, prefix, updated_at
-                        FROM damage_report_numbering
-                        WHERE id = 1
-                    """)
-                    row = cursor.fetchone()
-                
-                if row:
-                    current_year, current_number, prefix, updated_at = row
-                    next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
-                    logging.info(f"✅ [DR-NUMBERING] GET Success: current={current_number}, prefix={prefix}, next={next_number}")
-                    return {
-                        "ok": True,
-                        "current_year": current_year,
-                        "current_number": current_number,
-                        "prefix": prefix,
-                        "next_number": next_number,
-                        "updated_at": updated_at,
-                        "database": db_type
-                    }
-                else:
-                    # Criar registro inicial se não existir
-                    logging.warning("⚠️ [DR-NUMBERING] Not found in DB, creating initial record...")
-                    current_year = datetime.now().year
-                    current_number = 0
-                    prefix = 'DR'
-                    
-                    if is_postgres:
-                        # PostgreSQL
-                        with conn.cursor() as cur:
-                            cur.execute("""
-                                INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                                SELECT 1, %s, %s, %s
-                                WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
-                            """, (current_year, current_number, prefix))
-                            rows_affected = cur.rowcount
-                            logging.info(f"📝 [DR-NUMBERING] INSERT: {rows_affected} row(s) inserted")
-                    else:
-                        # SQLite
-                        cursor = conn.execute("""
-                            INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                            SELECT 1, ?, ?, ?
-                            WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
-                        """, (current_year, current_number, prefix))
-                        rows_affected = cursor.rowcount
-                        logging.info(f"📝 [DR-NUMBERING] INSERT: {rows_affected} row(s) inserted")
-                    
-                    conn.commit()
-                    logging.info(f"💾 [DR-NUMBERING] COMMIT executed")
-                    
-                    next_number = f"{prefix}{current_number + 1:02d}/{current_year}"
-                    logging.info(f"✅ [DR-NUMBERING] Created initial: next={next_number}")
-                    
-                    return {
-                        "ok": True,
-                        "current_year": current_year,
-                        "current_number": current_number,
-                        "prefix": prefix,
-                        "next_number": next_number,
-                        "updated_at": datetime.now().isoformat(),
-                        "database": db_type
-                    }
-            finally:
-                conn.close()
-    except Exception as e:
-        logging.error(f"❌ [DR-NUMBERING] GET Error: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/damage-reports/numbering/update")
