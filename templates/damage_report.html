@@ -2026,19 +2026,23 @@
                             const relY = (rect.top - containerRect.top) / containerRect.height;
                             
                             // Posição no canvas
-                            const canvasX = relX * canvas.width;
-                            const canvasY = relY * canvas.height;
+                            let canvasX = relX * canvas.width;
+                            let canvasY = relY * canvas.height;
                             
                             // Tamanho do pin (proporcional ao canvas)
                             const pinWidth = 40 * (canvas.width / containerRect.width) * currentPinSize;
                             const pinHeight = 56 * (canvas.height / containerRect.height) * currentPinSize;
                             
+                            // ✅ PROTEÇÃO: Garantir que pin não saia dos limites do canvas
+                            const pinX = Math.max(pinWidth / 2, Math.min(canvasX, canvas.width - pinWidth / 2));
+                            const pinY = Math.max(pinHeight, Math.min(canvasY, canvas.height));
+                            
                             // Desenhar imagem do pin (location icon)
                             // Centralizado horizontalmente, ancorado na parte inferior
                             ctx.drawImage(
                                 pinImg,
-                                canvasX - pinWidth / 2,
-                                canvasY - pinHeight,
+                                pinX - pinWidth / 2,
+                                pinY - pinHeight,
                                 pinWidth,
                                 pinHeight
                             );
@@ -2050,8 +2054,8 @@
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             // ✅ Número mais BAIXO na bola (ajustado para 0.35 - desceu mais)
-                            // Valor menor = número mais para BAIXO (menos subtração do Y)
-                            ctx.fillText(number, canvasX, canvasY - pinHeight * 0.35);
+                            // Usar pinX/pinY para manter alinhamento mesmo se pin foi ajustado
+                            ctx.fillText(number, pinX, pinY - pinHeight * 0.35);
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
