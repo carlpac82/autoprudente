@@ -394,50 +394,71 @@ def execute_search_for_schedule(schedule, schedule_index):
                 print(f"✅ CarJet search SUCCESSFUL!", flush=True)
                 print(f"   Results: {len(search_results)} locations", flush=True)
                 
-                # AGORA SALVAR NA BD (recent_searches)
-                print(f"\n💾 Saving results to database...", flush=True)
+                # AGORA SALVAR NA BD (automated_search_history - TABELA CORRETA!)
+                print(f"\n💾 Saving results to automated_search_history...", flush=True)
                 
-                searches_to_save = []
+                from datetime import datetime
+                now = datetime.now()
+                month_key = f"{now.year}-{str(now.month).zfill(2)}"
+                
                 for loc_result in search_results:
                     location_name = loc_result.get('location', '')
+                    
+                    # Preparar dados de preços por grupo
+                    prices_by_group = {}
+                    supplier_data = {}
+                    total_price_count = 0
+                    
                     for duration_result in loc_result.get('durations', []):
                         days_num = duration_result.get('days')
                         items = duration_result.get('items', [])
                         
-                        if items:  # Só salvar se tiver resultados
-                            # Data de pickup
-                            start_date = (datetime.now() + timedelta(days=1 + days_num)).strftime('%Y-%m-%d')
+                        if items:
+                            # Agrupar carros por grupo
+                            for item in items:
+                                grupo = item.get('group', 'Unknown')
+                                price = item.get('price_num', 0)
+                                
+                                if grupo not in prices_by_group:
+                                    prices_by_group[grupo] = {}
+                                
+                                # Guardar o menor preço para cada dia/grupo
+                                if days_num not in prices_by_group[grupo] or price < prices_by_group[grupo][days_num]:
+                                    prices_by_group[grupo][days_num] = price
+                                    total_price_count += 1
                             
-                            searches_to_save.append({
-                                'location': location_name,
-                                'start_date': start_date,
-                                'days': days_num,
-                                'results_data': json.dumps(items),
-                                'timestamp': datetime.now().isoformat(),
-                                'user': 'automated',
-                                'source': 'automated'
-                            })
+                            # Guardar supplier data (todos os carros para referência)
+                            supplier_data[str(days_num)] = items
                             
                             print(f"   → {location_name} | {days_num}d | {len(items)} cars", flush=True)
-                
-                # Salvar na BD
-                if searches_to_save:
-                    save_payload = {'searches': searches_to_save}
-                    save_response = requests.post(
-                        "http://localhost:8000/api/recent-searches/save",
-                        json=save_payload,
-                        headers={"Content-Type": "application/json"},
-                        timeout=30
-                    )
                     
-                    if save_response.status_code == 200:
-                        print(f"\n✅ {len(searches_to_save)} searches SAVED to database!", flush=True)
-                        print(f"✅ SEARCH EXECUTION COMPLETED!", flush=True)
-                        print(f"{'='*80}\n", flush=True)
-                    else:
-                        print(f"❌ Failed to save to database: {save_response.status_code}", flush=True)
-                else:
-                    print(f"⚠️ No results to save", flush=True)
+                    # Salvar na tabela automated_search_history
+                    if prices_by_group:
+                        save_payload = {
+                            'location': location_name,
+                            'searchType': 'automated',
+                            'prices': prices_by_group,
+                            'dias': days,
+                            'priceCount': total_price_count,
+                            'supplierData': supplier_data
+                        }
+                        
+                        save_response = requests.post(
+                            "http://localhost:8000/api/automated-search/save",
+                            json=save_payload,
+                            headers={"Content-Type": "application/json"},
+                            timeout=30
+                        )
+                        
+                        if save_response.status_code == 200:
+                            print(f"   ✅ {location_name}: {total_price_count} prices saved!", flush=True)
+                        else:
+                            print(f"   ❌ {location_name}: Failed ({save_response.status_code})", flush=True)
+                
+                print(f"\n✅ SEARCH EXECUTION COMPLETED!", flush=True)
+                print(f"✅ Results saved to AUTOMATED_SEARCH_HISTORY table!", flush=True)
+                print(f"✅ Go to Automated Pricing → History to see them!", flush=True)
+                print(f"{'='*80}\n", flush=True)
             else:
                 print(f"❌ CarJet search failed: {result.get('error')}", flush=True)
         else:

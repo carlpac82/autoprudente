@@ -21678,7 +21678,7 @@ async def save_recent_searches(request: Request):
 
 @app.get("/api/recent-searches/load")
 async def load_recent_searches(request: Request):
-    """Load recent searches from PostgreSQL"""
+    """Load recent searches from PostgreSQL - includes automated searches"""
     require_auth(request)
     try:
         username = request.session.get("username", "admin")
@@ -21695,12 +21695,13 @@ async def load_recent_searches(request: Request):
                 placeholder = "%s" if is_postgres else "?"
                 user_col = '"user"' if is_postgres else 'user'
                 
+                # MODIFIED: Include both user's searches AND automated searches
                 cursor = conn.execute(f"""
-                    SELECT location, start_date, days, results_data, timestamp, source
+                    SELECT location, start_date, days, results_data, timestamp, source, {user_col}
                     FROM recent_searches
-                    WHERE {user_col} = {placeholder}
+                    WHERE {user_col} = {placeholder} OR source = 'automated'
                     ORDER BY created_at DESC
-                    LIMIT 3
+                    LIMIT 50
                 """, (username,))
                 
                 rows = cursor.fetchall()
@@ -21713,9 +21714,11 @@ async def load_recent_searches(request: Request):
                         'days': row[2],
                         'results': json.loads(row[3]) if row[3] else [],
                         'timestamp': row[4],
-                        'source': row[5] if len(row) > 5 else 'manual'  # Backward compatibility
+                        'source': row[5] if len(row) > 5 else 'manual',  # 'automated' or 'manual'
+                        'user': row[6] if len(row) > 6 else username  # Show who created it
                     })
                 
+                logging.info(f"📥 Loaded {len(searches)} recent searches (including automated)")
                 return _no_store_json({"ok": True, "searches": searches})
             finally:
                 conn.close()
