@@ -354,14 +354,15 @@ def generate_daily_report_html_by_location(search_data, location):
                 price = float(car.get('price_num', 0))
                 is_ap = 'autoprudente' in supplier.lower()
                 
-                # Imagem real do carro (extraída do CarJet)
-                car_image = car.get('car_image', '')
+                # Imagem REAL do carro (campo 'photo' do CarJet)
+                car_photo = car.get('photo', '')
                 car_name = car.get('car', 'Unknown')
                 
-                # Se não tiver imagem, usa ícone SVG
-                if car_image and car_image.startswith('http'):
-                    car_visual = f'<img src="{car_image}" alt="{car_name}" style="width: 60px; height: auto; border-radius: 4px; border: 1px solid #e2e8f0;" onerror="this.style.display=\'none\'">'
+                # Usar imagem REAL
+                if car_photo and car_photo.startswith('http'):
+                    car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 80px; height: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
                 else:
+                    # Fallback: ícone SVG pequeno
                     car_visual = icon_car
                 
                 content_html += f"""

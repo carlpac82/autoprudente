@@ -16,23 +16,23 @@ mock_search_data = {
     'location': 'Albufeira',
     'date': datetime.now().strftime('%Y-%m-%d'),
     'results': [
-        # Grupo A - 3 dias - Albufeira
-        {'group': 'Grupo A', 'days': 3, 'location': 'Albufeira', 'supplier': 'Auto Prudente', 'price_num': 45.00, 'price': '45.00€', 'car': 'Renault Clio', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/renault_clio_or_similar.jpg'},
-        {'group': 'Grupo A', 'days': 3, 'location': 'Albufeira', 'supplier': 'Guerin', 'price_num': 50.00, 'price': '50.00€', 'car': 'Peugeot 208', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/peugeot_208_or_similar.jpg'},
-        {'group': 'Grupo A', 'days': 3, 'location': 'Albufeira', 'supplier': 'Europcar', 'price_num': 52.00, 'price': '52.00€', 'car': 'Opel Corsa', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/opel_corsa_or_similar.jpg'},
+        # Grupo A - 3 dias - Albufeira (IMAGENS REAIS do CarJet)
+        {'group': 'Grupo A', 'days': 3, 'location': 'Albufeira', 'supplier': 'Auto Prudente', 'price_num': 45.00, 'price': '45.00€', 'car': 'Renault Clio', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_A01.jpg'},
+        {'group': 'Grupo A', 'days': 3, 'location': 'Albufeira', 'supplier': 'Guerin', 'price_num': 50.00, 'price': '50.00€', 'car': 'Peugeot 208', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_B04.jpg'},
+        {'group': 'Grupo A', 'days': 3, 'location': 'Albufeira', 'supplier': 'Europcar', 'price_num': 52.00, 'price': '52.00€', 'car': 'Opel Corsa', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_B01.jpg'},
         
         # Grupo A - 7 dias - Albufeira
-        {'group': 'Grupo A', 'days': 7, 'location': 'Albufeira', 'supplier': 'Guerin', 'price_num': 90.00, 'price': '90.00€', 'car': 'Peugeot 208', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/peugeot_208_or_similar.jpg'},
-        {'group': 'Grupo A', 'days': 7, 'location': 'Albufeira', 'supplier': 'Auto Prudente', 'price_num': 92.00, 'price': '92.00€', 'car': 'Renault Clio', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/renault_clio_or_similar.jpg'},
-        {'group': 'Grupo A', 'days': 7, 'location': 'Albufeira', 'supplier': 'Hertz', 'price_num': 95.00, 'price': '95.00€', 'car': 'Ford Fiesta', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/ford_fiesta_or_similar.jpg'},
+        {'group': 'Grupo A', 'days': 7, 'location': 'Albufeira', 'supplier': 'Guerin', 'price_num': 90.00, 'price': '90.00€', 'car': 'Peugeot 208', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_B04.jpg'},
+        {'group': 'Grupo A', 'days': 7, 'location': 'Albufeira', 'supplier': 'Auto Prudente', 'price_num': 92.00, 'price': '92.00€', 'car': 'Renault Clio', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_A01.jpg'},
+        {'group': 'Grupo A', 'days': 7, 'location': 'Albufeira', 'supplier': 'Hertz', 'price_num': 95.00, 'price': '95.00€', 'car': 'Ford Fiesta', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_B05.jpg'},
         
         # Grupo B - 3 dias - Albufeira  
-        {'group': 'Grupo B', 'days': 3, 'location': 'Albufeira', 'supplier': 'Budget', 'price_num': 60.00, 'price': '60.00€', 'car': 'Volkswagen Polo', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/volkswagen_polo_or_similar.jpg'},
-        {'group': 'Grupo B', 'days': 3, 'location': 'Albufeira', 'supplier': 'Auto Prudente', 'price_num': 62.00, 'price': '62.00€', 'car': 'Seat Ibiza', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/seat_ibiza_or_similar.jpg'},
-        {'group': 'Grupo B', 'days': 3, 'location': 'Albufeira', 'supplier': 'Sixt', 'price_num': 65.00, 'price': '65.00€', 'car': 'Fiat 500', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/fiat_500_or_similar.jpg'},
+        {'group': 'Grupo B', 'days': 3, 'location': 'Albufeira', 'supplier': 'Budget', 'price_num': 60.00, 'price': '60.00€', 'car': 'Volkswagen Polo', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_C01.jpg'},
+        {'group': 'Grupo B', 'days': 3, 'location': 'Albufeira', 'supplier': 'Auto Prudente', 'price_num': 62.00, 'price': '62.00€', 'car': 'Seat Ibiza', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_B02.jpg'},
+        {'group': 'Grupo B', 'days': 3, 'location': 'Albufeira', 'supplier': 'Sixt', 'price_num': 65.00, 'price': '65.00€', 'car': 'Fiat 500', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_A03.jpg'},
         
         # Aeroporto (não deve aparecer no relatório de Albufeira)
-        {'group': 'Grupo A', 'days': 3, 'location': 'Aeroporto de Faro', 'supplier': 'Auto Prudente', 'price_num': 48.00, 'price': '48.00€', 'car': 'Renault Clio', 'car_image': 'https://media.carjet.net/api/vehicles/v1/small/renault_clio_or_similar.jpg'},
+        {'group': 'Grupo A', 'days': 3, 'location': 'Aeroporto de Faro', 'supplier': 'Auto Prudente', 'price_num': 48.00, 'price': '48.00€', 'car': 'Renault Clio', 'photo': 'https://www.carjet.com/cdn/img/cars/L/car_A01.jpg'},
     ]
 }
 
