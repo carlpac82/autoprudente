@@ -2751,18 +2751,25 @@
                     if (report.damage_diagram_data) {
                         try {
                             console.log('[EDIT-DR] Loading damage data...');
+                            console.log('[EDIT-DR] Raw damage_diagram_data:', report.damage_diagram_data);
                             const damageData = typeof report.damage_diagram_data === 'string' 
                                 ? JSON.parse(report.damage_diagram_data) 
                                 : report.damage_diagram_data;
                             
-                            if (Array.isArray(damageData)) {
+                            console.log('[EDIT-DR] Parsed damage data:', damageData);
+                            console.log('[EDIT-DR] Is array?', Array.isArray(damageData));
+                            
+                            if (Array.isArray(damageData) && damageData.length > 0) {
                                 damages = damageData;
                                 damageCounter = Math.max(...damages.map(d => d.number), 0);
-                                console.log(`[EDIT-DR] Loaded ${damages.length} damage pins, counter at ${damageCounter}`);
+                                console.log(`[EDIT-DR] ✅ Loaded ${damages.length} damage pins, counter at ${damageCounter}`);
                                 
                                 // Recriar pins
-                                damages.forEach(d => {
+                                damages.forEach((d, idx) => {
+                                    console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, d);
                                     const container = document.querySelector(`[data-view="${d.view}"]`);
+                                    console.log(`[EDIT-DR]   Container for view "${d.view}":`, container ? 'FOUND' : 'NOT FOUND');
+                                    
                                     if (container) {
                                         const pin = document.createElement('div');
                                         pin.className = 'damage-pin';
@@ -2786,14 +2793,23 @@
                                             removeDamagePin(d.id);
                                         };
                                         container.appendChild(pin);
+                                        console.log(`[EDIT-DR]   ✅ Pin #${d.number} created at (${d.x}, ${d.y})`);
+                                    } else {
+                                        console.error(`[EDIT-DR]   ❌ Container not found for view: ${d.view}`);
                                     }
                                 });
                                 updateDamageList();
+                                console.log('[EDIT-DR] ✅ All pins recreated and damage list updated');
+                            } else {
+                                console.warn('[EDIT-DR] ⚠️  No damage data to load (empty or not array)');
                             }
                         } catch (e) {
-                            console.error('[EDIT-DR] Error loading damage data:', e);
+                            console.error('[EDIT-DR] ❌ Error loading damage data:', e);
+                            console.error('[EDIT-DR] Stack:', e.stack);
                             // Não bloquear edição se houver erro nos danos
                         }
+                    } else {
+                        console.log('[EDIT-DR] No damage_diagram_data in report');
                     }
                     
                     // Carregar itens de reparo
@@ -2819,19 +2835,32 @@
                     if (report.damage_images) {
                         try {
                             console.log('[EDIT-DR] Loading damage images...');
+                            console.log('[EDIT-DR] Raw damage_images:', typeof report.damage_images, report.damage_images ? `(${report.damage_images.length} chars)` : 'null');
                             const imagesData = typeof report.damage_images === 'string' 
                                 ? JSON.parse(report.damage_images) 
                                 : report.damage_images;
                             
-                            if (Array.isArray(imagesData)) {
+                            console.log('[EDIT-DR] Parsed images data:', imagesData);
+                            console.log('[EDIT-DR] Is array?', Array.isArray(imagesData));
+                            
+                            if (Array.isArray(imagesData) && imagesData.length > 0) {
                                 damageImages = imagesData;
-                                console.log(`[EDIT-DR] Loaded ${damageImages.length} damage images`);
+                                console.log(`[EDIT-DR] ✅ Loaded ${damageImages.length} damage images`);
+                                damageImages.forEach((img, idx) => {
+                                    console.log(`[EDIT-DR]   Image ${idx + 1}:`, img.substring(0, 50) + '...');
+                                });
                                 updateImageList();
+                                console.log('[EDIT-DR] ✅ Image list updated');
+                            } else {
+                                console.warn('[EDIT-DR] ⚠️  No damage images to load (empty or not array)');
                             }
                         } catch (e) {
-                            console.error('[EDIT-DR] Error loading damage images:', e);
+                            console.error('[EDIT-DR] ❌ Error loading damage images:', e);
+                            console.error('[EDIT-DR] Stack:', e.stack);
                             // Não bloquear edição se houver erro nas imagens
                         }
+                    } else {
+                        console.log('[EDIT-DR] No damage_images in report');
                     }
                     
                     // Guardar DR number atual para update
