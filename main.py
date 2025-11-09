@@ -22227,6 +22227,62 @@ async def load_automated_reports_settings(request: Request):
 # API ENDPOINTS - OAUTH2 EMAIL INTEGRATION
 # ============================================================
 
+@app.get("/api/oauth/gmail/status")
+async def check_gmail_oauth_status(request: Request):
+    """Check if Gmail OAuth credentials exist and are valid"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT user_email, access_token, refresh_token, expires_at, updated_at
+                    FROM oauth_tokens 
+                    WHERE provider = 'google' 
+                    ORDER BY updated_at DESC 
+                    LIMIT 1
+                    """
+                )
+                row = cursor.fetchone()
+                
+                if not row:
+                    return JSONResponse({
+                        "ok": False,
+                        "connected": False,
+                        "message": "Nenhuma conta Gmail conectada. Por favor, conecte sua conta."
+                    })
+                
+                user_email, access_token, refresh_token, expires_at, updated_at = row
+                
+                # Check if has refresh token (critical!)
+                has_refresh = refresh_token and refresh_token.strip() != ''
+                has_access = access_token and access_token.strip() != ''
+                
+                status = {
+                    "ok": True,
+                    "connected": has_access and has_refresh,
+                    "email": user_email,
+                    "hasAccessToken": has_access,
+                    "hasRefreshToken": has_refresh,
+                    "expiresAt": expires_at,
+                    "lastUpdated": updated_at,
+                    "message": "✅ Gmail conectado e funcional" if (has_access and has_refresh) else "⚠️ Credenciais incompletas - reconecte o Gmail"
+                }
+                
+                logging.info(f"Gmail OAuth Status: connected={status['connected']}, email={user_email}")
+                return JSONResponse(status)
+                
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error checking Gmail status: {str(e)}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
 @app.get("/api/oauth/gmail/authorize")
 async def oauth_gmail_authorize(request: Request):
     """Initiate Gmail OAuth2 flow - REAL Google OAuth"""
