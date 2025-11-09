@@ -1,0 +1,323 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f5f5f5;
+            }
+            .email-container {
+                max-width: 800px;
+                margin: 0 auto;
+                background-color: #fff;
+            }
+            .header {
+                background-color: #009cb6;
+                padding: 20px;
+            }
+            .header-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .logo img {
+                height: 50px;
+            }
+            .header-info {
+                text-align: right;
+                color: #fff;
+            }
+            .header-title {
+                font-size: 20px;
+                font-weight: bold;
+                margin: 0;
+            }
+            .header-subtitle {
+                font-size: 14px;
+                margin: 5px 0 0 0;
+                opacity: 0.9;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+            .group-card {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .group-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #009cb6;
+            }
+            .group-name {
+                font-size: 18px;
+                font-weight: bold;
+                color: #1e293b;
+            }
+            .location-badge {
+                background: #fbbf24;
+                color: #92400e;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .price-comparison {
+                background: #f8fafc;
+                border-radius: 6px;
+                padding: 15px;
+                margin-bottom: 10px;
+            }
+            .competitor {
+                display: flex;
+                justify-content: space-between;
+                padding: 10px;
+                margin: 5px 0;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+            }
+            .competitor.autoprudente {
+                background: #e0f7fa;
+                border: 2px solid #009cb6;
+            }
+            .position-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .position-1 { background: #10b981; color: #fff; }
+            .position-2 { background: #fbbf24; color: #92400e; }
+            .position-3 { background: #f59e0b; color: #fff; }
+            .position-bad { background: #ef4444; color: #fff; }
+            .stats-box {
+                display: flex;
+                justify-content: space-around;
+                background: #f8fafc;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 25px;
+            }
+            .stat {
+                text-align: center;
+            }
+            .stat-value {
+                font-size: 32px;
+                font-weight: bold;
+                color: #009cb6;
+            }
+            .stat-label {
+                font-size: 13px;
+                color: #64748b;
+                margin-top: 5px;
+            }
+            .footer {
+                background: #f8fafc;
+                padding: 20px;
+                text-align: center;
+                border-top: 1px solid #e2e8f0;
+                font-size: 12px;
+                color: #94a3b8;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="email-container">
+            <div class="header">
+                <div class="header-content">
+                    <div class="logo">
+                        <img src="https://carrental-api-5f8q.onrender.com/static/ap-heather.png" alt="Auto Prudente" style="height:50px"/>
+                    </div>
+                    <div class="header-info">
+                        <div class="header-title">Relatório Diário - Albufeira</div>
+                        <div class="header-subtitle">09 de November de 2025</div>
+                    </div>
+                </div>
+            </div>
+            <div class="content">
+    
+    <div class="stats-box">
+        <div class="stat">
+            <div class="stat-value" style="color: #10b981;">1</div>
+            <div class="stat-label">Melhores Preços</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color: #fbbf24;">2</div>
+            <div class="stat-label">Competitivos</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">33%</div>
+            <div class="stat-label">Taxa de Liderança</div>
+        </div>
+    </div>
+    
+        <div class="group-card">
+            <div class="group-header">
+                <div>
+                    <div class="group-name">🚗 Grupo A</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">
+                        📅 3 dias • 📍 Albufeira
+                    </div>
+                </div>
+                <span class="position-badge position-1">🏆 1º Lugar</span>
+            </div>
+            <div class="price-comparison">
+        
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        1. Auto Prudente
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    45.00€
+                </div>
+            </div>
+            
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        2. Guerin
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    50.00€
+                </div>
+            </div>
+            
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        3. Europcar
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    52.00€
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+        <div class="group-card">
+            <div class="group-header">
+                <div>
+                    <div class="group-name">🚗 Grupo A</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">
+                        📅 7 dias • 📍 Albufeira
+                    </div>
+                </div>
+                <span class="position-badge position-2">#2 Posição</span>
+            </div>
+            <div class="price-comparison">
+        
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        1. Guerin
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    90.00€
+                </div>
+            </div>
+            
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        2. Auto Prudente
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    92.00€
+                </div>
+            </div>
+            
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        3. Hertz
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    95.00€
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+        <div class="group-card">
+            <div class="group-header">
+                <div>
+                    <div class="group-name">🚗 Grupo B</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">
+                        📅 3 dias • 📍 Albufeira
+                    </div>
+                </div>
+                <span class="position-badge position-2">#2 Posição</span>
+            </div>
+            <div class="price-comparison">
+        
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        1. Budget
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    60.00€
+                </div>
+            </div>
+            
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        2. Auto Prudente
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    62.00€
+                </div>
+            </div>
+            
+            <div class="competitor ">
+                <div>
+                    <div style="font-weight: 500; color: #1e293b;">
+                        3. Sixt
+                    </div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #1e293b;">
+                    65.00€
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+            </div>
+            <div class="footer">
+                <p style="margin: 0;">Auto Prudente © 2025 • Sistema de Monitorização de Preços</p>
+                <p style="margin: 8px 0 0 0; font-size: 11px; color: #cbd5e1;">
+                    Dados baseados na última pesquisa • Atualizado automaticamente
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    
