@@ -16126,14 +16126,20 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             if not date_str:
                 return ''
             try:
-                # Remove hora se existir (ex: "2025-11-06 00:00:00" → "2025-11-06")
-                date_only = date_str.split(' ')[0] if ' ' in date_str else date_str
-                # Converte de yyyy-mm-dd para dd-mm-yyyy
                 from datetime import datetime
+                # Se já é objeto datetime
+                if isinstance(date_str, datetime):
+                    return date_str.strftime('%d-%m-%Y')
+                # Se é string
+                date_str = str(date_str)
+                # Remove hora se existir (ex: "2025-11-06 00:00:00" → "2025-11-06")
+                # Ou "2025-11-06T00:00:00" → "2025-11-06"
+                date_only = date_str.split(' ')[0].split('T')[0]
+                # Converte de yyyy-mm-dd para dd-mm-yyyy
                 dt = datetime.strptime(date_only, '%Y-%m-%d')
                 return dt.strftime('%d-%m-%Y')
             except:
-                return date_str  # Retorna original se falhar
+                return str(date_str)  # Retorna original se falhar
         
         # Mapear campos da BD para IDs do mapeador (camelCase)
         report_data = {
@@ -19396,14 +19402,20 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
             if not date_str:
                 return ''
             try:
-                # Remove hora se existir (ex: "2025-11-06 00:00:00" → "2025-11-06")
-                date_only = date_str.split(' ')[0] if ' ' in date_str else date_str
-                # Converte de yyyy-mm-dd para dd-mm-yyyy
                 from datetime import datetime
+                # Se já é objeto datetime
+                if isinstance(date_str, datetime):
+                    return date_str.strftime('%d-%m-%Y')
+                # Se é string
+                date_str = str(date_str)
+                # Remove hora se existir (ex: "2025-11-06 00:00:00" → "2025-11-06")
+                # Ou "2025-11-06T00:00:00" → "2025-11-06"
+                date_only = date_str.split(' ')[0].split('T')[0]
+                # Converte de yyyy-mm-dd para dd-mm-yyyy
                 dt = datetime.strptime(date_only, '%Y-%m-%d')
                 return dt.strftime('%d-%m-%Y')
             except:
-                return date_str  # Retorna original se falhar
+                return str(date_str)  # Retorna original se falhar
         
         # 2. Mapear dados para geração
         report_data = {
