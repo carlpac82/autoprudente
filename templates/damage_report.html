@@ -2731,7 +2731,10 @@
                         document.getElementById('returnTime').value = report.return_time || '';
                         document.getElementById('returnLocation').value = report.return_location || '';
                         
-                        console.log('[EDIT-DR] Basic fields filled successfully');
+                        // Campos adicionais que faltavam
+                        document.getElementById('issuedBy').value = report.issued_by || '';
+                        
+                        console.log('[EDIT-DR] All form fields filled successfully');
                     } catch (e) {
                         console.error('[EDIT-DR] Error filling basic fields:', e);
                         throw new Error('Erro ao preencher campos básicos: ' + e.message);
@@ -2802,6 +2805,25 @@
                         } catch (e) {
                             console.error('[EDIT-DR] Error loading repair items:', e);
                             // Não bloquear edição se houver erro nos reparos
+                        }
+                    }
+                    
+                    // Carregar fotos de danos
+                    if (report.damage_images) {
+                        try {
+                            console.log('[EDIT-DR] Loading damage images...');
+                            const imagesData = typeof report.damage_images === 'string' 
+                                ? JSON.parse(report.damage_images) 
+                                : report.damage_images;
+                            
+                            if (Array.isArray(imagesData)) {
+                                damageImages = imagesData;
+                                console.log(`[EDIT-DR] Loaded ${damageImages.length} damage images`);
+                                updateImageList();
+                            }
+                        } catch (e) {
+                            console.error('[EDIT-DR] Error loading damage images:', e);
+                            // Não bloquear edição se houver erro nas imagens
                         }
                     }
                     
