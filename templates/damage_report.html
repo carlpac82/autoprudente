@@ -2536,7 +2536,6 @@
                     if (r.pickup_location) document.getElementById('pickupLocation').value = r.pickup_location;
                     if (r.return_location) document.getElementById('returnLocation').value = r.return_location;
                     if (r.damage_description) document.getElementById('damageDescription').value = r.damage_description;
-                    if (r.observations) document.getElementById('observations').value = r.observations;
                     
                     // Mostrar botões
                     const downloadBtn = document.getElementById('downloadBtn');
@@ -2646,7 +2645,6 @@
                     document.getElementById('returnDate').value = report.return_date || '';
                     document.getElementById('returnTime').value = report.return_time || '';
                     document.getElementById('returnLocation').value = report.return_location || '';
-                    document.getElementById('observations').value = report.observations || '';
                     
                     // Carregar danos se existirem
                     if (report.damage_diagram_data) {
