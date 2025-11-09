@@ -16634,6 +16634,9 @@ async def send_damage_report_email(request: Request):
         date = data.get('date', '')
         country = data.get('country', 'PT')  # ISO 3166-1 code
         
+        # 🔍 DEBUG: Verificar dados recebidos
+        logging.info(f"📧 Email data received: DR={dr_number}, RA={ra_number}, Contract={contract_number}")
+        
         # Anexos
         pdf_data_base64 = data.get('pdfData', '')  # Base64 do PDF
         attachments = data.get('attachments', [])  # Array de {name, data_base64, type}

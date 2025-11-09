@@ -3649,6 +3649,13 @@
                     vehiclePlate = drData.report.vehicle_plate || '';
                     date = drData.report.date || '';
                     clientCountry = drData.report.country || drData.report.client_country || country || '';
+                    
+                    // 🔍 DEBUG: Verificar RA Number da BD
+                    console.log('🔍 DR DATA FROM DB:', {
+                        dr_number: drData.report.dr_number,
+                        ra_number: drData.report.ra_number,
+                        contract_number: drData.report.contract_number
+                    });
                 }
                 
                 // Detectar idioma automaticamente do país (usar dados do DR, não parâmetro)
@@ -3660,7 +3667,7 @@
                 const detectedLang = langMap[clientCountry?.toUpperCase()] || 'en';
                 
                 console.log(`Loading email template for ${drNumber}, language: ${detectedLang}, country: ${clientCountry}`);
-                console.log(`DR data: RA=${contractNumber}, Plate=${vehiclePlate}, Date=${date}, Country=${clientCountry}`);
+                console.log(`DR data: RA=${raNumber}, Contract=${contractNumber}, Plate=${vehiclePlate}, Date=${date}, Country=${clientCountry}`);
                 
                 // Carregar template do backend
                 const response = await fetch(`/api/damage-reports/email-template/${detectedLang}`);
@@ -3815,6 +3822,13 @@
                     pdfData: pdfBase64,
                     attachments: attachmentsData
                 };
+                
+                // 🔍 DEBUG: Verificar payload do email
+                console.log('📧 EMAIL PAYLOAD:', {
+                    drNumber: emailPayload.drNumber,
+                    raNumber: emailPayload.raNumber,
+                    contractNumber: emailPayload.contractNumber
+                });
                 
                 const response = await fetch('/api/damage-reports/send-email', {
                     method: 'POST',
