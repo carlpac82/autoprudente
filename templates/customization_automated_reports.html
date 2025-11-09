@@ -392,43 +392,32 @@
         }
 
         async function testDailyReport() {
-            showNotification('A gerar relatório diário de teste...', 'info');
+            showNotification('⏳ Enviando 2 emails de teste (Albufeira + Aeroporto)...', 'info');
 
             try {
-                // Get OAuth token from localStorage
-                const oauthToken = localStorage.getItem('emailOAuthToken');
-                if (!oauthToken) {
-                    showNotification('Por favor, conecte sua conta Gmail primeiro em Email Notifications', 'warning');
-                    return;
-                }
-
-                const tokenData = JSON.parse(oauthToken);
-
                 const response = await fetch('/api/reports/test-daily', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        accessToken: tokenData.token
-                    })
+                    }
                 });
 
                 const result = await response.json();
 
                 if (result.ok) {
-                    showNotification('Relatório diário enviado com sucesso!', 'success');
+                    showNotification(`✅ ${result.message || 'Relatórios enviados com sucesso!'} (${result.sent} emails)`, 'success');
+                    console.log('Details:', result.details);
                 } else {
-                    showNotification(`Erro: ${result.error}`, 'error');
+                    showNotification(`❌ Erro: ${result.error}`, 'error');
                 }
             } catch (error) {
-                showNotification('Erro ao gerar relatório de teste', 'error');
+                showNotification('❌ Erro ao gerar relatório de teste', 'error');
                 console.error('Test report error:', error);
             }
         }
 
         async function testWeeklyReport() {
-            showNotification('A gerar relatório semanal de teste...', 'info');
+            showNotification('⏳ Enviando 2 emails semanais (Albufeira + Aeroporto)...', 'info');
 
             try {
                 const response = await fetch('/api/reports/test-weekly', {
@@ -441,9 +430,10 @@
                 const result = await response.json();
 
                 if (result.ok) {
-                    showNotification('Relatório semanal enviado com sucesso!', 'success');
+                    showNotification(`✅ ${result.message || 'Relatórios semanais enviados!'} (${result.sent} emails)`, 'success');
+                    console.log('Details:', result.details);
                 } else {
-                    showNotification(`Erro: ${result.error}`, 'error');
+                    showNotification(`❌ Erro: ${result.error}`, 'error');
                 }
             } catch (error) {
                 showNotification('Erro ao gerar relatório semanal', 'error');
