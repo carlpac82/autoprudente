@@ -44,12 +44,15 @@ def _get_db_connection():
 
 def load_advanced_settings():
     """Load advanced automated reports settings from database"""
+    print("🔌 Connecting to database...", flush=True)
     conn = _get_db_connection()
     if not conn:
+        print("❌ Database connection failed", flush=True)
         return None
     
     try:
         cursor = conn.cursor()
+        print("🔍 Querying automatedReportsAdvanced...", flush=True)
         cursor.execute(
             "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsAdvanced'"
         )
@@ -57,12 +60,16 @@ def load_advanced_settings():
         
         if row and row[0]:
             settings = json.loads(row[0])
+            print(f"✅ Loaded advanced settings from database", flush=True)
+            print(f"   Settings: {json.dumps(settings, indent=2)}", flush=True)
             logging.info(f"✅ Loaded advanced settings from database")
             return settings
         else:
+            print(f"📭 No advanced settings found in database", flush=True)
             logging.info(f"📭 No advanced settings found")
             return None
     except Exception as e:
+        print(f"❌ Error loading settings: {str(e)}", flush=True)
         logging.error(f"❌ Error loading settings: {str(e)}")
         return None
     finally:
@@ -317,25 +324,36 @@ def setup_scheduled_tasks():
     """
     global scheduler
     
+    print("\n" + "="*80, flush=True)
+    print("🤖 SETTING UP AUTOMATED SCHEDULER", flush=True)
+    print("="*80, flush=True)
     logging.info("\n" + "="*80)
     logging.info("🤖 SETTING UP AUTOMATED SCHEDULER")
     logging.info("="*80)
     
     # Load settings
+    print("📥 Loading settings from database...", flush=True)
     settings = load_advanced_settings()
     
     if not settings:
+        print("⚠️ No advanced settings found, scheduler not configured", flush=True)
         logging.warning("⚠️ No advanced settings found, scheduler not configured")
         return
     
+    print(f"✅ Settings loaded successfully", flush=True)
+    
     # Initialize scheduler
     if scheduler is None:
+        print("🆕 Creating new BackgroundScheduler...", flush=True)
         scheduler = BackgroundScheduler(timezone='UTC')
         scheduler.start()
+        print("✅ Scheduler started", flush=True)
         logging.info("✅ Scheduler started")
     else:
         # Clear existing jobs
+        print("🔄 Clearing existing jobs...", flush=True)
         scheduler.remove_all_jobs()
+        print("✅ Jobs cleared", flush=True)
         logging.info("🔄 Cleared existing jobs")
     
     job_count = 0
@@ -405,16 +423,24 @@ def setup_scheduled_tasks():
         job_count += 1
         logging.info(f"\n📊 MONTHLY REPORT: Day {day} at {send_time}")
     
+    print(f"\n{'='*80}", flush=True)
+    print(f"✅ SCHEDULER CONFIGURED: {job_count} jobs scheduled", flush=True)
+    print(f"{'='*80}\n", flush=True)
+    
     logging.info(f"\n{'='*80}")
     logging.info(f"✅ SCHEDULER CONFIGURED: {job_count} jobs scheduled")
     logging.info(f"{'='*80}\n")
     
     # Print next run times
     if job_count > 0:
+        print("📋 NEXT SCHEDULED RUNS:", flush=True)
         logging.info("📋 NEXT SCHEDULED RUNS:")
         for job in scheduler.get_jobs():
             next_run = job.next_run_time
+            print(f"   • {job.name}: {next_run}", flush=True)
             logging.info(f"   • {job.name}: {next_run}")
+    else:
+        print("⚠️ No jobs scheduled - check your configuration", flush=True)
 
 def shutdown_scheduler():
     """Shutdown the scheduler gracefully"""

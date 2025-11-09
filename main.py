@@ -12386,15 +12386,25 @@ async def startup_migrate_automated_reports():
 @app.on_event("startup")
 async def startup_automated_scheduler():
     """🤖 Iniciar sistema de agendamento automático de relatórios"""
+    print("="*80, flush=True)
+    print("🤖 INITIALIZING AUTOMATED SCHEDULER", flush=True)
+    print("="*80, flush=True)
     try:
         logging.info("🤖 Starting automated reports scheduler...")
+        print("📦 Importing automated_scheduler module...", flush=True)
         from automated_scheduler import setup_scheduled_tasks
+        print("✅ Module imported successfully", flush=True)
+        print("🔧 Calling setup_scheduled_tasks()...", flush=True)
         setup_scheduled_tasks()
+        print("✅ SCHEDULER INITIALIZED SUCCESSFULLY!", flush=True)
         logging.info("✅ Automated scheduler initialized successfully")
     except Exception as e:
+        print(f"❌ SCHEDULER INITIALIZATION FAILED: {str(e)}", flush=True)
         logging.error(f"❌ Failed to initialize automated scheduler: {str(e)}")
         import traceback
-        logging.error(traceback.format_exc())
+        traceback_str = traceback.format_exc()
+        print(traceback_str, flush=True)
+        logging.error(traceback_str)
 
 @app.on_event("shutdown")
 async def shutdown_automated_scheduler():
