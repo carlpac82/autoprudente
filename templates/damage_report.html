@@ -343,12 +343,14 @@
             background-repeat: no-repeat;
             background-position: center bottom;  /* ✅ Pin alinhado ao fundo */
             display: flex;
-            align-items: flex-start;  /* ✅ Número no topo (bola do pin) */
-            justify-content: center;
-            padding-top: 16px;  /* ✅ Ajustado para 16px (número mais BAIXO, correspondendo a 35% = ~20px do fundo) */
+            align-items: center;  /* ✅ CENTRAR verticalmente */
+            justify-content: center;  /* ✅ CENTRAR horizontalmente */
+            padding-top: 0;  /* ✅ SEM padding - flex centrado */
+            padding-bottom: 20px;  /* ✅ Compensar ponta do pin (parte inferior) */
             color: #000000;  /* ✅ PRETO PURO (não cinza) */
             font-weight: 900;
-            font-size: 24px;  /* ✅ MAIOR: 24px (era 20px) */
+            font-size: 24px;  /* ✅ MAIOR: 24px */
+            line-height: 1;  /* ✅ SEM espaço extra vertical */
             cursor: pointer;
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
             transform: translate(-50%, -100%);  /* ✅ Ponta do pin na posição clicada */
