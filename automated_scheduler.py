@@ -263,7 +263,7 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         
         cursor.execute(
             """
-            SELECT location, search_date, dias, prices_data
+            SELECT location, search_date, dias, prices_data, supplier_data
             FROM automated_search_history
             WHERE search_date >= %s
               AND search_type = 'automated'
@@ -279,28 +279,47 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         
         all_results = []
         for row in rows:
-            location, search_date, dias_json, prices_data = row
-            print(f"   [DEBUG] Processing row: location={location}, has_prices_data={bool(prices_data)}", flush=True)
+            location, search_date, dias_json, prices_data, supplier_data_json = row
+            print(f"   [DEBUG] Processing row: location={location}, has_prices_data={bool(prices_data)}, has_supplier_data={bool(supplier_data_json)}", flush=True)
             
             if prices_data:
                 # Parse dias JSON
                 dias_list = json.loads(dias_json) if isinstance(dias_json, str) else dias_json
                 # Parse prices - structure is: {"B1": {3: 25.50, 7: 30.00}, "D": {3: 22.00}}
                 prices_by_group = json.loads(prices_data) if isinstance(prices_data, str) else prices_data
+                # Parse supplier data - structure is: {"3": [car1, car2, ...], "7": [car1, car2, ...]}
+                supplier_data = json.loads(supplier_data_json) if supplier_data_json and isinstance(supplier_data_json, str) else (supplier_data_json or {})
                 
                 print(f"   [DEBUG] prices_by_group keys: {list(prices_by_group.keys())}", flush=True)
+                print(f"   [DEBUG] supplier_data days: {list(supplier_data.keys())}", flush=True)
                 
-                # Convert to flat list of results
+                # Convert to flat list of results with full car details
                 for group, day_prices in prices_by_group.items():
                     for day, price in day_prices.items():
+                        # Find the car in supplier_data that matches this group and price
+                        car_details = None
+                        day_items = supplier_data.get(str(day), [])
+                        for item in day_items:
+                            if item.get('group') == group and abs(item.get('price_num', 0) - price) < 0.01:
+                                car_details = item
+                                break
+                        
                         result_item = {
                             'group': group,
                             'days': int(day),
                             'price': price,
                             'price_num': price,
                             'location': location,
-                            'search_date': search_date
+                            'search_date': search_date,
+                            'car_name': car_details.get('car_clean', 'Unknown') if car_details else 'Unknown',
+                            'supplier': car_details.get('supplier', 'Unknown') if car_details else 'Unknown',
+                            'image_url': car_details.get('image_url', '') if car_details else '',
                         }
+                        
+                        # Debug first item
+                        if len(all_results) == 0:
+                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={group}, price={price}", flush=True)
+                        
                         all_results.append(result_item)
         
         cursor.close()
