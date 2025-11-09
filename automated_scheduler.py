@@ -69,37 +69,57 @@ def load_advanced_settings():
         cursor.close()
         conn.close()
 
-def execute_search(location, days):
+def save_automated_search_placeholder(location, days_list):
     """
-    Execute automated search for given location and days
-    Returns results data
+    Save automated search placeholder in recent_searches
+    This marks that an automated search should have occurred
     """
-    logging.info(f"🔍 EXECUTING SEARCH: {location}, days: {days}")
+    logging.info(f"💾 SAVING AUTOMATED SEARCH PLACEHOLDER: {location}, days: {days_list}")
     
     try:
-        import requests
         from datetime import datetime, timedelta
+        import json
         
-        # Use main app search endpoint
-        base_url = os.environ.get('BASE_URL', 'http://localhost:8000')
+        conn = _get_db_connection()
+        if not conn:
+            logging.error("❌ Cannot connect to database")
+            return False
         
-        results = []
-        for day in days:
+        cursor = conn.cursor()
+        
+        # For each day, create a placeholder search entry
+        for day in days_list:
             pickup_date = (datetime.now() + timedelta(days=day)).strftime('%Y-%m-%d')
+            timestamp = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             
-            # Call internal search function
-            # TODO: Import from main.py or make API call
-            logging.info(f"   Searching {location} for {day} days ahead ({pickup_date})")
+            # Create placeholder results
+            placeholder_results = json.dumps([{
+                "info": f"Automated search placeholder for {location}, {day} days",
+                "pickup_date": pickup_date,
+                "location": location,
+                "days": day
+            }])
             
-            # For now, we'll save a placeholder
-            # In production, this should trigger actual CarJet search
+            cursor.execute("""
+                INSERT INTO recent_searches 
+                (location, start_date, days, results_data, timestamp, source)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (location, pickup_date, day, placeholder_results, timestamp, 'automated'))
             
-        logging.info(f"✅ Search completed for {location}")
-        return results
+            logging.info(f"   ✅ Saved placeholder: {location}, {day}d, {pickup_date}")
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logging.info(f"✅ Search placeholders saved for {location}")
+        return True
         
     except Exception as e:
-        logging.error(f"❌ Search failed for {location}: {str(e)}")
-        return []
+        logging.error(f"❌ Failed to save search placeholders: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return False
 
 def send_daily_report_for_schedule(schedule, schedule_index):
     """
@@ -116,6 +136,21 @@ def send_daily_report_for_schedule(schedule, schedule_index):
     logging.info(f"   Send Time: {schedule.get('sendTime')}")
     logging.info(f"   Days: {schedule.get('days')}")
     logging.info(f"   Locations: {schedule.get('locations')}")
+    
+    # EXECUTAR PESQUISAS AUTOMÁTICAS
+    days = schedule.get('days', [])
+    locations_config = schedule.get('locations', {})
+    
+    if days and (locations_config.get('albufeira') or locations_config.get('faro')):
+        logging.info(f"\n🔍 EXECUTING AUTOMATED SEARCHES...")
+        
+        if locations_config.get('albufeira'):
+            save_automated_search_placeholder('Albufeira', days)
+        
+        if locations_config.get('faro'):
+            save_automated_search_placeholder('Aeroporto de Faro', days)
+    else:
+        logging.warning(f"   ⚠️ No days or locations configured for this schedule!")
     
     try:
         from googleapiclient.discovery import build

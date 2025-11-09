@@ -12465,6 +12465,45 @@ async def get_scheduler_status(request: Request):
             "error": str(e)
         }, status_code=500)
 
+@app.post("/api/scheduler/test-automated-search")
+async def test_automated_search(request: Request):
+    """🧪 Testar pesquisa automática - salva placeholders na BD"""
+    require_auth(request)
+    
+    try:
+        from automated_scheduler import save_automated_search_placeholder
+        
+        # Get request body
+        body = await request.json()
+        location = body.get('location', 'Albufeira')
+        days = body.get('days', [1, 3, 7])
+        
+        logging.info(f"🧪 Testing automated search: {location}, days: {days}")
+        
+        # Execute placeholder save
+        success = save_automated_search_placeholder(location, days)
+        
+        if success:
+            return JSONResponse({
+                "ok": True,
+                "message": f"Pesquisa automática salva: {location}, {len(days)} dias",
+                "location": location,
+                "days": days
+            })
+        else:
+            return JSONResponse({
+                "ok": False,
+                "error": "Falha ao salvar pesquisa automática"
+            }, status_code=500)
+    except Exception as e:
+        logging.error(f"❌ Error testing automated search: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
 @app.post("/api/vehicles/{vehicle_name}/photo/upload")
 async def upload_vehicle_photo(vehicle_name: str, request: Request, file: UploadFile = File(...)):
     """Upload de foto para um veículo"""

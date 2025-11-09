@@ -540,7 +540,11 @@
                         
                         // Load schedules (each schedule has its own days and locations)
                         if (settings.daily.schedules && settings.daily.schedules.length > 0) {
-                            dailySchedules = settings.daily.schedules;
+                            dailySchedules = settings.daily.schedules.map(s => ({
+                                ...s,
+                                days: s.days || [1, 3, 7], // Default if missing
+                                locations: s.locations || { albufeira: true, faro: true } // Default if missing
+                            }));
                             renderDailySchedules();
                         }
                     }
