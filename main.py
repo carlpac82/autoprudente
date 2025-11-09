@@ -15505,7 +15505,7 @@ async def create_damage_report(request: Request):
                         data.get('repairItems'),
                         data.get('damageImages'),
                         vehicle_damage_image_blob,
-                        datetime.datetime.now().isoformat(),
+                        datetime.now().isoformat(),
                         existing_dr_number
                     )
                     
@@ -15620,7 +15620,7 @@ async def create_damage_report(request: Request):
                             data.get('damageImages'),
                             vehicle_damage_image_blob,
                             request.session.get('username', 'unknown'),
-                            datetime.datetime.now().isoformat(),
+                            datetime.now().isoformat(),
                             dr_number
                         )
                         
