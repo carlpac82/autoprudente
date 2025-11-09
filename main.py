@@ -16150,7 +16150,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             'city': report.get('client_city', ''),
             'postalCode': report.get('client_postal_code', ''),
             'country': report.get('client_country', ''),
-            'customer_postal': ' '.join(filter(None, [report.get('client_postal_code', ''), report.get('client_city', '')])),
+            'customer_postal': ' / '.join(filter(None, [report.get('client_postal_code', ''), report.get('client_city', '')])),
             'customer_city': report.get('client_city', ''),
             'vehiclePlate': report.get('vehicle_plate', ''),
             'vehicleBrand': report.get('vehicle_brand', ''),
@@ -18289,7 +18289,8 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'customer_email': 'clientEmail',
                     'customer_phone': 'clientPhone',
                     'customer_address': 'address',
-                    'customer_postal': 'postalCode',
+                    'customer_postal': 'customer_postal',  # ✅ Código Postal + Cidade (campo combinado)
+                    'postalCodeCity': 'customer_postal',  # ✅ Alias do form
                     'customer_city': 'city',
                     'customer_country': 'country',
                     'vehicle_plate': 'vehiclePlate',
@@ -19406,7 +19407,7 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
             'city': report.get('client_city', ''),
             'postalCode': report.get('client_postal_code', ''),
             'country': report.get('client_country', ''),
-            'customer_postal': ' '.join(filter(None, [report.get('client_postal_code', ''), report.get('client_city', '')])),
+            'customer_postal': ' / '.join(filter(None, [report.get('client_postal_code', ''), report.get('client_city', '')])),
             'customer_city': report.get('client_city', ''),
             'vehiclePlate': report.get('vehicle_plate', ''),
             'vehicleBrand': report.get('vehicle_brand', ''),
