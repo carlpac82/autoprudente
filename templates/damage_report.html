@@ -2098,14 +2098,12 @@
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             
-                            // ✅ REPLICAR CSS EXATAMENTE: padding-top: 12px, height: 56px
-                            // Centro do texto no CSS: 12px (padding) + 12px (metade line-height) = 24px do topo
-                            // 24px / 56px = 0.4286 (42.86% do topo)
-                            // No canvas Y cresce para baixo, então: canvasY - pinHeight + (24px em escala)
-                            const paddingTopScaled = (12 / 56) * pinHeight;  // 12px escalado
-                            const lineHeightScaled = (24 / 56) * pinHeight;  // 24px escalado
-                            const textCenterFromTop = paddingTopScaled + (lineHeightScaled / 2);
-                            ctx.fillText(number, canvasX, canvasY - pinHeight + textCenterFromTop);
+                            // ✅ CENTRO DA BOLA DO PIN
+                            // Pin: 56px altura total, mas a BOLA fica só no topo (~40% superior)
+                            // Centro da bola: aproximadamente 18px do topo = 32% da altura
+                            // (testado visualmente para match com o interativo)
+                            const textYFromTop = pinHeight * 0.32;  // 32% do topo = centro da bola
+                            ctx.fillText(number, canvasX, canvasY - pinHeight + textYFromTop);
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
