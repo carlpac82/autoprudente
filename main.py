@@ -15993,6 +15993,130 @@ async def get_dr_numbering(request: Request):
         logging.error(f"❌ [DR-NUMBERING] GET Error: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
+# ⚠️ IMPORTANTE: Este endpoint DEVE vir ANTES do endpoint genérico /{dr_number:path}
+# para que FastAPI faça match correto de /DR42/2025/pdf
+@app.get("/api/damage-reports/{dr_number:path}/pdf")
+async def download_damage_report_pdf(request: Request, dr_number: str):
+    """Download do Damage Report em PDF - Usa template mapeado com coordenadas"""
+    logging.error(f"🔥🔥🔥 ENDPOINT HIT! DR='{dr_number}' - ANTES REQUIRE_AUTH")
+    require_auth(request)
+    logging.error(f"🔥🔥🔥 DEPOIS REQUIRE_AUTH - Executando código...")
+    
+    try:
+        from starlette.responses import Response
+        import json
+        
+        logging.error(f"📄 ==================== PDF GENERATION START ====================")
+        logging.error(f"📄 Generating PDF for DR: '{dr_number}'")
+        logging.error(f"📄 DR number length: {len(dr_number)}")
+        logging.error(f"📄 DR number bytes: {dr_number.encode('utf-8')}")
+        
+        # Buscar dados da base de dados
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Detectar PostgreSQL vs SQLite
+                is_postgres = False
+                if conn.__class__.__module__ == 'psycopg2.extensions':
+                    is_postgres = True
+                
+                logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                logging.info(f"Searching for DR: '{dr_number}' (length: {len(dr_number)})")
+                
+                if is_postgres:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM damage_reports WHERE dr_number = %s AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
+                    cursor.close()
+                else:
+                    cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ? AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
+                
+                if not row:
+                    # Debug: Listar DRs disponíveis
+                    if is_postgres:
+                        cur_debug = conn.cursor()
+                        cur_debug.execute("SELECT dr_number FROM damage_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 5")
+                        available = cur_debug.fetchall()
+                        cur_debug.close()
+                    else:
+                        cur_debug = conn.execute("SELECT dr_number FROM damage_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 5")
+                        available = cur_debug.fetchall()
+                    
+                    logging.error(f"❌ DR '{dr_number}' not found in database")
+                    logging.error(f"Available DRs: {[r[0] for r in available]}")
+                    raise HTTPException(status_code=404, detail="Damage Report not found")
+                
+                logging.error(f"✅ DR found in database!")
+                logging.error(f"✅ Row columns: {columns[:10]}...")  # Primeiras 10 colunas
+                report = dict(zip(columns, row))
+                logging.error(f"✅ Report dict created with {len(report)} fields")
+            finally:
+                conn.close()
+        
+        # Mapear campos da BD para IDs do mapeador (camelCase)
+        report_data = {
+            'dr_number': report.get('dr_number', ''),
+            'contractNumber': report.get('contract_number', ''),
+            'date': report.get('date', ''),
+            'inspection_date': report.get('date', ''),  # ✅ Alias para compatibilidade de mapeamento
+            'clientName': report.get('client_name', ''),
+            'clientEmail': report.get('client_email', ''),
+            'clientPhone': report.get('client_phone', ''),
+            'address': report.get('client_address', ''),
+            'city': report.get('client_city', ''),
+            'postalCode': report.get('client_postal_code', ''),
+            'country': report.get('client_country', ''),
+            'vehiclePlate': report.get('vehicle_plate', ''),
+            'vehicleBrand': report.get('vehicle_brand', ''),
+            'vehicleModel': report.get('vehicle_model', ''),
+            'vehicleColor': report.get('vehicle_color', ''),
+            'vehicleKm': report.get('vehicle_km', ''),
+            'pickupDate': report.get('pickup_date', ''),
+            'pickupTime': report.get('pickup_time', ''),
+            'pickupLocation': report.get('pickup_location', ''),
+            'returnDate': report.get('return_date', ''),
+            'returnTime': report.get('return_time', ''),
+            'returnLocation': report.get('return_location', ''),
+            'fuel_level_pickup': report.get('fuel_pickup', ''),
+            'fuel_level_return': report.get('fuel_return', ''),
+            'total_repair_cost': report.get('total_cost', ''),
+            'inspector_name': report.get('inspector_name', ''),
+            'inspection_date': report.get('inspection_date', ''),
+            # Adicionar pins do diagrama (JSON array de danos)
+            'damage_diagram_data': report.get('damage_diagram_data', ''),
+            'damageDiagramData': report.get('damage_diagram_data', '')  # Alias para compatibilidade
+        }
+        
+        # Usar função de overlay para preencher template
+        logging.error(f"🔧 Calling _fill_template_pdf_with_data...")
+        logging.error(f"🔧 Report data keys: {list(report_data.keys())[:15]}...")
+        
+        pdf_data = _fill_template_pdf_with_data(report_data)
+        
+        logging.error(f"✅ PDF generated! Size: {len(pdf_data)} bytes")
+        filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+        logging.error(f"📄 ==================== PDF GENERATION END ====================")
+        logging.error(f"📄 Filename: {filename}")
+        
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"❌❌❌ CRITICAL ERROR in PDF generation: {e}")
+        import traceback
+        logging.error(f"❌❌❌ Full traceback:")
+        logging.error(traceback.format_exc())
+        logging.error(f"❌❌❌ Exception type: {type(e).__name__}")
+        # Retornar erro em JSON com detalhe
+        return JSONResponse({"ok": False, "error": f"Error generating PDF: {str(e)}"}, status_code=500)
+
 @app.get("/api/damage-reports/{dr_number:path}")
 async def get_damage_report(request: Request, dr_number: str):
     """Obtém um Damage Report específico"""
@@ -19079,127 +19203,7 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/damage-reports/{dr_number:path}/pdf")
-async def download_damage_report_pdf(request: Request, dr_number: str):
-    """Download do Damage Report em PDF - Usa template mapeado com coordenadas"""
-    logging.error(f"🔥🔥🔥 ENDPOINT HIT! DR='{dr_number}' - ANTES REQUIRE_AUTH")
-    require_auth(request)
-    logging.error(f"🔥🔥🔥 DEPOIS REQUIRE_AUTH - Executando código...")
-    
-    try:
-        from starlette.responses import Response
-        import json
-        
-        logging.error(f"📄 ==================== PDF GENERATION START ====================")
-        logging.error(f"📄 Generating PDF for DR: '{dr_number}'")
-        logging.error(f"📄 DR number length: {len(dr_number)}")
-        logging.error(f"📄 DR number bytes: {dr_number.encode('utf-8')}")
-        
-        # Buscar dados da base de dados
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                # Detectar PostgreSQL vs SQLite
-                is_postgres = False
-                if conn.__class__.__module__ == 'psycopg2.extensions':
-                    is_postgres = True
-                
-                logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
-                logging.info(f"Searching for DR: '{dr_number}' (length: {len(dr_number)})")
-                
-                if is_postgres:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM damage_reports WHERE dr_number = %s AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
-                    row = cursor.fetchone()
-                    columns = [desc[0] for desc in cursor.description]
-                    cursor.close()
-                else:
-                    cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ? AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
-                    row = cursor.fetchone()
-                    columns = [desc[0] for desc in cursor.description]
-                
-                if not row:
-                    # Debug: Listar DRs disponíveis
-                    if is_postgres:
-                        cur_debug = conn.cursor()
-                        cur_debug.execute("SELECT dr_number FROM damage_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 5")
-                        available = cur_debug.fetchall()
-                        cur_debug.close()
-                    else:
-                        cur_debug = conn.execute("SELECT dr_number FROM damage_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 5")
-                        available = cur_debug.fetchall()
-                    
-                    logging.error(f"❌ DR '{dr_number}' not found in database")
-                    logging.error(f"Available DRs: {[r[0] for r in available]}")
-                    raise HTTPException(status_code=404, detail="Damage Report not found")
-                
-                logging.error(f"✅ DR found in database!")
-                logging.error(f"✅ Row columns: {columns[:10]}...")  # Primeiras 10 colunas
-                report = dict(zip(columns, row))
-                logging.error(f"✅ Report dict created with {len(report)} fields")
-            finally:
-                conn.close()
-        
-        # Mapear campos da BD para IDs do mapeador (camelCase)
-        report_data = {
-            'dr_number': report.get('dr_number', ''),
-            'contractNumber': report.get('contract_number', ''),
-            'date': report.get('date', ''),
-            'inspection_date': report.get('date', ''),  # ✅ Alias para compatibilidade de mapeamento
-            'clientName': report.get('client_name', ''),
-            'clientEmail': report.get('client_email', ''),
-            'clientPhone': report.get('client_phone', ''),
-            'address': report.get('client_address', ''),
-            'city': report.get('client_city', ''),
-            'postalCode': report.get('client_postal_code', ''),
-            'country': report.get('client_country', ''),
-            'vehiclePlate': report.get('vehicle_plate', ''),
-            'vehicleBrand': report.get('vehicle_brand', ''),
-            'vehicleModel': report.get('vehicle_model', ''),
-            'vehicleColor': report.get('vehicle_color', ''),
-            'vehicleKm': report.get('vehicle_km', ''),
-            'pickupDate': report.get('pickup_date', ''),
-            'pickupTime': report.get('pickup_time', ''),
-            'pickupLocation': report.get('pickup_location', ''),
-            'returnDate': report.get('return_date', ''),
-            'returnTime': report.get('return_time', ''),
-            'returnLocation': report.get('return_location', ''),
-            'fuel_level_pickup': report.get('fuel_pickup', ''),
-            'fuel_level_return': report.get('fuel_return', ''),
-            'total_repair_cost': report.get('total_cost', ''),
-            'inspector_name': report.get('inspector_name', ''),
-            'inspection_date': report.get('inspection_date', ''),
-            # Adicionar pins do diagrama (JSON array de danos)
-            'damage_diagram_data': report.get('damage_diagram_data', ''),
-            'damageDiagramData': report.get('damage_diagram_data', '')  # Alias para compatibilidade
-        }
-        
-        # Usar função de overlay para preencher template
-        logging.error(f"🔧 Calling _fill_template_pdf_with_data...")
-        logging.error(f"🔧 Report data keys: {list(report_data.keys())[:15]}...")
-        
-        pdf_data = _fill_template_pdf_with_data(report_data)
-        
-        logging.error(f"✅ PDF generated! Size: {len(pdf_data)} bytes")
-        filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
-        logging.error(f"📄 ==================== PDF GENERATION END ====================")
-        logging.error(f"📄 Filename: {filename}")
-        
-        return Response(
-            content=pdf_data,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"❌❌❌ CRITICAL ERROR in PDF generation: {e}")
-        import traceback
-        logging.error(f"❌❌❌ Full traceback:")
-        logging.error(traceback.format_exc())
-        logging.error(f"❌❌❌ Exception type: {type(e).__name__}")
-        # Retornar erro em JSON com detalhe
-        return JSONResponse({"ok": False, "error": f"Error generating PDF: {str(e)}"}, status_code=500)
+# Endpoint duplicado REMOVIDO - agora está na linha 15998 (ANTES do endpoint genérico)
 
 @app.post("/api/damage-reports/{dr_number:path}/generate-and-save-pdf")
 async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
