@@ -18522,32 +18522,52 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     logging.error(f"🖼️ Box mapeada: x={x}, y={y}, w={width}, h={height}")
                                     logging.error(f"🖼️ Imagem capturada: {img_width}x{img_height}")
                                 
-                                # ✅ USAR TAMANHO EXATO - SEM ESCALA
-                                # Respeitar os limites do template PDF
-                                draw_width = width
-                                draw_height = height
-                                draw_x = x
-                                draw_y = y
+                                # ✅ ESCALAR IMAGEM CAPTURADA PARA CABER NA BOX
+                                # Frontend captura em ~500px (boa qualidade)
+                                # Backend escala para 256×201px mantendo aspect ratio
+                                
+                                # Calcular escala para caber na box mantendo proporção
+                                img_ratio = img_width / img_height
+                                box_ratio = width / height
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ Desenhar EXATO: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)}")
+                                    logging.error(f"🖼️ Imagem capturada: {img_width}×{img_height} (ratio {img_ratio:.3f})")
+                                    logging.error(f"🖼️ Box PDF: {int(width)}×{int(height)} (ratio {box_ratio:.3f})")
                                 
-                                # Desenhar diagrama EXATAMENTE no tamanho mapeado
+                                # Escalar mantendo aspect ratio (fit dentro da box)
+                                if img_ratio > box_ratio:
+                                    # Imagem mais larga - limitar por largura
+                                    draw_width = width
+                                    draw_height = width / img_ratio
+                                    draw_x = x
+                                    draw_y = y + (height - draw_height) / 2  # Centralizar verticalmente
+                                else:
+                                    # Imagem mais alta - limitar por altura
+                                    draw_height = height
+                                    draw_width = height * img_ratio
+                                    draw_x = x + (width - draw_width) / 2  # Centralizar horizontalmente
+                                    draw_y = y
+                                
+                                if is_diagram_check:
+                                    logging.error(f"🖼️ Desenhar escalado: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}×{int(draw_height)}")
+                                
+                                # Desenhar diagrama escalado mantendo proporção
                                 logging.error(f"🖼️ Preparando buffer PNG para {field_id}...")
                                 img_buffer = BytesIO()
                                 img.save(img_buffer, format='PNG')
                                 img_buffer.seek(0)
                                 
-                                logging.error(f"🖼️ Chamando can.drawImage em ({int(draw_x)}, {int(draw_y)}, {int(draw_width)}x{int(draw_height)})...")
+                                logging.error(f"🖼️ Chamando can.drawImage em ({int(draw_x)}, {int(draw_y)}, {int(draw_width)}×{int(draw_height)})...")
                                 can.drawImage(
                                     ImageReader(img_buffer),
                                     draw_x, draw_y,
                                     width=draw_width,
                                     height=draw_height,
+                                    preserveAspectRatio=True,
                                     mask='auto'
                                 )
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
-                                logging.info(f"✅ Drew diagram {field_id} (EXACT SIZE: {int(draw_width)}x{int(draw_height)} - NO OVERLAP)")
+                                logging.info(f"✅ Drew diagram {field_id} ({int(img_width)}×{int(img_height)} → {int(draw_width)}×{int(draw_height)})")
                                 
                                 # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
                                 # O html2canvas captura o canvas com os pins já visíveis

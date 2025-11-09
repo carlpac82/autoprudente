@@ -3271,20 +3271,27 @@
             try {
                 const canvas = document.getElementById('carDiagram');
                 if (canvas && damages.length > 0) {
-                    // ✅ CAPTURAR NO TAMANHO DA BOX PDF
-                    // Box mapeada no PDF: 256×201px
-                    // Croqui.png natural: 986×700px
-                    // Scale necessário: 256/986 = 0.26
+                    // ✅ CAPTURAR NO TAMANHO DO BROWSER (preview)
+                    // Container CSS: max-width: 600px
+                    // Box PDF: 256×201px (será escalado no backend)
+                    // ESTRATÉGIA: Capturar em tamanho médio (500px) para qualidade boa
                     const rect = canvas.getBoundingClientRect();
-                    const targetWidth = 256;
-                    const scaleForPDF = targetWidth / rect.width;
+                    const img = canvas.querySelector('img');
+                    const naturalWidth = img.naturalWidth || 986;
                     
-                    console.log('   📐 Canvas renderizado:', rect.width, 'x', rect.height);
-                    console.log('   🎯 Scale para PDF:', scaleForPDF.toFixed(3));
+                    // Capturar em resolução média-alta (500px de largura final)
+                    // Isso dá qualidade boa quando escalado para 256px no PDF
+                    const targetCaptureWidth = 500;
+                    const scaleForCapture = targetCaptureWidth / rect.width;
+                    
+                    console.log('   📐 Container renderizado:', rect.width.toFixed(0), 'x', rect.height.toFixed(0));
+                    console.log('   🖼️ Imagem natural:', naturalWidth);
+                    console.log('   🎯 Capturando com largura:', targetCaptureWidth, 'px');
+                    console.log('   📊 Scale html2canvas:', scaleForCapture.toFixed(3));
                     
                     const diagramBase64 = await html2canvas(canvas, {
                         backgroundColor: '#ffffff',
-                        scale: scaleForPDF,  // ✅ Scale para capturar em 256px largura
+                        scale: scaleForCapture,  // ✅ Captura em ~500px para boa qualidade
                         logging: false,
                         useCORS: true
                     }).then(canvas => canvas.toDataURL('image/png'));
