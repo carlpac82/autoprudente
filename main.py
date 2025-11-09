@@ -14601,7 +14601,7 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                     
                     # Mapear cada campo extraído para o nome correto do DR
                     field_mapping = {
-                        'contractNumber': 'contractNumber',      # Número do Contrato → DR Nº Contrato
+                        'contractNumber': 'contractNumber',      # Número do Contrato → DR Nº Contrato (= RA Number)
                         'clientName': 'clientName',              # Nome do Cliente
                         'clientEmail': 'clientEmail',            # Email do Cliente  
                         'clientPhone': 'clientPhone',            # Telefone do Cliente
@@ -14654,6 +14654,12 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
                             dr_fields['vehicleBrand'] = parts[0].strip()
                         if not dr_fields.get('vehicleModel') and len(parts) > 1:
                             dr_fields['vehicleModel'] = parts[1].strip()
+                    
+                    # ✅ COPIAR CONTRACT NUMBER PARA RA NUMBER (são o mesmo campo!)
+                    # Contract Number = Rental Agreement Number = ex: 06424-09
+                    if 'contractNumber' in dr_fields and dr_fields['contractNumber']:
+                        dr_fields['raNumber'] = dr_fields['contractNumber']
+                        logging.info(f"   ✅ RA Number = Contract Number: {dr_fields['raNumber']}")
                     
                     logging.info(f"✅ SUCESSO: {len(dr_fields)} campos mapeados para Damage Report")
                     logging.info("   ⚡ Retornando campos prontos para inserir no DR")
@@ -15127,6 +15133,12 @@ async def extract_from_rental_agreement(request: Request, file: UploadFile = Fil
             brand_model = ' / '.join(filter(None, [fields.get('vehicleBrand'), fields.get('vehicleModel')]))
             if brand_model:
                 fields['vehicleBrandModel'] = brand_model
+        
+        # ✅ COPIAR CONTRACT NUMBER PARA RA NUMBER (são o mesmo campo!)
+        # Contract Number = Rental Agreement Number = ex: 06424-09
+        if 'contractNumber' in fields and fields['contractNumber']:
+            fields['raNumber'] = fields['contractNumber']
+            logging.info(f"   ✅ RA Number = Contract Number: {fields['raNumber']}")
         
         # Log para debug
         logging.info(f"✅ === CAMPOS EXTRAÍDOS (PATTERN-BASED) ===")
