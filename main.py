@@ -18523,34 +18523,40 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     logging.error(f"🖼️ Imagem capturada (com padding): {img_width}x{img_height}")
                                 
                                 # ✅ CROP AUTOMÁTICO: Remover bordas brancas (padding do frontend)
-                                # Converte para numpy array para análise
-                                import numpy as np
-                                img_array = np.array(img)
-                                
-                                # Detectar onde NÃO é branco puro (threshold 250 para margem)
-                                # Considera canal alpha se existir
-                                if img_array.shape[2] == 4:  # RGBA
-                                    non_white = np.any(img_array[:, :, :3] < 250, axis=2) | (img_array[:, :, 3] > 5)
-                                else:  # RGB
-                                    non_white = np.any(img_array < 250, axis=2)
-                                
-                                # Encontrar bounding box do conteúdo
-                                rows = np.any(non_white, axis=1)
-                                cols = np.any(non_white, axis=0)
-                                
-                                if rows.any() and cols.any():
-                                    ymin, ymax = np.where(rows)[0][[0, -1]]
-                                    xmin, xmax = np.where(cols)[0][[0, -1]]
+                                # Usar PIL getbbox() - SEM numpy
+                                try:
+                                    # Converter para modo que permite getbbox
+                                    if img.mode == 'RGBA':
+                                        # Usar canal alpha para detectar conteúdo
+                                        alpha = img.split()[-1]
+                                        bbox = alpha.getbbox()
+                                    else:
+                                        # Inverter cores para detectar não-branco
+                                        from PIL import ImageChops
+                                        bg = Image.new(img.mode, img.size, (255, 255, 255))
+                                        diff = ImageChops.difference(img, bg)
+                                        bbox = diff.getbbox()
                                     
-                                    # Crop imagem
-                                    img = img.crop((xmin, ymin, xmax + 1, ymax + 1))
-                                    img_width, img_height = img.size
-                                    
-                                    if is_diagram_check:
-                                        logging.error(f"🖼️ Após crop: {img_width}x{img_height} (padding removido)")
-                                else:
-                                    if is_diagram_check:
-                                        logging.error(f"⚠️ Não foi possível fazer crop (imagem toda branca?)")
+                                    if bbox:
+                                        # Crop com pequena margem (2px)
+                                        margin = 2
+                                        bbox = (
+                                            max(0, bbox[0] - margin),
+                                            max(0, bbox[1] - margin),
+                                            min(img.width, bbox[2] + margin),
+                                            min(img.height, bbox[3] + margin)
+                                        )
+                                        img = img.crop(bbox)
+                                        img_width, img_height = img.size
+                                        
+                                        if is_diagram_check:
+                                            logging.error(f"🖼️ Após crop: {img_width}x{img_height} (padding removido)")
+                                    else:
+                                        if is_diagram_check:
+                                            logging.error(f"⚠️ Não foi possível fazer crop (imagem toda branca?)")
+                                except Exception as crop_err:
+                                    logging.error(f"⚠️ Erro no crop automático: {crop_err}")
+                                    # Continuar com imagem original se crop falhar
                                 
                                 # ✅ ESCALAR IMAGEM PARA CABER NA BOX
                                 # Calcular escala mantendo proporção
