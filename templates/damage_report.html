@@ -953,16 +953,33 @@
                 </div>
                 
                 <!-- Lista de Anexos -->
-                <div style="margin-bottom: 25px;">
+                <div style="margin-bottom: 20px;">
                     <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Anexos</label>
                     <div id="emailAttachmentsList" style="padding: 12px; background: #f0f9fb; border: 2px solid #009cb6; border-radius: 6px;">
                         <div style="display: flex; align-items: center; gap: 8px; color: #009cb6; font-size: 13px;">
                             <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                             </svg>
-                            <span id="attachmentInfo">A carregar anexos...</span>
+                            <span id="attachmentInfo">Damage Report PDF</span>
+                        </div>
+                        <!-- Anexos Adicionais -->
+                        <div id="additionalAttachmentsList" style="margin-top: 12px; display: none;">
+                            <!-- Lista de arquivos adicionados dinamicamente -->
                         </div>
                     </div>
+                </div>
+                
+                <!-- Adicionar Anexos Adicionais -->
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px;">Adicionar Outros Anexos</label>
+                    <input type="file" id="additionalAttachmentsInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;" onchange="handleAdditionalAttachments(event)">
+                    <button onclick="document.getElementById('additionalAttachmentsInput').click()" style="padding: 10px 16px; background: white; color: #009cb6; border: 2px dashed #009cb6; border-radius: 6px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; width: 100%;" onmouseover="this.style.background='#f0f9fb'" onmouseout="this.style.background='white'">
+                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span>Adicionar Anexos (PDF, Imagens, Word)</span>
+                    </button>
+                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280;">Máximo 5 arquivos, 10MB cada</p>
                 </div>
                 
                 <!-- Botões -->
@@ -3299,8 +3316,77 @@
 
         // ==================== EMAIL MODAL FUNCTIONS ====================
         let currentEmailDR = null;
+        let additionalAttachments = []; // Array para guardar anexos adicionais
+
+        function handleAdditionalAttachments(event) {
+            const files = event.target.files;
+            const maxFiles = 5;
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            
+            if (additionalAttachments.length + files.length > maxFiles) {
+                showNotification(`Máximo de ${maxFiles} anexos adicionais permitidos`, 'warning');
+                return;
+            }
+            
+            Array.from(files).forEach(file => {
+                if (file.size > maxSize) {
+                    showNotification(`Arquivo ${file.name} excede 10MB`, 'warning');
+                    return;
+                }
+                
+                additionalAttachments.push(file);
+            });
+            
+            updateAdditionalAttachmentsList();
+            event.target.value = ''; // Limpar input
+        }
+        
+        function updateAdditionalAttachmentsList() {
+            const listDiv = document.getElementById('additionalAttachmentsList');
+            
+            if (additionalAttachments.length === 0) {
+                listDiv.style.display = 'none';
+                return;
+            }
+            
+            listDiv.style.display = 'block';
+            listDiv.innerHTML = '';
+            
+            additionalAttachments.forEach((file, index) => {
+                const fileDiv = document.createElement('div');
+                fileDiv.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e0f2fe;';
+                
+                const fileInfo = document.createElement('div');
+                fileInfo.style.cssText = 'display: flex; align-items: center; gap: 8px; color: #374151; font-size: 12px;';
+                fileInfo.innerHTML = `
+                    <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span>${file.name} (${(file.size / 1024).toFixed(0)} KB)</span>
+                `;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.style.cssText = 'background: #fee2e2; color: #dc2626; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all 0.2s;';
+                removeBtn.textContent = 'Remover';
+                removeBtn.onmouseover = () => removeBtn.style.background = '#fecaca';
+                removeBtn.onmouseout = () => removeBtn.style.background = '#fee2e2';
+                removeBtn.onclick = () => removeAdditionalAttachment(index);
+                
+                fileDiv.appendChild(fileInfo);
+                fileDiv.appendChild(removeBtn);
+                listDiv.appendChild(fileDiv);
+            });
+        }
+        
+        function removeAdditionalAttachment(index) {
+            additionalAttachments.splice(index, 1);
+            updateAdditionalAttachmentsList();
+        }
 
         async function openEmailModal(drNumber, clientEmail, clientName, country) {
+            // Limpar anexos anteriores
+            additionalAttachments = [];
+            updateAdditionalAttachmentsList();
             currentEmailDR = drNumber;
             
             // Preencher email do cliente
@@ -3414,6 +3500,21 @@
                     reader.readAsDataURL(pdfBlob);
                 });
                 
+                // Converter anexos adicionais para base64
+                const attachmentsData = [];
+                for (const file of additionalAttachments) {
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(file);
+                    });
+                    attachmentsData.push({
+                        name: file.name,
+                        data: base64,
+                        type: file.type || 'application/octet-stream'
+                    });
+                }
+                
                 // Enviar email
                 const emailPayload = {
                     drNumber: currentEmailDR,
@@ -3424,7 +3525,7 @@
                     date: report.date || new Date().toISOString().split('T')[0],
                     country: report.country || 'PT',
                     pdfData: pdfBase64,
-                    attachments: [] // Futuro: adicionar imagens extras
+                    attachments: attachmentsData
                 };
                 
                 const response = await fetch('/api/damage-reports/send-email', {
