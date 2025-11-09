@@ -254,28 +254,27 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         conn = _get_db_connection()
         cursor = conn.cursor()
         
-        # Get dates for last 24 hours (search_date is ISO timestamp)
+        # Get records from last 2 hours only (search was just executed before email)
         from datetime import datetime, timedelta
         now = datetime.now()
-        yesterday = now - timedelta(days=1)
-        
-        # Query for records from last 24 hours (use month_key for better filtering)
-        current_month = now.strftime('%Y-%m')
+        two_hours_ago = now - timedelta(hours=2)
+        cutoff_time = two_hours_ago.isoformat()
         
         cursor.execute(
             """
             SELECT location, search_date, dias, prices_data
             FROM automated_search_history
-            WHERE month_key = %s
+            WHERE search_date >= %s
+              AND search_type = 'automated'
             ORDER BY search_date DESC, id DESC
-            LIMIT 100
+            LIMIT 10
             """,
-            (current_month,)
+            (cutoff_time,)
         )
         rows = cursor.fetchall()
         
-        print(f"   📊 Query: month_key = '{current_month}'", flush=True)
-        print(f"   📊 Found {len(rows)} search records", flush=True)
+        print(f"   📊 Query: search_date >= '{cutoff_time}' AND search_type = 'automated'", flush=True)
+        print(f"   📊 Found {len(rows)} recent search records", flush=True)
         
         all_results = []
         for row in rows:
