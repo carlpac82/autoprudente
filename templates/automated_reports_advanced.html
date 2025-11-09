@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios Automáticos - Avançado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .schedule-item {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-[#009cb6] to-[#007a91] text-white rounded-lg p-6 mb-6">
+            <h1 class="text-2xl font-bold mb-2">📊 Sistema de Relatórios Automáticos</h1>
+            <p class="text-sm opacity-90">Configure múltiplos horários, separar pesquisa/envio e relatórios mensais</p>
+        </div>
+
+        <!-- DIÁRIO - Múltiplos Horários -->
+        <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Relatório Diário</h2>
+                        <p class="text-sm text-gray-500">Múltiplos horários por dia</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="enableDaily" class="sr-only peer" checked>
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#009cb6]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#009cb6]"></div>
+                </label>
+            </div>
+
+            <div id="dailySettings" class="space-y-6">
+                <!-- Lista de Horários -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-semibold text-gray-900">⏰ Horários Configurados</h3>
+                        <button onclick="addDailySchedule()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Adicionar Horário
+                        </button>
+                    </div>
+
+                    <div id="dailySchedulesList" class="space-y-3">
+                        <!-- Schedules will be added here by JS -->
+                    </div>
+                </div>
+
+                <!-- Configurações Gerais -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📅 Dias de Pesquisa</label>
+                        <input type="text" id="dailySearchDays" value="1,3,7,14" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6] focus:border-transparent">
+                        <p class="text-xs text-gray-500 mt-1">Separados por vírgula (ex: 1,3,7,14)</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📍 Localizações</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="dailyLocationAlbufeira" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm">Albufeira</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="dailyLocationFaro" checked class="w-4 h-4 text-[#009cb6] border-gray-300 rounded focus:ring-[#009cb6]">
+                                <span class="text-sm">Aeroporto</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEMANAL -->
+        <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Relatório Semanal</h2>
+                        <p class="text-sm text-gray-500">Mês → dias → grupos</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="enableWeekly" class="sr-only peer">
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#009cb6]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#009cb6]"></div>
+                </label>
+            </div>
+
+            <div id="weeklySettings" class="space-y-4" style="display:none;">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📆 Dia da Semana</label>
+                        <select id="weeklyDay" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                            <option value="monday">Segunda-feira</option>
+                            <option value="saturday" selected>Sábado</option>
+                            <option value="sunday">Domingo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">🔍 Hora Pesquisa</label>
+                        <input type="time" id="weeklySearchTime" value="09:55" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📧 Hora Envio</label>
+                        <input type="time" id="weeklySendTime" value="10:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENSAL (NOVO!) -->
+        <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Relatório Mensal</h2>
+                        <p class="text-sm text-gray-500">Análise de longo prazo</p>
+                    </div>
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">NOVO</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="enableMonthly" class="sr-only peer">
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#009cb6]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#009cb6]"></div>
+                </label>
+            </div>
+
+            <div id="monthlySettings" class="space-y-4" style="display:none;">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📅 Dia do Mês</label>
+                        <select id="monthlyDay" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                            <option value="1" selected>Dia 1</option>
+                            <option value="15">Dia 15</option>
+                            <option value="last">Último dia</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">🔍 Hora Pesquisa</label>
+                        <input type="time" id="monthlySearchTime" value="09:55" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📧 Hora Envio</label>
+                        <input type="time" id="monthlySendTime" value="10:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📊 Período</label>
+                        <select id="monthlyPeriod" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                            <option value="3">3 meses</option>
+                            <option value="6" selected>6 meses</option>
+                            <option value="9">9 meses</option>
+                            <option value="12">12 meses</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 border-l-4 border-[#009cb6] p-4 rounded">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="text-sm text-gray-700">
+                            <strong class="text-[#009cb6]">Relatório Mensal:</strong> Análise completa dos últimos meses com tendências de preços, melhor/pior período, e comparação entre locais.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="flex gap-3 flex-wrap">
+            <button onclick="saveAdvancedSettings()" class="px-6 py-3 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a91] transition-colors font-medium flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Guardar Configurações
+            </button>
+            <button onclick="testAllReports()" class="px-6 py-3 border-2 border-[#009cb6] text-[#009cb6] rounded-lg hover:bg-[#009cb6] hover:text-white transition-colors font-medium flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Testar Todos
+            </button>
+            <button onclick="viewScheduleSummary()" class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Ver Resumo
+            </button>
+        </div>
+
+        <!-- Preview de Agendamentos -->
+        <div id="scheduleSummary" class="mt-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-6" style="display:none;">
+            <h3 class="font-bold text-lg mb-4 text-gray-900">📋 Resumo dos Agendamentos</h3>
+            <div id="scheduleSummaryContent" class="text-sm space-y-2"></div>
+        </div>
+    </div>
+
+    <script src="/static/notifications.js"></script>
+    <script>
+        // State
+        let dailySchedules = [];
+
+        // Toggle visibility
+        document.getElementById('enableDaily').addEventListener('change', (e) => {
+            document.getElementById('dailySettings').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('enableWeekly').addEventListener('change', (e) => {
+            document.getElementById('weeklySettings').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('enableMonthly').addEventListener('change', (e) => {
+            document.getElementById('monthlySettings').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        // Add daily schedule
+        function addDailySchedule() {
+            const id = Date.now();
+            const schedule = {
+                id: id,
+                searchTime: '08:55',
+                sendTime: '09:00'
+            };
+            
+            dailySchedules.push(schedule);
+            renderDailySchedules();
+            showNotification('Horário adicionado!', 'success');
+        }
+
+        // Remove daily schedule
+        function removeDailySchedule(id) {
+            dailySchedules = dailySchedules.filter(s => s.id !== id);
+            renderDailySchedules();
+            showNotification('Horário removido!', 'success');
+        }
+
+        // Update schedule time
+        function updateScheduleTime(id, field, value) {
+            const schedule = dailySchedules.find(s => s.id === id);
+            if (schedule) {
+                schedule[field] = value;
+            }
+        }
+
+        // Render daily schedules
+        function renderDailySchedules() {
+            const container = document.getElementById('dailySchedulesList');
+            
+            if (dailySchedules.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="font-medium">Nenhum horário configurado</p>
+                        <p class="text-sm mt-1">Clique em "Adicionar Horário" para começar</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = dailySchedules.map((schedule, index) => `
+                <div class="schedule-item flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200">
+                    <div class="flex-shrink-0 w-12 h-12 bg-[#009cb6] rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">${index + 1}</span>
+                    </div>
+                    <div class="flex-1 grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">🔍 Hora Pesquisa</label>
+                            <input type="time" 
+                                   value="${schedule.searchTime}" 
+                                   onchange="updateScheduleTime(${schedule.id}, 'searchTime', this.value)"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6] text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">📧 Hora Envio</label>
+                            <input type="time" 
+                                   value="${schedule.sendTime}" 
+                                   onchange="updateScheduleTime(${schedule.id}, 'sendTime', this.value)"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6] text-sm">
+                        </div>
+                    </div>
+                    <button onclick="removeDailySchedule(${schedule.id})" 
+                            class="flex-shrink-0 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Save settings
+        async function saveAdvancedSettings() {
+            const settings = {
+                daily: {
+                    enabled: document.getElementById('enableDaily').checked,
+                    schedules: dailySchedules,
+                    searchDays: document.getElementById('dailySearchDays').value,
+                    locations: {
+                        albufeira: document.getElementById('dailyLocationAlbufeira').checked,
+                        faro: document.getElementById('dailyLocationFaro').checked
+                    }
+                },
+                weekly: {
+                    enabled: document.getElementById('enableWeekly').checked,
+                    day: document.getElementById('weeklyDay').value,
+                    searchTime: document.getElementById('weeklySearchTime').value,
+                    sendTime: document.getElementById('weeklySendTime').value
+                },
+                monthly: {
+                    enabled: document.getElementById('enableMonthly').checked,
+                    day: document.getElementById('monthlyDay').value,
+                    searchTime: document.getElementById('monthlySearchTime').value,
+                    sendTime: document.getElementById('monthlySendTime').value,
+                    period: document.getElementById('monthlyPeriod').value
+                }
+            };
+
+            try {
+                const response = await fetch('/api/settings/automated-reports/advanced', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(settings)
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    showNotification('✅ Configurações guardadas com sucesso!', 'success');
+                    viewScheduleSummary();
+                } else {
+                    showNotification('❌ Erro: ' + (result.error || 'Desconhecido'), 'error');
+                }
+            } catch (error) {
+                showNotification('❌ Erro ao guardar configurações', 'error');
+                console.error(error);
+            }
+        }
+
+        // Test all reports
+        async function testAllReports() {
+            showNotification('🧪 Testando todos os relatórios configurados...', 'info');
+            // TODO: Implement test function
+        }
+
+        // View schedule summary
+        function viewScheduleSummary() {
+            const summary = document.getElementById('scheduleSummary');
+            const content = document.getElementById('scheduleSummaryContent');
+            
+            let html = '';
+            
+            // Daily
+            if (document.getElementById('enableDaily').checked) {
+                html += `<div class="font-semibold text-[#009cb6] mb-2">📊 Relatório Diário (${dailySchedules.length} horários):</div>`;
+                dailySchedules.forEach((s, i) => {
+                    html += `<div class="ml-4 text-gray-700">• Horário ${i+1}: Pesquisa às ${s.searchTime}, envia às ${s.sendTime}</div>`;
+                });
+            }
+            
+            // Weekly
+            if (document.getElementById('enableWeekly').checked) {
+                const day = document.getElementById('weeklyDay').options[document.getElementById('weeklyDay').selectedIndex].text;
+                const search = document.getElementById('weeklySearchTime').value;
+                const send = document.getElementById('weeklySendTime').value;
+                html += `<div class="font-semibold text-[#009cb6] mt-3 mb-2">📅 Relatório Semanal:</div>`;
+                html += `<div class="ml-4 text-gray-700">• ${day}: Pesquisa às ${search}, envia às ${send}</div>`;
+            }
+            
+            // Monthly
+            if (document.getElementById('enableMonthly').checked) {
+                const day = document.getElementById('monthlyDay').options[document.getElementById('monthlyDay').selectedIndex].text;
+                const search = document.getElementById('monthlySearchTime').value;
+                const send = document.getElementById('monthlySendTime').value;
+                const period = document.getElementById('monthlyPeriod').value;
+                html += `<div class="font-semibold text-[#009cb6] mt-3 mb-2">📈 Relatório Mensal:</div>`;
+                html += `<div class="ml-4 text-gray-700">• ${day} do mês: Pesquisa às ${search}, envia às ${send} (${period} meses)</div>`;
+            }
+            
+            if (html) {
+                content.innerHTML = html;
+                summary.style.display = 'block';
+            } else {
+                showNotification('⚠️ Nenhum relatório ativado', 'warning');
+            }
+        }
+
+        // Initialize
+        addDailySchedule(); // Add default schedule
+    </script>
+</body>
+</html>
