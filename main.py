@@ -19088,6 +19088,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
                     is_postgres = True
                 
                 logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                logging.info(f"Searching for DR: '{dr_number}' (length: {len(dr_number)})")
                 
                 if is_postgres:
                     cursor = conn.cursor()
@@ -19101,7 +19102,18 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
                     columns = [desc[0] for desc in cursor.description]
                 
                 if not row:
-                    logging.error(f"❌ DR {dr_number} not found in database")
+                    # Debug: Listar DRs disponíveis
+                    if is_postgres:
+                        cur_debug = conn.cursor()
+                        cur_debug.execute("SELECT dr_number FROM damage_reports LIMIT 5")
+                        available = cur_debug.fetchall()
+                        cur_debug.close()
+                    else:
+                        cur_debug = conn.execute("SELECT dr_number FROM damage_reports LIMIT 5")
+                        available = cur_debug.fetchall()
+                    
+                    logging.error(f"❌ DR '{dr_number}' not found in database")
+                    logging.error(f"Available DRs: {[r[0] for r in available]}")
                     raise HTTPException(status_code=404, detail="Damage Report not found")
                 
                 report = dict(zip(columns, row))
