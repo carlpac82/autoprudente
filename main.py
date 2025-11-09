@@ -19076,6 +19076,8 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         from starlette.responses import Response
         import json
         
+        logging.info(f"📄 Generating PDF for DR: {dr_number}")
+        
         # Buscar dados da base de dados
         with _db_lock:
             conn = _db_connect()
@@ -19085,18 +19087,21 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
                 if conn.__class__.__module__ == 'psycopg2.extensions':
                     is_postgres = True
                 
+                logging.info(f"DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                
                 if is_postgres:
                     cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM damage_reports WHERE dr_number = %s", (dr_number,))
+                    cursor.execute("SELECT * FROM damage_reports WHERE dr_number = %s AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
                     row = cursor.fetchone()
                     columns = [desc[0] for desc in cursor.description]
                     cursor.close()
                 else:
-                    cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ?", (dr_number,))
+                    cursor = conn.execute("SELECT * FROM damage_reports WHERE dr_number = ? AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
                     row = cursor.fetchone()
                     columns = [desc[0] for desc in cursor.description]
                 
                 if not row:
+                    logging.error(f"❌ DR {dr_number} not found in database")
                     raise HTTPException(status_code=404, detail="Damage Report not found")
                 
                 report = dict(zip(columns, row))
