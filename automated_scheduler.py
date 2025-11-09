@@ -464,10 +464,14 @@ async def _do_carjet_search(locations, days, pickup_date):
                         rotated_pickup_date = date_obj.strftime('%Y-%m-%d')
                         print(f"      [DATE_ROTATION] +{date_offset} days → {rotated_pickup_date}", flush=True)
                 
-                # Mock request object
+                # Mock request object (complete with all FastAPI Request attributes)
                 class MockRequest:
                     def __init__(self, data):
                         self._data = data
+                        self.headers = {}  # Empty headers
+                        self.session = {'username': 'automated', 'user_email': 'automated'}  # Session data
+                        self.client = type('obj', (object,), {'host': '127.0.0.1'})()  # Mock client
+                    
                     async def json(self):
                         return self._data
                 
