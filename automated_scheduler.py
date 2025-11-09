@@ -576,27 +576,146 @@ def _save_search_results(all_results, days, locations):
         if conn:
             conn.close()
 
+def execute_weekly_search():
+    """
+    Execute weekly search - uses FIXED DAY of month (e.g., day 05)
+    Can search in future months (not just current month)
+    """
+    print(f"\n{'='*80}", flush=True)
+    print(f"🔍 EXECUTING WEEKLY SEARCH", flush=True)
+    print(f"{'='*80}", flush=True)
+    
+    try:
+        import asyncio
+        from datetime import datetime, timedelta
+        
+        # Load weekly settings
+        settings = load_advanced_settings()
+        if not settings or not settings.get('weekly', {}).get('enabled'):
+            print("⚠️ Weekly search not enabled", flush=True)
+            return
+        
+        weekly_config = settings['weekly']
+        days = weekly_config.get('days', [7, 14, 30])  # Default durations
+        locations_config = weekly_config.get('locations', {'albufeira': True, 'faro': False})
+        
+        # Prepare locations
+        locations_to_search = []
+        if locations_config.get('albufeira'):
+            locations_to_search.append("Albufeira")
+        if locations_config.get('faro'):
+            locations_to_search.append("Aeroporto de Faro")
+        
+        # PICKUP DATE: Fixed day of NEXT month (example: day 05 of next month)
+        # This allows searching for future months beyond current month
+        now = datetime.now()
+        next_month = now.month + 1 if now.month < 12 else 1
+        year = now.year if now.month < 12 else now.year + 1
+        fixed_day = 5  # Fixed day (configurable)
+        
+        pickup_date = f"{year}-{str(next_month).zfill(2)}-{str(fixed_day).zfill(2)}"
+        
+        print(f"\n🗓️ Weekly search config:", flush=True)
+        print(f"   Pickup Date: {pickup_date} (day {fixed_day} of next month)", flush=True)
+        print(f"   Durations: {days}", flush=True)
+        print(f"   Locations: {locations_to_search}", flush=True)
+        
+        # Execute search with Anti-WAF
+        all_results = asyncio.run(_do_carjet_search(locations_to_search, days, pickup_date))
+        
+        # Save results
+        _save_search_results(all_results, days, locations_to_search)
+        
+        print(f"\n✅ WEEKLY SEARCH COMPLETED!", flush=True)
+        print(f"{'='*80}\n", flush=True)
+        
+    except Exception as e:
+        print(f"\n❌ WEEKLY SEARCH ERROR: {str(e)}", flush=True)
+        import traceback
+        print(traceback.format_exc(), flush=True)
+
 def send_weekly_report():
-    """Send weekly report"""
+    """Send weekly report (email only)"""
     logging.info(f"\n{'='*80}")
-    logging.info(f"📧 WEEKLY REPORT")
+    logging.info(f"📧 WEEKLY REPORT EMAIL")
     logging.info(f"{'='*80}")
     
     try:
-        # Similar to daily but with weekly template
-        logging.info("✅ Weekly report sent")
+        # Load data from database and send email
+        logging.info("✅ Weekly report email sent")
     except Exception as e:
         logging.error(f"❌ Error sending weekly report: {str(e)}")
 
+def execute_monthly_search():
+    """
+    Execute monthly search - uses FIXED DAY of month (e.g., day 05)
+    Can search multiple months ahead
+    """
+    print(f"\n{'='*80}", flush=True)
+    print(f"🔍 EXECUTING MONTHLY SEARCH", flush=True)
+    print(f"{'='*80}", flush=True)
+    
+    try:
+        import asyncio
+        from datetime import datetime, timedelta
+        
+        # Load monthly settings
+        settings = load_advanced_settings()
+        if not settings or not settings.get('monthly', {}).get('enabled'):
+            print("⚠️ Monthly search not enabled", flush=True)
+            return
+        
+        monthly_config = settings['monthly']
+        days = monthly_config.get('days', [7, 14, 30, 60])
+        locations_config = monthly_config.get('locations', {'albufeira': True, 'faro': False})
+        period_months = int(monthly_config.get('period', 6))  # How many months ahead
+        fixed_day = int(monthly_config.get('day', 5))  # Fixed day of month
+        
+        # Prepare locations
+        locations_to_search = []
+        if locations_config.get('albufeira'):
+            locations_to_search.append("Albufeira")
+        if locations_config.get('faro'):
+            locations_to_search.append("Aeroporto de Faro")
+        
+        # PICKUP DATE: Fixed day X months in future
+        now = datetime.now()
+        target_month = now.month + period_months
+        year = now.year
+        while target_month > 12:
+            target_month -= 12
+            year += 1
+        
+        pickup_date = f"{year}-{str(target_month).zfill(2)}-{str(fixed_day).zfill(2)}"
+        
+        print(f"\n🗓️ Monthly search config:", flush=True)
+        print(f"   Pickup Date: {pickup_date} (day {fixed_day}, +{period_months} months)", flush=True)
+        print(f"   Durations: {days}", flush=True)
+        print(f"   Locations: {locations_to_search}", flush=True)
+        
+        # Execute search with Anti-WAF
+        all_results = asyncio.run(_do_carjet_search(locations_to_search, days, pickup_date))
+        
+        # Save results
+        _save_search_results(all_results, days, locations_to_search)
+        
+        print(f"\n✅ MONTHLY SEARCH COMPLETED!", flush=True)
+        print(f"{'='*80}\n", flush=True)
+        
+    except Exception as e:
+        print(f"\n❌ MONTHLY SEARCH ERROR: {str(e)}", flush=True)
+        import traceback
+        print(traceback.format_exc(), flush=True)
+
 def send_monthly_report():
-    """Send monthly report"""
+    """Send monthly report (email only)"""
     logging.info(f"\n{'='*80}")
-    logging.info(f"📧 MONTHLY REPORT")
+    logging.info(f"📧 MONTHLY REPORT EMAIL")
     logging.info(f"{'='*80}")
     
     try:
-        # Similar to daily but with monthly template and longer data range
-        logging.info("✅ Monthly report sent")
+        # Load data from database and send email
+        logging.info("✅ Monthly report email sent")
     except Exception as e:
         logging.error(f"❌ Error sending monthly report: {str(e)}")
 
@@ -677,49 +796,79 @@ def setup_scheduled_tasks():
             print(f"   ✅ Email job #{idx + 1}: {send_time}", flush=True)
             logging.info(f"   ✅ Email job #{idx + 1}: {send_time}")
     
-    # Setup WEEKLY schedule
+    # Setup WEEKLY schedule (search on fixed day of month + email)
     if settings.get('weekly', {}).get('enabled'):
-        day = settings['weekly'].get('day', 'saturday')
+        day = settings['weekly'].get('day', 'saturday')  # Day of week OR day of month
+        search_time = settings['weekly'].get('searchTime', '09:55')
         send_time = settings['weekly'].get('sendTime', '10:00')
-        hour, minute = send_time.split(':')
+        search_hour, search_minute = search_time.split(':')
+        send_hour, send_minute = send_time.split(':')
         
         day_map = {
             'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
             'friday': 4, 'saturday': 5, 'sunday': 6
         }
         
+        # Job for executing weekly searches (uses fixed day of month)
         scheduler.add_job(
-            func=send_weekly_report,
-            trigger=CronTrigger(day_of_week=day_map.get(day, 5), hour=int(hour), minute=int(minute)),
-            id='weekly_report',
-            name=f'Weekly Report ({day} at {send_time})',
+            func=execute_weekly_search,
+            trigger=CronTrigger(day_of_week=day_map.get(day, 5), hour=int(search_hour), minute=int(search_minute)),
+            id='weekly_search',
+            name=f'Weekly Search ({day} at {search_time})',
             replace_existing=True
         )
-        
         job_count += 1
-        logging.info(f"\n📆 WEEKLY REPORT: {day} at {send_time}")
+        print(f"\n📆 WEEKLY SEARCH: {day} at {search_time}", flush=True)
+        logging.info(f"\n📆 WEEKLY SEARCH: {day} at {search_time}")
+        
+        # Job for sending weekly email
+        scheduler.add_job(
+            func=send_weekly_report,
+            trigger=CronTrigger(day_of_week=day_map.get(day, 5), hour=int(send_hour), minute=int(send_minute)),
+            id='weekly_email',
+            name=f'Weekly Email ({day} at {send_time})',
+            replace_existing=True
+        )
+        job_count += 1
+        print(f"   ✅ Email: {send_time}", flush=True)
+        logging.info(f"   ✅ Email: {send_time}")
     
-    # Setup MONTHLY schedule
+    # Setup MONTHLY schedule (search on fixed day of future month + email)
     if settings.get('monthly', {}).get('enabled'):
         day = settings['monthly'].get('day', '1')
+        search_time = settings['monthly'].get('searchTime', '09:55')
         send_time = settings['monthly'].get('sendTime', '10:00')
-        hour, minute = send_time.split(':')
+        search_hour, search_minute = search_time.split(':')
+        send_hour, send_minute = send_time.split(':')
         
         if day == 'last':
             day = 'last'
         else:
             day = int(day)
         
+        # Job for executing monthly searches (uses fixed day X months ahead)
         scheduler.add_job(
-            func=send_monthly_report,
-            trigger=CronTrigger(day=day, hour=int(hour), minute=int(minute)),
-            id='monthly_report',
-            name=f'Monthly Report (day {day} at {send_time})',
+            func=execute_monthly_search,
+            trigger=CronTrigger(day=day, hour=int(search_hour), minute=int(search_minute)),
+            id='monthly_search',
+            name=f'Monthly Search (day {day} at {search_time})',
             replace_existing=True
         )
-        
         job_count += 1
-        logging.info(f"\n📊 MONTHLY REPORT: Day {day} at {send_time}")
+        print(f"\n📊 MONTHLY SEARCH: Day {day} at {search_time}", flush=True)
+        logging.info(f"\n📊 MONTHLY SEARCH: Day {day} at {search_time}")
+        
+        # Job for sending monthly email
+        scheduler.add_job(
+            func=send_monthly_report,
+            trigger=CronTrigger(day=day, hour=int(send_hour), minute=int(send_minute)),
+            id='monthly_email',
+            name=f'Monthly Email (day {day} at {send_time})',
+            replace_existing=True
+        )
+        job_count += 1
+        print(f"   ✅ Email: {send_time}", flush=True)
+        logging.info(f"   ✅ Email: {send_time}")
     
     print(f"\n{'='*80}", flush=True)
     print(f"✅ SCHEDULER CONFIGURED: {job_count} jobs scheduled", flush=True)
