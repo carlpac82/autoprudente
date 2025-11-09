@@ -12481,6 +12481,10 @@ async def test_automated_search(request: Request):
     require_auth(request)
     
     try:
+        print("="*80, flush=True)
+        print("🧪 TEST: Manual automated search save", flush=True)
+        print("="*80, flush=True)
+        
         from automated_scheduler import save_automated_search_placeholder
         
         # Get request body
@@ -12488,27 +12492,39 @@ async def test_automated_search(request: Request):
         location = body.get('location', 'Albufeira')
         days = body.get('days', [1, 3, 7])
         
+        print(f"📍 Test Location: {location}", flush=True)
+        print(f"📅 Test Days: {days}", flush=True)
+        
         logging.info(f"🧪 Testing automated search: {location}, days: {days}")
         
         # Execute placeholder save
         success = save_automated_search_placeholder(location, days)
         
         if success:
+            print(f"✅ TEST SUCCESSFUL - Searches saved to history!", flush=True)
+            print(f"→ Check Automated Pricing → Search History", flush=True)
+            print("="*80, flush=True)
             return JSONResponse({
                 "ok": True,
-                "message": f"Pesquisa automática salva: {location}, {len(days)} dias",
+                "message": f"✅ Pesquisa automática salva: {location}, {len(days)} dias. Verifica o histórico!",
                 "location": location,
                 "days": days
             })
         else:
+            print(f"❌ TEST FAILED - Could not save to database", flush=True)
+            print("="*80, flush=True)
             return JSONResponse({
                 "ok": False,
                 "error": "Falha ao salvar pesquisa automática"
             }, status_code=500)
     except Exception as e:
+        print(f"❌ TEST ERROR: {str(e)}", flush=True)
         logging.error(f"❌ Error testing automated search: {str(e)}")
         import traceback
-        logging.error(traceback.format_exc())
+        traceback_str = traceback.format_exc()
+        print(traceback_str, flush=True)
+        logging.error(traceback_str)
+        print("="*80, flush=True)
         return JSONResponse({
             "ok": False,
             "error": str(e)

@@ -81,23 +81,35 @@ def save_automated_search_placeholder(location, days_list):
     Save automated search placeholder in recent_searches
     This marks that an automated search should have occurred
     """
+    print(f"\n{'='*80}", flush=True)
+    print(f"💾 SAVING AUTOMATED SEARCH TO HISTORY", flush=True)
+    print(f"{'='*80}", flush=True)
+    print(f"📍 Location: {location}", flush=True)
+    print(f"📅 Days: {days_list}", flush=True)
+    
     logging.info(f"💾 SAVING AUTOMATED SEARCH PLACEHOLDER: {location}, days: {days_list}")
     
     try:
         from datetime import datetime, timedelta
         import json
         
+        print("🔌 Connecting to database for saving...", flush=True)
         conn = _get_db_connection()
         if not conn:
+            print("❌ Database connection FAILED!", flush=True)
             logging.error("❌ Cannot connect to database")
             return False
         
+        print("✅ Database connected", flush=True)
         cursor = conn.cursor()
         
+        saved_count = 0
         # For each day, create a placeholder search entry
         for day in days_list:
             pickup_date = (datetime.now() + timedelta(days=day)).strftime('%Y-%m-%d')
             timestamp = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
+            
+            print(f"\n   📝 Saving: {location} | {day}d | {pickup_date}", flush=True)
             
             # Create placeholder results
             placeholder_results = json.dumps([{
@@ -107,25 +119,56 @@ def save_automated_search_placeholder(location, days_list):
                 "days": day
             }])
             
-            cursor.execute("""
-                INSERT INTO recent_searches 
-                (location, start_date, days, results_data, timestamp, source)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (location, pickup_date, day, placeholder_results, timestamp, 'automated'))
-            
-            logging.info(f"   ✅ Saved placeholder: {location}, {day}d, {pickup_date}")
+            try:
+                cursor.execute("""
+                    INSERT INTO recent_searches 
+                    (location, start_date, days, results_data, timestamp, source)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (location, pickup_date, day, placeholder_results, timestamp, 'automated'))
+                
+                saved_count += 1
+                print(f"   ✅ SAVED TO DATABASE: {location}, {day}d, {pickup_date}", flush=True)
+                logging.info(f"   ✅ Saved placeholder: {location}, {day}d, {pickup_date}")
+            except Exception as insert_error:
+                print(f"   ❌ INSERT FAILED: {str(insert_error)}", flush=True)
+                logging.error(f"   ❌ Insert failed: {str(insert_error)}")
         
         conn.commit()
+        print(f"\n✅ COMMIT SUCCESSFUL - {saved_count} searches saved", flush=True)
+        
+        # VERIFICAR SE FOI SALVO
+        print(f"\n🔍 VERIFYING: Checking if searches were saved...", flush=True)
+        cursor.execute("""
+            SELECT location, start_date, days, timestamp, source
+            FROM recent_searches
+            WHERE source = 'automated'
+            ORDER BY timestamp DESC
+            LIMIT 10
+        """)
+        rows = cursor.fetchall()
+        
+        print(f"📊 Found {len(rows)} automated searches in database:", flush=True)
+        for row in rows:
+            loc, start, days, ts, src = row
+            print(f"   • {loc} | {days}d | {start} | {ts} | source={src}", flush=True)
+        
         cursor.close()
         conn.close()
+        
+        print(f"\n{'='*80}", flush=True)
+        print(f"✅ AUTOMATED SEARCH SAVED TO HISTORY: {location} ({saved_count} records)", flush=True)
+        print(f"{'='*80}\n", flush=True)
         
         logging.info(f"✅ Search placeholders saved for {location}")
         return True
         
     except Exception as e:
+        print(f"\n❌ FAILED TO SAVE SEARCH: {str(e)}", flush=True)
         logging.error(f"❌ Failed to save search placeholders: {str(e)}")
         import traceback
-        logging.error(traceback.format_exc())
+        traceback_str = traceback.format_exc()
+        print(traceback_str, flush=True)
+        logging.error(traceback_str)
         return False
 
 def send_daily_report_for_schedule(schedule, schedule_index):
@@ -136,6 +179,14 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         schedule: dict with searchTime, sendTime, days, locations
         schedule_index: int, index of schedule (for logging)
     """
+    print(f"\n{'='*80}", flush=True)
+    print(f"📧 DAILY REPORT - SCHEDULE #{schedule_index + 1}", flush=True)
+    print(f"{'='*80}", flush=True)
+    print(f"   Search Time: {schedule.get('searchTime')}", flush=True)
+    print(f"   Send Time: {schedule.get('sendTime')}", flush=True)
+    print(f"   Days: {schedule.get('days')}", flush=True)
+    print(f"   Locations: {schedule.get('locations')}", flush=True)
+    
     logging.info(f"\n{'='*80}")
     logging.info(f"📧 DAILY REPORT - SCHEDULE #{schedule_index + 1}")
     logging.info(f"{'='*80}")
@@ -149,14 +200,26 @@ def send_daily_report_for_schedule(schedule, schedule_index):
     locations_config = schedule.get('locations', {})
     
     if days and (locations_config.get('albufeira') or locations_config.get('faro')):
+        print(f"\n🔍 EXECUTING AUTOMATED SEARCHES...", flush=True)
         logging.info(f"\n🔍 EXECUTING AUTOMATED SEARCHES...")
         
         if locations_config.get('albufeira'):
-            save_automated_search_placeholder('Albufeira', days)
+            print(f"   → Saving Albufeira searches to database...", flush=True)
+            result = save_automated_search_placeholder('Albufeira', days)
+            if result:
+                print(f"   ✅ Albufeira searches SAVED to history!", flush=True)
+            else:
+                print(f"   ❌ Albufeira searches FAILED to save!", flush=True)
         
         if locations_config.get('faro'):
-            save_automated_search_placeholder('Aeroporto de Faro', days)
+            print(f"   → Saving Aeroporto de Faro searches to database...", flush=True)
+            result = save_automated_search_placeholder('Aeroporto de Faro', days)
+            if result:
+                print(f"   ✅ Aeroporto de Faro searches SAVED to history!", flush=True)
+            else:
+                print(f"   ❌ Aeroporto de Faro searches FAILED to save!", flush=True)
     else:
+        print(f"   ⚠️ No days or locations configured for this schedule!", flush=True)
         logging.warning(f"   ⚠️ No days or locations configured for this schedule!")
     
     try:
