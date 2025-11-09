@@ -22169,6 +22169,33 @@ async def save_advanced_automated_reports(request: Request):
         logging.error(f"❌ Error saving advanced automated reports: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/settings/automated-reports/advanced/load")
+async def load_advanced_automated_reports(request: Request):
+    """Load ADVANCED automated reports settings"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute(
+                    "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'automatedReportsAdvanced'"
+                )
+                row = cursor.fetchone()
+                
+                if row and row[0]:
+                    settings = json.loads(row[0])
+                    logging.info(f"📥 Loaded ADVANCED automated reports settings")
+                    return JSONResponse({"ok": True, "settings": settings})
+                else:
+                    logging.info(f"📭 No advanced settings found, returning defaults")
+                    return JSONResponse({"ok": True, "settings": None})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error loading advanced settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/settings/automated-reports/load")
 async def load_automated_reports_settings(request: Request):
     """Load automated reports settings from PostgreSQL"""

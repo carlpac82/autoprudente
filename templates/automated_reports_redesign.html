@@ -418,8 +418,61 @@
             }
         }
 
+        // Load settings on page load
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings/automated-reports/advanced/load');
+                const result = await response.json();
+                
+                if (result.ok && result.settings) {
+                    const settings = result.settings;
+                    
+                    // Daily
+                    if (settings.daily) {
+                        document.getElementById('enableDaily').checked = settings.daily.enabled || false;
+                        document.getElementById('dailySettings').style.display = settings.daily.enabled ? 'block' : 'none';
+                        document.getElementById('dailySearchDays').value = settings.daily.searchDays || '1,3,7,14';
+                        document.getElementById('dailyLocationAlbufeira').checked = settings.daily.locations?.albufeira !== false;
+                        document.getElementById('dailyLocationFaro').checked = settings.daily.locations?.faro !== false;
+                        
+                        // Load schedules
+                        if (settings.daily.schedules && settings.daily.schedules.length > 0) {
+                            dailySchedules = settings.daily.schedules;
+                            renderDailySchedules();
+                        }
+                    }
+                    
+                    // Weekly
+                    if (settings.weekly) {
+                        document.getElementById('enableWeekly').checked = settings.weekly.enabled || false;
+                        document.getElementById('weeklySettings').style.display = settings.weekly.enabled ? 'block' : 'none';
+                        document.getElementById('weeklyDay').value = settings.weekly.day || 'saturday';
+                        document.getElementById('weeklySearchTime').value = settings.weekly.searchTime || '09:55';
+                        document.getElementById('weeklySendTime').value = settings.weekly.sendTime || '10:00';
+                    }
+                    
+                    // Monthly
+                    if (settings.monthly) {
+                        document.getElementById('enableMonthly').checked = settings.monthly.enabled || false;
+                        document.getElementById('monthlySettings').style.display = settings.monthly.enabled ? 'block' : 'none';
+                        document.getElementById('monthlyDay').value = settings.monthly.day || '1';
+                        document.getElementById('monthlySearchTime').value = settings.monthly.searchTime || '09:55';
+                        document.getElementById('monthlySendTime').value = settings.monthly.sendTime || '10:00';
+                        document.getElementById('monthlyPeriod').value = settings.monthly.period || '6';
+                    }
+                    
+                    console.log('Settings loaded successfully');
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
         // Initialize
-        addDailySchedule();
+        if (dailySchedules.length === 0) {
+            addDailySchedule(); // Add default if none exist
+        }
+        loadSettings(); // Load saved settings
     </script>
 </body>
 </html>
