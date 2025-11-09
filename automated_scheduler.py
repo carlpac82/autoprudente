@@ -240,14 +240,37 @@ def send_daily_report_for_schedule(schedule, schedule_index):
             scopes=['https://www.googleapis.com/auth/gmail.send']
         )
         
-        # Get recipient email
+        # Get recipient emails from email_settings (múltiplos emails)
         conn = _get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'report_email'"
+            "SELECT setting_value FROM user_settings WHERE setting_key = 'email_settings' LIMIT 1"
         )
         row = cursor.fetchone()
-        recipient = row[0] if row else 'carlpac82@hotmail.com'
+        
+        recipients = []
+        if row and row[0]:
+            import json
+            try:
+                email_settings = json.loads(row[0])
+                recipients_text = email_settings.get('recipients', '')
+                if recipients_text:
+                    # Split by newlines and clean up
+                    recipients = [email.strip() for email in recipients_text.split('\n') if email.strip()]
+                    print(f"   📧 Loaded {len(recipients)} recipient(s): {', '.join(recipients)}", flush=True)
+            except:
+                pass
+        
+        # Fallback to report_email if no recipients found
+        if not recipients:
+            cursor.execute(
+                "SELECT setting_value FROM price_automation_settings WHERE setting_key = 'report_email'"
+            )
+            row = cursor.fetchone()
+            default_email = row[0] if row else 'carlpac82@hotmail.com'
+            recipients = [default_email]
+            print(f"   📧 Using fallback email: {default_email}", flush=True)
+        
         cursor.close()
         conn.close()
         
@@ -293,32 +316,27 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                 print(f"   [DEBUG] prices_by_group keys: {list(prices_by_group.keys())}", flush=True)
                 print(f"   [DEBUG] supplier_data days: {list(supplier_data.keys())}", flush=True)
                 
-                # Convert to flat list of results with full car details
-                for group, day_prices in prices_by_group.items():
-                    for day, price in day_prices.items():
-                        # Find the car in supplier_data that matches this group and price
-                        car_details = None
-                        day_items = supplier_data.get(str(day), [])
-                        for item in day_items:
-                            if item.get('group') == group and abs(item.get('price_num', 0) - price) < 0.01:
-                                car_details = item
-                                break
-                        
+                # Send ALL cars from supplier_data (not just 1 per group)
+                # This allows the report to show multiple suppliers per group
+                for day_str, day_items in supplier_data.items():
+                    for item in day_items:
+                        # Add location and search_date to each item
                         result_item = {
-                            'group': group,
-                            'days': int(day),
-                            'price': price,
-                            'price_num': price,
+                            'group': item.get('group', 'Unknown'),
+                            'days': int(day_str),
+                            'price': item.get('price_num', 0),
+                            'price_num': item.get('price_num', 0),
                             'location': location,
                             'search_date': search_date,
-                            'car_name': car_details.get('car_clean', 'Unknown') if car_details else 'Unknown',
-                            'supplier': car_details.get('supplier', 'Unknown') if car_details else 'Unknown',
-                            'image_url': car_details.get('image_url', '') if car_details else '',
+                            'car_name': item.get('car_clean', 'Unknown'),
+                            'supplier': item.get('supplier', 'Unknown'),
+                            'image_url': item.get('image_url', ''),
+                            'car': item.get('car', 'Unknown'),
                         }
                         
                         # Debug first item
                         if len(all_results) == 0:
-                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={group}, price={price}", flush=True)
+                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}", flush=True)
                         
                         all_results.append(result_item)
         
@@ -353,23 +371,25 @@ def send_daily_report_for_schedule(schedule, schedule_index):
             
             html_content = generate_daily_report_html_by_location(search_data, location)
             
-            message = MIMEMultipart('alternative')
-            message['to'] = recipient
-            message['subject'] = f'📊 Relatório Diário {location} - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'
-            
-            html_part = MIMEText(html_content, 'html')
-            message.attach(html_part)
-            
-            raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-            send_message = service.users().messages().send(
-                userId='me',
-                body={'raw': raw_message}
-            ).execute()
-            
-            sent_count += 1
-            logging.info(f"   ✅ Email sent to {recipient} for {location}")
+            # Send to ALL recipients
+            for recipient in recipients:
+                message = MIMEMultipart('alternative')
+                message['to'] = recipient
+                message['subject'] = f'📊 Relatório Diário {location} - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'
+                
+                html_part = MIMEText(html_content, 'html')
+                message.attach(html_part)
+                
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = service.users().messages().send(
+                    userId='me',
+                    body={'raw': raw_message}
+                ).execute()
+                
+                sent_count += 1
+                logging.info(f"   ✅ Email sent to {recipient} for {location}")
         
-        logging.info(f"✅ SCHEDULE #{schedule_index + 1} COMPLETED - {sent_count} emails sent")
+        logging.info(f"✅ SCHEDULE #{schedule_index + 1} COMPLETED - {sent_count} emails sent (to {len(recipients)} recipients)")
         
     except Exception as e:
         logging.error(f"❌ Error sending daily report for schedule #{schedule_index + 1}: {str(e)}")
