@@ -860,9 +860,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                 </button>
-                <button type="submit" class="btn" id="submitButton" title="Guardar Damage Report" style="width: 48px; height: 48px; padding: 12px; border-radius: 8px; background-color: #009cb6; border-color: #009cb6; color: white; transition: all 0.2s;">
+                <button type="submit" class="btn" id="submitButton" title="Criar Damage Report com PDF" style="width: 48px; height: 48px; padding: 12px; border-radius: 8px; background-color: #10b981; border-color: #10b981; color: white; transition: all 0.2s;">
                     <svg class="icon-mono" style="width: 24px; height: 24px;" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                 </button>
             </div>
@@ -2472,13 +2472,6 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                         </svg>
                                                     </button>
-                                                    ${!report.has_pdf ? `
-                                                        <button onclick="generateAndSavePDF('${report.dr_number}')" style="background: transparent; color: #10b981; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='transparent'" title="Gerar e Salvar PDF">
-                                                            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                                                            </svg>
-                                                        </button>
-                                                    ` : ''}
                                                     <button onclick="openEmailModal('${report.dr_number}', '${(report.client_email || '').replace(/'/g, "\\'")}', '${(report.client_name || '').replace(/'/g, "\\'")}', '${(report.country || 'PT').replace(/'/g, "\\'")}');" style="background: transparent; color: #009cb6; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'" title="Enviar Email">
                                                         <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -2772,30 +2765,6 @@
             } catch (error) {
                 console.error('Erro ao eliminar:', error);
                 showNotification('Erro ao eliminar DR: ' + error.message, 'error');
-            }
-        }
-        
-        // Gerar e Salvar PDF (para DRs criados manualmente sem PDF)
-        async function generateAndSavePDF(drNumber) {
-            showNotification(`Gerando PDF para ${drNumber}...`, 'info');
-            
-            try {
-                const response = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}/generate-and-save-pdf`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (result.ok) {
-                    showNotification(`PDF gerado e salvo com sucesso! (${(result.size / 1024).toFixed(0)} KB)`, 'success');
-                    // Recarregar lista para mostrar que agora tem PDF
-                    loadHistory();
-                } else {
-                    showNotification('Erro ao gerar PDF: ' + (result.error || 'Desconhecido'), 'error');
-                }
-            } catch (error) {
-                console.error('Erro ao gerar PDF:', error);
-                showNotification('Erro ao gerar PDF: ' + error.message, 'error');
             }
         }
         
@@ -3234,10 +3203,10 @@
                 
                 // Resetar botão para modo criar
                 const submitBtn = document.getElementById('submitButton');
-                submitBtn.title = 'Guardar Damage Report';
-                submitBtn.style.background = '';
-                submitBtn.style.borderColor = '';
-                submitBtn.style.color = '';
+                submitBtn.title = 'Criar Damage Report com PDF';
+                submitBtn.style.background = '#10b981';
+                submitBtn.style.borderColor = '#10b981';
+                submitBtn.style.color = 'white';
             }
         }
 
@@ -3246,7 +3215,7 @@
             e.preventDefault();
             
             console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('💾 SUBMIT FORM - Guardar Damage Report');
+            console.log('💾 SUBMIT FORM - Criar Damage Report com PDF');
             console.log('   Event:', e);
             
             const formData = new FormData(e.target);
@@ -3297,11 +3266,38 @@
                 if (result.ok) {
                     currentDRNumber = result.dr_number;
                     console.log('   ✅ SUCCESS! DR Number:', result.dr_number);
-                    console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Verificar se foi criação ou atualização
-                    const isUpdate = document.getElementById('submitButton').title === 'Atualizar DR';
-                    showNotification(`Damage Report Nr. ${result.dr_number} ${isUpdate ? 'atualizado' : 'criado'}`, 'success');
+                    const isUpdate = document.getElementById('submitButton').title.includes('Atualizar');
+                    
+                    if (!isUpdate) {
+                        // NOVO DR - Gerar PDF automaticamente
+                        console.log('   🔧 Gerando PDF automaticamente...');
+                        showNotification(`DR ${result.dr_number} criado! Gerando PDF...`, 'info');
+                        
+                        try {
+                            const pdfResponse = await fetch(`/api/damage-reports/${encodeURIComponent(result.dr_number)}/generate-and-save-pdf`, {
+                                method: 'POST'
+                            });
+                            
+                            const pdfResult = await pdfResponse.json();
+                            
+                            if (pdfResult.ok) {
+                                console.log('   ✅ PDF gerado e salvo:', pdfResult.size, 'bytes');
+                                showNotification(`DR ${result.dr_number} criado com PDF (${(pdfResult.size / 1024).toFixed(0)} KB)`, 'success');
+                            } else {
+                                console.error('   ❌ Erro ao gerar PDF:', pdfResult.error);
+                                showNotification(`DR ${result.dr_number} criado mas erro no PDF: ${pdfResult.error}`, 'warning');
+                            }
+                        } catch (pdfError) {
+                            console.error('   ❌ Exception ao gerar PDF:', pdfError);
+                            showNotification(`DR ${result.dr_number} criado mas erro no PDF`, 'warning');
+                        }
+                    } else {
+                        showNotification(`DR ${result.dr_number} atualizado`, 'success');
+                    }
+                    
+                    console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Mostrar botões no header e no formulário
                     const downloadBtn = document.getElementById('downloadBtn');
@@ -3314,10 +3310,10 @@
                     
                     // Resetar botão para modo criar
                     const submitBtn = document.getElementById('submitButton');
-                    submitBtn.title = 'Guardar Damage Report';
-                    submitBtn.style.background = '';
-                    submitBtn.style.borderColor = '';
-                    submitBtn.style.color = '';
+                    submitBtn.title = 'Criar Damage Report com PDF';
+                    submitBtn.style.background = '#10b981';
+                    submitBtn.style.borderColor = '#10b981';
+                    submitBtn.style.color = 'white';
                     
                     // Recarregar histórico
                     loadHistory();
