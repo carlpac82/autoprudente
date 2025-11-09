@@ -29,3 +29,4 @@ logs/
 cache/
 __pycache__/
 backups/
+backup_FULL_10_*.json
