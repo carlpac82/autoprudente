@@ -388,7 +388,7 @@ def execute_search_for_schedule(schedule, schedule_index):
         print(f"\n✅ Search completed!", flush=True)
         
         # SALVAR NA BD
-        _save_search_results(all_results, days, locations_to_search)
+        _save_search_results(all_results, days, locations_to_search, pickup_date)
         
         print(f"\n✅ SEARCH EXECUTION COMPLETED!", flush=True)
         print(f"✅ Results saved to AUTOMATED_SEARCH_HISTORY table!", flush=True)
@@ -469,9 +469,10 @@ async def _do_carjet_search(locations, days, pickup_date):
     
     return all_results
 
-def _save_search_results(all_results, days, locations):
+def _save_search_results(all_results, days, locations, pickup_date):
     """
     Save search results to automated_search_history table
+    Uses pickup_date to determine month_key (not current date)
     """
     import json
     from datetime import datetime
@@ -484,6 +485,15 @@ def _save_search_results(all_results, days, locations):
         return
     
     try:
+        # Parse pickup_date to get month_key
+        if isinstance(pickup_date, str):
+            search_dt = datetime.strptime(pickup_date, '%Y-%m-%d')
+        else:
+            search_dt = pickup_date
+        
+        month_key = f"{search_dt.year}-{str(search_dt.month).zfill(2)}"
+        search_date = search_dt.isoformat()
+        
         for location in locations:
             location_results = all_results.get(location, {})
             
@@ -511,9 +521,6 @@ def _save_search_results(all_results, days, locations):
             
             if prices_by_group:
                 # Insert into database
-                now = datetime.now()
-                month_key = f"{now.year}-{str(now.month).zfill(2)}"
-                search_date = now.isoformat()
                 
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -590,7 +597,7 @@ def execute_weekly_search():
         all_results = asyncio.run(_do_carjet_search(locations_to_search, days, pickup_date))
         
         # Save results
-        _save_search_results(all_results, days, locations_to_search)
+        _save_search_results(all_results, days, locations_to_search, pickup_date)
         
         print(f"\n✅ WEEKLY SEARCH COMPLETED!", flush=True)
         print(f"{'='*80}\n", flush=True)
@@ -663,7 +670,7 @@ def execute_monthly_search():
         all_results = asyncio.run(_do_carjet_search(locations_to_search, days, pickup_date))
         
         # Save results
-        _save_search_results(all_results, days, locations_to_search)
+        _save_search_results(all_results, days, locations_to_search, pickup_date)
         
         print(f"\n✅ MONTHLY SEARCH COMPLETED!", flush=True)
         print(f"{'='*80}\n", flush=True)

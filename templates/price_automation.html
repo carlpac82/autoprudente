@@ -1888,8 +1888,28 @@
 
             // Guardar automaticamente no histórico após pesquisa
             const savedCount = saveToHistory();
-            console.log('Preços guardados no histórico automaticamente');
+            console.log('Preços guardados no histórico automaticamente (localStorage)');
             console.log(`Total de preços guardados: ${savedCount}`);
+            
+            // ALSO save to PostgreSQL with searchType='current' (manual search)
+            const realPricesByGroup = {};
+            grupos.forEach(grupo => {
+                realPricesByGroup[grupo] = {};
+                dias.forEach(day => {
+                    const inputReal = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
+                    if (inputReal && inputReal.value && inputReal.value !== '-') {
+                        const price = parseFloat(inputReal.value);
+                        if (!isNaN(price) && price > 0) {
+                            realPricesByGroup[grupo][day] = price;
+                        }
+                    }
+                });
+            });
+            
+            // Save to PostgreSQL with 'current' type (manual search) and supplier data
+            const supplierData = window.currentSupplierData || {};
+            await saveAutomatedPriceHistory(realPricesByGroup, dias, 'current', supplierData);
+            console.log('Preços guardados na BD PostgreSQL como searchType=current');
 
             setTimeout(() => {
                 progressBar.classList.add('hidden');
@@ -5871,12 +5891,14 @@
                 return 0;
             }
             
-            // Get location from page
+            // Get location and pickup date from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
+            const pickupDate = document.getElementById('pickupDate')?.value || document.getElementById('startDateAuto')?.value || '';
             
             console.log('[SAVE-FUNCTION] Sending to PostgreSQL:', {
                 location: location,
                 searchType: searchType,
+                pickupDate: pickupDate,
                 pricesDataSample: Object.keys(pricesData).slice(0, 3),
                 dias: dias,
                 priceCount: priceCount
@@ -5890,6 +5912,7 @@
                     body: JSON.stringify({
                         location: location,
                         searchType: searchType,
+                        pickupDate: pickupDate,
                         prices: pricesData,
                         dias: dias,
                         priceCount: priceCount,

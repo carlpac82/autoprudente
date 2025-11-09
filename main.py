@@ -26249,8 +26249,9 @@ async def save_automated_search_history(request: Request):
         dias = data.get('dias', [])
         price_count = data.get('priceCount', 0)
         supplier_data = data.get('supplierData', {})  # allCarsByDay - dados individuais dos suppliers
+        pickup_date = data.get('pickupDate', '')  # Date of search (not current date)
         
-        logging.info(f"📥 Received save request: Location={location}, Type={search_type}, Dias={dias}, PriceCount={price_count}, Groups={list(prices_data.keys())}")
+        logging.info(f"📥 Received save request: Location={location}, Type={search_type}, PickupDate={pickup_date}, Dias={dias}, PriceCount={price_count}, Groups={list(prices_data.keys())}")
         
         if not prices_data:
             logging.warning("⚠️ No prices data provided in save request")
@@ -26261,10 +26262,20 @@ async def save_automated_search_history(request: Request):
             try:
                 is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 
-                # Generate month_key
+                # Generate month_key based on pickup_date (search date), not current date
                 from datetime import datetime
-                now = datetime.now()
-                month_key = f"{now.year}-{str(now.month).zfill(2)}"
+                if pickup_date:
+                    try:
+                        search_date = datetime.strptime(pickup_date, '%Y-%m-%d')
+                        month_key = f"{search_date.year}-{str(search_date.month).zfill(2)}"
+                    except:
+                        # Fallback to current date if parsing fails
+                        now = datetime.now()
+                        month_key = f"{now.year}-{str(now.month).zfill(2)}"
+                else:
+                    # If no pickup_date provided, use current date
+                    now = datetime.now()
+                    month_key = f"{now.year}-{str(now.month).zfill(2)}"
                 
                 # Save search
                 import json
