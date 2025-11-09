@@ -415,10 +415,16 @@ async def _do_carjet_search(locations, days, pickup_date):
             try:
                 # Mock request object (complete with all FastAPI Request attributes)
                 # NOTE: NO rotation here - track_by_params does all rotations internally!
+                class MockHeaders(dict):
+                    """Mock headers object with .get() method"""
+                    def get(self, key, default=None):
+                        return super().get(key, default)
+                
                 class MockRequest:
                     def __init__(self, data):
                         self._data = data
-                        self.headers = {}  # Empty headers
+                        # Special header to bypass authentication (see require_auth in main.py line 3173)
+                        self.headers = MockHeaders({'X-Internal-Request': 'scheduler'})
                         self.session = {'username': 'automated', 'user_email': 'automated'}  # Session data
                         self.client = type('obj', (object,), {'host': '127.0.0.1'})()  # Mock client
                     
