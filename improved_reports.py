@@ -413,24 +413,231 @@ def generate_daily_report_html_by_location(search_data, location):
     html += stats_html + content_html + generate_report_footer()
     return html
 
-def generate_weekly_report_html_by_location(months_data, location):
+def generate_weekly_report_html_by_location(search_data, location):
     """
-    Generate weekly report for ONE location
-    Similar structure to daily but with weekly data
+    Relatório SEMANAL - Estrutura: MÊS → dias → grupos
+    Igual ao diário mas com um nível extra (mês)
     """
-    # Similar logic to daily but adapted for weekly data
-    # (código similar ao generate_daily_report_html_by_location mas para dados semanais)
+    # SVG Icons
+    icon_car = '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>'
+    icon_trophy = '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M20 7h-2V5c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v3c0 2.5 1.5 4.7 3.8 5.7.5 1.7 1.8 3 3.5 3.7V23h5v-1.6c1.7-.7 3-2 3.5-3.7 2.3-1 3.8-3.2 3.8-5.7V9c0-1.1-.9-2-2-2zm0 5c0 1.9-1.2 3.5-2.9 4.1-.2-1.3-.8-2.4-1.7-3.3l-1.4 1.4c.6.6 1 1.5 1 2.4 0 1.9-1.6 3.5-3.5 3.5S8 18.5 8 16.6c0-.9.4-1.8 1-2.4L7.6 12.8c-.9.9-1.5 2-1.7 3.3C4.2 15.5 3 13.9 3 12V9h3V5h12v4h3v3z"/></svg>'
+    icon_calendar = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>'
     
+    if not search_data or not search_data.get('results'):
+        html = generate_report_header(
+            f"Relatório Semanal - {location}",
+            f"Semana {datetime.now().strftime('%W/%Y')}"
+        )
+        html += """
+        <div style="text-align: center; padding: 40px;">
+            <p style="color: #ef4444; font-size: 16px;">Sem dados de pesquisa disponíveis</p>
+        </div>
+        """
+        html += generate_report_footer()
+        return html
+    
+    # Filter by location
+    results = [r for r in search_data['results'] if r.get('location', '').lower() == location.lower()]
+    
+    if not results:
+        html = generate_report_header(
+            f"Relatório Semanal - {location}",
+            f"Semana {datetime.now().strftime('%W/%Y')}"
+        )
+        html += f"""
+        <div style="text-align: center; padding: 40px;">
+            <p style="color: #94a3b8; font-size: 16px;">Sem dados para {location}</p>
+        </div>
+        """
+        html += generate_report_footer()
+        return html
+    
+    # Group by MONTH first, then by DAYS, then by GROUP
+    # Estrutura: MÊS → dias → grupos (igual ao diário mas com mês no topo)
+    from collections import defaultdict
+    from datetime import datetime as dt
+    
+    data_by_month = defaultdict(lambda: defaultdict(dict))
+    
+    for car in results:
+        days = car.get('days', 1)
+        group = car.get('group', 'Unknown')
+        
+        # Determinar mês (assumir pesquisa para próximo mês para simplificar)
+        month_key = datetime.now().strftime('%B %Y')
+        
+        if days not in data_by_month[month_key]:
+            data_by_month[month_key][days] = {}
+        
+        if group not in data_by_month[month_key][days]:
+            data_by_month[month_key][days][group] = []
+        
+        data_by_month[month_key][days][group].append(car)
+    
+    # Stats
+    ap_best_price = 0
+    ap_competitive = 0
+    total_searches = 0
+    
+    # Generate HTML
     html = generate_report_header(
         f"Relatório Semanal - {location}",
         f"Semana {datetime.now().strftime('%W/%Y')}"
     )
     
-    html += """
-    <div style="text-align: center; padding: 40px;">
-        <p style="color: #94a3b8;">Relatório semanal em desenvolvimento...</p>
+    content_html = ""
+    
+    # Iterar por meses
+    for month in sorted(data_by_month.keys()):
+        days_data = data_by_month[month]
+        
+        # BARRA AZUL GRANDE - Mês
+        content_html += f"""
+        <div style="background: {COLOR_PRIMARY}; padding: 20px 20px; margin: 30px 0 20px 0; border-radius: 6px;">
+            <div style="color: #fff; font-size: 22px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                {icon_calendar} {month}
+            </div>
+        </div>
+        """
+        
+        # Dentro do mês: dias → grupos (igual ao diário)
+        sorted_days = sorted(days_data.keys())
+        
+        for days in sorted_days:
+            groups = days_data[days]
+            
+            # BARRA AZUL média - Dias
+            content_html += f"""
+            <div style="background: {COLOR_PRIMARY}; padding: 15px 20px; margin: 25px 0 15px 0; border-radius: 6px; opacity: 0.9;">
+                <div style="color: #fff; font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                    {icon_calendar} {days} dia{'s' if days > 1 else ''}
+                </div>
+            </div>
+            """
+            
+            # Grupos
+            for group in sorted(groups.keys()):
+                cars = groups[group]
+                total_searches += 1
+                
+                sorted_cars = sorted(cars, key=lambda x: float(x.get('price_num', 999999)))
+                
+                # Find AP position
+                ap_position = None
+                for idx, car in enumerate(sorted_cars, 1):
+                    supplier = (car.get('supplier', '') or '').lower()
+                    if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                        ap_position = idx
+                        break
+                
+                if ap_position == 1:
+                    ap_best_price += 1
+                    position_bg = COLOR_PRIMARY
+                    position_text = "1º"
+                    position_icon = icon_trophy
+                elif ap_position == 2:
+                    ap_competitive += 1
+                    position_bg = COLOR_ORANGE
+                    position_text = "2º"
+                    position_icon = icon_trophy
+                elif ap_position == 3:
+                    ap_competitive += 1
+                    position_bg = COLOR_YELLOW
+                    position_text = "3º"
+                    position_icon = icon_trophy
+                elif ap_position and ap_position <= 5:
+                    position_bg = COLOR_GRAY
+                    position_text = f"{ap_position}º"
+                    position_icon = ""
+                elif ap_position:
+                    position_bg = COLOR_RED
+                    position_text = f"{ap_position}º"
+                    position_icon = ""
+                else:
+                    position_bg = COLOR_GRAY
+                    position_text = "N/A"
+                    position_icon = ""
+                
+                text_color = "#fff" if position_bg not in [COLOR_YELLOW] else "#92400e"
+                
+                # BARRA AMARELA - Grupo
+                content_html += f"""
+                <div style="background: {COLOR_YELLOW}; height: 3px; margin: 15px 0 15px 0;"></div>
+                """
+                
+                # Group card
+                content_html += f"""
+                <div class="group-card">
+                    <div class="group-header">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            {icon_car}
+                            <span class="group-name">{group}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; background: {position_bg}; color: {text_color}; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            {position_icon}
+                            <span>{position_text}</span>
+                        </div>
+                    </div>
+                    <div class="price-comparison">
+                """
+                
+                # Top 5 competitors
+                for idx, car in enumerate(sorted_cars[:5], 1):
+                    supplier = car.get('supplier', 'Unknown')
+                    price = float(car.get('price_num', 0))
+                    is_ap = 'autoprudente' in supplier.lower()
+                    
+                    car_photo = car.get('photo', '')
+                    car_name = car.get('car', 'Unknown')
+                    
+                    if car_photo and car_photo.startswith('http'):
+                        car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 80px; height: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
+                    else:
+                        car_visual = icon_car
+                    
+                    content_html += f"""
+                    <div class="competitor {'autoprudente' if is_ap else ''}">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            {car_visual}
+                            <div>
+                                <div style="font-weight: {'bold' if is_ap else '500'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px;">
+                                    {idx}. {supplier}
+                                </div>
+                                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                                    {car_name}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'};">
+                            {price:.2f}€
+                        </div>
+                    </div>
+                    """
+                
+                content_html += """
+                    </div>
+                </div>
+                """
+    
+    # Stats
+    ap_percentage = (ap_best_price / total_searches * 100) if total_searches > 0 else 0
+    
+    stats_html = f"""
+    <div class="stats-box">
+        <div class="stat">
+            <div class="stat-value" style="color: {COLOR_PRIMARY};">{ap_best_price}</div>
+            <div class="stat-label">Melhores Preços</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" style="color: #92400e;">{ap_competitive}</div>
+            <div class="stat-label">Competitivos</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{ap_percentage:.0f}%</div>
+            <div class="stat-label">Taxa de Liderança</div>
+        </div>
     </div>
     """
     
-    html += generate_report_footer()
+    html += stats_html + content_html + generate_report_footer()
     return html

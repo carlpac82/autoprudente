@@ -23544,7 +23544,7 @@ async def list_backups(request: Request):
 
 @app.post("/api/reports/test-weekly")
 async def test_weekly_report(request: Request):
-    """Send test weekly report"""
+    """Send test weekly report - 2 EMAILS com NOVO TEMPLATE (Mês → dias → grupos)"""
     require_auth(request)
     
     try:
@@ -23554,6 +23554,7 @@ async def test_weekly_report(request: Request):
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime
+        from improved_reports import generate_weekly_report_html_by_location
         
         # Get complete Gmail credentials
         credentials = _get_gmail_credentials()
@@ -23567,109 +23568,88 @@ async def test_weekly_report(request: Request):
         # Usar email de configuração como destinatário
         report_recipients = [_get_setting("report_email", "carlpac82@hotmail.com")]
         
+        # Load REAL search data from today
+        search_data = {'results': []}
+        with _db_lock:
+            conn = _db_connect()  
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT location, start_date, days, results_data, timestamp
+                    FROM recent_searches
+                    WHERE DATE(timestamp) = CURRENT_DATE
+                    ORDER BY timestamp DESC
+                    """
+                )
+                rows = cursor.fetchall()
+                
+                all_results = []
+                for row in rows:
+                    location, start_date, days, results_data, timestamp = row
+                    if results_data:
+                        results = json.loads(results_data)
+                        for r in results:
+                            r['days'] = days
+                            r['location'] = location
+                        all_results.extend(results)
+                
+                search_data = {'results': all_results}
+                logging.info(f"📊 Found {len(all_results)} total results for weekly report")
+            finally:
+                conn.close()
+        
+        if not search_data['results']:
+            return JSONResponse({
+                "ok": False,
+                "error": "Sem dados de pesquisa de hoje. Execute uma pesquisa primeiro."
+            })
+        
         # Build Gmail service with complete credentials
         service = build('gmail', 'v1', credentials=credentials)
         
-        # Send to each recipient
+        # ENVIAR 2 EMAILS SEPARADOS
+        locations = ['Albufeira', 'Aeroporto de Faro']
         sent_count = 0
+        message_ids = []
+        sent_details = []
         
-        for recipient in report_recipients:
-            try:
-                # Create HTML email with weekly report sample
-                message = MIMEMultipart('alternative')
-                message['to'] = recipient
-                message['subject'] = f'📊 Relatório Semanal - Auto Prudente (Semana {datetime.now().strftime("%W/%Y")})'
-                
-                html_content = f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                </head>
-                <body style="font-family: 'Segoe UI', sans-serif; background: #f8fafc; padding: 20px;">
-                    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px; text-align: center;">
-                            <h1 style="margin: 0; color: white; font-size: 24px;">📊 Relatório Semanal</h1>
-                            <p style="margin: 8px 0 0 0; color: #dbeafe; font-size: 14px;">Semana {datetime.now().strftime('%W/%Y')} - {datetime.now().strftime('%d/%m/%Y')}</p>
-                        </div>
-                        <div style="padding: 30px;">
-                            <h2 style="color: #3b82f6; margin: 0 0 20px 0;">📈 Análise dos Próximos 3 Meses</h2>
-                            <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                Este é um email de teste do relatório semanal.<br>
-                                O sistema analisa tendências e fornece insights sobre os próximos meses.
-                            </p>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
-                                <div style="background: #eff6ff; padding: 15px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">156</div>
-                                    <div style="font-size: 12px; color: #64748b;">Ofertas Analisadas</div>
-                                </div>
-                                <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; font-weight: bold; color: #10b981;">↓ 3.2%</div>
-                                    <div style="font-size: 12px; color: #64748b;">Preço Médio</div>
-                                </div>
-                                <div style="background: #fef2f2; padding: 15px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; font-weight: bold; color: #ef4444;">5</div>
-                                    <div style="font-size: 12px; color: #64748b;">Alertas</div>
-                                </div>
-                            </div>
-                            
-                            <h3 style="color: #1e293b; font-size: 16px; margin: 20px 0 10px 0;">🎯 Tendências Identificadas</h3>
-                            
-                            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin-bottom: 10px; border-radius: 4px;">
-                                <div style="font-weight: bold; color: #065f46; margin-bottom: 5px;">↓ Grupos Económicos (B1, C, D)</div>
-                                <div style="color: #047857; font-size: 14px;">
-                                    Preços em queda (-5.2%) - Boa oportunidade para ajustar
-                                </div>
-                            </div>
-                            
-                            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 10px; border-radius: 4px;">
-                                <div style="font-weight: bold; color: #991b1b; margin-bottom: 5px;">↑ Grupos Premium (J2, L1, M1)</div>
-                                <div style="color: #7f1d1d; font-size: 14px;">
-                                    Preços em alta (+8.7%) - Demanda crescente
-                                </div>
-                            </div>
-                            
-                            <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; border-radius: 4px;">
-                                <p style="margin: 0; color: #1e293b; font-size: 14px;">
-                                    <strong style="color: #009cb6;">Recomendações:</strong><br>
-                                    • Ajustar preços dos grupos económicos<br>
-                                    • Manter competitividade nos premium<br>
-                                    • Monitorizar sazonalidade
-                                </p>
-                            </div>
-                        </div>
-                        <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                                Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
-                            </p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """
-                
-                html_part = MIMEText(html_content, 'html')
-                message.attach(html_part)
-                
-                # Encode and send
-                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-                send_message = service.users().messages().send(
-                    userId='me',
-                    body={'raw': raw_message}
-                ).execute()
-                
-                sent_count += 1
-                logging.info(f"✅ Test weekly report sent to {recipient}")
-                
-            except Exception as e:
-                logging.error(f"❌ Failed to send weekly report to {recipient}: {str(e)}")
+        for location in locations:
+            logging.info(f"\n📍 Generating weekly test report for: {location}")
+            
+            # Generate HTML for this location with REAL data
+            html_content = generate_weekly_report_html_by_location(search_data, location)
+            
+            # Send to all recipients
+            for recipient in report_recipients:
+                try:
+                    message = MIMEMultipart('alternative')
+                    message['to'] = recipient
+                    message['subject'] = f'📊 TESTE Relatório Semanal {location} - Auto Prudente (Semana {datetime.now().strftime("%W/%Y")})'
+                    
+                    html_part = MIMEText(html_content, 'html')
+                    message.attach(html_part)
+                    
+                    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                    send_message = service.users().messages().send(
+                        userId='me',
+                        body={'raw': raw_message}
+                    ).execute()
+                    
+                    message_ids.append(send_message.get('id'))
+                    sent_count += 1
+                    sent_details.append(f"{location} → {recipient}")
+                    logging.info(f"✅ Test weekly {location} report sent to {recipient}")
+                except Exception as e:
+                    logging.error(f"❌ Failed to send weekly {location} report to {recipient}: {str(e)}")
         
         return JSONResponse({
             "ok": True,
-            "message": f"Relatório semanal enviado com sucesso para {sent_count} destinatário(s)!",
+            "message": f"2 emails semanais de teste enviados! (Mês → dias → grupos)",
             "sent": sent_count,
-            "recipients": report_recipients
+            "details": sent_details,
+            "messageIds": message_ids,
+            "recipients": report_recipients,
+            "totalResults": len(search_data['results'])
         })
         
     except Exception as e:
