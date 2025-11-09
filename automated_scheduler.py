@@ -180,47 +180,18 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         schedule_index: int, index of schedule (for logging)
     """
     print(f"\n{'='*80}", flush=True)
-    print(f"📧 DAILY REPORT - SCHEDULE #{schedule_index + 1}", flush=True)
+    print(f"📧 SENDING EMAIL - SCHEDULE #{schedule_index + 1}", flush=True)
     print(f"{'='*80}", flush=True)
-    print(f"   Search Time: {schedule.get('searchTime')}", flush=True)
     print(f"   Send Time: {schedule.get('sendTime')}", flush=True)
     print(f"   Days: {schedule.get('days')}", flush=True)
     print(f"   Locations: {schedule.get('locations')}", flush=True)
     
     logging.info(f"\n{'='*80}")
-    logging.info(f"📧 DAILY REPORT - SCHEDULE #{schedule_index + 1}")
+    logging.info(f"📧 SENDING EMAIL - SCHEDULE #{schedule_index + 1}")
     logging.info(f"{'='*80}")
-    logging.info(f"   Search Time: {schedule.get('searchTime')}")
     logging.info(f"   Send Time: {schedule.get('sendTime')}")
     logging.info(f"   Days: {schedule.get('days')}")
     logging.info(f"   Locations: {schedule.get('locations')}")
-    
-    # EXECUTAR PESQUISAS AUTOMÁTICAS
-    days = schedule.get('days', [])
-    locations_config = schedule.get('locations', {})
-    
-    if days and (locations_config.get('albufeira') or locations_config.get('faro')):
-        print(f"\n🔍 EXECUTING AUTOMATED SEARCHES...", flush=True)
-        logging.info(f"\n🔍 EXECUTING AUTOMATED SEARCHES...")
-        
-        if locations_config.get('albufeira'):
-            print(f"   → Saving Albufeira searches to database...", flush=True)
-            result = save_automated_search_placeholder('Albufeira', days)
-            if result:
-                print(f"   ✅ Albufeira searches SAVED to history!", flush=True)
-            else:
-                print(f"   ❌ Albufeira searches FAILED to save!", flush=True)
-        
-        if locations_config.get('faro'):
-            print(f"   → Saving Aeroporto de Faro searches to database...", flush=True)
-            result = save_automated_search_placeholder('Aeroporto de Faro', days)
-            if result:
-                print(f"   ✅ Aeroporto de Faro searches SAVED to history!", flush=True)
-            else:
-                print(f"   ❌ Aeroporto de Faro searches FAILED to save!", flush=True)
-    else:
-        print(f"   ⚠️ No days or locations configured for this schedule!", flush=True)
-        logging.warning(f"   ⚠️ No days or locations configured for this schedule!")
     
     try:
         from googleapiclient.discovery import build
@@ -356,6 +327,46 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         import traceback
         logging.error(traceback.format_exc())
 
+def execute_search_for_schedule(schedule, schedule_index):
+    """
+    Execute ONLY the searches for a schedule (no email sending)
+    This runs at searchTime
+    """
+    print(f"\n{'='*80}", flush=True)
+    print(f"🔍 EXECUTING SEARCHES - SCHEDULE #{schedule_index + 1}", flush=True)
+    print(f"{'='*80}", flush=True)
+    print(f"   Search Time: {schedule.get('searchTime')}", flush=True)
+    print(f"   Days: {schedule.get('days')}", flush=True)
+    print(f"   Locations: {schedule.get('locations')}", flush=True)
+    
+    # EXECUTAR PESQUISAS AUTOMÁTICAS
+    days = schedule.get('days', [])
+    locations_config = schedule.get('locations', {})
+    
+    if days and (locations_config.get('albufeira') or locations_config.get('faro')):
+        print(f"\n🔍 EXECUTING AUTOMATED SEARCHES...", flush=True)
+        
+        if locations_config.get('albufeira'):
+            print(f"   → Saving Albufeira searches to database...", flush=True)
+            result = save_automated_search_placeholder('Albufeira', days)
+            if result:
+                print(f"   ✅ Albufeira searches SAVED to history!", flush=True)
+            else:
+                print(f"   ❌ Albufeira searches FAILED to save!", flush=True)
+        
+        if locations_config.get('faro'):
+            print(f"   → Saving Aeroporto de Faro searches to database...", flush=True)
+            result = save_automated_search_placeholder('Aeroporto de Faro', days)
+            if result:
+                print(f"   ✅ Aeroporto de Faro searches SAVED to history!", flush=True)
+            else:
+                print(f"   ❌ Aeroporto de Faro searches FAILED to save!", flush=True)
+        
+        print(f"\n✅ SEARCH EXECUTION COMPLETED!", flush=True)
+        print(f"{'='*80}\n", flush=True)
+    else:
+        print(f"   ⚠️ No days or locations configured for this schedule!", flush=True)
+
 def send_weekly_report():
     """Send weekly report"""
     logging.info(f"\n{'='*80}")
@@ -424,23 +435,38 @@ def setup_scheduled_tasks():
     # Setup DAILY schedules
     if settings.get('daily', {}).get('enabled'):
         schedules = settings['daily'].get('schedules', [])
+        print(f"\n📅 DAILY REPORTS: {len(schedules)} schedules", flush=True)
         logging.info(f"\n📅 DAILY REPORTS: {len(schedules)} schedules")
         
         for idx, schedule in enumerate(schedules):
+            search_time = schedule.get('searchTime', '08:55')
             send_time = schedule.get('sendTime', '09:00')
-            hour, minute = send_time.split(':')
+            search_hour, search_minute = search_time.split(':')
+            send_hour, send_minute = send_time.split(':')
             
-            # Add job for sending email
+            # Add job for EXECUTING SEARCHES at searchTime
             scheduler.add_job(
-                func=lambda s=schedule, i=idx: send_daily_report_for_schedule(s, i),
-                trigger=CronTrigger(hour=int(hour), minute=int(minute)),
-                id=f'daily_schedule_{idx}',
-                name=f'Daily Report Schedule #{idx + 1} at {send_time}',
+                func=lambda s=schedule, i=idx: execute_search_for_schedule(s, i),
+                trigger=CronTrigger(hour=int(search_hour), minute=int(search_minute)),
+                id=f'daily_search_{idx}',
+                name=f'Daily Search Schedule #{idx + 1} at {search_time}',
                 replace_existing=True
             )
-            
             job_count += 1
-            logging.info(f"   ✅ Schedule #{idx + 1}: {send_time} | Days: {schedule.get('days')} | Locations: {schedule.get('locations')}")
+            print(f"   ✅ Search job #{idx + 1}: {search_time} | Days: {schedule.get('days')} | Locations: {schedule.get('locations')}", flush=True)
+            logging.info(f"   ✅ Search job #{idx + 1}: {search_time}")
+            
+            # Add job for SENDING EMAIL at sendTime
+            scheduler.add_job(
+                func=lambda s=schedule, i=idx: send_daily_report_for_schedule(s, i),
+                trigger=CronTrigger(hour=int(send_hour), minute=int(send_minute)),
+                id=f'daily_send_{idx}',
+                name=f'Daily Email Schedule #{idx + 1} at {send_time}',
+                replace_existing=True
+            )
+            job_count += 1
+            print(f"   ✅ Email job #{idx + 1}: {send_time}", flush=True)
+            logging.info(f"   ✅ Email job #{idx + 1}: {send_time}")
     
     # Setup WEEKLY schedule
     if settings.get('weekly', {}).get('enabled'):
