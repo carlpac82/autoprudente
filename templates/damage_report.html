@@ -663,6 +663,14 @@
                         <label>Marca / Modelo *</label>
                         <input type="text" id="vehicleBrandModel" name="vehicleBrandModel" placeholder="Volkswagen / Golf" required>
                     </div>
+                    <div class="form-group">
+                        <label>Cor do Veículo</label>
+                        <input type="text" id="vehicleColor" name="vehicleColor" placeholder="Preto, Branco, etc.">
+                    </div>
+                    <div class="form-group">
+                        <label>Quilómetros (Km)</label>
+                        <input type="text" id="vehicleKm" name="vehicleKm" placeholder="50000">
+                    </div>
                 </div>
             </div>
 
@@ -689,6 +697,17 @@
                         <input type="text" id="pickupLocation" name="pickupLocation" value="AUTO PRUDENTE">
                     </div>
                     <div class="form-group">
+                        <label>Combustível Levantamento</label>
+                        <select id="fuelPickup" name="fuelPickup">
+                            <option value="">Selecione...</option>
+                            <option value="1/8">1/8</option>
+                            <option value="1/4">1/4</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="FULL">Cheio (FULL)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>Data de Devolução</label>
                         <input type="date" id="returnDate" name="returnDate">
                     </div>
@@ -699,6 +718,42 @@
                     <div class="form-group">
                         <label>Local de Devolução</label>
                         <input type="text" id="returnLocation" name="returnLocation" value="AUTO PRUDENTE">
+                    </div>
+                    <div class="form-group">
+                        <label>Combustível Devolução</label>
+                        <select id="fuelReturn" name="fuelReturn">
+                            <option value="">Selecione...</option>
+                            <option value="1/8">1/8</option>
+                            <option value="1/4">1/4</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="FULL">Cheio (FULL)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalhes da Inspeção -->
+            <div class="card">
+                <div class="card-header">
+                    <svg class="icon-mono" style="color: #009cb6;" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                    <h2>Detalhes da Inspeção</h2>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Data de Inspeção</label>
+                        <input type="date" id="inspectionDate" name="inspectionDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Nome do Inspetor</label>
+                        <input type="text" id="inspectorName" name="inspectorName" placeholder="Nome do funcionário">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Observações</label>
+                        <textarea id="observations" name="observations" rows="3" placeholder="Observações adicionais sobre o veículo ou danos..."></textarea>
                     </div>
                 </div>
             </div>
@@ -3238,6 +3293,7 @@
             data.repairItems = JSON.stringify(repairItems);
             const repairTotal = repairItems.reduce((sum, item) => sum + item.total, 0);
             data.repairTotal = repairTotal.toFixed(2);
+            data.totalCost = repairTotal.toFixed(2);  // Para compatibilidade com BD
             
             // Adicionar imagens
             data.damageImages = JSON.stringify(damageImages);
