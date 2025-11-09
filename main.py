@@ -18512,31 +18512,28 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             
                             # ✅ is_diagram já foi definido acima (linha 18391)
                             if is_diagram:
-                                # DIAGRAMA: ESCALAR PARA TAMANHO CORRETO
-                                # Imagem original Croqui.png: 986×700px
-                                # Box mapeada: ~256×201px (muito pequena!)
-                                # Solução: Multiplicar por fator para ficar igual ao preview
+                                # DIAGRAMA: TAMANHO FIXO GRANDE (como no preview)
+                                # Box mapeada: 256×201px (posição de referência)
+                                # Tamanho desejado: ~450×320px (grande mas sem sobrepor)
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ MODO DIAGRAMA - ESCALAR PARA PREVIEW SIZE")
-                                    logging.error(f"🖼️ Box mapeada: x={x}, y={y}, w={width}, h={height}")
+                                    logging.error(f"🖼️ MODO DIAGRAMA - TAMANHO FIXO GRANDE")
+                                    logging.error(f"🖼️ Box mapeada (referência): x={x}, y={y}, w={width}, h={height}")
                                     logging.error(f"🖼️ Imagem capturada: {img_width}x{img_height}")
                                 
-                                # ✅ CALCULAR FATOR DE ESCALA baseado no tamanho real da imagem
-                                # Imagem Croqui.png original: 986×700px
-                                # Se a imagem capturada for diferente, ajustar proporcionalmente
-                                scale_factor = img_width / width  # Quanto precisa crescer
+                                # ✅ USAR TAMANHO FIXO GRANDE (proporcional à box mas maior)
+                                # Multiplicar por 1.75x para ficar visível mas não sobrepor
+                                fixed_scale = 1.75
+                                draw_width = width * fixed_scale
+                                draw_height = height * fixed_scale
                                 
-                                # ✅ APLICAR ESCALA À BOX
-                                draw_width = width * scale_factor
-                                draw_height = height * scale_factor
-                                # Manter X,Y mas centralizar se necessário
+                                # Posição: manter X, ajustar Y para não sobrepor header
                                 draw_x = x
-                                draw_y = y - (draw_height - height) / 2  # Centralizar verticalmente
+                                draw_y = y
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ Fator de escala: {scale_factor:.2f}x")
-                                    logging.error(f"🖼️ Desenhar ESCALADO: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)} (original: {int(width)}x{int(height)})")
+                                    logging.error(f"🖼️ Escala fixa: {fixed_scale}x")
+                                    logging.error(f"🖼️ Desenhar: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)}")
                                 
                                 # Desenhar diagrama EXATAMENTE no tamanho mapeado
                                 logging.error(f"🖼️ Preparando buffer PNG para {field_id}...")
@@ -18553,7 +18550,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     mask='auto'
                                 )
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
-                                logging.info(f"✅ Drew diagram {field_id} (SCALED {scale_factor:.2f}x: {int(draw_width)}x{int(draw_height)} - PREVIEW SIZE)")
+                                logging.info(f"✅ Drew diagram {field_id} (FIXED SCALE {fixed_scale}x: {int(draw_width)}x{int(draw_height)} - LARGER BUT NOT OVERLAPPING)")
                                 
                                 # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
                                 # O html2canvas captura o canvas com os pins já visíveis
