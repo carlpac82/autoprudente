@@ -18591,11 +18591,12 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
                                 logging.info(f"✅ Drew diagram {field_id} ({int(img_width)}×{int(img_height)} → {int(draw_width)}×{int(draw_height)})")
                                 
-                                # ✅ DESENHAR PINS DINAMICAMENTE NO PDF
-                                # A imagem do croqui vem do frontend mas os pins são desenhados aqui
-                                # para garantir posicionamento correto no PDF
-                                pins_data = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
-                                if pins_data:  # ✅ ATIVADO!
+                                # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
+                                # O frontend captura o croqui com html2canvas com os pins já visíveis
+                                # Se desenharmos novamente, ficam DUPLICADOS (como o user reportou!)
+                                # A posição dos números NOS PINS está correta no CSS (padding-top: 12px)
+                                pins_data_disabled = None  # Desativado para evitar duplicação
+                                if pins_data_disabled:  # Never executes - pins vêm na imagem!
                                     try:
                                         # Parse JSON se necessário
                                         if isinstance(pins_data, str):
