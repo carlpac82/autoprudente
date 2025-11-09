@@ -250,15 +250,15 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         cursor.close()
         conn.close()
         
-        # Load search data from database
+        # Load search data from automated_search_history (correct table for automated searches)
         conn = _get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT location, start_date, days, results_data, timestamp
-            FROM recent_searches
-            WHERE timestamp >= NOW() - INTERVAL '24 hours'
-            ORDER BY timestamp DESC
+            SELECT location, search_date, dias, prices_data
+            FROM automated_search_history
+            WHERE TO_TIMESTAMP(search_date, 'YYYY-MM-DD') >= CURRENT_DATE - INTERVAL '1 day'
+            ORDER BY search_date DESC, id DESC
             LIMIT 100
             """
         )
@@ -266,13 +266,21 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         
         all_results = []
         for row in rows:
-            location, start_date, days_val, results_data, timestamp = row
-            if results_data:
-                results = json.loads(results_data)
-                for r in results:
-                    r['days'] = days_val
-                    r['location'] = location
-                all_results.extend(results)
+            location, search_date, dias_json, prices_data = row
+            if prices_data:
+                # Parse dias JSON
+                dias_list = json.loads(dias_json) if isinstance(dias_json, str) else dias_json
+                # Parse prices
+                prices = json.loads(prices_data) if isinstance(prices_data, str) else prices_data
+                
+                # Add metadata to each price
+                for day in dias_list:
+                    if str(day) in prices:
+                        for price_item in prices[str(day)]:
+                            price_item['days'] = day
+                            price_item['location'] = location
+                            price_item['search_date'] = search_date
+                            all_results.append(price_item)
         
         cursor.close()
         conn.close()
