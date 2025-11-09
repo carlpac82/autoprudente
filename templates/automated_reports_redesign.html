@@ -200,6 +200,12 @@
                     </svg>
                     Ver Resumo
                 </button>
+                <button onclick="viewSchedulerStatus()" class="inline-flex items-center gap-2 px-6 py-3 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Status Scheduler
+                </button>
             </div>
 
             <!-- Summary -->
@@ -473,6 +479,48 @@
                 summary.style.display = 'block';
             } else {
                 showNotification('Nenhum relatório ativado', 'warning');
+            }
+        }
+
+        // View scheduler status
+        async function viewSchedulerStatus() {
+            try {
+                const response = await fetch('/api/scheduler/status');
+                const result = await response.json();
+                
+                const summary = document.getElementById('scheduleSummary');
+                const content = document.getElementById('scheduleSummaryContent');
+                
+                if (result.ok && result.running) {
+                    let html = `<div class="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">`;
+                    html += `<div class="font-semibold text-green-700 mb-2">✅ Scheduler Ativo</div>`;
+                    html += `<div class="text-green-600 text-sm">${result.message}</div>`;
+                    html += `</div>`;
+                    
+                    if (result.jobs && result.jobs.length > 0) {
+                        html += `<div class="space-y-2">`;
+                        result.jobs.forEach(job => {
+                            html += `<div class="p-3 bg-gray-50 rounded-lg border border-gray-200">`;
+                            html += `<div class="font-medium text-gray-900 text-sm">${job.name}</div>`;
+                            html += `<div class="text-gray-600 text-xs mt-1">Próxima execução: ${job.next_run || 'N/A'}</div>`;
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    content.innerHTML = html;
+                    summary.style.display = 'block';
+                } else {
+                    let html = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">`;
+                    html += `<div class="font-semibold text-red-700 mb-2">❌ Scheduler Inativo</div>`;
+                    html += `<div class="text-red-600 text-sm">${result.message || 'Scheduler não está rodando'}</div>`;
+                    html += `</div>`;
+                    content.innerHTML = html;
+                    summary.style.display = 'block';
+                }
+            } catch (error) {
+                showNotification('Erro ao verificar status do scheduler', 'error');
+                console.error(error);
             }
         }
 

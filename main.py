@@ -12427,6 +12427,44 @@ async def reload_scheduler(request: Request):
             "error": str(e)
         }, status_code=500)
 
+@app.get("/api/scheduler/status")
+async def get_scheduler_status(request: Request):
+    """📊 Obter status do scheduler e próximas execuções"""
+    require_auth(request)
+    
+    try:
+        from automated_scheduler import scheduler
+        
+        if scheduler is None:
+            return JSONResponse({
+                "ok": False,
+                "running": False,
+                "message": "Scheduler não inicializado"
+            })
+        
+        jobs_info = []
+        for job in scheduler.get_jobs():
+            jobs_info.append({
+                "id": job.id,
+                "name": job.name,
+                "next_run": str(job.next_run_time) if job.next_run_time else None,
+                "trigger": str(job.trigger)
+            })
+        
+        return JSONResponse({
+            "ok": True,
+            "running": True,
+            "job_count": len(jobs_info),
+            "jobs": jobs_info,
+            "message": f"Scheduler ativo com {len(jobs_info)} jobs agendados"
+        })
+    except Exception as e:
+        logging.error(f"❌ Error getting scheduler status: {str(e)}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
 @app.post("/api/vehicles/{vehicle_name}/photo/upload")
 async def upload_vehicle_photo(vehicle_name: str, request: Request, file: UploadFile = File(...)):
     """Upload de foto para um veículo"""
