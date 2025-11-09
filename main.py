@@ -19999,6 +19999,63 @@ async def debug_ra_coordinates(request: Request):
             "traceback": traceback.format_exc()
         }
 
+@app.get("/api/rental-agreements/list-fields")
+async def list_rental_agreement_fields(request: Request):
+    """🔍 DEBUG: Listar todos os field_ids mapeados no RA"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT field_id, x, y, width, height, page
+                            FROM rental_agreement_coordinates
+                            ORDER BY field_id
+                        """)
+                        rows = cur.fetchall()
+                else:
+                    cursor = conn.execute("""
+                        SELECT field_id, x, y, width, height, page
+                        FROM rental_agreement_coordinates
+                        ORDER BY field_id
+                    """)
+                    rows = cursor.fetchall()
+                
+                fields = []
+                for row in rows:
+                    fields.append({
+                        'field_id': row[0],
+                        'x': row[1],
+                        'y': row[2],
+                        'width': row[3],
+                        'height': row[4],
+                        'page': row[5] if row[5] else 1
+                    })
+                
+                logging.info(f"📊 LIST RA Fields: {len(fields)} total")
+                
+                # Verificar se pickupDate e returnDate existem
+                has_pickup = any(f['field_id'] == 'pickupDate' for f in fields)
+                has_return = any(f['field_id'] == 'returnDate' for f in fields)
+                
+                return {
+                    "ok": True, 
+                    "total": len(fields),
+                    "fields": fields,
+                    "has_pickupDate": has_pickup,
+                    "has_returnDate": has_return
+                }
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error listing RA fields: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/rental-agreements/get-coordinates")
 async def get_rental_agreement_coordinates(request: Request):
     """Obter coordenadas dos campos do RA"""
