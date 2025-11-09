@@ -3271,15 +3271,20 @@
             try {
                 const canvas = document.getElementById('carDiagram');
                 if (canvas && damages.length > 0) {
-                    // ✅ CAPTURAR NO TAMANHO REAL - SEM SCALE, SEM PADDING EXTRA
-                    // Box mapeada: 256×201px - capturar EXATAMENTE nesse tamanho
+                    // ✅ CAPTURAR NO TAMANHO DA BOX PDF
+                    // Box mapeada no PDF: 256×201px
+                    // Croqui.png natural: 986×700px
+                    // Scale necessário: 256/986 = 0.26
                     const rect = canvas.getBoundingClientRect();
+                    const targetWidth = 256;
+                    const scaleForPDF = targetWidth / rect.width;
                     
-                    console.log('   📐 Canvas real:', rect.width, 'x', rect.height);
+                    console.log('   📐 Canvas renderizado:', rect.width, 'x', rect.height);
+                    console.log('   🎯 Scale para PDF:', scaleForPDF.toFixed(3));
                     
                     const diagramBase64 = await html2canvas(canvas, {
                         backgroundColor: '#ffffff',
-                        scale: 1,  // ✅ SEM SCALE - tamanho real
+                        scale: scaleForPDF,  // ✅ Scale para capturar em 256px largura
                         logging: false,
                         useCORS: true
                     }).then(canvas => canvas.toDataURL('image/png'));

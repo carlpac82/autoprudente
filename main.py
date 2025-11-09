@@ -18512,28 +18512,25 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             
                             # ✅ is_diagram já foi definido acima (linha 18391)
                             if is_diagram:
-                                # DIAGRAMA: TAMANHO FIXO GRANDE (como no preview)
-                                # Box mapeada: 256×201px (posição de referência)
-                                # Tamanho desejado: ~450×320px (grande mas sem sobrepor)
+                                # DIAGRAMA: USAR TAMANHO EXATO DA BOX MAPEADA
+                                # Box: X=25, Y=254, W=256, H=201 (página 1)
+                                # Limite direito: X=318 (início das descrições)
+                                # SOLUÇÃO: Desenhar EXATAMENTE no tamanho mapeado
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ MODO DIAGRAMA - TAMANHO FIXO GRANDE")
-                                    logging.error(f"🖼️ Box mapeada (referência): x={x}, y={y}, w={width}, h={height}")
+                                    logging.error(f"🖼️ MODO DIAGRAMA - TAMANHO EXATO DA BOX")
+                                    logging.error(f"🖼️ Box mapeada: x={x}, y={y}, w={width}, h={height}")
                                     logging.error(f"🖼️ Imagem capturada: {img_width}x{img_height}")
                                 
-                                # ✅ USAR TAMANHO FIXO GRANDE (proporcional à box mas maior)
-                                # Multiplicar por 1.75x para ficar visível mas não sobrepor
-                                fixed_scale = 1.75
-                                draw_width = width * fixed_scale
-                                draw_height = height * fixed_scale
-                                
-                                # Posição: manter X, ajustar Y para não sobrepor header
+                                # ✅ USAR TAMANHO EXATO - SEM ESCALA
+                                # Respeitar os limites do template PDF
+                                draw_width = width
+                                draw_height = height
                                 draw_x = x
                                 draw_y = y
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ Escala fixa: {fixed_scale}x")
-                                    logging.error(f"🖼️ Desenhar: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)}")
+                                    logging.error(f"🖼️ Desenhar EXATO: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)}")
                                 
                                 # Desenhar diagrama EXATAMENTE no tamanho mapeado
                                 logging.error(f"🖼️ Preparando buffer PNG para {field_id}...")
@@ -18550,7 +18547,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     mask='auto'
                                 )
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
-                                logging.info(f"✅ Drew diagram {field_id} (FIXED SCALE {fixed_scale}x: {int(draw_width)}x{int(draw_height)} - LARGER BUT NOT OVERLAPPING)")
+                                logging.info(f"✅ Drew diagram {field_id} (EXACT SIZE: {int(draw_width)}x{int(draw_height)} - NO OVERLAP)")
                                 
                                 # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
                                 # O html2canvas captura o canvas com os pins já visíveis
