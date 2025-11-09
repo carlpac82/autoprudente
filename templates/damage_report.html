@@ -2098,11 +2098,11 @@
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             
-                            // ✅ CENTRO DA BOLA DO PIN
+                            // ✅ CENTRO DA BOLA DO PIN (ajustado após feedback do user)
                             // Pin: 56px altura total, mas a BOLA fica só no topo (~40% superior)
-                            // Centro da bola: aproximadamente 18px do topo = 32% da altura
-                            // (testado visualmente para match com o interativo)
-                            const textYFromTop = pinHeight * 0.32;  // 32% do topo = centro da bola
+                            // Centro da bola: aproximadamente 9.5px do topo = 17% da altura
+                            // User pediu para subir 15% (era 32%, agora 17%)
+                            const textYFromTop = pinHeight * 0.17;  // 17% do topo = centro da bola
                             ctx.fillText(number, canvasX, canvasY - pinHeight + textYFromTop);
                         });
                         
