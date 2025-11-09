@@ -22705,7 +22705,7 @@ async def load_email_settings(request: Request):
 
 @app.post("/api/reports/test-daily")
 async def test_daily_report(request: Request):
-    """Send test daily report email via Gmail API"""
+    """Send test daily report email - 2 EMAILS SEPARADOS com NOVO TEMPLATE"""
     require_auth(request)
     
     try:
@@ -22715,6 +22715,7 @@ async def test_daily_report(request: Request):
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
         from datetime import datetime
+        from improved_reports import generate_daily_report_html_by_location
         
         # Get complete Gmail credentials
         credentials = _get_gmail_credentials()
@@ -22731,97 +22732,88 @@ async def test_daily_report(request: Request):
         username = request.session.get('username')
         logging.info(f"Test daily report requested by {username} for {len(report_recipients)} recipient(s)")
         
-        # Build Gmail service with complete credentials
+        # Load REAL search data from today 07h00
+        search_data = {'results': []}
+        with _db_lock:
+            conn = _db_connect()  
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT location, start_date, days, results_data, timestamp
+                    FROM recent_searches
+                    WHERE DATE(timestamp) = CURRENT_DATE
+                    ORDER BY timestamp DESC
+                    """
+                )
+                rows = cursor.fetchall()
+                
+                all_results = []
+                for row in rows:
+                    location, start_date, days, results_data, timestamp = row
+                    if results_data:
+                        results = json.loads(results_data)
+                        for r in results:
+                            r['days'] = days
+                            r['location'] = location
+                        all_results.extend(results)
+                
+                search_data = {'results': all_results}
+                logging.info(f"📊 Found {len(all_results)} total results from today")
+            finally:
+                conn.close()
+        
+        if not search_data['results']:
+            return JSONResponse({
+                "ok": False,
+                "error": "Sem dados de pesquisa de hoje. Execute uma pesquisa primeiro."
+            })
+        
+        # Build Gmail service
         service = build('gmail', 'v1', credentials=credentials)
         
-        # Create HTML email with sample data
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Relatório Diário de Preços</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', sans-serif;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px 0;">
-                <tr>
-                    <td align="center">
-                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                            <!-- Header -->
-                            <tr>
-                                <td style="background: linear-gradient(135deg, #009cb6 0%, #007a91 100%); padding: 30px 20px; text-align: center;">
-                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📊 Relatório Diário de Preços</h1>
-                                    <p style="margin: 8px 0 0 0; color: #e0f2f7; font-size: 14px;">{datetime.now().strftime('%d/%m/%Y')} - Email de Teste</p>
-                                </td>
-                            </tr>
-                            <!-- Content -->
-                            <tr>
-                                <td style="padding: 30px 20px; text-align: center;">
-                                    <h2 style="color: #009cb6; margin: 0 0 20px 0;">✅ Sistema de Relatórios Funcionando!</h2>
-                                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                        Este é um email de teste do sistema de relatórios automáticos.<br>
-                                        O sistema está configurado e pronto para enviar relatórios diários com dados reais de preços.
-                                    </p>
-                                    <div style="background: #f0f9fb; border-left: 4px solid #009cb6; padding: 15px; text-align: left; border-radius: 4px;">
-                                        <p style="margin: 0; color: #1e293b; font-size: 14px;">
-                                            <strong style="color: #009cb6;">Próximos passos:</strong><br>
-                                            • Configure os horários em Settings → Automated Reports<br>
-                                            • O sistema enviará relatórios automáticos às 09h00<br>
-                                            • Inclui comparação de preços e alertas
-                                        </p>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Footer -->
-                            <tr>
-                                <td style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                                        Auto Prudente © {datetime.now().year} - Sistema de Monitorização de Preços
-                                    </p>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
-        """
-        
-        # Enviar para todos os destinatários
+        # ENVIAR 2 EMAILS SEPARADOS
+        locations = ['Albufeira', 'Aeroporto de Faro']
         sent_count = 0
         message_ids = []
+        sent_details = []
         
-        for recipient in report_recipients:
-            try:
-                # Create message
-                message = MIMEMultipart('alternative')
-                message['to'] = recipient
-                message['subject'] = f'📊 Relatório Diário de Preços - Teste ({datetime.now().strftime("%d/%m/%Y")})'
-                
-                # Attach HTML
-                html_part = MIMEText(html_content, 'html')
-                message.attach(html_part)
-                
-                # Encode and send
-                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-                send_message = service.users().messages().send(
-                    userId='me',
-                    body={'raw': raw_message}
-                ).execute()
-                
-                message_ids.append(send_message.get('id'))
-                sent_count += 1
-                logging.info(f"✅ Test email sent successfully to {recipient}")
-            except Exception as e:
-                logging.error(f"❌ Failed to send to {recipient}: {str(e)}")
+        for location in locations:
+            logging.info(f"\n📍 Generating test report for: {location}")
+            
+            # Generate HTML for this location with REAL data
+            html_content = generate_daily_report_html_by_location(search_data, location)
+            
+            # Send to all recipients
+            for recipient in report_recipients:
+                try:
+                    message = MIMEMultipart('alternative')
+                    message['to'] = recipient
+                    message['subject'] = f'📊 TESTE Relatório Diário {location} - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'
+                    
+                    html_part = MIMEText(html_content, 'html')
+                    message.attach(html_part)
+                    
+                    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                    send_message = service.users().messages().send(
+                        userId='me',
+                        body={'raw': raw_message}
+                    ).execute()
+                    
+                    message_ids.append(send_message.get('id'))
+                    sent_count += 1
+                    sent_details.append(f"{location} → {recipient}")
+                    logging.info(f"✅ Test {location} report sent to {recipient}")
+                except Exception as e:
+                    logging.error(f"❌ Failed to send {location} report to {recipient}: {str(e)}")
         
         return JSONResponse({
             "ok": True,
-            "message": f"Email de teste enviado com sucesso para {sent_count} destinatário(s)!",
+            "message": f"2 emails de teste enviados com sucesso! (dados reais de hoje 07h00)",
             "recipients": report_recipients,
             "sent": sent_count,
-            "messageIds": message_ids
+            "details": sent_details,
+            "messageIds": message_ids,
+            "totalResults": len(search_data['results'])
         })
         
     except Exception as e:
