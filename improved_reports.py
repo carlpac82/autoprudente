@@ -173,7 +173,7 @@ def generate_report_header(title, subtitle=""):
     """
 
 def generate_report_footer():
-    """Footer padrão - BARRA AZUL igual ao DR"""
+    """Footer padrão - BARRA AZUL + texto DEPOIS da barra (igual ao DR)"""
     return f"""
             </div>
             <!-- Footer com barra azul (igual ao DR) -->
@@ -183,6 +183,15 @@ def generate_report_footer():
                 </p>
                 <p style="margin: 8px 0 0 0; font-size: 12px; color: #e0f7fa;">
                     Sistema de Monitorização de Preços
+                </p>
+            </div>
+            <!-- Texto APÓS a barra azul (igual ao DR) -->
+            <div style="background: #f8fafc; padding: 20px; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                    Dados baseados na última pesquisa • Atualizado automaticamente
+                </p>
+                <p style="margin: 8px 0 0 0; font-size: 11px; color: #cbd5e1;">
+                    Este email foi enviado automaticamente pelo sistema
                 </p>
             </div>
         </div>
@@ -292,18 +301,34 @@ def generate_daily_report_html_by_location(search_data, location):
             
             if ap_position == 1:
                 ap_best_price += 1
-                position_color = COLOR_GREEN
-                position_text = "1º Lugar"
-            elif ap_position and ap_position <= 3:
+                position_bg = COLOR_GREEN
+                position_text = "1º"
+                position_icon = icon_trophy
+            elif ap_position == 2:
                 ap_competitive += 1
-                position_color = COLOR_YELLOW
-                position_text = f"#{ap_position}"
+                position_bg = COLOR_ORANGE
+                position_text = "2º"
+                position_icon = icon_trophy
+            elif ap_position == 3:
+                ap_competitive += 1
+                position_bg = COLOR_YELLOW
+                position_text = "3º"
+                position_icon = icon_trophy
+            elif ap_position and ap_position <= 5:
+                position_bg = COLOR_GRAY
+                position_text = f"{ap_position}º"
+                position_icon = ""
             elif ap_position:
-                position_color = COLOR_RED
-                position_text = f"#{ap_position}"
+                position_bg = COLOR_RED
+                position_text = f"{ap_position}º"
+                position_icon = ""
             else:
-                position_color = COLOR_GRAY
+                position_bg = COLOR_GRAY
                 position_text = "N/A"
+                position_icon = ""
+            
+            # Cor do texto (branco ou escuro)
+            text_color = "#fff" if position_bg not in [COLOR_YELLOW] else "#92400e"
             
             # BARRA AMARELA pequena - Separador de grupos
             content_html += f"""
@@ -314,13 +339,14 @@ def generate_daily_report_html_by_location(search_data, location):
             content_html += f"""
             <div class="group-card">
                 <div class="group-header">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
                         {icon_car}
                         <span class="group-name">{group}</span>
                     </div>
-                    <span class="position-badge" style="background: {position_color}; color: {'#fff' if position_color != COLOR_YELLOW else '#92400e'};">
-                        {icon_trophy} {position_text}
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 8px; background: {position_bg}; color: {text_color}; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        {position_icon}
+                        <span>{position_text}</span>
+                    </div>
                 </div>
                 <div class="price-comparison">
             """
