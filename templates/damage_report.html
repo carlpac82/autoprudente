@@ -2731,10 +2731,18 @@
                         const brandModel = [brand, model].filter(x => x && typeof x === 'string').join(' / ');
                         document.getElementById('vehicleBrandModel').value = brandModel;
                         
-                        document.getElementById('pickupDate').value = report.pickup_date || '';
+                        // ✅ DATAS: API retorna snake_case (pickup_date, return_date)
+                        // Converter para formato de input date (YYYY-MM-DD)
+                        const pickupDateValue = report.pickup_date || '';
+                        const returnDateValue = report.return_date || '';
+                        console.log('[EDIT-DR] pickup_date raw:', pickupDateValue);
+                        console.log('[EDIT-DR] return_date raw:', returnDateValue);
+                        
+                        // Se vier timestamp completo (2025-11-07T00:00:00), extrair só a data
+                        document.getElementById('pickupDate').value = pickupDateValue ? pickupDateValue.split('T')[0] : '';
                         document.getElementById('pickupTime').value = report.pickup_time || '';
                         document.getElementById('pickupLocation').value = report.pickup_location || '';
-                        document.getElementById('returnDate').value = report.return_date || '';
+                        document.getElementById('returnDate').value = returnDateValue ? returnDateValue.split('T')[0] : '';
                         document.getElementById('returnTime').value = report.return_time || '';
                         document.getElementById('returnLocation').value = report.return_location || '';
                         
