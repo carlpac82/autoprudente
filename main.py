@@ -19081,7 +19081,10 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         from starlette.responses import Response
         import json
         
-        logging.info(f"📄 Generating PDF for DR: {dr_number}")
+        logging.error(f"📄 ==================== PDF GENERATION START ====================")
+        logging.error(f"📄 Generating PDF for DR: '{dr_number}'")
+        logging.error(f"📄 DR number length: {len(dr_number)}")
+        logging.error(f"📄 DR number bytes: {dr_number.encode('utf-8')}")
         
         # Buscar dados da base de dados
         with _db_lock:
@@ -19110,18 +19113,21 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
                     # Debug: Listar DRs disponíveis
                     if is_postgres:
                         cur_debug = conn.cursor()
-                        cur_debug.execute("SELECT dr_number FROM damage_reports LIMIT 5")
+                        cur_debug.execute("SELECT dr_number FROM damage_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 5")
                         available = cur_debug.fetchall()
                         cur_debug.close()
                     else:
-                        cur_debug = conn.execute("SELECT dr_number FROM damage_reports LIMIT 5")
+                        cur_debug = conn.execute("SELECT dr_number FROM damage_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 5")
                         available = cur_debug.fetchall()
                     
                     logging.error(f"❌ DR '{dr_number}' not found in database")
                     logging.error(f"Available DRs: {[r[0] for r in available]}")
                     raise HTTPException(status_code=404, detail="Damage Report not found")
                 
+                logging.error(f"✅ DR found in database!")
+                logging.error(f"✅ Row columns: {columns[:10]}...")  # Primeiras 10 colunas
                 report = dict(zip(columns, row))
+                logging.error(f"✅ Report dict created with {len(report)} fields")
             finally:
                 conn.close()
         
@@ -19160,9 +19166,15 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         }
         
         # Usar função de overlay para preencher template
+        logging.error(f"🔧 Calling _fill_template_pdf_with_data...")
+        logging.error(f"🔧 Report data keys: {list(report_data.keys())[:15]}...")
+        
         pdf_data = _fill_template_pdf_with_data(report_data)
         
+        logging.error(f"✅ PDF generated! Size: {len(pdf_data)} bytes")
         filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+        logging.error(f"📄 ==================== PDF GENERATION END ====================")
+        logging.error(f"📄 Filename: {filename}")
         
         return Response(
             content=pdf_data,
@@ -19172,10 +19184,13 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Error generating PDF with template: {e}")
+        logging.error(f"❌❌❌ CRITICAL ERROR in PDF generation: {e}")
         import traceback
+        logging.error(f"❌❌❌ Full traceback:")
         logging.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"❌❌❌ Exception type: {type(e).__name__}")
+        # Retornar erro em JSON com detalhe
+        return JSONResponse({"ok": False, "error": f"Error generating PDF: {str(e)}"}, status_code=500)
 
 # ============================================================
 # RENTAL AGREEMENT - Templates and Coordinates
