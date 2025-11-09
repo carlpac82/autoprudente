@@ -15821,7 +15821,7 @@ async def list_damage_reports(request: Request):
                         cur.execute("""
                             SELECT 
                                 id, dr_number, ra_number, contract_number, date,
-                                client_name, vehicle_plate, vehicle_model,
+                                client_name, client_email, client_country, vehicle_plate, vehicle_model,
                                 status, created_at, created_by, pdf_filename
                             FROM damage_reports
                             WHERE (is_deleted = 0 OR is_deleted IS NULL)
@@ -15833,7 +15833,7 @@ async def list_damage_reports(request: Request):
                     cursor = conn.execute("""
                         SELECT 
                             id, dr_number, ra_number, contract_number, date,
-                            client_name, vehicle_plate, vehicle_model,
+                            client_name, client_email, client_country, vehicle_plate, vehicle_model,
                             status, created_at, created_by, pdf_filename
                         FROM damage_reports
                         WHERE (is_deleted = 0 OR is_deleted IS NULL)
@@ -15867,13 +15867,15 @@ async def list_damage_reports(request: Request):
                         'contract_number': row[3],
                         'date': row[4],
                         'client_name': row[5],
-                        'vehicle_plate': row[6],
-                        'vehicle_model': row[7],
-                        'status': row[8],
-                        'created_at': row[9],
-                        'created_by': row[10],
-                        'has_pdf': row[11] is not None,
-                        'pdf_filename': row[11],
+                        'client_email': row[6],
+                        'country': row[7],
+                        'vehicle_plate': row[8],
+                        'vehicle_model': row[9],
+                        'status': row[10],
+                        'created_at': row[11],
+                        'created_by': row[12],
+                        'has_pdf': row[13] is not None,
+                        'pdf_filename': row[13],
                         'is_protected': is_protected
                     }
                     
