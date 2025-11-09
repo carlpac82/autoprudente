@@ -2677,6 +2677,7 @@
         // Editar DR - Carrega dados e muda para tab Criar
         async function editDR(drNumber) {
             try {
+                console.log('[EDIT-DR] Loading DR for edit:', drNumber);
                 const response = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}`);
                 
                 if (!response.ok) {
@@ -2685,78 +2686,114 @@
                 }
                 
                 const result = await response.json();
+                console.log('[EDIT-DR] Received data:', result);
                 
                 if (result.ok && result.report) {
                     const report = result.report;
+                    console.log('[EDIT-DR] Report fields:', Object.keys(report));
                     
-                    // Preencher formulário
-                    document.getElementById('contractNumber').value = report.contract_number || '';
-                    document.getElementById('date').value = report.date || '';
-                    document.getElementById('clientName').value = report.client_name || '';
-                    document.getElementById('clientEmail').value = report.client_email || '';
-                    document.getElementById('clientPhone').value = report.client_phone || '';
-                    document.getElementById('address').value = report.client_address || '';
-                    // Combinar código postal e cidade
-                    const postalCodeCity = [report.client_postal_code, report.client_city].filter(x => x).join(' / ');
-                    document.getElementById('postalCodeCity').value = postalCodeCity;
-                    document.getElementById('country').value = report.client_country || '';
-                    document.getElementById('vehiclePlate').value = report.vehicle_plate || '';
-                    // Combinar marca e modelo
-                    const brandModel = [report.vehicle_brand, report.vehicle_model].filter(x => x).join(' / ');
-                    document.getElementById('vehicleBrandModel').value = brandModel;
-                    document.getElementById('pickupDate').value = report.pickup_date || '';
-                    document.getElementById('pickupTime').value = report.pickup_time || '';
-                    document.getElementById('pickupLocation').value = report.pickup_location || '';
-                    document.getElementById('returnDate').value = report.return_date || '';
-                    document.getElementById('returnTime').value = report.return_time || '';
-                    document.getElementById('returnLocation').value = report.return_location || '';
+                    // Preencher formulário - com tratamento de erros individual
+                    try {
+                        document.getElementById('contractNumber').value = report.contract_number || '';
+                        document.getElementById('date').value = report.date || '';
+                        document.getElementById('clientName').value = report.client_name || '';
+                        document.getElementById('clientEmail').value = report.client_email || '';
+                        document.getElementById('clientPhone').value = report.client_phone || '';
+                        document.getElementById('address').value = report.client_address || '';
+                        
+                        // Combinar código postal e cidade (com verificação de tipos)
+                        const postal = report.client_postal_code || '';
+                        const city = report.client_city || '';
+                        const postalCodeCity = [postal, city].filter(x => x && typeof x === 'string').join(' / ');
+                        document.getElementById('postalCodeCity').value = postalCodeCity;
+                        
+                        document.getElementById('country').value = report.client_country || '';
+                        document.getElementById('vehiclePlate').value = report.vehicle_plate || '';
+                        
+                        // Combinar marca e modelo (com verificação de tipos)
+                        const brand = report.vehicle_brand || '';
+                        const model = report.vehicle_model || '';
+                        const brandModel = [brand, model].filter(x => x && typeof x === 'string').join(' / ');
+                        document.getElementById('vehicleBrandModel').value = brandModel;
+                        
+                        document.getElementById('pickupDate').value = report.pickup_date || '';
+                        document.getElementById('pickupTime').value = report.pickup_time || '';
+                        document.getElementById('pickupLocation').value = report.pickup_location || '';
+                        document.getElementById('returnDate').value = report.return_date || '';
+                        document.getElementById('returnTime').value = report.return_time || '';
+                        document.getElementById('returnLocation').value = report.return_location || '';
+                        
+                        console.log('[EDIT-DR] Basic fields filled successfully');
+                    } catch (e) {
+                        console.error('[EDIT-DR] Error filling basic fields:', e);
+                        throw new Error('Erro ao preencher campos básicos: ' + e.message);
+                    }
                     
                     // Carregar danos se existirem
                     if (report.damage_diagram_data) {
                         try {
-                            damages = JSON.parse(report.damage_diagram_data);
-                            damageCounter = Math.max(...damages.map(d => d.number), 0);
-                            // Recriar pins
-                            damages.forEach(d => {
-                                const container = document.querySelector(`[data-view="${d.view}"]`);
-                                if (container) {
-                                    const pin = document.createElement('div');
-                                    pin.className = 'damage-pin';
-                                    pin.id = d.id;
-                                    pin.textContent = d.number;
-                                    pin.style.left = d.x + 'px';
-                                    pin.style.top = d.y + 'px';
-                                    // Aplicar tamanho salvo (default 0.5 se não existir)
-                                    const pinSize = d.size || 0.5;
-                                    pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
-                                    
-                                    // Click simples: SELECIONAR
-                                    pin.onclick = (e) => {
-                                        e.stopPropagation();
-                                        selectPin(d.id);
-                                    };
-                                    
-                                    // Duplo click: REMOVER
-                                    pin.ondblclick = (e) => {
-                                        e.stopPropagation();
-                                        removeDamagePin(d.id);
-                                    };
-                                    container.appendChild(pin);
-                                }
-                            });
-                            updateDamageList();
+                            console.log('[EDIT-DR] Loading damage data...');
+                            const damageData = typeof report.damage_diagram_data === 'string' 
+                                ? JSON.parse(report.damage_diagram_data) 
+                                : report.damage_diagram_data;
+                            
+                            if (Array.isArray(damageData)) {
+                                damages = damageData;
+                                damageCounter = Math.max(...damages.map(d => d.number), 0);
+                                console.log(`[EDIT-DR] Loaded ${damages.length} damage pins, counter at ${damageCounter}`);
+                                
+                                // Recriar pins
+                                damages.forEach(d => {
+                                    const container = document.querySelector(`[data-view="${d.view}"]`);
+                                    if (container) {
+                                        const pin = document.createElement('div');
+                                        pin.className = 'damage-pin';
+                                        pin.id = d.id;
+                                        pin.textContent = d.number;
+                                        pin.style.left = d.x + 'px';
+                                        pin.style.top = d.y + 'px';
+                                        // Aplicar tamanho salvo (default 0.5 se não existir)
+                                        const pinSize = d.size || 0.5;
+                                        pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
+                                        
+                                        // Click simples: SELECIONAR
+                                        pin.onclick = (e) => {
+                                            e.stopPropagation();
+                                            selectPin(d.id);
+                                        };
+                                        
+                                        // Duplo click: REMOVER
+                                        pin.ondblclick = (e) => {
+                                            e.stopPropagation();
+                                            removeDamagePin(d.id);
+                                        };
+                                        container.appendChild(pin);
+                                    }
+                                });
+                                updateDamageList();
+                            }
                         } catch (e) {
-                            console.error('Erro ao carregar danos:', e);
+                            console.error('[EDIT-DR] Error loading damage data:', e);
+                            // Não bloquear edição se houver erro nos danos
                         }
                     }
                     
                     // Carregar itens de reparo
                     if (report.repair_items) {
                         try {
-                            repairItems = JSON.parse(report.repair_items);
-                            updateRepairTable();
+                            console.log('[EDIT-DR] Loading repair items...');
+                            const repairData = typeof report.repair_items === 'string' 
+                                ? JSON.parse(report.repair_items) 
+                                : report.repair_items;
+                            
+                            if (Array.isArray(repairData)) {
+                                repairItems = repairData;
+                                console.log(`[EDIT-DR] Loaded ${repairItems.length} repair items`);
+                                updateRepairTable();
+                            }
                         } catch (e) {
-                            console.error('Erro ao carregar reparos:', e);
+                            console.error('[EDIT-DR] Error loading repair items:', e);
+                            // Não bloquear edição se houver erro nos reparos
                         }
                     }
                     
@@ -2771,18 +2808,24 @@
                     submitBtn.style.color = 'white';
                     
                     // Mudar para tab Criar
+                    console.log('[EDIT-DR] Switching to create tab...');
                     document.querySelector('[onclick="showTab(\'create\')"]').click();
                     
                     // Scroll para o topo
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     
+                    console.log('[EDIT-DR] DR loaded successfully for edit');
                     showNotification(`A editar DR ${drNumber}`, 'success');
                 } else {
-                    showNotification('Erro ao carregar DR', 'error');
+                    console.error('[EDIT-DR] Invalid response structure:', result);
+                    showNotification('Erro ao carregar DR: resposta inválida', 'error');
                 }
             } catch (error) {
-                console.error('Erro ao editar:', error);
-                showNotification('Erro ao carregar DR para edição', 'error');
+                console.error('[EDIT-DR] Error during edit:', error);
+                console.error('[EDIT-DR] Error stack:', error.stack);
+                // Mostrar erro específico se disponível
+                const errorMsg = error.message || 'Erro desconhecido';
+                showNotification(`Erro ao carregar DR: ${errorMsg}`, 'error');
             }
         }
         
