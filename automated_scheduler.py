@@ -341,8 +341,8 @@ def execute_search_for_schedule(schedule, schedule_index):
     
     try:
         from datetime import datetime, timedelta
-        import requests
         import json
+        import asyncio
         
         # Obter configurações
         days = schedule.get('days', [])
@@ -352,12 +352,12 @@ def execute_search_for_schedule(schedule, schedule_index):
             print(f"   ⚠️ No days or locations configured!", flush=True)
             return
         
-        # Preparar localizações para a pesquisa
+        # Preparar localizações
         locations_to_search = []
         if locations_config.get('albufeira'):
-            locations_to_search.append({"name": "Albufeira", "template": "pt"})
+            locations_to_search.append("Albufeira")
         if locations_config.get('faro'):
-            locations_to_search.append({"name": "Aeroporto de Faro", "template": "faro"})
+            locations_to_search.append("Aeroporto de Faro")
         
         # Data de pickup (amanhã)
         pickup_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
@@ -365,109 +365,154 @@ def execute_search_for_schedule(schedule, schedule_index):
         print(f"\n🚗 Preparing CarJet search...", flush=True)
         print(f"   Pickup Date: {pickup_date}", flush=True)
         print(f"   Durations: {days}", flush=True)
-        print(f"   Locations: {[loc['name'] for loc in locations_to_search]}", flush=True)
+        print(f"   Locations: {locations_to_search}", flush=True)
         
-        # Fazer chamada interna ao endpoint /api/track-carjet
-        payload = {
-            "pickupDate": pickup_date,
-            "pickupTime": "10:00",
-            "durations": days,
-            "locations": locations_to_search,
-            "lang": "pt",
-            "currency": "EUR"
-        }
+        # Executar pesquisa usando asyncio
+        all_results = asyncio.run(_do_carjet_search(locations_to_search, days, pickup_date))
+        print(f"\n✅ Search completed!", flush=True)
         
-        print(f"\n🌐 Calling CarJet API endpoint...", flush=True)
+        # SALVAR NA BD
+        _save_search_results(all_results, days, locations_to_search)
         
-        # Chamada HTTP interna (localhost)
-        response = requests.post(
-            "http://localhost:8000/api/track-carjet",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=600  # 10 minutos timeout (pesquisas podem demorar)
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('ok'):
-                search_results = result.get('results', [])
-                print(f"✅ CarJet search SUCCESSFUL!", flush=True)
-                print(f"   Results: {len(search_results)} locations", flush=True)
-                
-                # AGORA SALVAR NA BD (automated_search_history - TABELA CORRETA!)
-                print(f"\n💾 Saving results to automated_search_history...", flush=True)
-                
-                from datetime import datetime
-                now = datetime.now()
-                month_key = f"{now.year}-{str(now.month).zfill(2)}"
-                
-                for loc_result in search_results:
-                    location_name = loc_result.get('location', '')
-                    
-                    # Preparar dados de preços por grupo
-                    prices_by_group = {}
-                    supplier_data = {}
-                    total_price_count = 0
-                    
-                    for duration_result in loc_result.get('durations', []):
-                        days_num = duration_result.get('days')
-                        items = duration_result.get('items', [])
-                        
-                        if items:
-                            # Agrupar carros por grupo
-                            for item in items:
-                                grupo = item.get('group', 'Unknown')
-                                price = item.get('price_num', 0)
-                                
-                                if grupo not in prices_by_group:
-                                    prices_by_group[grupo] = {}
-                                
-                                # Guardar o menor preço para cada dia/grupo
-                                if days_num not in prices_by_group[grupo] or price < prices_by_group[grupo][days_num]:
-                                    prices_by_group[grupo][days_num] = price
-                                    total_price_count += 1
-                            
-                            # Guardar supplier data (todos os carros para referência)
-                            supplier_data[str(days_num)] = items
-                            
-                            print(f"   → {location_name} | {days_num}d | {len(items)} cars", flush=True)
-                    
-                    # Salvar na tabela automated_search_history
-                    if prices_by_group:
-                        save_payload = {
-                            'location': location_name,
-                            'searchType': 'automated',
-                            'prices': prices_by_group,
-                            'dias': days,
-                            'priceCount': total_price_count,
-                            'supplierData': supplier_data
-                        }
-                        
-                        save_response = requests.post(
-                            "http://localhost:8000/api/automated-search/save",
-                            json=save_payload,
-                            headers={"Content-Type": "application/json"},
-                            timeout=30
-                        )
-                        
-                        if save_response.status_code == 200:
-                            print(f"   ✅ {location_name}: {total_price_count} prices saved!", flush=True)
-                        else:
-                            print(f"   ❌ {location_name}: Failed ({save_response.status_code})", flush=True)
-                
-                print(f"\n✅ SEARCH EXECUTION COMPLETED!", flush=True)
-                print(f"✅ Results saved to AUTOMATED_SEARCH_HISTORY table!", flush=True)
-                print(f"✅ Go to Automated Pricing → History to see them!", flush=True)
-                print(f"{'='*80}\n", flush=True)
-            else:
-                print(f"❌ CarJet search failed: {result.get('error')}", flush=True)
-        else:
-            print(f"❌ HTTP error: {response.status_code}", flush=True)
+        print(f"\n✅ SEARCH EXECUTION COMPLETED!", flush=True)
+        print(f"✅ Results saved to AUTOMATED_SEARCH_HISTORY table!", flush=True)
+        print(f"✅ Go to Automated Pricing → History to see them!", flush=True)
+        print(f"{'='*80}\n", flush=True)
             
     except Exception as e:
         print(f"\n❌ SEARCH ERROR: {str(e)}", flush=True)
         import traceback
         print(traceback.format_exc(), flush=True)
+
+async def _do_carjet_search(locations, days, pickup_date):
+    """
+    Execute CarJet search using Playwright - internal async function
+    """
+    from playwright.async_api import async_playwright
+    import sys
+    import os
+    
+    # Import track_by_params from main
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from main import track_by_params
+    
+    all_results = {}
+    
+    for location in locations:
+        print(f"\n📍 Searching {location}...", flush=True)
+        location_results = {}
+        
+        for day in days:
+            print(f"   → {day} days...", flush=True)
+            
+            try:
+                # Mock request object
+                class MockRequest:
+                    def __init__(self, data):
+                        self._data = data
+                    async def json(self):
+                        return self._data
+                
+                request = MockRequest({
+                    'location': location,
+                    'start_date': pickup_date,
+                    'start_time': '10:00',
+                    'days': day,
+                    'lang': 'pt',
+                    'currency': 'EUR'
+                })
+                
+                # Call track_by_params
+                response = await track_by_params(request)
+                
+                # Extract items from response
+                if hasattr(response, 'body'):
+                    import json
+                    data = json.loads(response.body.decode())
+                    items = data.get('items', [])
+                    print(f"      ✅ {len(items)} cars found", flush=True)
+                    location_results[day] = items
+                    
+            except Exception as e:
+                print(f"      ❌ Error: {str(e)}", flush=True)
+                location_results[day] = []
+        
+        all_results[location] = location_results
+    
+    return all_results
+
+def _save_search_results(all_results, days, locations):
+    """
+    Save search results to automated_search_history table
+    """
+    import json
+    from datetime import datetime
+    
+    print(f"\n💾 Saving results to automated_search_history...", flush=True)
+    
+    conn = _get_db_connection()
+    if not conn:
+        print("❌ Database connection failed", flush=True)
+        return
+    
+    try:
+        for location in locations:
+            location_results = all_results.get(location, {})
+            
+            # Preparar dados de preços por grupo
+            prices_by_group = {}
+            supplier_data = {}
+            total_price_count = 0
+            
+            for day, items in location_results.items():
+                if items:
+                    # Agrupar por grupo
+                    for item in items:
+                        grupo = item.get('group', 'Unknown')
+                        price = item.get('price_num', 0)
+                        
+                        if grupo not in prices_by_group:
+                            prices_by_group[grupo] = {}
+                        
+                        # Menor preço
+                        if day not in prices_by_group[grupo] or price < prices_by_group[grupo][day]:
+                            prices_by_group[grupo][day] = price
+                            total_price_count += 1
+                    
+                    supplier_data[str(day)] = items
+            
+            if prices_by_group:
+                # Insert into database
+                now = datetime.now()
+                month_key = f"{now.year}-{str(now.month).zfill(2)}"
+                search_date = now.isoformat()
+                
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO automated_search_history 
+                    (location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    location,
+                    'automated',
+                    search_date,
+                    month_key,
+                    json.dumps(prices_by_group),
+                    json.dumps(days),
+                    total_price_count,
+                    json.dumps(supplier_data)
+                ))
+                
+                conn.commit()
+                print(f"   ✅ {location}: {total_price_count} prices saved!", flush=True)
+                
+    except Exception as e:
+        print(f"❌ Save error: {str(e)}", flush=True)
+        import traceback
+        traceback.print_exc()
+    finally:
+        if conn:
+            conn.close()
 
 def send_weekly_report():
     """Send weekly report"""
