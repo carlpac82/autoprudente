@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .header { background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); padding: 12px 15px; text-align: center; color: white; }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .logo { height: 40px; max-width: 120px; object-fit: contain; }
+        .dr-info { text-align: right; font-size: 11px; line-height: 1.3; white-space: nowrap; }
+        .dr-info strong { display: block; margin-bottom: 2px; }
+        .content { max-width: 600px; margin: 20px auto; padding: 0 20px; }
+        .footer-bar { background: #009cb6; height: 2px; margin: 20px 0; }
+        .footer { background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); color: white; padding: 12px 20px; margin-top: 30px; text-align: center; }
+        .footer-text { font-size: 11px; margin: 0; }
+        .legal-text { font-size: 8px; line-height: 1.3; color: #666; text-align: center; margin: 10px 20px; }
+        .company-info { font-size: 10px; line-height: 1.4; color: #666; text-align: center; margin: 10px 20px; }
+        .phone-icon { display: inline-block; margin-right: 10px; font-size: 28px; color: #009cb6; vertical-align: middle; font-weight: bold; }
+        
+        /* Mobile optimization */
+        @media only screen and (max-width: 480px) {
+            .header { padding: 10px 10px; }
+            .logo { height: 35px; }
+            .dr-info { font-size: 10px; }
+            .content { padding: 0 15px; }
+            .footer { padding: 10px 15px; }
+            .footer-text { font-size: 10px; }
+            .legal-text { font-size: 7px; margin: 8px 10px; }
+            .company-info { font-size: 9px; margin: 8px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- KOPFZEILE MIT LOGO UND DR/RA -->
+    <div class="header">
+        <div class="header-content">
+            <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_autoprudente_header.png" alt="Auto Prudente" class="logo">
+            <div class="dr-info">
+                <strong>DR: {drNumber}</strong>
+                <strong>RA: {raNumber}</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- E-MAIL INHALT -->
+    <div class="content">
+        <p style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">Hallo <strong>{firstName}</strong>,</p>
+        
+        <p>Vielen Dank, dass Sie sich für Auto Prudente Rent a Car entschieden haben!</p>
+        
+        <p>Aufgrund unvorhergesehener Umstände während des oben genannten Mietvertrags wurde das von Ihnen gemietete Fahrzeug beschädigt.</p>
+        
+        <p>Ihr Mietvertrag zeigt, dass Sie unsere Premium-Versicherung abgelehnt haben und sich dafür entschieden haben, die volle Verantwortung für jeden Verlust oder Schaden zu übernehmen, unabhängig davon, wer schuld war.</p>
+        
+        <p>Daher sind Sie für den in der Anlage beschriebenen Betrag verantwortlich.</p>
+        
+        <p>Wenn diese Angelegenheit von Ihrer Versicherung oder Kreditkartenverwaltung gelöst wird, leiten Sie bitte die beigefügten Dokumente weiter und kontaktieren Sie uns mit Ihren Schadensinformationen.</p>
+        
+        <p>Der Zweck dieser E-Mail ist es, Sie darüber zu informieren, dass wir Ihre Kreditkarte mit allen Kosten belasten werden, die mit dem Schaden während der Mietzeit zusammenhängen.</p>
+        
+        <p>Bitte ignorieren Sie diese Rechnungsanzeige nicht. Wenn Sie Fragen zur Anzeige haben, kontaktieren Sie uns bitte unter <a href="mailto:info@auto-prudente.com">info@auto-prudente.com</a>.</p>
+        
+        <p><strong>Mit freundlichen Grüßen,</strong><br>
+        Verwaltungsabteilung</p>
+        
+        <div class="footer-bar"></div>
+        
+        <p>Wenn Sie Fragen haben oder Kommentare abgeben möchten, zögern Sie bitte nicht, uns zu kontaktieren.</p>
+        
+        <p style="font-size: 16px;"><span class="phone-icon">☏</span> <strong>+351 289 542 160</strong></p>
+    </div>
+    
+    <!-- BLAUER FUßZEILE -->
+    <div class="footer">
+        <p class="footer-text"><strong>@ Auto Prudente Rent a Car</strong></p>
+    </div>
+    
+    <!-- RECHTLICHER TEXT (NACH BLAUER BALKEN) -->
+    <p class="legal-text">Sie erhalten diese E-Mail, weil Sie einen Fahrzeugmietvertrag mit Auto Prudente Rent a Car unterzeichnet haben. Als Datenverantwortlicher verarbeitet Auto Prudente Rent a Car Unipessoal, Lda. Ihre personenbezogenen Daten, um Ihnen Informationen und Dienstleistungen im Zusammenhang mit Ihrer Miete zu senden, im Rahmen der Ausführung Ihres Fahrzeugmietvertrags. Weitere Informationen darüber, wie Auto Prudente Rent a Car Ihre personenbezogenen Daten verarbeitet und Ihre Rechte nach dem Datenschutzgesetz finden Sie in unserer Datenschutzerklärung.</p>
+    
+    <!-- FIRMENINFORMATIONEN -->
+    <p class="company-info"><strong>Auto Prudente Rent a Car Unipessoal, Lda.</strong><br>
+    Steuernummer: PT 503 539 791<br>
+    Hauptsitz: Estrada de Santa Eulália, Edifício Onda do Mar Loja E, 8200-269 Albufeira<br>
+    Telefon: +351 289 542 160 | E-Mail: info@auto-prudente.com</p>
+</body>
+</html>
