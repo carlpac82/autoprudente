@@ -15466,9 +15466,11 @@ async def create_damage_report(request: Request):
                     return {"ok": True, "dr_number": existing_dr_number, "message": "Damage Report updated successfully"}
                 else:
                     # CREATE - Criar novo DR ou reciclar número eliminado
-                    conn.close()  # Fechar conexão temporariamente
-                    dr_number = _get_next_dr_number()  # Busca número reciclado ou gera novo
-                    conn = _db_connect()  # Re-abrir conexão
+                    # ❌ NÃO FECHAR conn aqui - manter conexão aberta e usar diretamente
+                    # conn.close() causava deadlock com _get_next_dr_number() que também usa _db_lock
+                    
+                    # Gerar DR number usando a conexão já aberta
+                    dr_number = _get_next_dr_number(existing_conn=conn)  # Usar versão que recebe conn
                     
                     # Verificar se é um número reciclado (já existe na tabela com is_deleted = 1)
                     is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
@@ -15929,103 +15931,118 @@ async def get_damage_report(request: Request, dr_number: str):
         logging.error(f"Error getting damage report: {e}")
         return {"ok": False, "error": str(e)}
 
-def _get_next_dr_number():
-    """Gerar próximo número de DR com reset anual automático e reciclagem de números eliminados"""
+def _get_next_dr_number(existing_conn=None):
+    """Gerar próximo número de DR com reset anual automático e reciclagem de números eliminados
+    
+    Args:
+        existing_conn: Conexão existente (se None, cria nova com lock)
+    """
     from datetime import datetime
     
-    with _db_lock:
+    # Se já temos conexão, usar diretamente SEM lock (lock já adquirido pelo caller)
+    if existing_conn:
+        conn = existing_conn
+        should_close = False
+    else:
+        # Criar nova conexão COM lock
+        _db_lock.acquire()
         conn = _db_connect()
-        try:
-            current_year = datetime.now().year
-            is_postgres = hasattr(conn, 'cursor')
-            
-            # 1. PRIORIDADE: Verificar se há números eliminados disponíveis para reutilizar
-            # NOTA: Reciclagem de números desativada (coluna is_deleted não existe)
-            # logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
-            # TODO: Adicionar coluna is_deleted se reciclagem for necessária
-            
-            logging.info("✨ Gerando novo número sequencial")
-            
-            # 2. FALLBACK: Gerar novo número sequencial
-            # Obter configuração atual
-            if is_postgres:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT current_year, current_number, prefix 
-                        FROM damage_report_numbering 
-                        WHERE id = 1
-                    """)
-                    row = cur.fetchone()
-            else:
-                cursor = conn.execute("""
+        should_close = True
+    
+    try:
+        current_year = datetime.now().year
+        is_postgres = hasattr(conn, 'cursor')
+        
+        # 1. PRIORIDADE: Verificar se há números eliminados disponíveis para reutilizar
+        # NOTA: Reciclagem de números desativada (coluna is_deleted não existe)
+        # logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
+        # TODO: Adicionar coluna is_deleted se reciclagem for necessária
+        
+        logging.info("✨ Gerando novo número sequencial")
+        
+        # 2. FALLBACK: Gerar novo número sequencial
+        # Obter configuração atual
+        if is_postgres:
+            with conn.cursor() as cur:
+                cur.execute("""
                     SELECT current_year, current_number, prefix 
                     FROM damage_report_numbering 
                     WHERE id = 1
                 """)
-                row = cursor.fetchone()
-            
-            if not row:
-                # Criar configuração inicial APENAS se não existir
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                            SELECT 1, %s, 1, 'DR'
-                            WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
-                        """, (current_year,))
-                        conn.commit()
-                else:
-                    conn.execute("""
+                row = cur.fetchone()
+        else:
+            cursor = conn.execute("""
+                SELECT current_year, current_number, prefix 
+                FROM damage_report_numbering 
+                WHERE id = 1
+            """)
+            row = cursor.fetchone()
+        
+        if not row:
+            # Criar configuração inicial APENAS se não existir
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("""
                         INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        SELECT 1, ?, 1, 'DR'
+                        SELECT 1, %s, 1, 'DR'
                         WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
                     """, (current_year,))
                     conn.commit()
-                return f"DR01/{current_year}"
-            
-            saved_year, current_number, prefix = row
-            
-            # Verificar se mudou o ano (reset)
-            if current_year > saved_year:
-                # Novo ano - reset para 01
-                new_number = 1
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            UPDATE damage_report_numbering 
-                            SET current_year = %s, current_number = %s, updated_at = %s
-                            WHERE id = 1
-                        """, (current_year, new_number, datetime.now().isoformat()))
-                        conn.commit()
-                else:
-                    conn.execute("""
+            else:
+                conn.execute("""
+                    INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                    SELECT 1, ?, 1, 'DR'
+                    WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
+                """, (current_year,))
+                conn.commit()
+            return f"DR01/{current_year}"
+        
+        saved_year, current_number, prefix = row
+        
+        # Verificar se mudou o ano (reset)
+        if current_year > saved_year:
+            # Novo ano - reset para 01
+            new_number = 1
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("""
                         UPDATE damage_report_numbering 
-                        SET current_year = ?, current_number = ?, updated_at = ?
+                        SET current_year = %s, current_number = %s, updated_at = %s
                         WHERE id = 1
                     """, (current_year, new_number, datetime.now().isoformat()))
                     conn.commit()
-                return f"{prefix}{new_number:02d}/{current_year}"
             else:
-                # Mesmo ano - incrementar
-                new_number = current_number + 1
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            UPDATE damage_report_numbering 
-                            SET current_number = %s, updated_at = %s
-                            WHERE id = 1
-                        """, (new_number, datetime.now().isoformat()))
-                        conn.commit()
-                else:
-                    conn.execute("""
+                conn.execute("""
+                    UPDATE damage_report_numbering 
+                    SET current_year = ?, current_number = ?, updated_at = ?
+                    WHERE id = 1
+                """, (current_year, new_number, datetime.now().isoformat()))
+                conn.commit()
+            return f"{prefix}{new_number:02d}/{current_year}"
+        else:
+            # Mesmo ano - incrementar
+            new_number = current_number + 1
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("""
                         UPDATE damage_report_numbering 
-                        SET current_number = ?, updated_at = ?
+                        SET current_number = %s, updated_at = %s
                         WHERE id = 1
                     """, (new_number, datetime.now().isoformat()))
                     conn.commit()
-                return f"{prefix}{new_number:02d}/{current_year}"
-        finally:
+            else:
+                conn.execute("""
+                    UPDATE damage_report_numbering 
+                    SET current_number = ?, updated_at = ?
+                    WHERE id = 1
+                """, (new_number, datetime.now().isoformat()))
+                conn.commit()
+            return f"{prefix}{new_number:02d}/{current_year}"
+    finally:
+        # Fechar e liberar lock apenas se criamos a conexão aqui
+        if should_close:
             conn.close()
+            _db_lock.release()
 
 def _ensure_damage_report_tables():
     """DEPRECATED - usar _ensure_damage_reports_tables() no startup"""
