@@ -2789,64 +2789,87 @@
                                 if (carDiagram) {
                                     // 🎯 ESCALA: Ajustar coordenadas para tamanho atual do container
                                     const img = carDiagram.querySelector('img');
-                                    const rect = carDiagram.getBoundingClientRect();
-                                    const currentWidth = img ? img.clientWidth : rect.width;
-                                    const currentHeight = img ? img.clientHeight : rect.height;
                                     
-                                    // Imagem original: Croqui.png é 986×700px
-                                    const ORIGINAL_WIDTH = 986;
-                                    const ORIGINAL_HEIGHT = 700;
-                                    const scaleX = currentWidth / ORIGINAL_WIDTH;
-                                    const scaleY = currentHeight / ORIGINAL_HEIGHT;
-                                    
-                                    console.log('[EDIT-DR] Container dimensions:', {
-                                        width: currentWidth,
-                                        height: currentHeight,
-                                        scaleX: scaleX.toFixed(3),
-                                        scaleY: scaleY.toFixed(3)
-                                    });
-                                    
-                                    damages.forEach((d, idx) => {
-                                        // ✅ Aplicar escala às coordenadas salvas
-                                        const scaledX = d.x * scaleX;
-                                        const scaledY = d.y * scaleY;
+                                    // ✅ FUNÇÃO para criar pins com escala correta
+                                    const createPinsWithScale = () => {
+                                        const rect = carDiagram.getBoundingClientRect();
+                                        const currentWidth = img ? img.clientWidth : rect.width;
+                                        const currentHeight = img ? img.clientHeight : rect.height;
                                         
-                                        console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, {
-                                            id: d.id,
-                                            number: d.number,
-                                            originalX: d.x,
-                                            originalY: d.y,
-                                            scaledX: scaledX.toFixed(2),
-                                            scaledY: scaledY.toFixed(2),
-                                            view: d.view,
-                                            size: d.size
+                                        // Se ainda não tem dimensões, esperar mais
+                                        if (currentWidth === 0 || currentHeight === 0) {
+                                            console.log('[EDIT-DR] ⏳ Aguardando imagem carregar... (width:', currentWidth, ')');
+                                            return false;
+                                        }
+                                        
+                                        // Imagem original: Croqui.png é 986×700px
+                                        const ORIGINAL_WIDTH = 986;
+                                        const ORIGINAL_HEIGHT = 700;
+                                        const scaleX = currentWidth / ORIGINAL_WIDTH;
+                                        const scaleY = currentHeight / ORIGINAL_HEIGHT;
+                                        
+                                        console.log('[EDIT-DR] Container dimensions:', {
+                                            width: currentWidth,
+                                            height: currentHeight,
+                                            scaleX: scaleX.toFixed(3),
+                                            scaleY: scaleY.toFixed(3)
                                         });
                                         
-                                        const pin = document.createElement('div');
-                                        pin.className = 'damage-pin';
-                                        pin.id = d.id;
-                                        pin.textContent = d.number;
-                                        pin.style.left = scaledX + 'px';
-                                        pin.style.top = scaledY + 'px';
-                                        pin.style.position = 'absolute';
-                                        // Aplicar tamanho salvo (default 0.5 se não existir)
-                                        const pinSize = d.size || 0.5;
-                                        pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
+                                        damages.forEach((d, idx) => {
+                                            // ✅ Aplicar escala às coordenadas salvas
+                                            const scaledX = d.x * scaleX;
+                                            const scaledY = d.y * scaleY;
                                         
-                                        // Click simples: SELECIONAR
-                                        pin.onclick = (e) => {
-                                            e.stopPropagation();
-                                            selectPin(d.id);
-                                        };
+                                            console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, {
+                                                id: d.id,
+                                                number: d.number,
+                                                originalX: d.x,
+                                                originalY: d.y,
+                                                scaledX: scaledX.toFixed(2),
+                                                scaledY: scaledY.toFixed(2),
+                                                view: d.view,
+                                                size: d.size
+                                            });
+                                            
+                                            const pin = document.createElement('div');
+                                            pin.className = 'damage-pin';
+                                            pin.id = d.id;
+                                            pin.textContent = d.number;
+                                            pin.style.left = scaledX + 'px';
+                                            pin.style.top = scaledY + 'px';
+                                            pin.style.position = 'absolute';
+                                            // Aplicar tamanho salvo (default 0.5 se não existir)
+                                            const pinSize = d.size || 0.5;
+                                            pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
+                                            
+                                            // Click simples: SELECIONAR
+                                            pin.onclick = (e) => {
+                                                e.stopPropagation();
+                                                selectPin(d.id);
+                                            };
+                                            
+                                            // Duplo click: REMOVER
+                                            pin.ondblclick = (e) => {
+                                                e.stopPropagation();
+                                                removeDamagePin(d.id);
+                                            };
+                                            carDiagram.appendChild(pin);
+                                            console.log(`[EDIT-DR]   ✅ Pin #${d.number} appended to container`);
+                                        });
                                         
-                                        // Duplo click: REMOVER
-                                        pin.ondblclick = (e) => {
-                                            e.stopPropagation();
-                                            removeDamagePin(d.id);
-                                        };
-                                        carDiagram.appendChild(pin);
-                                        console.log(`[EDIT-DR]   ✅ Pin #${d.number} appended to container`);
-                                    });
+                                        return true; // Sucesso!
+                                    }; // Fim createPinsWithScale
+                                    
+                                    // ✅ Tentar criar pins, com retry se imagem não carregou
+                                    if (!createPinsWithScale()) {
+                                        console.log('[EDIT-DR] 🔄 Imagem ainda não carregou, aguardando 500ms...');
+                                        setTimeout(() => {
+                                            if (!createPinsWithScale()) {
+                                                console.log('[EDIT-DR] 🔄 Retry após 1s...');
+                                                setTimeout(createPinsWithScale, 500);
+                                            }
+                                        }, 500);
+                                    }
                                 } else {
                                     console.error('[EDIT-DR] ❌ Car diagram container (#carDiagram) not found!');
                                 }
