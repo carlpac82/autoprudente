@@ -3243,6 +3243,26 @@
             // Adicionar imagens
             data.damageImages = JSON.stringify(damageImages);
             
+            // ✅ GERAR CROQUI COM PINS DESENHADOS (vehicle_diagram)
+            console.log('   🚗 Gerando croqui com pins...');
+            try {
+                const canvas = document.getElementById('carDiagram');
+                if (canvas && damages.length > 0) {
+                    const diagramBase64 = await html2canvas(canvas, {
+                        backgroundColor: '#ffffff',
+                        scale: 2,
+                        logging: false
+                    }).then(canvas => canvas.toDataURL('image/png'));
+                    
+                    data.vehicleDiagram = diagramBase64;
+                    console.log('   ✅ Croqui gerado:', diagramBase64.length, 'chars');
+                } else {
+                    console.log('   ⚠️ Sem pins - croqui não gerado');
+                }
+            } catch (err) {
+                console.error('   ❌ Erro ao gerar croqui:', err);
+            }
+            
             // Se estamos editando, enviar o DR number existente
             if (currentDRNumber) {
                 data.existingDRNumber = currentDRNumber;
