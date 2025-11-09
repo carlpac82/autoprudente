@@ -2098,12 +2098,14 @@
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             
-                            // ✅ CENTRO DA BOLA DO PIN (ajustado após feedback do user)
-                            // Pin: 56px altura total, mas a BOLA fica só no topo (~40% superior)
-                            // Centro da bola: aproximadamente 9.5px do topo = 17% da altura
-                            // User pediu para subir 15% (era 32%, agora 17%)
-                            const textYFromTop = pinHeight * 0.17;  // 17% do topo = centro da bola
-                            ctx.fillText(number, canvasX, canvasY - pinHeight + textYFromTop);
+                            // ✅ POSIÇÃO DO NÚMERO NA BOLA DO PIN
+                            // Formato original: canvasY - pinHeight * X
+                            // onde X é a distância do FUNDO do pin
+                            // 
+                            // Original era 0.35 (35% de baixo = muito alto)
+                            // User pediu para DESCER (aumentar valor)
+                            // 0.35 + 0.15 = 0.50 (50% de baixo = mais centrado na bola)
+                            ctx.fillText(number, canvasX, canvasY - pinHeight * 0.50);
                         });
                         
                         const diagramBase64 = canvas.toDataURL('image/png', 0.95);
