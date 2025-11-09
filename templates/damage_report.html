@@ -747,7 +747,7 @@
                         <div class="car-svg-container" id="carDiagram" onclick="addDamagePin(event, 'all')" onmousemove="showPinPreview(event)" onmouseleave="hidePinPreview()" style="position: relative;">
                             <img src="/static/images/Croqui.png" alt="Croqui do Carro" style="width: 100%; height: auto; display: block; max-width: 1000px; margin: 0 auto;">
                             <!-- Pin preview (fantasma) -->
-                            <div id="pinPreview" class="damage-pin" style="pointer-events: none; opacity: 0.5; display: none;"></div>
+                            <div id="pinPreview" class="damage-pin" style="pointer-events: none; opacity: 0.5; display: none; will-change: transform, left, top;"></div>
                         </div>
                     </div>
                     
@@ -2959,27 +2959,53 @@
             window.open(`/api/damage-reports/${encodeURIComponent(currentDRNumber)}/pdf?preview=true`, '_blank');
         }
 
-        // Preview do pin ao mover mouse
+        // Preview do pin ao mover mouse (otimizado com requestAnimationFrame)
+        let previewRAF = null;
+        let previewLastX = -1;
+        let previewLastY = -1;
+        
         function showPinPreview(event) {
             const preview = document.getElementById('pinPreview');
             if (!preview) return;
+            
+            // Cancelar frame anterior se ainda não foi executado
+            if (previewRAF) {
+                cancelAnimationFrame(previewRAF);
+            }
             
             const container = event.currentTarget;
             const rect = container.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             
-            // Mostrar preview na posição do mouse
-            preview.style.display = 'block';
-            preview.style.left = x + 'px';
-            preview.style.top = y + 'px';
-            preview.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
-            preview.textContent = damageCounter + 1;  // Próximo número
+            // Só atualizar se posição mudou significativamente (>2px)
+            if (Math.abs(x - previewLastX) < 2 && Math.abs(y - previewLastY) < 2) {
+                return;
+            }
+            
+            previewLastX = x;
+            previewLastY = y;
+            
+            // Usar requestAnimationFrame para sincronizar com refresh do browser
+            previewRAF = requestAnimationFrame(() => {
+                preview.style.display = 'block';
+                preview.style.left = x + 'px';
+                preview.style.top = y + 'px';
+                preview.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
+                preview.textContent = damageCounter + 1;
+                previewRAF = null;
+            });
         }
         
         function hidePinPreview() {
             const preview = document.getElementById('pinPreview');
             if (preview) preview.style.display = 'none';
+            previewLastX = -1;
+            previewLastY = -1;
+            if (previewRAF) {
+                cancelAnimationFrame(previewRAF);
+                previewRAF = null;
+            }
         }
 
         // Adicionar pin de dano
