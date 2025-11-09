@@ -24953,8 +24953,12 @@ def save_automated_searches_to_history():
         logging.error(traceback.format_exc())
 
 def send_automatic_daily_report():
-    """Send daily report automatically based on saved settings"""
+    """
+    Send daily report automatically - 2 EMAILS SEPARADOS
+    1 email para Albufeira, 1 email para Aeroporto
+    """
     from datetime import datetime, timedelta
+    from improved_reports import generate_daily_report_html_by_location
     
     try:
         print("\n" + "="*80)
@@ -24976,8 +24980,7 @@ def send_automatic_daily_report():
                 row = cursor.fetchone()
                 
                 if not row or not row[0]:
-                    logging.warning("⚠️ No automated reports settings found in price_automation_settings")
-                    logging.warning("⚠️ User needs to configure reports at: /admin/customization/automated-reports")
+                    logging.warning("⚠️ No automated reports settings found")
                     return
                 
                 automation_settings = json.loads(row[0])
@@ -24987,102 +24990,112 @@ def send_automatic_daily_report():
                     logging.info("ℹ️ Daily reports are disabled - skipping")
                     return
                 
-                # Get recipients from user_settings (email_settings)
-                logging.info("[EMAIL-DEBUG] Checking user_settings for email recipients...")
+                # Get recipients
                 cursor = conn.execute(
                     "SELECT setting_value FROM user_settings WHERE setting_key = 'email_settings'"
                 )
                 email_row = cursor.fetchone()
                 
                 if not email_row or not email_row[0]:
-                    logging.warning("⚠️ No email settings found in user_settings")
-                    logging.warning("⚠️ Please configure at: /admin/customization/email")
+                    logging.warning("⚠️ No email settings found")
                     return
                 
                 email_settings = json.loads(email_row[0])
                 recipients_text = email_settings.get('recipients', '')
-                
-                # Parse recipients (one per line)
                 recipients = [email.strip() for email in recipients_text.split('\n') if email.strip()]
                 
                 if not recipients:
-                    logging.warning("⚠️ No recipients configured in email settings")
-                    logging.warning("⚠️ Please add recipients at: /admin/customization/email")
+                    logging.warning("⚠️ No recipients configured")
                     return
                 
                 logging.info(f"📧 Sending daily report to {len(recipients)} recipient(s): {recipients}")
             finally:
                 conn.close()
         
-        # Get complete Gmail credentials
+        # Get Gmail credentials
         from googleapiclient.discovery import build
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        from datetime import datetime
         import base64
         
         credentials = _get_gmail_credentials()
         
         if not credentials:
-            logging.error("❌ No Gmail credentials found - cannot send daily report")
+            logging.error("❌ No Gmail credentials found")
             return
         
-        # Load recent search data from database
-        search_data = None
+        # Load ALL recent search data (TODOS os dias e locais)
+        search_data = {'results': []}
         with _db_lock:
             conn = _db_connect()  
             try:
                 cursor = conn.execute(
                     """
-                    SELECT location, start_date, days, results_data
+                    SELECT location, start_date, days, results_data, timestamp
                     FROM recent_searches
+                    WHERE DATE(timestamp) = CURRENT_DATE
                     ORDER BY timestamp DESC
-                    LIMIT 1
                     """
                 )
-                row = cursor.fetchone()
-                if row:
-                    search_data = {
-                        'location': row[0],
-                        'date': row[1],
-                        'days': row[2],
-                        'results': json.loads(row[3]) if row[3] else []
-                    }
-                    logging.info(f"📊 Found search data: {search_data['location']} - {len(search_data['results'])} cars")
+                rows = cursor.fetchall()
+                
+                all_results = []
+                for row in rows:
+                    location, start_date, days, results_data, timestamp = row
+                    if results_data:
+                        results = json.loads(results_data)
+                        # Adicionar info de days a cada resultado
+                        for r in results:
+                            r['days'] = days
+                            r['location'] = location
+                        all_results.extend(results)
+                
+                search_data = {'results': all_results}
+                logging.info(f"📊 Found {len(all_results)} total results from today's searches")
             finally:
                 conn.close()
         
-        # Build Gmail service with complete credentials
+        if not search_data['results']:
+            logging.warning("⚠️ No search data found for today")
+            return
+        
+        # Build Gmail service
         service = build('gmail', 'v1', credentials=credentials)
         
-        sent_count = 0
-        for recipient in recipients:
-            try:
-                # Generate visual HTML report
-                html_content = generate_daily_report_html(search_data)
-                
-                message = MIMEMultipart('alternative')
-                message['to'] = recipient  
-                message['subject'] = f'📊 Relatório Diário - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'  
-                message.attach(MIMEText(html_content, 'html'))
-                
-                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
-                service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
-                
-                sent_count += 1
-                logging.info(f"✅ Daily report sent to {recipient}")
-            except Exception as e:
-                logging.error(f"❌ Failed to send daily report to {recipient}: {str(e)}")
+        # ENVIAR 2 EMAILS SEPARADOS
+        locations = ['Albufeira', 'Aeroporto de Faro']
+        total_sent = 0
         
-        logging.info(f"🎉 Daily report completed: {sent_count}/{len(recipients)} sent successfully")
+        for location in locations:
+            logging.info(f"\n📍 Generating report for: {location}")
+            
+            # Generate HTML for this location
+            html_content = generate_daily_report_html_by_location(search_data, location)
+            
+            # Send to all recipients
+            for recipient in recipients:
+                try:
+                    message = MIMEMultipart('alternative')
+                    message['to'] = recipient  
+                    message['subject'] = f'📊 Relatório Diário {location} - Auto Prudente ({datetime.now().strftime("%d/%m/%Y")})'  
+                    message.attach(MIMEText(html_content, 'html'))
+                    
+                    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+                    service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+                    
+                    total_sent += 1
+                    logging.info(f"✅ {location} report sent to {recipient}")
+                except Exception as e:
+                    logging.error(f"❌ Failed to send {location} report to {recipient}: {str(e)}")
         
-        # Save automated searches to history (for Preços Automatizados page)
+        logging.info(f"🎉 Daily reports completed: {total_sent} emails sent (2 locations × {len(recipients)} recipients)")
+        
+        # Save history
         try:
             save_automated_searches_to_history()
         except Exception as e:
             logging.error(f"⚠️ Failed to save automated searches to history: {str(e)}")
         
-        # Save automated prices from recent searches (for automated_prices_history table)
         try:
             save_automated_prices_from_searches()
         except Exception as e:
