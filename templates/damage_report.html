@@ -2539,9 +2539,13 @@
                     if (r.observations) document.getElementById('observations').value = r.observations;
                     
                     // Mostrar botões
-                    document.getElementById('downloadBtn').style.display = 'inline-flex';
-                    document.getElementById('downloadBtnHeader').style.display = 'inline-flex';
-                    document.getElementById('previewBtn').style.display = 'inline-flex';
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    const downloadBtnHeader = document.getElementById('downloadBtnHeader');
+                    const previewBtn = document.getElementById('previewBtn');
+                    
+                    if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+                    if (downloadBtnHeader) downloadBtnHeader.style.display = 'inline-flex';
+                    if (previewBtn) previewBtn.style.display = 'inline-flex';
                     
                     // Scroll para o formulário
                     document.getElementById('damageReportForm').scrollIntoView({ behavior: 'smooth' });
@@ -3171,9 +3175,14 @@
                 updateDamageList();
                 updateRepairTable();
                 updateImageGallery();
-                document.getElementById('downloadBtn').style.display = 'none';
-                document.getElementById('downloadBtnHeader').style.display = 'none';
-                document.getElementById('previewBtn').style.display = 'none';
+                
+                const downloadBtn = document.getElementById('downloadBtn');
+                const downloadBtnHeader = document.getElementById('downloadBtnHeader');
+                const previewBtn = document.getElementById('previewBtn');
+                
+                if (downloadBtn) downloadBtn.style.display = 'none';
+                if (downloadBtnHeader) downloadBtnHeader.style.display = 'none';
+                if (previewBtn) previewBtn.style.display = 'none';
                 
                 // Resetar botão para modo criar
                 const submitBtn = document.getElementById('submitButton');
@@ -3247,9 +3256,13 @@
                     showNotification(`Damage Report Nr. ${result.dr_number} ${isUpdate ? 'atualizado' : 'criado'}`, 'success');
                     
                     // Mostrar botões no header e no formulário
-                    document.getElementById('downloadBtn').style.display = 'inline-flex';
-                    document.getElementById('downloadBtnHeader').style.display = 'inline-flex';
-                    document.getElementById('previewBtn').style.display = 'inline-flex';
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    const downloadBtnHeader = document.getElementById('downloadBtnHeader');
+                    const previewBtn = document.getElementById('previewBtn');
+                    
+                    if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+                    if (downloadBtnHeader) downloadBtnHeader.style.display = 'inline-flex';
+                    if (previewBtn) previewBtn.style.display = 'inline-flex';
                     
                     // Resetar botão para modo criar
                     const submitBtn = document.getElementById('submitButton');

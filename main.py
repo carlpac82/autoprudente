@@ -15347,6 +15347,26 @@ async def create_damage_report(request: Request):
                         cur.execute("ALTER TABLE damage_reports ADD COLUMN deleted_by TEXT")
                         logging.info("✅ Coluna deleted_by adicionada (PostgreSQL)")
                     
+                    if 'client_country' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN client_country TEXT")
+                        logging.info("✅ Coluna client_country adicionada (PostgreSQL)")
+                    
+                    if 'pickup_time' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN pickup_time TEXT")
+                        logging.info("✅ Coluna pickup_time adicionada (PostgreSQL)")
+                    
+                    if 'return_time' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN return_time TEXT")
+                        logging.info("✅ Coluna return_time adicionada (PostgreSQL)")
+                    
+                    if 'issued_by' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN issued_by TEXT")
+                        logging.info("✅ Coluna issued_by adicionada (PostgreSQL)")
+                    
+                    if 'damage_images' not in existing_columns:
+                        cur.execute("ALTER TABLE damage_reports ADD COLUMN damage_images TEXT")
+                        logging.info("✅ Coluna damage_images adicionada (PostgreSQL)")
+                    
                     conn.commit()
                     cur.close()
                 else:
@@ -15384,6 +15404,36 @@ async def create_damage_report(request: Request):
                     try:
                         conn.execute("ALTER TABLE damage_reports ADD COLUMN deleted_by TEXT")
                         logging.info("✅ Coluna deleted_by adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN client_country TEXT")
+                        logging.info("✅ Coluna client_country adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN pickup_time TEXT")
+                        logging.info("✅ Coluna pickup_time adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN return_time TEXT")
+                        logging.info("✅ Coluna return_time adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN issued_by TEXT")
+                        logging.info("✅ Coluna issued_by adicionada (SQLite)")
+                    except Exception:
+                        pass  # Coluna já existe
+                    
+                    try:
+                        conn.execute("ALTER TABLE damage_reports ADD COLUMN damage_images TEXT")
+                        logging.info("✅ Coluna damage_images adicionada (SQLite)")
                     except Exception:
                         pass  # Coluna já existe
                 
