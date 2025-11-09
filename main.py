@@ -2951,7 +2951,7 @@ def _get_gmail_credentials():
         conn = _db_connect()
         try:
             cursor = conn.execute(
-                "SELECT access_token, refresh_token FROM oauth_tokens WHERE provider = 'gmail' ORDER BY updated_at DESC LIMIT 1"
+                "SELECT access_token, refresh_token FROM oauth_tokens WHERE provider = 'google' ORDER BY updated_at DESC LIMIT 1"
             )
             row = cursor.fetchone()
             if row:
@@ -21919,7 +21919,7 @@ async def oauth_gmail_callback(request: Request, code: str = None, error: str = 
                 <script>
                     const data = {{
                         type: 'oauth-success',
-                        provider: 'gmail',
+                        provider: 'google',
                         email: '{user_email}',
                         name: '{user_name}',
                         picture: '{user_picture}',
@@ -21950,7 +21950,7 @@ async def save_oauth_token(request: Request):
     
     try:
         data = await request.json()
-        provider = data.get('provider', 'gmail')
+        provider = data.get('provider', 'google')
         user_email = data.get('email')
         access_token = data.get('token')
         refresh_token = data.get('refreshToken', '')
@@ -22002,7 +22002,7 @@ async def load_oauth_token(request: Request):
     require_auth(request)
     
     try:
-        provider = request.query_params.get('provider', 'gmail')
+        provider = request.query_params.get('provider', 'google')
         
         with _db_lock:
             conn = _db_connect()

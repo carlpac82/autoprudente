@@ -202,7 +202,7 @@
             
             // Listen for OAuth callback
             window.addEventListener('message', (event) => {
-                if (event.data.type === 'oauth-success' && event.data.provider === 'gmail') {
+                if (event.data.type === 'oauth-success' && (event.data.provider === 'google' || event.data.provider === 'gmail')) {
                     handleOAuthSuccess(event.data);
                     popup.close();
                 }
