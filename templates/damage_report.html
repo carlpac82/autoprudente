@@ -3432,23 +3432,25 @@
                 let contractNumber = '';
                 let vehiclePlate = '';
                 let date = '';
+                let clientCountry = '';
                 
                 if (drData.ok && drData.report) {
                     contractNumber = drData.report.contract_number || '';
                     vehiclePlate = drData.report.vehicle_plate || '';
                     date = drData.report.date || '';
+                    clientCountry = drData.report.country || drData.report.client_country || country || '';
                 }
                 
-                // Detectar idioma automaticamente do país
+                // Detectar idioma automaticamente do país (usar dados do DR, não parâmetro)
                 const langMap = {
                     'PT': 'pt', 'BR': 'pt',
                     'FR': 'fr', 'BE': 'fr', 'MC': 'fr',
                     'DE': 'de', 'AT': 'de', 'CH': 'de', 'LU': 'de'
                 };
-                const detectedLang = langMap[country?.toUpperCase()] || 'en';
+                const detectedLang = langMap[clientCountry?.toUpperCase()] || 'en';
                 
-                console.log(`Loading email template for ${drNumber}, language: ${detectedLang}, country: ${country}`);
-                console.log(`DR data: RA=${contractNumber}, Plate=${vehiclePlate}, Date=${date}`);
+                console.log(`Loading email template for ${drNumber}, language: ${detectedLang}, country: ${clientCountry}`);
+                console.log(`DR data: RA=${contractNumber}, Plate=${vehiclePlate}, Date=${date}, Country=${clientCountry}`);
                 
                 // Carregar template do backend
                 const response = await fetch(`/api/damage-reports/email-template/${detectedLang}`);
