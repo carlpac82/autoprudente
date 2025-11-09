@@ -15351,8 +15351,6 @@ async def create_damage_report(request: Request):
                     except Exception:
                         pass  # Coluna já existe
                 
-                import datetime
-                
                 # Dividir campos combinados
                 # Código Postal / Cidade
                 postal_code_city = data.get('postalCodeCity', '')

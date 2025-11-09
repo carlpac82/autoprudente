@@ -3229,7 +3229,7 @@
                     
                     // Verificar se foi criação ou atualização
                     const isUpdate = document.getElementById('submitButton').title === 'Atualizar DR';
-                    showNotification(`Damage Report ${result.dr_number} ${isUpdate ? 'atualizado' : 'criado'} com sucesso!`, 'success');
+                    showNotification(`Damage Report Nr. ${result.dr_number} ${isUpdate ? 'atualizado' : 'criado'}`, 'success');
                     
                     // Mostrar botões no header e no formulário
                     document.getElementById('downloadBtn').style.display = 'inline-flex';
@@ -3252,7 +3252,7 @@
                     console.error('   ❌ ERRO! result.ok =', result.ok);
                     console.error('   Error:', result.error);
                     console.log('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    showNotification('Erro: ' + (result.error || 'Desconhecido'), 'error');
+                    showNotification('Erro ao criar Damage Report: ' + (result.error || 'Erro desconhecido'), 'error');
                 }
             } catch (error) {
                 console.error('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -3261,7 +3261,7 @@
                 console.error('   Message:', error.message);
                 console.error('   Stack:', error.stack);
                 console.error('💾 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                showNotification('Erro ao guardar: ' + error.message, 'error');
+                showNotification('Erro ao criar Damage Report: ' + error.message, 'error');
             }
         });
 
