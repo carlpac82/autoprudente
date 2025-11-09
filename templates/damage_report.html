@@ -3424,6 +3424,20 @@
             
             // Carregar template do email
             try {
+                // Buscar dados completos do DR para preencher template
+                const drResponse = await fetch(`/api/damage-reports/${encodeURIComponent(drNumber)}`);
+                const drData = await drResponse.json();
+                
+                let contractNumber = '';
+                let vehiclePlate = '';
+                let date = '';
+                
+                if (drData.ok && drData.report) {
+                    contractNumber = drData.report.contract_number || '';
+                    vehiclePlate = drData.report.vehicle_plate || '';
+                    date = drData.report.date || '';
+                }
+                
                 // Detectar idioma automaticamente do país
                 const langMap = {
                     'PT': 'pt', 'BR': 'pt',
@@ -3433,6 +3447,7 @@
                 const detectedLang = langMap[country?.toUpperCase()] || 'en';
                 
                 console.log(`Loading email template for ${drNumber}, language: ${detectedLang}, country: ${country}`);
+                console.log(`DR data: RA=${contractNumber}, Plate=${vehiclePlate}, Date=${date}`);
                 
                 // Carregar template do backend
                 const response = await fetch(`/api/damage-reports/email-template/${detectedLang}`);
@@ -3444,16 +3459,18 @@
                     
                     let subject = data.template.subject_template
                         .replace(/{drNumber}/g, drNumber)
-                        .replace(/{firstName}/g, firstName);
+                        .replace(/{firstName}/g, firstName)
+                        .replace(/{vehiclePlate}/g, vehiclePlate);
                     
                     let body = data.template.body_template
                         .replace(/{drNumber}/g, drNumber)
                         .replace(/{firstName}/g, firstName)
                         .replace(/{email}/g, clientEmail || '')
                         .replace(/{clientName}/g, clientName || '')
-                        .replace(/{contractNumber}/g, '')
-                        .replace(/{vehiclePlate}/g, '')
-                        .replace(/{date}/g, '');
+                        .replace(/{contractNumber}/g, contractNumber)
+                        .replace(/{raNumber}/g, contractNumber)
+                        .replace(/{vehiclePlate}/g, vehiclePlate)
+                        .replace(/{date}/g, date);
                     
                     // Mostrar preview (suporta HTML)
                     document.getElementById('emailSubjectPreview').textContent = subject;

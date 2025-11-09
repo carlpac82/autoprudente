@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .header { background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); padding: 12px 15px; text-align: center; color: white; }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .logo { height: 40px; max-width: 120px; object-fit: contain; }
+        .dr-info { text-align: right; font-size: 11px; line-height: 1.3; white-space: nowrap; }
+        .dr-info strong { display: block; margin-bottom: 2px; }
+        .content { max-width: 600px; margin: 20px auto; padding: 0 20px; }
+        .footer { background: #009cb6; color: white; padding: 20px; margin-top: 40px; font-size: 12px; text-align: center; }
+        .footer-bar { background: #009cb6; height: 2px; margin: 20px 0; }
+        .phone-icon { display: inline-block; margin-right: 10px; font-size: 28px; color: #009cb6; vertical-align: middle; font-weight: bold; }
+        
+        /* Mobile optimization */
+        @media only screen and (max-width: 480px) {
+            .header { padding: 10px 10px; }
+            .logo { height: 35px; }
+            .dr-info { font-size: 10px; }
+            .content { padding: 0 15px; }
+            .footer { padding: 15px 10px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- EN-TÊTE AVEC LOGO ET DR/RA -->
+    <div class="header">
+        <div class="header-content">
+            <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_autoprudente_header.png" alt="Auto Prudente" class="logo">
+            <div class="dr-info">
+                <strong>DR: {drNumber}</strong>
+                <strong>RA: {raNumber}</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CORPS DU MESSAGE -->
+    <div class="content">
+        <p style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">Bonjour <strong>{firstName}</strong>,</p>
+        
+        <p>Merci d'avoir choisi Auto Prudente Rent a Car!</p>
+        
+        <p>En raison de circonstances imprévues survenues pendant le contrat de location mentionné ci-dessus, le véhicule que vous avez loué a subi des dommages.</p>
+        
+        <p>Votre contrat de location indique que vous avez refusé notre assurance premium, choisissant d'accepter l'entière responsabilité de toute perte ou dommage qui survient, indépendamment de qui était en faute.</p>
+        
+        <p>Par conséquent, vous êtes responsable du montant décrit en pièce jointe.</p>
+        
+        <p>Si cette affaire est résolue par votre assureur ou l'entité de gestion de votre carte de crédit, veuillez leur transmettre les documents joints et nous contacter avec les informations de votre sinistre.</p>
+        
+        <p>L'objectif de cet e-mail est de vous informer que nous débiterons votre carte de crédit de tous les frais liés aux dommages survenus pendant la période de location.</p>
+        
+        <p>Veuillez ne pas ignorer cet avis de facturation. Si vous avez des questions concernant l'avis, veuillez nous contacter à <a href="mailto:info@auto-prudente.com">info@auto-prudente.com</a>.</p>
+        
+        <p><strong>Cordialement,</strong><br>
+        Département Assistante Administrative</p>
+        
+        <div class="footer-bar"></div>
+        
+        <p>Si vous avez des questions ou souhaitez faire des commentaires, n'hésitez pas à nous contacter.</p>
+        
+        <p style="font-size: 16px;"><span class="phone-icon">☏</span> <strong>+351 289 542 160</strong></p>
+    </div>
+    
+    <!-- PIED DE PAGE AVEC INFORMATIONS LÉGALES -->
+    <div class="footer">
+        <p><strong>@ Auto Prudente Rent a Car</strong></p>
+        
+        <p style="margin: 15px 0;">Vous recevez cet e-mail car vous avez signé un contrat de location de véhicule avec Auto Prudente Rent a Car. En tant que responsable du traitement, Auto Prudente Rent a Car Unipessoal, Lda. traite vos données personnelles pour vous envoyer des informations et des services liés à votre location, dans le cadre de l'exécution de votre contrat de location de véhicule. Pour plus d'informations sur la manière dont Auto Prudente Rent a Car traite vos données personnelles et vos droits en vertu de la loi sur la protection des données, veuillez consulter notre politique de confidentialité.</p>
+        
+        <p><strong>Auto Prudente Rent a Car Unipessoal, Lda.</strong><br>
+        Numéro Fiscal: PT 503 539 791<br>
+        Siège Social: Estrada de Santa Eulália, Edifício Onda do Mar Loja E, 8200-269 Albufeira<br>
+        Téléphone: +351 289 542 160 | E-mail: info@auto-prudente.com</p>
+    </div>
+</body>
+</html>
