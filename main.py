@@ -18686,14 +18686,14 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                                 font_size = max(10, int(pin_width_pdf * 0.58))
                                                 can.setFont("Helvetica-Bold", font_size)  # BOLD
                                                 
-                                                # ✅ Número mais baixo na bola (50% da altura)
+                                                # ✅ Número NO CENTRO da bola (60% da altura)
                                                 # drawCentredString usa Y como BASELINE do texto (não centro!)
                                                 # Baseline fica na parte inferior do texto
                                                 text_x = pin_x_scaled
-                                                # 50% da altura do pin para descer o número
-                                                text_y_base = pin_y_final + (pin_height_pdf * 0.50)
-                                                # Adicionar compensação da baseline (20% da fonte - ajustado)
-                                                text_y = text_y_base + (font_size * 0.20)
+                                                # 60% da altura do pin = CENTRO DA BOLA
+                                                text_y_base = pin_y_final + (pin_height_pdf * 0.60)
+                                                # Compensação mínima da baseline (10% da fonte)
+                                                text_y = text_y_base + (font_size * 0.10)
                                                 
                                                 can.drawCentredString(text_x, text_y, str(pin_number))
                                                 
