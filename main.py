@@ -16207,6 +16207,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
         
         # ✅ EXTRAIR ITENS DE REPARAÇÃO (repair_line_1, repair_line_2, ...)
         repair_json = report.get('repair_items', '')
+        total_calculated = 0.0
         if repair_json:
             try:
                 repair_items = json.loads(repair_json)
@@ -16218,9 +16219,19 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
                     report_data[f'repair_line_{line_num}_hours'] = '-' if hours_val == 0 or hours_val == '0' else str(hours_val)
                     report_data[f'repair_line_{line_num}_price'] = str(item.get('price', ''))
                     report_data[f'repair_line_{line_num}_subtotal'] = str(item.get('total', ''))
+                    # Somar ao total
+                    total_calculated += float(item.get('total', 0))
                 logging.info(f"✅ Extraídos {len(repair_items)} itens de reparação")
+                logging.info(f"💰 Total calculado: {total_calculated:.2f} €")
             except:
                 logging.warning("⚠️ Erro ao parsear repair_items")
+        
+        # ✅ SOBRESCREVER total_repair_cost com valor CALCULADO (igual ao preview)
+        if total_calculated > 0:
+            report_data['total_repair_cost'] = f"{total_calculated:.2f}"
+            report_data['totalRepairCost'] = f"{total_calculated:.2f}"
+            report_data['total_amount'] = f"{total_calculated:.2f}"
+            logging.info(f"✅ Total repair cost SOBRESCRITO: {total_calculated:.2f} €")
         
         # ✅ ADICIONAR CROQUI COM PINS
         vehicle_diagram_blob = report.get('vehicle_damage_image')
@@ -19466,6 +19477,7 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
         
         # ✅ EXTRAIR ITENS DE REPARAÇÃO (repair_line_1, repair_line_2, ...)
         repair_json = report.get('repair_items', '')
+        total_calculated = 0.0
         if repair_json:
             try:
                 repair_items = json.loads(repair_json)
@@ -19477,9 +19489,19 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
                     report_data[f'repair_line_{line_num}_hours'] = '-' if hours_val == 0 or hours_val == '0' else str(hours_val)
                     report_data[f'repair_line_{line_num}_price'] = str(item.get('price', ''))
                     report_data[f'repair_line_{line_num}_subtotal'] = str(item.get('total', ''))
+                    # Somar ao total
+                    total_calculated += float(item.get('total', 0))
                 logging.info(f"✅ Extraídos {len(repair_items)} itens de reparação")
+                logging.info(f"💰 Total calculado: {total_calculated:.2f} €")
             except:
                 logging.warning("⚠️ Erro ao parsear repair_items")
+        
+        # ✅ SOBRESCREVER total_repair_cost com valor CALCULADO (igual ao preview)
+        if total_calculated > 0:
+            report_data['total_repair_cost'] = f"{total_calculated:.2f}"
+            report_data['totalRepairCost'] = f"{total_calculated:.2f}"
+            report_data['total_amount'] = f"{total_calculated:.2f}"
+            logging.info(f"✅ Total repair cost SOBRESCRITO: {total_calculated:.2f} €")
         
         # ✅ ADICIONAR CROQUI COM PINS
         vehicle_diagram_blob = report.get('vehicle_damage_image')
