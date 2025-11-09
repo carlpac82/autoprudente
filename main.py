@@ -16121,13 +16121,27 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             finally:
                 conn.close()
         
+        # Formatar datas para dd-mm-yyyy (remover hora se existir)
+        def format_date(date_str):
+            if not date_str:
+                return ''
+            try:
+                # Remove hora se existir (ex: "2025-11-06 00:00:00" → "2025-11-06")
+                date_only = date_str.split(' ')[0] if ' ' in date_str else date_str
+                # Converte de yyyy-mm-dd para dd-mm-yyyy
+                from datetime import datetime
+                dt = datetime.strptime(date_only, '%Y-%m-%d')
+                return dt.strftime('%d-%m-%Y')
+            except:
+                return date_str  # Retorna original se falhar
+        
         # Mapear campos da BD para IDs do mapeador (camelCase)
         report_data = {
             'dr_number': report.get('dr_number', ''),
             'ra_number': report.get('ra_number', ''),
             'contractNumber': report.get('contract_number', ''),
-            'date': report.get('date', ''),
-            'inspection_date': report.get('date', ''),
+            'date': format_date(report.get('date', '')),
+            'inspection_date': format_date(report.get('date', '')),
             'clientName': report.get('client_name', ''),
             'clientEmail': report.get('client_email', ''),
             'clientPhone': report.get('client_phone', ''),
@@ -16140,10 +16154,10 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
             'vehicleModel': report.get('vehicle_model', ''),
             'vehicleColor': report.get('vehicle_color', ''),
             'vehicleKm': report.get('vehicle_km', ''),
-            'pickupDate': report.get('pickup_date', ''),
+            'pickupDate': format_date(report.get('pickup_date', '')),
             'pickupTime': report.get('pickup_time', ''),
             'pickupLocation': report.get('pickup_location', ''),
-            'returnDate': report.get('return_date', ''),
+            'returnDate': format_date(report.get('return_date', '')),
             'returnTime': report.get('return_time', ''),
             'returnLocation': report.get('return_location', ''),
             'fuel_level_pickup': report.get('fuel_pickup', ''),
@@ -18503,9 +18517,11 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
                                 logging.info(f"✅ Drew diagram {field_id} (CONTAIN mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box, NO CROP)")
                                 
-                                # 🎯 DESENHAR PINS DOS DANOS sobre o diagrama
-                                pins_data = report_data.get('damage_pins') or report_data.get('damageDiagramData') or report_data.get('damage_diagram_data')
-                                if pins_data:
+                                # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
+                                # O html2canvas captura o canvas com os pins já visíveis
+                                # Se desenharmos novamente, ficam duplicados
+                                pins_data_disabled = None  # Desativado propositadamente
+                                if pins_data_disabled:  # Never executes
                                     try:
                                         # Parse JSON se necessário
                                         if isinstance(pins_data, str):
@@ -19349,13 +19365,27 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
             finally:
                 conn.close()
         
+        # Formatar datas para dd-mm-yyyy (remover hora se existir)
+        def format_date(date_str):
+            if not date_str:
+                return ''
+            try:
+                # Remove hora se existir (ex: "2025-11-06 00:00:00" → "2025-11-06")
+                date_only = date_str.split(' ')[0] if ' ' in date_str else date_str
+                # Converte de yyyy-mm-dd para dd-mm-yyyy
+                from datetime import datetime
+                dt = datetime.strptime(date_only, '%Y-%m-%d')
+                return dt.strftime('%d-%m-%Y')
+            except:
+                return date_str  # Retorna original se falhar
+        
         # 2. Mapear dados para geração
         report_data = {
             'dr_number': report.get('dr_number', ''),
             'ra_number': report.get('ra_number', ''),
             'contractNumber': report.get('contract_number', ''),
-            'date': report.get('date', ''),
-            'inspection_date': report.get('date', ''),
+            'date': format_date(report.get('date', '')),
+            'inspection_date': format_date(report.get('date', '')),
             'clientName': report.get('client_name', ''),
             'clientEmail': report.get('client_email', ''),
             'clientPhone': report.get('client_phone', ''),
@@ -19367,10 +19397,10 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
             'vehicleBrand': report.get('vehicle_brand', ''),
             'vehicleModel': report.get('vehicle_model', ''),
             'vehicleKm': report.get('mileage', ''),
-            'pickupDate': report.get('pickup_date', ''),
+            'pickupDate': format_date(report.get('pickup_date', '')),
             'pickupTime': report.get('pickup_time', ''),
             'pickupLocation': report.get('pickup_location', ''),
-            'returnDate': report.get('return_date', ''),
+            'returnDate': format_date(report.get('return_date', '')),
             'returnTime': report.get('return_time', ''),
             'returnLocation': report.get('return_location', ''),
             'fuel_level_pickup': report.get('fuel_level', ''),
