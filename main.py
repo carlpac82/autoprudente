@@ -16162,7 +16162,7 @@ async def download_damage_report_pdf(request: Request, dr_number: str, preview: 
         pdf_data = _fill_template_pdf_with_data(report_data)
         
         logging.error(f"✅ PDF generated! Size: {len(pdf_data)} bytes")
-        filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+        filename = f"{dr_number.replace('/', '_').replace(':', '_')}.pdf"
         logging.error(f"📄 ==================== PDF GENERATION END ====================")
         logging.error(f"📄 Filename: {filename}")
         
@@ -19331,7 +19331,7 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
         logging.info(f"✅ PDF generated! Size: {len(pdf_data)} bytes")
         
         # 4. SALVAR NA BD
-        filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+        filename = f"{dr_number.replace('/', '_').replace(':', '_')}.pdf"
         
         with _db_lock:
             conn = _db_connect()
