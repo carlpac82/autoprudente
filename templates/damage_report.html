@@ -3444,12 +3444,6 @@
                 console.error('   ❌ Erro ao gerar croqui:', err);
             }
             
-            // ✅ ADICIONAR RA NUMBER (igual ao Contract Number)
-            // O RA Number é o número do Rental Agreement, que é o mesmo que Contract Number
-            if (data.contractNumber) {
-                data.raNumber = data.contractNumber;  // ✅ camelCase para backend
-                console.log('   ✅ RA Number adicionado:', data.raNumber);
-            }
             
             // Se estamos editando, enviar o DR number existente
             if (currentDRNumber) {
