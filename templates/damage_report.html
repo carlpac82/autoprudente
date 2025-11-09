@@ -733,17 +733,19 @@
                     <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
                             <label style="font-weight: 600; color: #374151; min-width: 120px;">Tamanho do Pin:</label>
-                            <input type="range" id="pinSizeSlider" min="0.5" max="2" step="0.1" value="1" style="flex: 1;">
-                            <span id="pinSizeValue" style="font-weight: 600; color: #009cb6; min-width: 50px; text-align: center;">100%</span>
+                            <input type="range" id="pinSizeSlider" min="0.3" max="2" step="0.1" value="0.5" style="flex: 1;">
+                            <span id="pinSizeValue" style="font-weight: 600; color: #009cb6; min-width: 50px; text-align: center;">50%</span>
                         </div>
                         <p style="color: #6b7280; margin: 0; font-size: 13px;">
-                            💡 Clique no carro para adicionar pins de danos. Clique no pin para remover. Ajuste o tamanho antes de marcar.
+                            💡 Clique no carro para adicionar pins. Clique num pin para SELECIONAR e ajustar tamanho individual. Duplo clique para remover.
                         </p>
                     </div>
                     
                     <div class="car-view">
-                        <div class="car-svg-container" id="carDiagram" onclick="addDamagePin(event, 'all')" style="position: relative;">
+                        <div class="car-svg-container" id="carDiagram" onclick="addDamagePin(event, 'all')" onmousemove="showPinPreview(event)" onmouseleave="hidePinPreview()" style="position: relative;">
                             <img src="/static/images/Croqui.png" alt="Croqui do Carro" style="width: 100%; height: auto; display: block; max-width: 1000px; margin: 0 auto;">
+                            <!-- Pin preview (fantasma) -->
+                            <div id="pinPreview" class="damage-pin" style="pointer-events: none; opacity: 0.5; display: none;"></div>
                         </div>
                     </div>
                     
@@ -1002,14 +1004,52 @@
         let damages = [];
         let currentDRNumber = null;
         let repairItems = [];
-        let currentPinSize = 1.0; // Tamanho padrão do pin
+        let currentPinSize = 0.5; // Tamanho padrão do pin (50%)
+        let selectedPinId = null; // Pin atualmente selecionado
         
-        // Função para atualizar tamanho de todos os pins em tempo real
-        function updateAllPinsSize() {
-            const pins = document.querySelectorAll('.damage-pin');
-            pins.forEach(pin => {
+        // Função para atualizar tamanho do pin selecionado
+        function updateSelectedPinSize() {
+            if (!selectedPinId) return;
+            
+            const pin = document.getElementById(selectedPinId);
+            if (pin) {
                 pin.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
+                
+                // Atualizar size no array damages
+                const damage = damages.find(d => d.id === selectedPinId);
+                if (damage) {
+                    damage.size = currentPinSize;
+                    console.log(`📌 Pin ${damage.number} redimensionado para ${Math.round(currentPinSize * 100)}%`);
+                }
+            }
+        }
+        
+        // Selecionar pin para edição
+        function selectPin(pinId) {
+            // Remover seleção anterior
+            document.querySelectorAll('.damage-pin').forEach(p => {
+                p.style.outline = 'none';
             });
+            
+            selectedPinId = pinId;
+            const pin = document.getElementById(pinId);
+            if (pin) {
+                // Destacar pin selecionado
+                pin.style.outline = '3px solid #009cb6';
+                pin.style.outlineOffset = '2px';
+                
+                // Atualizar slider com tamanho atual do pin
+                const damage = damages.find(d => d.id === pinId);
+                if (damage) {
+                    currentPinSize = damage.size || 0.5;
+                    const slider = document.getElementById('pinSizeSlider');
+                    const value = document.getElementById('pinSizeValue');
+                    if (slider) slider.value = currentPinSize;
+                    if (value) value.textContent = Math.round(currentPinSize * 100) + '%';
+                    
+                    console.log(`📌 Pin #${damage.number} selecionado (tamanho: ${Math.round(currentPinSize * 100)}%)`);
+                }
+            }
         }
         
         // Atualizar valor do slider de tamanho do pin
@@ -1022,8 +1062,16 @@
                     currentPinSize = parseFloat(this.value);
                     value.textContent = Math.round(currentPinSize * 100) + '%';
                     
-                    // ✅ ATUALIZAR TODOS OS PINS EM TEMPO REAL
-                    updateAllPinsSize();
+                    // ✅ ATUALIZAR PIN SELECIONADO (se houver)
+                    if (selectedPinId) {
+                        updateSelectedPinSize();
+                    }
+                    
+                    // ✅ ATUALIZAR PREVIEW do próximo pin
+                    const preview = document.getElementById('pinPreview');
+                    if (preview) {
+                        preview.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
+                    }
                 });
             }
             
@@ -2678,10 +2726,18 @@
                                     pin.textContent = d.number;
                                     pin.style.left = d.x + 'px';
                                     pin.style.top = d.y + 'px';
-                                    // Aplicar tamanho salvo (default 1.0 se não existir)
-                                    const pinSize = d.size || 1.0;
+                                    // Aplicar tamanho salvo (default 0.5 se não existir)
+                                    const pinSize = d.size || 0.5;
                                     pin.style.transform = `translate(-50%, -100%) scale(${pinSize})`;
+                                    
+                                    // Click simples: SELECIONAR
                                     pin.onclick = (e) => {
+                                        e.stopPropagation();
+                                        selectPin(d.id);
+                                    };
+                                    
+                                    // Duplo click: REMOVER
+                                    pin.ondblclick = (e) => {
                                         e.stopPropagation();
                                         removeDamagePin(d.id);
                                     };
@@ -2901,6 +2957,29 @@
             window.open(`/api/damage-reports/${encodeURIComponent(currentDRNumber)}/pdf?preview=true`, '_blank');
         }
 
+        // Preview do pin ao mover mouse
+        function showPinPreview(event) {
+            const preview = document.getElementById('pinPreview');
+            if (!preview) return;
+            
+            const container = event.currentTarget;
+            const rect = container.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Mostrar preview na posição do mouse
+            preview.style.display = 'block';
+            preview.style.left = x + 'px';
+            preview.style.top = y + 'px';
+            preview.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
+            preview.textContent = damageCounter + 1;  // Próximo número
+        }
+        
+        function hidePinPreview() {
+            const preview = document.getElementById('pinPreview');
+            if (preview) preview.style.display = 'none';
+        }
+
         // Adicionar pin de dano
         function addDamagePin(event, view) {
             const container = event.currentTarget;
@@ -2938,7 +3017,15 @@
             pin.style.left = x + 'px';
             pin.style.top = y + 'px';
             pin.style.transform = `translate(-50%, -100%) scale(${currentPinSize})`;
+            
+            // Click simples: SELECIONAR pin
             pin.onclick = (e) => {
+                e.stopPropagation();
+                selectPin(damageId);
+            };
+            
+            // Duplo click: REMOVER pin
+            pin.ondblclick = (e) => {
                 e.stopPropagation();
                 removeDamagePin(damageId);
             };
@@ -2962,6 +3049,11 @@
         function removeDamagePin(damageId) {
             const pin = document.getElementById(damageId);
             if (pin) pin.remove();
+            
+            // Limpar seleção se era o pin selecionado
+            if (selectedPinId === damageId) {
+                selectedPinId = null;
+            }
             
             // Remover do array
             damages = damages.filter(d => d.id !== damageId);
