@@ -15468,11 +15468,12 @@ async def create_damage_report(request: Request):
                     # UPDATE - Atualizar DR existente
                     logging.info(f"🔄 Atualizando DR {existing_dr_number}")
                     
-                    # Processar imagem do veículo com danos
+                    # Processar imagem do veículo com danos (diagrama com pins)
                     vehicle_damage_image_blob = None
-                    if data.get('vehicleDamageImage'):
+                    # Frontend envia 'vehicleDiagram', não 'vehicleDamageImage'
+                    if data.get('vehicleDiagram') or data.get('vehicleDamageImage'):
                         import base64
-                        image_data = data.get('vehicleDamageImage')
+                        image_data = data.get('vehicleDiagram') or data.get('vehicleDamageImage')
                         if image_data.startswith('data:image'):
                             image_data = image_data.split(',')[1]
                         vehicle_damage_image_blob = base64.b64decode(image_data)
@@ -15584,11 +15585,12 @@ async def create_damage_report(request: Request):
                     else:
                         logging.info(f"✨ Criando novo DR: {dr_number}")
                     
-                    # Processar imagem do veículo com danos
+                    # Processar imagem do veículo com danos (diagrama com pins)
                     vehicle_damage_image_blob = None
-                    if data.get('vehicleDamageImage'):
+                    # Frontend envia 'vehicleDiagram', não 'vehicleDamageImage'
+                    if data.get('vehicleDiagram') or data.get('vehicleDamageImage'):
                         import base64
-                        image_data = data.get('vehicleDamageImage')
+                        image_data = data.get('vehicleDiagram') or data.get('vehicleDamageImage')
                         if image_data.startswith('data:image'):
                             image_data = image_data.split(',')[1]
                         vehicle_damage_image_blob = base64.b64decode(image_data)
