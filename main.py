@@ -15185,8 +15185,11 @@ async def debug_rental_agreement_lines(request: Request, file: UploadFile = File
 @app.post("/api/damage-reports/create")
 async def create_damage_report(request: Request):
     """Cria um novo Damage Report"""
+    print("🔥🔥🔥 ENDPOINT HIT - ANTES DE TUDO")
     logging.error("💾💾💾 CREATE DAMAGE REPORT - INÍCIO")
+    print("🔥🔥🔥 ANTES REQUIRE_AUTH")
     require_auth(request)
+    print("🔥🔥🔥 DEPOIS REQUIRE_AUTH")
     
     try:
         logging.error("💾 Recebendo JSON...")
@@ -15473,13 +15476,15 @@ async def create_damage_report(request: Request):
                     dr_number = _get_next_dr_number(existing_conn=conn)  # Usar versão que recebe conn
                     
                     # Verificar se é um número reciclado (já existe na tabela com is_deleted = 1)
-                    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                    is_postgres = isinstance(conn, PostgreSQLConnectionWrapper) or conn.__class__.__module__ == 'psycopg2.extensions'
                     is_recycled = False
+                    logging.error(f"💾 Verificando reciclagem do DR {dr_number}... is_postgres={is_postgres}")
                     
                     if is_postgres:
-                        with conn.cursor() as cur:
-                            cur.execute("SELECT id FROM damage_reports WHERE dr_number = %s AND is_deleted = 1", (dr_number,))
-                            is_recycled = cur.fetchone() is not None
+                        cur = conn.cursor()
+                        cur.execute("SELECT id FROM damage_reports WHERE dr_number = %s AND is_deleted = 1", (dr_number,))
+                        is_recycled = cur.fetchone() is not None
+                        cur.close()
                     else:
                         cursor = conn.execute("SELECT id FROM damage_reports WHERE dr_number = ? AND is_deleted = 1", (dr_number,))
                         is_recycled = cursor.fetchone() is not None
@@ -15951,7 +15956,10 @@ def _get_next_dr_number(existing_conn=None):
     
     try:
         current_year = datetime.now().year
-        is_postgres = hasattr(conn, 'cursor')
+        # ✅ DETECÇÃO CORRETA: PostgreSQLConnectionWrapper ou psycopg2
+        is_postgres = isinstance(conn, PostgreSQLConnectionWrapper) or conn.__class__.__module__ == 'psycopg2.extensions'
+        
+        logging.error(f"🔢 _get_next_dr_number: is_postgres={is_postgres}, conn type={type(conn).__name__}")
         
         # 1. PRIORIDADE: Verificar se há números eliminados disponíveis para reutilizar
         # NOTA: Reciclagem de números desativada (coluna is_deleted não existe)
@@ -15963,13 +15971,14 @@ def _get_next_dr_number(existing_conn=None):
         # 2. FALLBACK: Gerar novo número sequencial
         # Obter configuração atual
         if is_postgres:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT current_year, current_number, prefix 
-                    FROM damage_report_numbering 
-                    WHERE id = 1
-                """)
-                row = cur.fetchone()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT current_year, current_number, prefix 
+                FROM damage_report_numbering 
+                WHERE id = 1
+            """)
+            row = cur.fetchone()
+            cur.close()
         else:
             cursor = conn.execute("""
                 SELECT current_year, current_number, prefix 
@@ -15981,13 +15990,14 @@ def _get_next_dr_number(existing_conn=None):
         if not row:
             # Criar configuração inicial APENAS se não existir
             if is_postgres:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
-                        SELECT 1, %s, 1, 'DR'
-                        WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
-                    """, (current_year,))
-                    conn.commit()
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
+                    SELECT 1, %s, 1, 'DR'
+                    WHERE NOT EXISTS (SELECT 1 FROM damage_report_numbering WHERE id = 1)
+                """, (current_year,))
+                conn.commit()
+                cur.close()
             else:
                 conn.execute("""
                     INSERT INTO damage_report_numbering (id, current_year, current_number, prefix)
@@ -16004,13 +16014,14 @@ def _get_next_dr_number(existing_conn=None):
             # Novo ano - reset para 01
             new_number = 1
             if is_postgres:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE damage_report_numbering 
-                        SET current_year = %s, current_number = %s, updated_at = %s
-                        WHERE id = 1
-                    """, (current_year, new_number, datetime.now().isoformat()))
-                    conn.commit()
+                cur = conn.cursor()
+                cur.execute("""
+                    UPDATE damage_report_numbering 
+                    SET current_year = %s, current_number = %s, updated_at = %s
+                    WHERE id = 1
+                """, (current_year, new_number, datetime.now().isoformat()))
+                conn.commit()
+                cur.close()
             else:
                 conn.execute("""
                     UPDATE damage_report_numbering 
@@ -16023,13 +16034,14 @@ def _get_next_dr_number(existing_conn=None):
             # Mesmo ano - incrementar
             new_number = current_number + 1
             if is_postgres:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE damage_report_numbering 
-                        SET current_number = %s, updated_at = %s
-                        WHERE id = 1
-                    """, (new_number, datetime.now().isoformat()))
-                    conn.commit()
+                cur = conn.cursor()
+                cur.execute("""
+                    UPDATE damage_report_numbering 
+                    SET current_number = %s, updated_at = %s
+                    WHERE id = 1
+                """, (new_number, datetime.now().isoformat()))
+                conn.commit()
+                cur.close()
             else:
                 conn.execute("""
                     UPDATE damage_report_numbering 
