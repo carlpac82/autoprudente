@@ -199,6 +199,7 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         import base64
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
+        import json
         
         # Get Gmail credentials
         conn = _get_db_connection()
@@ -279,26 +280,35 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         all_results = []
         for row in rows:
             location, search_date, dias_json, prices_data = row
+            print(f"   [DEBUG] Processing row: location={location}, has_prices_data={bool(prices_data)}", flush=True)
+            
             if prices_data:
                 # Parse dias JSON
                 dias_list = json.loads(dias_json) if isinstance(dias_json, str) else dias_json
-                # Parse prices
-                prices = json.loads(prices_data) if isinstance(prices_data, str) else prices_data
+                # Parse prices - structure is: {"B1": {3: 25.50, 7: 30.00}, "D": {3: 22.00}}
+                prices_by_group = json.loads(prices_data) if isinstance(prices_data, str) else prices_data
                 
-                # Add metadata to each price
-                for day in dias_list:
-                    if str(day) in prices:
-                        for price_item in prices[str(day)]:
-                            price_item['days'] = day
-                            price_item['location'] = location
-                            price_item['search_date'] = search_date
-                            all_results.append(price_item)
+                print(f"   [DEBUG] prices_by_group keys: {list(prices_by_group.keys())}", flush=True)
+                
+                # Convert to flat list of results
+                for group, day_prices in prices_by_group.items():
+                    for day, price in day_prices.items():
+                        result_item = {
+                            'group': group,
+                            'days': int(day),
+                            'price': price,
+                            'price_num': price,
+                            'location': location,
+                            'search_date': search_date
+                        }
+                        all_results.append(result_item)
         
         cursor.close()
         conn.close()
         
         search_data = {'results': all_results}
-        logging.info(f"   📊 Loaded {len(all_results)} search results")
+        logging.info(f"   📊 Loaded {len(all_results)} search results (prices)")
+        print(f"   [DEBUG] all_results count: {len(all_results)}", flush=True)
         
         if not all_results:
             logging.warning("   ⚠️ No search data available, skipping email")
