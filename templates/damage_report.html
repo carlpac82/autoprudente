@@ -8,14 +8,14 @@
     <meta http-equiv="Expires" content="-1">
     <meta name="cache-control" content="no-cache">
     <meta name="expires" content="0">
-    <title>Relatório de Danos - Auto Prudente v2.4-DR-FIX</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=2.4">
-    <script src="/static/notifications.js?v=2.4"></script>
+    <title>Relatório de Danos - Auto Prudente v2.5-PHOTOS</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=2.5">
+    <script src="/static/notifications.js?v=2.5"></script>
     <script>
-        // Force cache bypass - v2.4-DR-FIX
-        const jsVersion = '2.4-DR-FIX-202511090100';
+        // Force cache bypass - v2.5-PHOTOS
+        const jsVersion = '2.5-PHOTOS-202511090115';
         console.log('🔄 JavaScript Version:', jsVersion, '- Loaded at:', new Date().toISOString());
-        console.log('✅ Damage numbering fix deployed!');
+        console.log('✅ Damage photos now showing in preview!');
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -2300,6 +2300,21 @@
                                 </tr>
                             </tfoot>
                         </table>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Damage Photos -->
+                    ${damageImages.length > 0 ? `
+                    <div style="margin-bottom: 25px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px;">
+                        <h3 style="margin: 0 0 15px 0; color: #009cb6; font-size: 16px; font-weight: bold; border-bottom: 2px solid #009cb6; padding-bottom: 8px;">📸 FOTOS DOS DANOS / DAMAGE PHOTOS (${damageImages.length})</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            ${damageImages.map((img, idx) => `
+                                <div style="border: 2px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                                    <img src="${img.data}" style="width: 100%; height: 200px; object-fit: cover; display: block;" alt="Damage Photo ${idx + 1}">
+                                    <p style="margin: 0; padding: 8px; background: #f9fafb; font-size: 11px; color: #6b7280; text-align: center;">Foto ${idx + 1}</p>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                     ` : ''}
                     
