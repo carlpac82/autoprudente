@@ -26,7 +26,7 @@ def generate_report_header(title, subtitle=""):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body {{
-                font-family: Arial, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 margin: 0;
                 padding: 0;
                 background-color: #f5f5f5;
@@ -340,7 +340,7 @@ def generate_daily_report_html_by_location(search_data, location):
                         {icon_car}
                         <span class="group-name">{group}</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; background: {position_bg}; color: {text_color}; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 8px; background: {position_bg}; color: {text_color}; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         {position_icon}
                         <span>{position_text}</span>
                     </div>
@@ -356,7 +356,8 @@ def generate_daily_report_html_by_location(search_data, location):
                 
                 content_html += f"""
                 <div class="competitor {'autoprudente' if is_ap else ''}">
-                    <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        {icon_car}
                         <div style="font-weight: {'bold' if is_ap else '500'}; color: {'#009cb6' if is_ap else '#1e293b'};">
                             {idx}. {supplier}
                         </div>
