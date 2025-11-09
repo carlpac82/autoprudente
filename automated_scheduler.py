@@ -430,7 +430,10 @@ async def _do_carjet_search(locations, days, pickup_date):
                     
                     print(f"      [HTTP POST] Calling API...", flush=True)
                     
-                    async with session.post(api_url, json=payload, timeout=aiohttp.ClientTimeout(total=600)) as response:
+                    # Add authentication header for internal scheduler requests
+                    headers = {'X-Internal-Request': 'scheduler'}
+                    
+                    async with session.post(api_url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=600)) as response:
                         print(f"      [HTTP] Status: {response.status}", flush=True)
                         
                         if response.status == 200:
