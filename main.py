@@ -18387,6 +18387,19 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                 width = coords['width']
                 height = coords['height']
                 
+                # ✅ EXPANDIR BOX para diagramas (acomodar padding de 80px do html2canvas)
+                is_diagram = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
+                if is_diagram and field_type == 'image':
+                    expansion_factor = 1.20  # 20% maior para garantir espaço para pins nas bordas
+                    original_width = width
+                    original_height = height
+                    width = width * expansion_factor
+                    height = height * expansion_factor
+                    # Recentrar a box expandida
+                    x = x - (width - original_width) / 2
+                    y = y - (height - original_height) / 2
+                    logging.error(f"🖼️ EXPANDINDO BOX DO DIAGRAMA: {original_width:.0f}x{original_height:.0f} → {width:.0f}x{height:.0f}")
+                
                 # LOG PRÉ-TRANSFORMAÇÃO (para diagrama)
                 is_diagram_check = 'diagram' in field_id.lower() or 'croqui' in field_id.lower()
                 if is_diagram_check:
@@ -18497,25 +18510,36 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             diagram_final_x, diagram_final_y = x, y
                             diagram_final_width, diagram_final_height = width, height
                             
+                            # ✅ is_diagram já foi definido acima (linha 18391)
                             if is_diagram:
-                                # DIAGRAMA: Usar TODA a box SEM escalar (preservar padding do html2canvas)
-                                # A imagem do html2canvas já tem padding de 80px, então desenhar com tamanho COMPLETO
-                                # garante que nenhum pin nas bordas seja cortado
+                                # DIAGRAMA: CONTAIN mode PRESERVANDO aspect ratio (não distorcer)
+                                # A imagem capturada tem padding de 80px do html2canvas
+                                # Precisamos desenhar SEM cortar e SEM distorcer
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ MODO DIAGRAMA - FILL (usar toda a box)")
+                                    logging.error(f"🖼️ MODO DIAGRAMA - CONTAIN (manter proporções)")
                                     logging.error(f"🖼️ Box: x={x}, y={y}, w={width}, h={height}")
                                     logging.error(f"🖼️ Imagem: {img_width}x{img_height}")
                                 
-                                # ✅ USAR TODA A BOX sem manter aspect ratio
-                                # Isso garante que o padding é preservado e nenhum pin é cortado
-                                draw_width = width
-                                draw_height = height
-                                draw_x = x
-                                draw_y = y
+                                img_aspect = img_width / img_height
+                                box_aspect = width / height
+                                
+                                if img_aspect > box_aspect:
+                                    # Imagem mais larga: ajustar pela LARGURA
+                                    draw_width = width
+                                    draw_height = width / img_aspect
+                                    draw_x = x
+                                    draw_y = y + (height - draw_height) / 2  # Centrar verticalmente
+                                else:
+                                    # Imagem mais alta: ajustar pela ALTURA
+                                    draw_height = height
+                                    draw_width = height * img_aspect
+                                    draw_x = x + (width - draw_width) / 2  # Centrar horizontalmente
+                                    draw_y = y
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ FILL mode: desenhar em {int(draw_width)}x{int(draw_height)}")
+                                    logging.error(f"🖼️ CONTAIN: aspect_img={img_aspect:.3f} aspect_box={box_aspect:.3f}")
+                                    logging.error(f"🖼️ Desenhar: ({int(draw_x)}, {int(draw_y)}) {int(draw_width)}x{int(draw_height)}")
                                 
                                 # Guardar posição final para os pins
                                 diagram_final_x, diagram_final_y = draw_x, draw_y
@@ -18536,7 +18560,7 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                                     mask='auto'
                                 )
                                 logging.error(f"🖼️✅ DIAGRAMA DESENHADO COM SUCESSO! {field_id}")
-                                logging.info(f"✅ Drew diagram {field_id} (FILL mode: {int(draw_width)}x{int(draw_height)} - preserves html2canvas padding, NO CROP)")
+                                logging.info(f"✅ Drew diagram {field_id} (CONTAIN mode: {int(draw_width)}x{int(draw_height)} in {int(width)}x{int(height)} box - expanded 20%, NO CROP)")
                                 
                                 # 🎯 NÃO DESENHAR PINS - A imagem vehicleDiagram do frontend JÁ TEM os pins desenhados!
                                 # O html2canvas captura o canvas com os pins já visíveis
