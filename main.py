@@ -26432,7 +26432,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         'location': location,
                         'date': search_date,
                         'timestamp': search_date,  # Same as date for compatibility
-                        'source': 'automated',  # Identifies automated searches
+                        'source': search_type,  # Use actual search_type: 'automated' from scheduler or 'current' from manual
                         'prices': json.loads(prices_data) if isinstance(prices_data, str) else prices_data,
                         'dias': json.loads(dias) if isinstance(dias, str) else dias,
                         'priceCount': price_count,
@@ -26441,9 +26441,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                     
                     history[month_key][search_type].append(entry)
                     
-                    # Keep only last 3 versions per type
-                    if len(history[month_key][search_type]) > 3:
-                        history[month_key][search_type] = history[month_key][search_type][:3]
+                    # NO LIMIT - Keep ALL versions (user requested to save all history)
                 
                 return JSONResponse({
                     "ok": True,

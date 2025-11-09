@@ -5716,8 +5716,9 @@
             }
             
             // Save as new version with current timestamp, including supplier data
+            // Use 'current' for manual edits/searches, not 'automated' (which is for scheduler)
             const supplierData = window.currentSupplierData || {};
-            const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', supplierData);
+            const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'current', supplierData);
             
             if (savedCount > 0) {
                 const now = new Date();
