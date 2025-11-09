@@ -26431,6 +26431,8 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         'id': search_id,
                         'location': location,
                         'date': search_date,
+                        'timestamp': search_date,  # Same as date for compatibility
+                        'source': 'automated',  # Identifies automated searches
                         'prices': json.loads(prices_data) if isinstance(prices_data, str) else prices_data,
                         'dias': json.loads(dias) if isinstance(dias, str) else dias,
                         'priceCount': price_count,
