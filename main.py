@@ -19082,7 +19082,9 @@ async def download_original_pdf(request: Request, dr_number: str, preview: bool 
 @app.get("/api/damage-reports/{dr_number:path}/pdf")
 async def download_damage_report_pdf(request: Request, dr_number: str):
     """Download do Damage Report em PDF - Usa template mapeado com coordenadas"""
+    logging.error(f"🔥🔥🔥 ENDPOINT HIT! DR='{dr_number}' - ANTES REQUIRE_AUTH")
     require_auth(request)
+    logging.error(f"🔥🔥🔥 DEPOIS REQUIRE_AUTH - Executando código...")
     
     try:
         from starlette.responses import Response
