@@ -11150,15 +11150,16 @@ async def admin_customization_email(request: Request):
 
 @app.get("/admin/customization/automated-reports", response_class=HTMLResponse)
 async def admin_customization_automated_reports(request: Request):
-    """Página de configuração de relatórios automáticos"""
+    """Página de configuração de relatórios automáticos - NOVO DESIGN"""
     require_auth(request)
     
-    html_path = os.path.join(os.path.dirname(__file__), "templates", "customization_automated_reports.html")
+    # Usar novo template redesenhado (sem emojis, ícones monocromáticos)
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "automated_reports_redesign.html")
     try:
         with open(html_path, 'r', encoding='utf-8') as f:
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
-        return HTMLResponse(content="<h1>Erro: customization_automated_reports.html não encontrado</h1>", status_code=500)
+        return HTMLResponse(content="<h1>Erro: automated_reports_redesign.html não encontrado</h1>", status_code=500)
 
 @app.get("/admin/migrate-data", response_class=HTMLResponse)
 async def admin_migrate_data(request: Request):
@@ -22126,6 +22127,46 @@ async def save_automated_reports_settings(request: Request):
                 conn.close()
     except Exception as e:
         logging.error(f"❌ Error saving automated reports settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/settings/automated-reports/advanced")
+async def save_advanced_automated_reports(request: Request):
+    """Save ADVANCED automated reports settings (múltiplos horários, mensal, etc)"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        logging.info(f"💾 Saving ADVANCED automated reports settings")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                settings_json = json.dumps(data)
+                
+                query = f"""
+                    INSERT INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                    VALUES ('automatedReportsAdvanced', {placeholder}, 'json', CURRENT_TIMESTAMP)
+                    ON CONFLICT (setting_key) DO UPDATE SET
+                        setting_value = EXCLUDED.setting_value,
+                        updated_at = CURRENT_TIMESTAMP
+                """
+                
+                conn.execute(query, (settings_json,))
+                conn.commit()
+                
+                logging.info(f"✅ Saved ADVANCED automated reports settings")
+                logging.info(f"   Daily schedules: {len(data.get('daily', {}).get('schedules', []))}")
+                logging.info(f"   Weekly: {data.get('weekly', {}).get('enabled', False)}")
+                logging.info(f"   Monthly: {data.get('monthly', {}).get('enabled', False)}")
+                
+                return JSONResponse({"ok": True, "message": "Configurações avançadas guardadas com sucesso"})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving advanced automated reports: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/settings/automated-reports/load")
