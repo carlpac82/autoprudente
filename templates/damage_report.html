@@ -2882,8 +2882,8 @@
                 return;
             }
             
-            // Abrir PDF original em nova janela
-            window.open(`/api/damage-reports/${currentDRNumber}/pdf-original?preview=true`, '_blank');
+            // Abrir PDF gerado com template em nova janela
+            window.open(`/api/damage-reports/${encodeURIComponent(currentDRNumber)}/pdf?preview=true`, '_blank');
         }
 
         // Adicionar pin de dano
