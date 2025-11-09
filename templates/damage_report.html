@@ -341,21 +341,20 @@
             background-image: url('/static/pin.png');
             background-size: contain;
             background-repeat: no-repeat;
-            background-position: center bottom;  /* ✅ Pin alinhado ao fundo */
-            display: flex;
-            align-items: flex-start;  /* ✅ Alinhar ao TOPO */
-            justify-content: center;  /* ✅ CENTRAR horizontalmente */
-            padding-top: 14px;  /* ✅ Número mais baixo (30% extra) */
-            color: #000000;  /* ✅ PRETO PURO (não cinza) */
+            background-position: center bottom;
+            color: #000000;
             font-weight: 900;
-            font-size: 24px;  /* ✅ MAIOR: 24px */
-            line-height: 1;  /* ✅ SEM espaço extra vertical */
+            font-size: 24px;
+            line-height: 24px;  /* ✅ Igual ao font-size */
+            padding-top: 12px;  /* ✅ DESCER MANUALMENTE o número para centro da bola */
+            text-align: center;
             cursor: pointer;
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
-            transform: translate(-50%, -100%);  /* ✅ Ponta do pin na posição clicada */
-            transform-origin: bottom center;  /* ✅ Ponto de referência na ponta do pin */
+            transform: translate(-50%, -100%);
+            transform-origin: bottom center;
             transition: all 0.2s;
-            pointer-events: auto;  /* ✅ Garantir clique em toda área */
+            pointer-events: auto;
+            box-sizing: border-box;
         }
         
         .damage-pin:hover {
