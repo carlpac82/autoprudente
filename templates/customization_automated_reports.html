@@ -222,59 +222,76 @@
                     Pré-visualização do Email
                 </h3>
                 <div class="bg-gray-50 p-4 rounded text-xs overflow-auto" style="max-height: 400px;">
-                    <!-- Mini preview of email design -->
-                    <div style="background: linear-gradient(135deg, #2563eb 0%, #007a91 100%); padding: 20px; text-align: center; border-radius: 4px 4px 0 0;">
-                        <div style="color: white; font-weight: 600; font-size: 16px;">Relatório Diário de Preços</div>
-                        <div style="color: #e0f2f7; font-size: 11px; margin-top: 4px;">02/11/2024 - Comparação com ontem</div>
+                    <!-- NOVO TEMPLATE - Header igual ao DR -->
+                    <div style="background: #009cb6; padding: 15px; border-radius: 4px 4px 0 0; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <img src="https://carrental-api-5f8q.onrender.com/static/ap-heather.png" alt="AP" style="height: 30px;">
+                            <div style="color: white; font-weight: 600; font-size: 14px;">Relatório Diário</div>
+                        </div>
+                        <div style="color: #e0f7fa; font-size: 10px;">Albufeira</div>
                     </div>
                     <div style="background: white; padding: 15px; border: 1px solid #e2e8f0; border-top: none;">
-                        <!-- Summary cards -->
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                            <div style="flex: 1; background: #f0f9fb; border-left: 3px solid #2563eb; padding: 10px; border-radius: 3px;">
-                                <div style="font-size: 10px; color: #64748b;">TOTAL DE OFERTAS</div>
-                                <div style="font-size: 20px; font-weight: 700; color: #2563eb;">156</div>
+                        <!-- Stats -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <div style="flex: 1; text-align: center; padding: 8px; background: #f8fafc; border-radius: 4px;">
+                                <div style="font-size: 18px; font-weight: 700; color: #009cb6;">1</div>
+                                <div style="font-size: 9px; color: #64748b;">Melhores Preços</div>
                             </div>
-                            <div style="flex: 1; background: #fff7ed; border-left: 3px solid #1d4ed8; padding: 10px; border-radius: 3px;">
-                                <div style="font-size: 10px; color: #64748b;">ALERTAS</div>
-                                <div style="font-size: 20px; font-weight: 700; color: #1d4ed8;">3</div>
+                            <div style="flex: 1; text-align: center; padding: 8px; background: #f8fafc; border-radius: 4px;">
+                                <div style="font-size: 18px; font-weight: 700; color: #f59e0b;">2</div>
+                                <div style="font-size: 9px; color: #64748b;">Competitivos</div>
+                            </div>
+                            <div style="flex: 1; text-align: center; padding: 8px; background: #f8fafc; border-radius: 4px;">
+                                <div style="font-size: 18px; font-weight: 700; color: #009cb6;">33%</div>
+                                <div style="font-size: 9px; color: #64748b;">Taxa Liderança</div>
                             </div>
                         </div>
                         
-                        <!-- Location section -->
-                        <div style="border-bottom: 2px solid #2563eb; padding-bottom: 5px; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
-                            ✈️ Aeroporto de Faro
+                        <!-- BARRA AZUL - 1 dia -->
+                        <div style="background: #009cb6; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                            <div style="color: white; font-weight: 600; font-size: 12px;">📅 1 dia</div>
                         </div>
                         
-                        <!-- Mini table -->
-                        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px;">
-                            <thead>
-                                <tr style="background: #f8fafc;">
-                                    <th style="padding: 5px; text-align: left; border-bottom: 1px solid #e2e8f0;">Fornecedor</th>
-                                    <th style="padding: 5px; text-align: right; border-bottom: 1px solid #e2e8f0;">Preço</th>
-                                    <th style="padding: 5px; text-align: right; border-bottom: 1px solid #e2e8f0;">Mudança</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">AutoPrudente</td>
-                                    <td style="padding: 5px; text-align: right; font-weight: 600; border-bottom: 1px solid #f1f5f9;">€38.00</td>
-                                    <td style="padding: 5px; text-align: right; color: #10b981; border-bottom: 1px solid #f1f5f9;">↓ €3.50</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Goldcar</td>
-                                    <td style="padding: 5px; text-align: right; font-weight: 600; border-bottom: 1px solid #f1f5f9;">€42.80</td>
-                                    <td style="padding: 5px; text-align: right; color: #ef4444; border-bottom: 1px solid #f1f5f9;">↑ €2.10</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <!-- BARRA AMARELA - Grupo -->
+                        <div style="background: #fbbf24; height: 2px; margin: 8px 0;"></div>
                         
-                        <div style="background: #fef3c7; border-left: 3px solid #1d4ed8; padding: 8px; border-radius: 3px; font-size: 10px;">
-                            <div style="font-weight: 600; color: #92400e;">2 alertas disparados</div>
+                        <!-- Group card -->
+                        <div style="padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="font-weight: 600; font-size: 11px;">🚗 Grupo A</div>
+                                <div style="background: #009cb6; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">🏆 1º</div>
+                            </div>
+                            <!-- Competitors with car images -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div style="width: 40px; height: 25px; background: linear-gradient(135deg, #009cb6, #00b4d8); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🚗</div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 10px; color: #009cb6;">1. Auto Prudente</div>
+                                        <div style="font-size: 8px; color: #64748b;">Renault Clio</div>
+                                    </div>
+                                </div>
+                                <div style="font-weight: 700; font-size: 12px; color: #009cb6;">45.00€</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div style="width: 40px; height: 25px; background: #e2e8f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🚗</div>
+                                    <div>
+                                        <div style="font-weight: 500; font-size: 10px;">2. Guerin</div>
+                                        <div style="font-size: 8px; color: #64748b;">Peugeot 208</div>
+                                    </div>
+                                </div>
+                                <div style="font-weight: 700; font-size: 12px;">50.00€</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer bar -->
+                        <div style="background: #009cb6; padding: 8px; text-align: center; border-radius: 4px; margin-top: 10px;">
+                            <div style="color: white; font-size: 9px; font-weight: 500;">Auto Prudente © 2025</div>
                         </div>
                     </div>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">
-                    O email real incluirá tabelas completas com todos os preços e comparações detalhadas para ambas as localizações.
+                    ✨ NOVO TEMPLATE: Header DR + imagens reais + badges azuis + 2 emails separados (Albufeira + Aeroporto)
                 </p>
             </div>
 
