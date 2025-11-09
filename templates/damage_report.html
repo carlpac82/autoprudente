@@ -3269,32 +3269,53 @@
             // ✅ GERAR CROQUI COM PINS DESENHADOS (vehicle_diagram)
             console.log('   🚗 Gerando croqui com pins...');
             try {
-                const canvas = document.getElementById('carDiagram');
-                if (canvas && damages.length > 0) {
-                    // ✅ CAPTURAR NO TAMANHO DO BROWSER (preview)
-                    // Container CSS: max-width: 600px
-                    // Box PDF: 256×201px (será escalado no backend)
-                    // ESTRATÉGIA: Capturar em tamanho médio (500px) para qualidade boa
-                    const rect = canvas.getBoundingClientRect();
-                    const img = canvas.querySelector('img');
-                    const naturalWidth = img.naturalWidth || 986;
+                const diagramContainer = document.getElementById('carDiagram');
+                if (diagramContainer && damages.length > 0) {
+                    // ✅ EVITAR PINS CORTADOS: Criar wrapper temporário com padding
+                    // Pins têm 56px altura e transform: translate(-50%, -100%)
+                    // Pins no topo ficam 56px acima - precisam de espaço para captura!
                     
-                    // Capturar em resolução média-alta (500px de largura final)
-                    // Isso dá qualidade boa quando escalado para 256px no PDF
+                    const pinHeight = 56;
+                    const pinSideMargin = 20;  // Margem lateral para pins nas bordas
+                    
+                    // Criar wrapper temporário invisível
+                    const wrapper = document.createElement('div');
+                    wrapper.style.padding = `${pinHeight}px ${pinSideMargin}px ${pinSideMargin}px ${pinSideMargin}px`;
+                    wrapper.style.backgroundColor = '#ffffff';
+                    wrapper.style.position = 'absolute';
+                    wrapper.style.left = '-9999px';  // Fora da tela
+                    wrapper.style.top = '0';
+                    
+                    // Clonar diagrama (imagem + pins)
+                    const clone = diagramContainer.cloneNode(true);
+                    clone.style.position = 'relative';
+                    clone.style.margin = '0';
+                    clone.style.maxWidth = 'none';
+                    clone.style.width = diagramContainer.offsetWidth + 'px';
+                    
+                    wrapper.appendChild(clone);
+                    document.body.appendChild(wrapper);
+                    
+                    console.log('   📐 Container original:', diagramContainer.offsetWidth, 'x', diagramContainer.offsetHeight);
+                    console.log('   📦 Wrapper com padding:', wrapper.offsetWidth, 'x', wrapper.offsetHeight);
+                    console.log('   📌 Padding: top=' + pinHeight + 'px, sides=' + pinSideMargin + 'px');
+                    
+                    // Capturar wrapper com pins completos
                     const targetCaptureWidth = 500;
-                    const scaleForCapture = targetCaptureWidth / rect.width;
+                    const scaleForCapture = targetCaptureWidth / wrapper.offsetWidth;
                     
-                    console.log('   📐 Container renderizado:', rect.width.toFixed(0), 'x', rect.height.toFixed(0));
-                    console.log('   🖼️ Imagem natural:', naturalWidth);
                     console.log('   🎯 Capturando com largura:', targetCaptureWidth, 'px');
                     console.log('   📊 Scale html2canvas:', scaleForCapture.toFixed(3));
                     
-                    const diagramBase64 = await html2canvas(canvas, {
+                    const diagramBase64 = await html2canvas(wrapper, {
                         backgroundColor: '#ffffff',
-                        scale: scaleForCapture,  // ✅ Captura em ~500px para boa qualidade
+                        scale: scaleForCapture,
                         logging: false,
                         useCORS: true
                     }).then(canvas => canvas.toDataURL('image/png'));
+                    
+                    // ✅ REMOVER wrapper temporário
+                    document.body.removeChild(wrapper);
                     
                     data.vehicleDiagram = diagramBase64;
                     console.log('   ✅ Croqui gerado (tamanho real):', diagramBase64.length, 'chars');
