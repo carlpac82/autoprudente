@@ -682,7 +682,7 @@
                     </div>
                     <div class="form-group">
                         <label>Hora de Levantamento</label>
-                        <input type="text" id="pickupTime" name="pickupTime" value="-" placeholder="-" maxlength="5">
+                        <input type="time" id="pickupTime" name="pickupTime">
                     </div>
                     <div class="form-group">
                         <label>Local de Levantamento</label>
@@ -694,7 +694,7 @@
                     </div>
                     <div class="form-group">
                         <label>Hora de Devolução</label>
-                        <input type="text" id="returnTime" name="returnTime" value="-" placeholder="-" maxlength="5">
+                        <input type="time" id="returnTime" name="returnTime">
                     </div>
                     <div class="form-group">
                         <label>Local de Devolução</label>
@@ -3030,9 +3030,9 @@
         // Adicionar linha de reparo
         function addRepairRow() {
             const id = Date.now();
-            // Default: quantidade=1, horas=2, preço=20
-            // Cálculo correto: 1 × 2 × 20 = 40
-            repairItems.push({ id, description: '', quantity: 1, hours: 2, price: 20, total: 40 });
+            // Default: quantidade=1, horas=- (0), preço=20
+            // Cálculo correto: 1 × 20 = 20 (sem horas)
+            repairItems.push({ id, description: '', quantity: 1, hours: 0, price: 20, total: 20 });
             updateRepairTable();
         }
         
