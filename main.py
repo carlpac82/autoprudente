@@ -16045,9 +16045,9 @@ async def get_email_template_by_lang(request: Request, lang: str):
         return {"ok": False, "error": str(e)}
 
 @app.get("/api/damage-reports/{dr_number:path}/pdf")
-async def download_damage_report_pdf(request: Request, dr_number: str):
-    """Download do Damage Report em PDF - Usa template mapeado com coordenadas"""
-    logging.error(f"🔥🔥🔥 ENDPOINT HIT! DR='{dr_number}' - ANTES REQUIRE_AUTH")
+async def download_damage_report_pdf(request: Request, dr_number: str, preview: bool = False):
+    """Download ou Preview do Damage Report em PDF - Usa template mapeado com coordenadas"""
+    logging.error(f"🔥🔥🔥 ENDPOINT HIT! DR='{dr_number}', preview={preview} - ANTES REQUIRE_AUTH")
     require_auth(request)
     logging.error(f"🔥🔥🔥 DEPOIS REQUIRE_AUTH - Executando código...")
     
@@ -16150,10 +16150,13 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         logging.error(f"📄 ==================== PDF GENERATION END ====================")
         logging.error(f"📄 Filename: {filename}")
         
+        # Preview: inline (abre no browser) | Download: attachment (faz download)
+        disposition = "inline" if preview else "attachment"
+        
         return Response(
             content=pdf_data,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'{disposition}; filename="{filename}"'}
         )
     except HTTPException:
         raise
