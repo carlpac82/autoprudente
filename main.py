@@ -16252,11 +16252,37 @@ def _get_next_dr_number(existing_conn=None):
         logging.error(f"🔢 _get_next_dr_number: is_postgres={is_postgres}, conn type={type(conn).__name__}")
         
         # 1. PRIORIDADE: Verificar se há números eliminados disponíveis para reutilizar
-        # NOTA: Reciclagem de números desativada (coluna is_deleted não existe)
-        # logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
-        # TODO: Adicionar coluna is_deleted se reciclagem for necessária
+        logging.info("🔄 Verificando números DR eliminados disponíveis para reciclagem...")
         
-        logging.info("✨ Gerando novo número sequencial")
+        if is_postgres:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT dr_number 
+                FROM damage_reports 
+                WHERE is_deleted = 1 
+                  AND EXTRACT(YEAR FROM deleted_at) = %s
+                ORDER BY dr_number 
+                LIMIT 1
+            """, (current_year,))
+            deleted_dr = cur.fetchone()
+            cur.close()
+        else:
+            cursor = conn.execute("""
+                SELECT dr_number 
+                FROM damage_reports 
+                WHERE is_deleted = 1 
+                  AND strftime('%Y', deleted_at) = ?
+                ORDER BY dr_number 
+                LIMIT 1
+            """, (str(current_year),))
+            deleted_dr = cursor.fetchone()
+        
+        if deleted_dr:
+            recycled_number = deleted_dr[0]
+            logging.info(f"♻️ Reciclando número eliminado: {recycled_number}")
+            return recycled_number
+        
+        logging.info("✨ Nenhum número eliminado disponível - Gerando novo número sequencial")
         
         # 2. FALLBACK: Gerar novo número sequencial
         # Obter configuração atual
