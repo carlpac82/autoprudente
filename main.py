@@ -15821,6 +15821,7 @@ async def list_damage_reports(request: Request):
                                 client_name, vehicle_plate, vehicle_model,
                                 status, created_at, created_by, pdf_filename
                             FROM damage_reports
+                            WHERE (is_deleted = 0 OR is_deleted IS NULL)
                             ORDER BY id DESC
                         """)
                         rows = cur.fetchall()
@@ -15832,6 +15833,7 @@ async def list_damage_reports(request: Request):
                             client_name, vehicle_plate, vehicle_model,
                             status, created_at, created_by, pdf_filename
                         FROM damage_reports
+                        WHERE (is_deleted = 0 OR is_deleted IS NULL)
                         ORDER BY id DESC
                     """)
                     rows = cursor.fetchall()
