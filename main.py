@@ -18512,54 +18512,21 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                             
                             # ✅ is_diagram já foi definido acima (linha 18391)
                             if is_diagram:
-                                # DIAGRAMA: CROP padding branco e escalar para box
+                                # DIAGRAMA: USAR TAMANHO EXATO DA BOX MAPEADA
                                 # Box: X=25, Y=254, W=256, H=201 (página 1)
-                                # Frontend adiciona padding (56px topo, 20px laterais) para pins
-                                # Backend remove padding branco antes de escalar
+                                # Limite direito: X=318 (início das descrições)
+                                # SOLUÇÃO: Desenhar EXATAMENTE no tamanho mapeado
                                 
                                 if is_diagram_check:
-                                    logging.error(f"🖼️ MODO DIAGRAMA - CROP E ESCALA")
+                                    logging.error(f"🖼️ MODO DIAGRAMA - TAMANHO EXATO DA BOX")
                                     logging.error(f"🖼️ Box mapeada: x={x}, y={y}, w={width}, h={height}")
-                                    logging.error(f"🖼️ Imagem capturada (com padding): {img_width}x{img_height}")
+                                    logging.error(f"🖼️ Imagem capturada: {img_width}x{img_height}")
                                 
-                                # ✅ CROP AUTOMÁTICO: Remover bordas brancas (padding do frontend)
-                                # Usar PIL getbbox() - SEM numpy
-                                try:
-                                    # Converter para modo que permite getbbox
-                                    if img.mode == 'RGBA':
-                                        # Usar canal alpha para detectar conteúdo
-                                        alpha = img.split()[-1]
-                                        bbox = alpha.getbbox()
-                                    else:
-                                        # Inverter cores para detectar não-branco
-                                        from PIL import ImageChops
-                                        bg = Image.new(img.mode, img.size, (255, 255, 255))
-                                        diff = ImageChops.difference(img, bg)
-                                        bbox = diff.getbbox()
-                                    
-                                    if bbox:
-                                        # Crop com pequena margem (2px)
-                                        margin = 2
-                                        bbox = (
-                                            max(0, bbox[0] - margin),
-                                            max(0, bbox[1] - margin),
-                                            min(img.width, bbox[2] + margin),
-                                            min(img.height, bbox[3] + margin)
-                                        )
-                                        img = img.crop(bbox)
-                                        img_width, img_height = img.size
-                                        
-                                        if is_diagram_check:
-                                            logging.error(f"🖼️ Após crop: {img_width}x{img_height} (padding removido)")
-                                    else:
-                                        if is_diagram_check:
-                                            logging.error(f"⚠️ Não foi possível fazer crop (imagem toda branca?)")
-                                except Exception as crop_err:
-                                    logging.error(f"⚠️ Erro no crop automático: {crop_err}")
-                                    # Continuar com imagem original se crop falhar
+                                # ✅ ESCALAR IMAGEM CAPTURADA PARA CABER NA BOX
+                                # Frontend captura em ~500px (boa qualidade)
+                                # Backend escala para 256×201px mantendo aspect ratio
                                 
-                                # ✅ ESCALAR IMAGEM PARA CABER NA BOX
-                                # Calcular escala mantendo proporção
+                                # Calcular escala para caber na box mantendo proporção
                                 img_ratio = img_width / img_height
                                 box_ratio = width / height
                                 
