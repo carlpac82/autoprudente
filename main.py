@@ -505,6 +505,10 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.status import HTTP_303_SEE_OTHER
 from dotenv import load_dotenv
+
+# ⚠️ CRITICAL: Load environment variables FIRST before importing database module
+load_dotenv()
+
 import requests
 import asyncio
 from bs4 import BeautifulSoup
@@ -543,9 +547,6 @@ try:
 except ImportError:
     logging.warning("⚠️  Could not import VEHICLES from carjet_direct")
     VEHICLES = {}
-
-# Load environment variables FIRST before checking USE_PLAYWRIGHT
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(
