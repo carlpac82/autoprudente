@@ -253,14 +253,22 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         # Load search data from automated_search_history (correct table for automated searches)
         conn = _get_db_connection()
         cursor = conn.cursor()
+        
+        # Get today's date for comparison (search_date is TEXT in format YYYY-MM-DD)
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        yesterday = today - timedelta(days=1)
+        date_filter = yesterday.strftime('%Y-%m-%d')
+        
         cursor.execute(
             """
             SELECT location, search_date, dias, prices_data
             FROM automated_search_history
-            WHERE TO_TIMESTAMP(search_date, 'YYYY-MM-DD') >= CURRENT_DATE - INTERVAL '1 day'
+            WHERE search_date >= %s
             ORDER BY search_date DESC, id DESC
             LIMIT 100
-            """
+            """,
+            (date_filter,)
         )
         rows = cursor.fetchall()
         
