@@ -18289,16 +18289,16 @@ def _fill_template_pdf_with_data(report_data: dict) -> bytes:
                     'customer_city': 'city',
                     'customer_country': 'country',
                     'vehicle_plate': 'vehiclePlate',
-                    'vehicle_brand': 'vehicleBrand',
+                    'vehicle_brand': 'vehicleBrandModel',  # ✅ Mapeia para campo COMBINADO Marca / Modelo
                     'vehicle_model': 'vehicleModel',
                     'vehicle_brand_model': 'vehicleBrandModel',  # ✅ Campo combinado Marca / Modelo
                     'vehicleBrandModel': 'vehicleBrandModel',  # ✅ Alias direto
                     'vehicle_color': 'vehicleColor',
                     'vehicle_km': 'vehicleKm',
-                    'pickup_date': 'pickupDate',
+                    'pickup_date': 'pickupDate',  # ✅ Data FORMATADA dd-mm-yyyy
                     'pickup_time': 'pickupTime',
                     'pickup_location': 'pickupLocation',
-                    'return_date': 'returnDate',
+                    'return_date': 'returnDate',  # ✅ Data FORMATADA dd-mm-yyyy
                     'return_time': 'returnTime',
                     'return_location': 'returnLocation',
                     'total_amount': 'total_amount',  # ✅ Total da reparação
