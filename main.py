@@ -19192,6 +19192,127 @@ async def download_damage_report_pdf(request: Request, dr_number: str):
         # Retornar erro em JSON com detalhe
         return JSONResponse({"ok": False, "error": f"Error generating PDF: {str(e)}"}, status_code=500)
 
+@app.post("/api/damage-reports/{dr_number:path}/generate-and-save-pdf")
+async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
+    """
+    Gera o PDF do Damage Report dinamicamente e SALVA na BD
+    Útil para DRs criados manualmente que ainda não têm PDF
+    """
+    require_auth(request)
+    
+    try:
+        logging.info(f"🔧 GENERATE AND SAVE PDF - DR: {dr_number}")
+        
+        # 1. Buscar dados do DR
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                if is_postgres:
+                    cursor = conn.cursor()
+                    cursor.execute(f"SELECT * FROM damage_reports WHERE dr_number = {placeholder} AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
+                    cursor.close()
+                else:
+                    cursor = conn.execute(f"SELECT * FROM damage_reports WHERE dr_number = {placeholder} AND (is_deleted = 0 OR is_deleted IS NULL)", (dr_number,))
+                    row = cursor.fetchone()
+                    columns = [desc[0] for desc in cursor.description]
+                
+                if not row:
+                    logging.error(f"❌ DR '{dr_number}' not found")
+                    return JSONResponse({"ok": False, "error": "Damage Report not found"}, status_code=404)
+                
+                report = dict(zip(columns, row))
+            finally:
+                conn.close()
+        
+        # 2. Mapear dados para geração
+        report_data = {
+            'dr_number': report.get('dr_number', ''),
+            'contractNumber': report.get('contract_number', ''),
+            'date': report.get('date', ''),
+            'inspection_date': report.get('date', ''),
+            'clientName': report.get('client_name', ''),
+            'clientEmail': report.get('client_email', ''),
+            'clientPhone': report.get('client_phone', ''),
+            'address': report.get('client_address', ''),
+            'city': report.get('client_city', ''),
+            'postalCode': report.get('client_postal_code', ''),
+            'country': report.get('client_country', ''),
+            'vehiclePlate': report.get('vehicle_plate', ''),
+            'vehicleBrand': report.get('vehicle_brand', ''),
+            'vehicleModel': report.get('vehicle_model', ''),
+            'vehicleKm': report.get('mileage', ''),
+            'pickupDate': report.get('pickup_date', ''),
+            'pickupTime': report.get('pickup_time', ''),
+            'pickupLocation': report.get('pickup_location', ''),
+            'returnDate': report.get('return_date', ''),
+            'returnTime': report.get('return_time', ''),
+            'returnLocation': report.get('return_location', ''),
+            'fuel_level_pickup': report.get('fuel_level', ''),
+            'fuel_level_return': report.get('fuel_level', ''),
+            'total_repair_cost': report.get('total_amount', ''),
+            'inspector_name': report.get('inspector_name', ''),
+            'inspection_date': report.get('date', ''),
+            'damage_diagram_data': report.get('damage_diagram_data', ''),
+            'damageDiagramData': report.get('damage_diagram_data', '')
+        }
+        
+        # 3. Gerar PDF
+        logging.info(f"🔧 Calling _fill_template_pdf_with_data...")
+        pdf_data = _fill_template_pdf_with_data(report_data)
+        logging.info(f"✅ PDF generated! Size: {len(pdf_data)} bytes")
+        
+        # 4. SALVAR NA BD
+        filename = f"DR_{dr_number.replace('/', '_').replace(':', '_')}.pdf"
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                if is_postgres:
+                    cursor = conn.cursor()
+                    cursor.execute(f"""
+                        UPDATE damage_reports 
+                        SET pdf_data = {placeholder}, 
+                            pdf_filename = {placeholder},
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE dr_number = {placeholder}
+                    """, (pdf_data, filename, dr_number))
+                    conn.commit()
+                    cursor.close()
+                else:
+                    conn.execute(f"""
+                        UPDATE damage_reports 
+                        SET pdf_data = {placeholder}, 
+                            pdf_filename = {placeholder},
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE dr_number = {placeholder}
+                    """, (pdf_data, filename, dr_number))
+                    conn.commit()
+                
+                logging.info(f"✅ PDF saved to database! Filename: {filename}")
+            finally:
+                conn.close()
+        
+        return JSONResponse({
+            "ok": True, 
+            "message": f"PDF generated and saved successfully",
+            "filename": filename,
+            "size": len(pdf_data)
+        })
+        
+    except Exception as e:
+        logging.error(f"❌ Error generating and saving PDF: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # ============================================================
 # RENTAL AGREEMENT - Templates and Coordinates
 # ============================================================
