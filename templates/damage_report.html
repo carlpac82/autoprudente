@@ -2733,10 +2733,20 @@
                         
                         // ✅ DATAS: API retorna snake_case (pickup_date, return_date)
                         // Converter para formato de input date (YYYY-MM-DD)
-                        const pickupDateValue = report.pickup_date || '';
-                        const returnDateValue = report.return_date || '';
+                        let pickupDateValue = report.pickup_date || '';
+                        let returnDateValue = report.return_date || '';
                         console.log('[EDIT-DR] pickup_date raw:', pickupDateValue);
                         console.log('[EDIT-DR] return_date raw:', returnDateValue);
+                        
+                        // 🔧 FALLBACK: Se datas vazias, usar data do DR como default
+                        if (!pickupDateValue && report.date) {
+                            pickupDateValue = report.date;
+                            console.log('[EDIT-DR] ⚠️  pickup_date vazio, usando date:', pickupDateValue);
+                        }
+                        if (!returnDateValue && report.date) {
+                            returnDateValue = report.date;
+                            console.log('[EDIT-DR] ⚠️  return_date vazio, usando date:', returnDateValue);
+                        }
                         
                         // Se vier timestamp completo (2025-11-07T00:00:00), extrair só a data
                         document.getElementById('pickupDate').value = pickupDateValue ? pickupDateValue.split('T')[0] : '';
@@ -2777,21 +2787,37 @@
                                 console.log('[EDIT-DR] Car diagram container:', carDiagram ? 'FOUND ✅' : 'NOT FOUND ❌');
                                 
                                 if (carDiagram) {
-                                    // Log dimensões do container para debug
+                                    // 🎯 ESCALA: Ajustar coordenadas para tamanho atual do container
+                                    const img = carDiagram.querySelector('img');
                                     const rect = carDiagram.getBoundingClientRect();
+                                    const currentWidth = img ? img.clientWidth : rect.width;
+                                    const currentHeight = img ? img.clientHeight : rect.height;
+                                    
+                                    // Imagem original: Croqui.png é 986×700px
+                                    const ORIGINAL_WIDTH = 986;
+                                    const ORIGINAL_HEIGHT = 700;
+                                    const scaleX = currentWidth / ORIGINAL_WIDTH;
+                                    const scaleY = currentHeight / ORIGINAL_HEIGHT;
+                                    
                                     console.log('[EDIT-DR] Container dimensions:', {
-                                        width: rect.width,
-                                        height: rect.height,
-                                        left: rect.left,
-                                        top: rect.top
+                                        width: currentWidth,
+                                        height: currentHeight,
+                                        scaleX: scaleX.toFixed(3),
+                                        scaleY: scaleY.toFixed(3)
                                     });
                                     
                                     damages.forEach((d, idx) => {
+                                        // ✅ Aplicar escala às coordenadas salvas
+                                        const scaledX = d.x * scaleX;
+                                        const scaledY = d.y * scaleY;
+                                        
                                         console.log(`[EDIT-DR] Creating pin ${idx + 1}:`, {
                                             id: d.id,
                                             number: d.number,
-                                            x: d.x,
-                                            y: d.y,
+                                            originalX: d.x,
+                                            originalY: d.y,
+                                            scaledX: scaledX.toFixed(2),
+                                            scaledY: scaledY.toFixed(2),
                                             view: d.view,
                                             size: d.size
                                         });
@@ -2800,8 +2826,8 @@
                                         pin.className = 'damage-pin';
                                         pin.id = d.id;
                                         pin.textContent = d.number;
-                                        pin.style.left = d.x + 'px';
-                                        pin.style.top = d.y + 'px';
+                                        pin.style.left = scaledX + 'px';
+                                        pin.style.top = scaledY + 'px';
                                         pin.style.position = 'absolute';
                                         // Aplicar tamanho salvo (default 0.5 se não existir)
                                         const pinSize = d.size || 0.5;
