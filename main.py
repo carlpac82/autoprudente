@@ -15490,41 +15490,45 @@ async def create_damage_report(request: Request):
                             image_data = image_data.split(',')[1]
                         vehicle_damage_image_blob = base64.b64decode(image_data)
                     
+                    # Helper: converter string vazia para None (NULL no SQL)
+                    def empty_to_none(value):
+                        return None if value == '' else value
+                    
                     update_values = (
-                        data.get('raNumber'),  # ✅ Frontend envia raNumber (camelCase)
-                        data.get('contractNumber'),
-                        data.get('date'),
-                        data.get('clientName'),
-                        data.get('clientEmail'),
-                        data.get('clientPhone'),
-                        data.get('address'),
-                        data.get('city'),
-                        data.get('postalCode'),
-                        data.get('country'),
-                        data.get('vehiclePlate'),
-                        data.get('vehicleModel'),
-                        data.get('vehicleBrand'),
-                        data.get('vehicleColor'),
-                        data.get('vehicleKm'),
-                        data.get('pickupDate'),
-                        data.get('pickupTime'),
-                        data.get('pickupLocation'),
-                        data.get('returnDate'),
-                        data.get('returnTime'),
-                        data.get('returnLocation'),
-                        data.get('issuedBy'),
-                        data.get('inspectionType'),
-                        data.get('inspectorName'),
-                        data.get('mileage'),
-                        data.get('fuelPickup'),
-                        data.get('fuelReturn'),
-                        data.get('totalCost'),
-                        data.get('inspectionDate'),
-                        data.get('damageDescription'),
-                        data.get('observations'),
-                        data.get('damageDiagramData'),
-                        data.get('repairItems'),
-                        data.get('damageImages'),
+                        empty_to_none(data.get('raNumber')),  # ✅ Frontend envia raNumber (camelCase)
+                        empty_to_none(data.get('contractNumber')),
+                        empty_to_none(data.get('date')),
+                        empty_to_none(data.get('clientName')),
+                        empty_to_none(data.get('clientEmail')),
+                        empty_to_none(data.get('clientPhone')),
+                        empty_to_none(data.get('address')),
+                        empty_to_none(data.get('city')),
+                        empty_to_none(data.get('postalCode')),
+                        empty_to_none(data.get('country')),
+                        empty_to_none(data.get('vehiclePlate')),
+                        empty_to_none(data.get('vehicleModel')),
+                        empty_to_none(data.get('vehicleBrand')),
+                        empty_to_none(data.get('vehicleColor')),
+                        empty_to_none(data.get('vehicleKm')),
+                        empty_to_none(data.get('pickupDate')),  # ✅ NULL se vazio
+                        empty_to_none(data.get('pickupTime')),  # ✅ NULL se vazio
+                        empty_to_none(data.get('pickupLocation')),
+                        empty_to_none(data.get('returnDate')),  # ✅ NULL se vazio
+                        empty_to_none(data.get('returnTime')),  # ✅ NULL se vazio
+                        empty_to_none(data.get('returnLocation')),
+                        empty_to_none(data.get('issuedBy')),
+                        empty_to_none(data.get('inspectionType')),
+                        empty_to_none(data.get('inspectorName')),
+                        empty_to_none(data.get('mileage')),
+                        empty_to_none(data.get('fuelPickup')),
+                        empty_to_none(data.get('fuelReturn')),
+                        empty_to_none(data.get('totalCost')),
+                        empty_to_none(data.get('inspectionDate')),  # ✅ NULL se vazio
+                        empty_to_none(data.get('damageDescription')),
+                        empty_to_none(data.get('observations')),
+                        empty_to_none(data.get('damageDiagramData')),
+                        empty_to_none(data.get('repairItems')),
+                        empty_to_none(data.get('damageImages')),
                         vehicle_damage_image_blob,
                         datetime.now().isoformat(),
                         existing_dr_number
@@ -15616,38 +15620,42 @@ async def create_damage_report(request: Request):
                             image_data = image_data.split(',')[1]
                         vehicle_damage_image_blob = base64.b64decode(image_data)
                     
+                    # Helper: converter string vazia para None (NULL no SQL)
+                    def empty_to_none(value):
+                        return None if value == '' else value
+                    
                     if is_recycled:
                         # UPDATE - Reutilizar registo eliminado e resetar flags de eliminação
                         update_values = (
-                            data.get('raNumber'),  # ✅ Frontend envia raNumber (camelCase)
-                            data.get('contractNumber'),
-                            data.get('date'),
-                            data.get('clientName'),
-                            data.get('clientEmail'),
-                            data.get('clientPhone'),
-                            data.get('address'),
-                            data.get('city'),
-                            data.get('postalCode'),
-                            data.get('country'),
-                            data.get('vehiclePlate'),
-                            data.get('vehicleModel'),
-                            data.get('vehicleBrand'),
-                            data.get('pickupDate'),
-                            data.get('pickupTime'),
-                            data.get('pickupLocation'),
-                            data.get('returnDate'),
-                            data.get('returnTime'),
-                            data.get('returnLocation'),
-                            data.get('issuedBy'),
-                            data.get('inspectionType'),
-                            data.get('inspectorName'),
-                            data.get('mileage'),
-                            data.get('fuelLevel'),
-                            data.get('damageDescription'),
-                            data.get('observations'),
-                            data.get('damageDiagramData'),
-                            data.get('repairItems'),
-                            data.get('damageImages'),
+                            empty_to_none(data.get('raNumber')),  # ✅ Frontend envia raNumber (camelCase)
+                            empty_to_none(data.get('contractNumber')),
+                            empty_to_none(data.get('date')),
+                            empty_to_none(data.get('clientName')),
+                            empty_to_none(data.get('clientEmail')),
+                            empty_to_none(data.get('clientPhone')),
+                            empty_to_none(data.get('address')),
+                            empty_to_none(data.get('city')),
+                            empty_to_none(data.get('postalCode')),
+                            empty_to_none(data.get('country')),
+                            empty_to_none(data.get('vehiclePlate')),
+                            empty_to_none(data.get('vehicleModel')),
+                            empty_to_none(data.get('vehicleBrand')),
+                            empty_to_none(data.get('pickupDate')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('pickupTime')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('pickupLocation')),
+                            empty_to_none(data.get('returnDate')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('returnTime')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('returnLocation')),
+                            empty_to_none(data.get('issuedBy')),
+                            empty_to_none(data.get('inspectionType')),
+                            empty_to_none(data.get('inspectorName')),
+                            empty_to_none(data.get('mileage')),
+                            empty_to_none(data.get('fuelLevel')),
+                            empty_to_none(data.get('damageDescription')),
+                            empty_to_none(data.get('observations')),
+                            empty_to_none(data.get('damageDiagramData')),
+                            empty_to_none(data.get('repairItems')),
+                            empty_to_none(data.get('damageImages')),
                             vehicle_damage_image_blob,
                             request.session.get('username', 'unknown'),
                             datetime.now().isoformat(),
@@ -15711,42 +15719,47 @@ async def create_damage_report(request: Request):
                     else:
                         # INSERT - Criar novo registo
                         logging.error(f"💾 Preparando INSERT para DR: {dr_number}")
+                        
+                        # Helper: converter string vazia para None (NULL no SQL)
+                        def empty_to_none(value):
+                            return None if value == '' else value
+                        
                         insert_values = (
                             dr_number,
-                            data.get('raNumber'),  # ✅ Frontend envia raNumber (camelCase)
-                            data.get('contractNumber'),
-                            data.get('date'),
-                            data.get('clientName'),
-                            data.get('clientEmail'),
-                            data.get('clientPhone'),
-                            data.get('address'),
-                            data.get('city'),
-                            data.get('postalCode'),
-                            data.get('country'),
-                            data.get('vehiclePlate'),
-                            data.get('vehicleModel'),
-                            data.get('vehicleBrand'),
-                            data.get('vehicleColor'),
-                            data.get('vehicleKm'),
-                            data.get('pickupDate'),
-                            data.get('pickupTime'),
-                            data.get('pickupLocation'),
-                            data.get('returnDate'),
-                            data.get('returnTime'),
-                            data.get('returnLocation'),
-                            data.get('issuedBy'),
-                            data.get('inspectionType'),
-                            data.get('inspectorName'),
-                            data.get('mileage'),
-                            data.get('fuelPickup'),
-                            data.get('fuelReturn'),
-                            data.get('totalCost'),
-                            data.get('inspectionDate'),
-                            data.get('damageDescription'),
-                            data.get('observations'),
-                            data.get('damageDiagramData'),
-                            data.get('repairItems'),
-                            data.get('damageImages'),
+                            empty_to_none(data.get('raNumber')),  # ✅ Frontend envia raNumber (camelCase)
+                            empty_to_none(data.get('contractNumber')),
+                            empty_to_none(data.get('date')),
+                            empty_to_none(data.get('clientName')),
+                            empty_to_none(data.get('clientEmail')),
+                            empty_to_none(data.get('clientPhone')),
+                            empty_to_none(data.get('address')),
+                            empty_to_none(data.get('city')),
+                            empty_to_none(data.get('postalCode')),
+                            empty_to_none(data.get('country')),
+                            empty_to_none(data.get('vehiclePlate')),
+                            empty_to_none(data.get('vehicleModel')),
+                            empty_to_none(data.get('vehicleBrand')),
+                            empty_to_none(data.get('vehicleColor')),
+                            empty_to_none(data.get('vehicleKm')),
+                            empty_to_none(data.get('pickupDate')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('pickupTime')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('pickupLocation')),
+                            empty_to_none(data.get('returnDate')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('returnTime')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('returnLocation')),
+                            empty_to_none(data.get('issuedBy')),
+                            empty_to_none(data.get('inspectionType')),
+                            empty_to_none(data.get('inspectorName')),
+                            empty_to_none(data.get('mileage')),
+                            empty_to_none(data.get('fuelPickup')),
+                            empty_to_none(data.get('fuelReturn')),
+                            empty_to_none(data.get('totalCost')),
+                            empty_to_none(data.get('inspectionDate')),  # ✅ NULL se vazio
+                            empty_to_none(data.get('damageDescription')),
+                            empty_to_none(data.get('observations')),
+                            empty_to_none(data.get('damageDiagramData')),
+                            empty_to_none(data.get('repairItems')),
+                            empty_to_none(data.get('damageImages')),
                             vehicle_damage_image_blob,
                             request.session.get('username', 'unknown')
                         )
