@@ -15995,8 +15995,55 @@ async def get_dr_numbering(request: Request):
         logging.error(f"❌ [DR-NUMBERING] GET Error: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
-# ⚠️ IMPORTANTE: Este endpoint DEVE vir ANTES do endpoint genérico /{dr_number:path}
-# para que FastAPI faça match correto de /DR42/2025/pdf
+# ⚠️ IMPORTANTE: Estes endpoints DEVEM vir ANTES do endpoint genérico /{dr_number:path}
+# para que FastAPI faça match correto de URLs específicas
+
+@app.get("/api/damage-reports/email-template/{lang}")
+async def get_email_template_by_lang(request: Request, lang: str):
+    """Get email template for specific language"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT id, language_code, language_name, subject_template, body_template, updated_at
+                            FROM dr_email_templates
+                            WHERE language_code = %s
+                        """, (lang,))
+                        row = cur.fetchone()
+                else:
+                    cursor = conn.execute("""
+                        SELECT id, language_code, language_name, subject_template, body_template, updated_at
+                        FROM dr_email_templates
+                        WHERE language_code = ?
+                    """, (lang,))
+                    row = cursor.fetchone()
+                
+                if not row:
+                    return {"ok": False, "error": f"Template for language '{lang}' not found"}
+                
+                template = {
+                    'id': row[0],
+                    'language_code': row[1],
+                    'language_name': row[2],
+                    'subject_template': row[3],
+                    'body_template': row[4],
+                    'updated_at': row[5]
+                }
+                
+                return {"ok": True, "template": template}
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"Error getting email template for {lang}: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/damage-reports/{dr_number:path}/pdf")
 async def download_damage_report_pdf(request: Request, dr_number: str):
     """Download do Damage Report em PDF - Usa template mapeado com coordenadas"""
@@ -16367,51 +16414,7 @@ async def get_email_templates(request: Request):
         logging.error(f"Error getting email templates: {e}")
         return {"ok": False, "error": str(e)}
 
-@app.get("/api/damage-reports/email-template/{lang}")
-async def get_email_template_by_lang(request: Request, lang: str):
-    """Get email template for specific language"""
-    require_auth(request)
-    
-    try:
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
-                
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            SELECT id, language_code, language_name, subject_template, body_template, updated_at
-                            FROM dr_email_templates
-                            WHERE language_code = %s
-                        """, (lang,))
-                        row = cur.fetchone()
-                else:
-                    cursor = conn.execute("""
-                        SELECT id, language_code, language_name, subject_template, body_template, updated_at
-                        FROM dr_email_templates
-                        WHERE language_code = ?
-                    """, (lang,))
-                    row = cursor.fetchone()
-                
-                if not row:
-                    return {"ok": False, "error": f"Template for language '{lang}' not found"}
-                
-                template = {
-                    'id': row[0],
-                    'language_code': row[1],
-                    'language_name': row[2],
-                    'subject_template': row[3],
-                    'body_template': row[4],
-                    'updated_at': row[5]
-                }
-                
-                return {"ok": True, "template": template}
-            finally:
-                conn.close()
-    except Exception as e:
-        logging.error(f"Error getting email template for {lang}: {e}")
-        return {"ok": False, "error": str(e)}
+# Endpoint GET duplicado REMOVIDO - agora está na linha 16001 (ANTES do endpoint genérico)
 
 @app.post("/api/damage-reports/email-template/{lang}")
 async def save_email_template(request: Request, lang: str):
