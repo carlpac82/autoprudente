@@ -317,28 +317,48 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                 print(f"   [DEBUG] supplier_data days: {list(supplier_data.keys())}", flush=True)
                 
                 # Send ALL cars from supplier_data (not just 1 per group)
-                # This allows the report to show multiple suppliers per group
+                # Filter duplicates: same supplier + car + price = duplicate
+                seen_cars = set()
+                total_before = 0
+                
                 for day_str, day_items in supplier_data.items():
+                    total_before += len(day_items)
                     for item in day_items:
+                        supplier = item.get('supplier', 'Unknown')
+                        car = item.get('car', 'Unknown')
+                        price = item.get('price_num', 0)
+                        
+                        # Create unique key
+                        unique_key = f"{supplier}|{car}|{price:.2f}"
+                        
+                        # Skip if already seen
+                        if unique_key in seen_cars:
+                            continue
+                        
+                        seen_cars.add(unique_key)
+                        
                         # Add location and search_date to each item
                         result_item = {
                             'group': item.get('group', 'Unknown'),
                             'days': int(day_str),
-                            'price': item.get('price_num', 0),
-                            'price_num': item.get('price_num', 0),
+                            'price': price,
+                            'price_num': price,
                             'location': location,
                             'search_date': search_date,
                             'car_name': item.get('car_clean', 'Unknown'),
-                            'supplier': item.get('supplier', 'Unknown'),
+                            'supplier': supplier,
+                            'photo': item.get('image_url', ''),  # Map image_url -> photo for HTML
                             'image_url': item.get('image_url', ''),
-                            'car': item.get('car', 'Unknown'),
+                            'car': car,
                         }
                         
                         # Debug first item
                         if len(all_results) == 0:
-                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}", flush=True)
+                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}, photo={bool(result_item['photo'])}", flush=True)
                         
                         all_results.append(result_item)
+                
+                print(f"   [DEBUG] Dedup: {total_before} total → {len(seen_cars)} unique (removed {total_before - len(seen_cars)} duplicates)", flush=True)
         
         cursor.close()
         conn.close()
