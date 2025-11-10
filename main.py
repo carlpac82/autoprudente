@@ -12949,10 +12949,13 @@ async def export_configuration(request: Request):
                     """).fetchall()
                     
                     for row in rows:
+                        updated_at = row[2]
+                        # Convert datetime to ISO string for JSON serialization
+                        updated_at_str = updated_at if isinstance(updated_at, str) else (updated_at.isoformat() if updated_at else None)
                         name_overrides_data.append({
                             "original_name": row[0],
                             "edited_name": row[1],
-                            "updated_at": row[2]
+                            "updated_at": updated_at_str
                         })
                 finally:
                     conn.close()
