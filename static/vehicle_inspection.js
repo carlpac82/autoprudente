@@ -358,21 +358,13 @@ async function openCamera(photoType) {
     }
 }
 
+let scene, camera3D, renderer, carModel, animationId;
+
 function setupCameraOverlay(photoType) {
     const overlayContainer = document.getElementById('cameraOverlay');
     
     // Clear existing overlay
     overlayContainer.innerHTML = '';
-    
-    // Rotation angles for each view
-    const rotations = {
-        'front': 0,
-        'left': 90,
-        'back': 180,
-        'right': 270,
-        'interior': 0,
-        'odometer': 0
-    };
     
     const hints = {
         'front': 'Dirija-se à FRENTE do veículo',
@@ -383,25 +375,14 @@ function setupCameraOverlay(photoType) {
         'odometer': 'Aponte para o ODÓMETRO'
     };
     
-    const rotation = rotations[photoType] || 0;
     const isInteriorOrOdo = photoType === 'interior' || photoType === 'odometer';
     
-    // Create animated 3D car overlay
+    // Create container for 3D scene
     overlayContainer.innerHTML = `
-        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center;">
             
-            <!-- 3D Car Animation -->
-            <div style="perspective: 1000px; margin-bottom: 40px;">
-                <div id="car3D" style="
-                    width: 300px;
-                    height: 180px;
-                    transform-style: preserve-3d;
-                    transform: rotateY(${rotation}deg);
-                    transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                ">
-                    ${get3DCarHTML()}
-                </div>
-            </div>
+            <!-- Three.js 3D Container -->
+            <div id="threejs-container" style="width: 100%; height: 400px; margin-bottom: 40px;"></div>
             
             <!-- Direction hint with icon -->
             <div style="text-align: center; color: white;">
@@ -418,108 +399,175 @@ function setupCameraOverlay(photoType) {
             </div>
         </div>
     `;
+    
+    // Initialize Three.js 3D car
+    setTimeout(() => init3DCar(photoType), 100);
 }
 
-function get3DCarHTML() {
-    return `
-        <!-- Simple 3D car using CSS -->
-        <div style="
-            position: absolute;
-            width: 300px;
-            height: 180px;
-            transform-style: preserve-3d;
-        ">
-            <!-- Car body -->
-            <div style="
-                position: absolute;
-                width: 240px;
-                height: 100px;
-                left: 30px;
-                top: 50px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border-radius: 20px 20px 8px 8px;
-                transform: translateZ(30px);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            "></div>
-            
-            <!-- Roof -->
-            <div style="
-                position: absolute;
-                width: 140px;
-                height: 70px;
-                left: 80px;
-                top: 20px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border-radius: 12px 12px 0 0;
-                transform: translateZ(30px);
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            "></div>
-            
-            <!-- Windshield -->
-            <div style="
-                position: absolute;
-                width: 100px;
-                height: 50px;
-                left: 100px;
-                top: 30px;
-                background: rgba(100, 200, 255, 0.3);
-                border-radius: 8px;
-                transform: translateZ(31px);
-                border: 2px solid rgba(255,255,255,0.5);
-            "></div>
-            
-            <!-- Front -->
-            <div style="
-                position: absolute;
-                width: 60px;
-                height: 100px;
-                left: 30px;
-                top: 50px;
-                background: linear-gradient(90deg, #059669 0%, #10b981 100%);
-                border-radius: 20px 0 0 8px;
-                transform: rotateY(-90deg) translateZ(30px);
-            "></div>
-            
-            <!-- Back -->
-            <div style="
-                position: absolute;
-                width: 60px;
-                height: 100px;
-                right: 30px;
-                top: 50px;
-                background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-                border-radius: 0 20px 8px 0;
-                transform: rotateY(90deg) translateZ(0px);
-            "></div>
-            
-            <!-- Wheels -->
-            <div style="
-                position: absolute;
-                width: 40px;
-                height: 40px;
-                left: 50px;
-                top: 120px;
-                background: #1f2937;
-                border-radius: 50%;
-                transform: translateZ(35px);
-                border: 4px solid #374151;
-                box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-            "></div>
-            <div style="
-                position: absolute;
-                width: 40px;
-                height: 40px;
-                right: 50px;
-                top: 120px;
-                background: #1f2937;
-                border-radius: 50%;
-                transform: translateZ(35px);
-                border: 4px solid #374151;
-                box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-            "></div>
-        </div>
-    `;
+function init3DCar(photoType) {
+    const container = document.getElementById('threejs-container');
+    if (!container) return;
+    
+    // Clean up previous scene
+    if (renderer) {
+        cancelAnimationFrame(animationId);
+        renderer.dispose();
+    }
+    
+    // Create scene
+    scene = new THREE.Scene();
+    
+    // Create camera
+    camera3D = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera3D.position.set(0, 3, 8);
+    camera3D.lookAt(0, 0, 0);
+    
+    // Create renderer
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+    
+    // Add lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(5, 10, 5);
+    scene.add(directionalLight);
+    
+    // Create 3D car model
+    carModel = create3DCarModel();
+    scene.add(carModel);
+    
+    // Set initial rotation based on photo type
+    const rotations = {
+        'front': 0,
+        'left': Math.PI / 2,
+        'back': Math.PI,
+        'right': -Math.PI / 2,
+        'interior': 0,
+        'odometer': 0
+    };
+    
+    carModel.rotation.y = rotations[photoType] || 0;
+    
+    // Animate
+    animate3DCar();
 }
+
+function create3DCarModel() {
+    const carGroup = new THREE.Group();
+    
+    // Car body (main)
+    const bodyGeometry = new THREE.BoxGeometry(4, 1.2, 2);
+    const bodyMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x10b981,
+        shininess: 100,
+        specular: 0x444444
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.6;
+    carGroup.add(body);
+    
+    // Car cabin (roof)
+    const cabinGeometry = new THREE.BoxGeometry(2.5, 1, 1.8);
+    const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+    cabin.position.set(-0.3, 1.7, 0);
+    carGroup.add(cabin);
+    
+    // Windows
+    const windowMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x64b5f6,
+        transparent: true,
+        opacity: 0.5,
+        shininess: 100
+    });
+    
+    // Front window
+    const frontWindowGeometry = new THREE.BoxGeometry(0.1, 0.8, 1.6);
+    const frontWindow = new THREE.Mesh(frontWindowGeometry, windowMaterial);
+    frontWindow.position.set(0.95, 1.7, 0);
+    carGroup.add(frontWindow);
+    
+    // Rear window
+    const rearWindow = new THREE.Mesh(frontWindowGeometry, windowMaterial);
+    rearWindow.position.set(-1.55, 1.7, 0);
+    carGroup.add(rearWindow);
+    
+    // Wheels
+    const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+    const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x1f2937 });
+    
+    // Front left wheel
+    const wheel1 = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    wheel1.position.set(1.2, 0.4, 1.1);
+    wheel1.rotation.z = Math.PI / 2;
+    carGroup.add(wheel1);
+    
+    // Front right wheel
+    const wheel2 = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    wheel2.position.set(1.2, 0.4, -1.1);
+    wheel2.rotation.z = Math.PI / 2;
+    carGroup.add(wheel2);
+    
+    // Rear left wheel
+    const wheel3 = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    wheel3.position.set(-1.2, 0.4, 1.1);
+    wheel3.rotation.z = Math.PI / 2;
+    carGroup.add(wheel3);
+    
+    // Rear right wheel
+    const wheel4 = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    wheel4.position.set(-1.2, 0.4, -1.1);
+    wheel4.rotation.z = Math.PI / 2;
+    carGroup.add(wheel4);
+    
+    // Headlights
+    const headlightGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+    const headlightMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xffffaa,
+        emissive: 0xffff00,
+        emissiveIntensity: 0.5
+    });
+    
+    const headlight1 = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    headlight1.position.set(2.1, 0.8, 0.7);
+    carGroup.add(headlight1);
+    
+    const headlight2 = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    headlight2.position.set(2.1, 0.8, -0.7);
+    carGroup.add(headlight2);
+    
+    // Tail lights
+    const taillightMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.3
+    });
+    
+    const taillight1 = new THREE.Mesh(headlightGeometry, taillightMaterial);
+    taillight1.position.set(-2.1, 0.8, 0.7);
+    carGroup.add(taillight1);
+    
+    const taillight2 = new THREE.Mesh(headlightGeometry, taillightMaterial);
+    taillight2.position.set(-2.1, 0.8, -0.7);
+    carGroup.add(taillight2);
+    
+    return carGroup;
+}
+
+function animate3DCar() {
+    animationId = requestAnimationFrame(animate3DCar);
+    
+    // Slow automatic rotation for visual effect
+    if (carModel) {
+        carModel.rotation.y += 0.005;
+    }
+    
+    renderer.render(scene, camera3D);
+}
+
 
 function getCarFrontSVG() {
     return `
@@ -841,6 +889,22 @@ function closeCamera() {
     if (hintInterval) {
         clearInterval(hintInterval);
         hintInterval = null;
+    }
+    
+    // Clean up Three.js
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    if (renderer) {
+        renderer.dispose();
+        renderer = null;
+    }
+    if (scene) {
+        scene = null;
+    }
+    if (carModel) {
+        carModel = null;
     }
     
     document.getElementById('cameraModal').classList.remove('active');
