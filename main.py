@@ -1439,6 +1439,22 @@ def _db_connect():
     else:
         return sqlite3.connect(str(DB_PATH))
 
+def _convert_query_for_db(query, conn):
+    """Convert SQLite query to PostgreSQL if needed"""
+    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+    if is_postgres:
+        # Convert datetime('now') to NOW()
+        query = query.replace("datetime('now')", "NOW()")
+        query = query.replace('datetime("now")', "NOW()")
+        # Convert ? to %s
+        import re
+        # Count placeholders
+        param_count = query.count('?')
+        if param_count > 0:
+            parts = query.split('?')
+            query = '%s'.join(parts)
+    return query
+
 def _ensure_users_table():
     with _db_lock:
         con = _db_connect()
@@ -12109,14 +12125,17 @@ async def save_user_settings(request: Request):
                     # Serializar valor como JSON
                     value_json = json.dumps(value) if not isinstance(value, str) else value
                     
-                    conn.execute(
-                        """
+                    query = _convert_query_for_db("""
                         INSERT OR REPLACE INTO user_settings 
                         (user_key, setting_key, setting_value, updated_at)
                         VALUES (?, ?, ?, datetime('now'))
-                        """,
-                        (user_key, key, value_json)
-                    )
+                    """, conn)
+                    
+                    if conn.__class__.__module__ == 'psycopg2.extensions':
+                        with conn.cursor() as cur:
+                            cur.execute(query, (user_key, key, value_json))
+                    else:
+                        conn.execute(query, (user_key, key, value_json))
                 
                 conn.commit()
                 logging.info(f"✅ User settings saved: {len(settings)} keys for {user_key}")
@@ -13258,11 +13277,17 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                         image_data = base64.b64decode(image_info["data"])
                         source_url = image_info.get("source_url")
                         
-                        conn.execute("""
+                        query = _convert_query_for_db("""
                             INSERT OR REPLACE INTO vehicle_images 
                             (vehicle_name, image_data, source_url, updated_at)
                             VALUES (?, ?, ?, datetime('now'))
-                        """, (vehicle_name, image_data, source_url))
+                        """, conn)
+                        
+                        if conn.__class__.__module__ == 'psycopg2.extensions':
+                            with conn.cursor() as cur:
+                                cur.execute(query, (vehicle_name, image_data, source_url))
+                        else:
+                            conn.execute(query, (vehicle_name, image_data, source_url))
                         imported_images += 1
                     conn.commit()
                 finally:
@@ -14466,12 +14491,16 @@ async def download_vehicle_photo_from_url(vehicle_name: str, request: Request):
             with _db_lock:
                 con = _db_connect()
                 try:
-                    con.execute(
+                    query = _convert_query_for_db(
                         """INSERT OR REPLACE INTO vehicle_images 
                            (vehicle_key, image_data, content_type, source_url, downloaded_at)
-                           VALUES (?, ?, ?, ?, datetime('now'))""",
-                        (vehicle_key, image_data, content_type, url)
-                    )
+                           VALUES (?, ?, ?, ?, datetime('now'))""", con)
+                    
+                    if con.__class__.__module__ == 'psycopg2.extensions':
+                        with con.cursor() as cur:
+                            cur.execute(query, (vehicle_key, image_data, content_type, url))
+                    else:
+                        con.execute(query, (vehicle_key, image_data, content_type, url))
                     con.commit()
                 finally:
                     con.close()
@@ -14502,12 +14531,16 @@ async def upload_vehicle_photo(vehicle_name: str, request: Request, file: Upload
         with _db_lock:
             con = _db_connect()
             try:
-                con.execute(
+                query = _convert_query_for_db(
                     """INSERT OR REPLACE INTO vehicle_images 
                        (vehicle_key, image_data, content_type, source_url, downloaded_at)
-                       VALUES (?, ?, ?, ?, datetime('now'))""",
-                    (vehicle_key, image_data, content_type, 'uploaded')
-                )
+                       VALUES (?, ?, ?, ?, datetime('now'))""", con)
+                
+                if con.__class__.__module__ == 'psycopg2.extensions':
+                    with con.cursor() as cur:
+                        cur.execute(query, (vehicle_key, image_data, content_type, 'uploaded'))
+                else:
+                    con.execute(query, (vehicle_key, image_data, content_type, 'uploaded'))
                 con.commit()
             finally:
                 con.close()
@@ -14644,7 +14677,7 @@ async def import_config(request: Request):
                         content_type = image_info.get("content_type", "image/jpeg")
                         source_url = image_info.get("source_url", "")
                         
-                        con.execute("""
+                        query = _convert_query_for_db("""
                             INSERT INTO vehicle_images (vehicle_key, image_data, content_type, source_url, downloaded_at)
                             VALUES (?, ?, ?, ?, datetime('now'))
                             ON CONFLICT(vehicle_key) DO UPDATE SET
@@ -14652,7 +14685,13 @@ async def import_config(request: Request):
                                 content_type = excluded.content_type,
                                 source_url = excluded.source_url,
                                 downloaded_at = excluded.downloaded_at
-                        """, (vehicle_key, image_data, content_type, source_url))
+                        """, con)
+                        
+                        if con.__class__.__module__ == 'psycopg2.extensions':
+                            with con.cursor() as cur:
+                                cur.execute(query, (vehicle_key, image_data, content_type, source_url))
+                        else:
+                            con.execute(query, (vehicle_key, image_data, content_type, source_url))
                         imported["images"] += 1
                     con.commit()
                 finally:
@@ -20846,13 +20885,20 @@ async def save_export_history(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                con.execute("""
+                query = _convert_query_for_db("""
                     INSERT INTO export_history 
                     (filename, broker, location, period_start, period_end, month, year, month_name, 
                      file_content, file_size, exported_by, export_date)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                """, (filename, broker, location, period_start, period_end, month, year, 
-                      month_name, file_content, file_size, username))
+                """, con)
+                
+                if con.__class__.__module__ == 'psycopg2.extensions':
+                    with con.cursor() as cur:
+                        cur.execute(query, (filename, broker, location, period_start, period_end, month, year, 
+                                           month_name, file_content, file_size, username))
+                else:
+                    con.execute(query, (filename, broker, location, period_start, period_end, month, year, 
+                                       month_name, file_content, file_size, username))
                 con.commit()
                 
                 export_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -20963,11 +21009,17 @@ async def download_export_history(request: Request, export_id: int):
                 filename, file_content, broker = row
                 
                 # Update last_downloaded
-                con.execute("""
+                query = _convert_query_for_db("""
                     UPDATE export_history
                     SET last_downloaded = datetime('now')
                     WHERE id = ?
-                """, (export_id,))
+                """, con)
+                
+                if con.__class__.__module__ == 'psycopg2.extensions':
+                    with con.cursor() as cur:
+                        cur.execute(query, (export_id,))
+                else:
+                    con.execute(query, (export_id,))
                 con.commit()
                 
                 # Return CSV file
@@ -22568,12 +22620,16 @@ async def fetch_car_photos(request: Request):
                             print(f"  ⏭️  Skipped (already exists): {car_name}", file=sys.stderr, flush=True)
                         else:
                             # Inserir nova foto
-                            conn.execute(
+                            query = _convert_query_for_db(
                                 """INSERT INTO vehicle_images 
                                    (vehicle_key, source_url, downloaded_at, content_type) 
-                                   VALUES (?, ?, datetime('now'), 'image/jpeg')""",
-                                (car_name, photo_url)
-                            )
+                                   VALUES (?, ?, datetime('now'), 'image/jpeg')""", conn)
+                            
+                            if conn.__class__.__module__ == 'psycopg2.extensions':
+                                with conn.cursor() as cur:
+                                    cur.execute(query, (car_name, photo_url))
+                            else:
+                                conn.execute(query, (car_name, photo_url))
                             conn.commit()
                             downloaded += 1
                             print(f"  ✅ Saved: {car_name} -> {photo_url}", file=sys.stderr, flush=True)
