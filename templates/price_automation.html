@@ -5284,22 +5284,28 @@
                     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
                     const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                     
-                    // Automated Prices History
-                    const hasAutomatedData = history[monthKey] && history[monthKey].automated && history[monthKey].automated.length > 0;
+                    // Merge automated and current searches, sort by date (newest first)
+                    const automatedSearches = (history[monthKey] && history[monthKey].automated) || [];
+                    const currentSearches = (history[monthKey] && history[monthKey].current) || [];
+                    const allSearches = [...automatedSearches, ...currentSearches].sort((a, b) => 
+                        new Date(b.date) - new Date(a.date)
+                    );
+                    
+                    const hasData = allSearches.length > 0;
                     
                     const buttonAutomated = document.createElement('button');
-                    buttonAutomated.className = `p-3 border rounded text-sm ${hasAutomatedData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
+                    buttonAutomated.className = `p-3 border rounded text-sm ${hasData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
                     buttonAutomated.textContent = monthName;
-                    buttonAutomated.disabled = !hasAutomatedData;
+                    buttonAutomated.disabled = !hasData;
                     
-                    if (hasAutomatedData) {
-                        buttonAutomated.onclick = () => showHistoryMonthFromServer(monthKey, monthName, 'automated', history[monthKey].automated);
+                    if (hasData) {
+                        buttonAutomated.onclick = () => showHistoryMonthFromServer(monthKey, monthName, 'all', allSearches);
                     }
                     
                     containerAutomated.appendChild(buttonAutomated);
                     
-                    if (hasAutomatedData) {
-                        console.log(`${monthKey}: Automated=${history[monthKey].automated.length} versions`);
+                    if (hasData) {
+                        console.log(`${monthKey}: Total=${allSearches.length} versions (${automatedSearches.length} auto, ${currentSearches.length} current)`);
                     }
                 });
                 
@@ -5442,7 +5448,7 @@
             }
             
             try {
-                document.getElementById('historyTitle').textContent = `${type === 'automated' ? 'Automated' : 'Current'} Prices - ${monthName} (${historyArray.length} versions)`;
+                document.getElementById('historyTitle').textContent = `Automated Prices - ${monthName} (${historyArray.length} versions)`;
                 document.getElementById('historyTableContainer').classList.remove('hidden');
                 
                 const container = document.getElementById('historyTableContainer');
