@@ -13085,6 +13085,18 @@ async def export_configuration(request: Request):
         except Exception as e:
             print(f"[EXPORT] Warning: Could not export users: {e}")
         
+        # Função auxiliar para converter datetime recursivamente
+        def convert_datetime_recursive(obj):
+            """Converte recursivamente todos os datetime objects para ISO strings"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {key: convert_datetime_recursive(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_datetime_recursive(item) for item in obj]
+            else:
+                return obj
+        
         # Criar estrutura de export completa
         config = {
             "version": "2.0",  # Nova versão com dados completos
@@ -13111,6 +13123,9 @@ async def export_configuration(request: Request):
                 "users": users_data
             }
         }
+        
+        # Converter todos os datetime recursivamente antes de serializar
+        config = convert_datetime_recursive(config)
         
         # Retornar como JSON para download
         from fastapi.responses import Response
