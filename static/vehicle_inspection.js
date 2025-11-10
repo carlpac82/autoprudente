@@ -70,6 +70,20 @@ document.addEventListener('DOMContentLoaded', function() {
         receptionistField.value = userName;
     }
     
+    // Set user initials in avatar
+    const userInitials = document.getElementById('userInitials');
+    const userNameDisplay = document.getElementById('userNameDisplay');
+    if (userInitials && userName) {
+        const nameParts = userName.split(' ');
+        const initials = nameParts.length > 1 
+            ? nameParts[0][0] + nameParts[nameParts.length - 1][0]
+            : userName.substring(0, 2);
+        userInitials.textContent = initials.toUpperCase();
+    }
+    if (userNameDisplay) {
+        userNameDisplay.textContent = userName;
+    }
+    
     // Auto-fill current Date
     const now = new Date();
     const dateStr = now.toLocaleDateString('pt-PT', { 
@@ -1541,6 +1555,19 @@ function generateReview() {
             ` : ''}
         </div>
     `;
+}
+
+// Logout function
+function logout() {
+    // Clear user data
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userToken');
+    
+    // Show confirmation
+    if (confirm('Tem a certeza que deseja terminar a sessão?')) {
+        // Redirect to login page
+        window.location.href = '/login';
+    }
 }
 
 // Save inspection
