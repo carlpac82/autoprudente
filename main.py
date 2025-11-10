@@ -20506,6 +20506,313 @@ async def load_ai_models():
         logging.warning(f"⚠️ Could not load AI models: {e}")
 
 # ============================================================
+# VEHICLE INSPECTIONS - Check-in/Check-out System
+# ============================================================
+
+@app.get("/vehicle-inspection", response_class=HTMLResponse)
+async def vehicle_inspection_page(request: Request):
+    """Vehicle inspection page with real-time camera"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("vehicle_inspection.html", {
+        "request": request
+    })
+
+@app.get("/vehicle-inspections", response_class=HTMLResponse)
+async def vehicle_inspections_list(request: Request):
+    """List all vehicle inspections"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    # TODO: Create list page
+    return templates.TemplateResponse("vehicle_inspections_list.html", {
+        "request": request
+    })
+
+@app.post("/api/vehicle-inspections/create")
+async def create_vehicle_inspection(request: Request):
+    """
+    Create new vehicle inspection with photos and AI analysis
+    Saves to database with all photos and results
+    """
+    require_auth(request)
+    
+    try:
+        form = await request.form()
+        
+        # Generate inspection number
+        import datetime
+        now = datetime.datetime.now()
+        inspection_number = f"VI-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}"
+        
+        # Extract vehicle info
+        inspection_type = form.get('inspection_type', 'check_in')
+        vehicle_plate = form.get('vehicle_plate', '').strip()
+        
+        if not vehicle_plate:
+            return JSONResponse({"ok": False, "error": "Vehicle plate is required"}, status_code=400)
+        
+        # Parse AI results
+        import json
+        ai_results = json.loads(form.get('ai_results', '{}'))
+        
+        # Count damages
+        damage_count = sum(1 for r in ai_results.values() if r.get('ok') and r.get('has_damage'))
+        has_damage = damage_count > 0
+        
+        # Calculate average confidence
+        confidences = [r.get('confidence_percent', 0) for r in ai_results.values() if r.get('ok')]
+        ai_confidence_avg = sum(confidences) / len(confidences) if confidences else 0
+        
+        # Collect damage types
+        damage_types = [r.get('damage_type') for r in ai_results.values() if r.get('ok') and r.get('has_damage') and r.get('damage_type')]
+        ai_damages_detected = json.dumps(damage_types) if damage_types else None
+        
+        # Determine severity
+        max_confidence = max(confidences) if confidences else 0
+        if not has_damage:
+            damage_severity = 'none'
+        elif max_confidence > 80:
+            damage_severity = 'severe'
+        elif max_confidence > 60:
+            damage_severity = 'moderate'
+        else:
+            damage_severity = 'minor'
+        
+        # Save to database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    # PostgreSQL
+                    cursor = conn.cursor()
+                    
+                    # Insert inspection
+                    cursor.execute("""
+                        INSERT INTO vehicle_inspections 
+                        (inspection_number, inspection_type, vehicle_plate, vehicle_brand, vehicle_model,
+                         contract_number, customer_name, customer_email, customer_phone,
+                         inspector_name, inspector_notes, has_damage, damage_count, damage_severity,
+                         ai_analysis_complete, ai_confidence_avg, ai_damages_detected,
+                         odometer_reading, fuel_level, status, photo_count)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (
+                        inspection_number,
+                        inspection_type,
+                        vehicle_plate,
+                        form.get('vehicle_brand', '').strip() or None,
+                        form.get('vehicle_model', '').strip() or None,
+                        form.get('contract_number', '').strip() or None,
+                        form.get('customer_name', '').strip() or None,
+                        form.get('customer_email', '').strip() or None,
+                        form.get('customer_phone', '').strip() or None,
+                        form.get('inspector_name', '').strip(),
+                        form.get('inspector_notes', '').strip() or None,
+                        has_damage,
+                        damage_count,
+                        damage_severity,
+                        True,  # ai_analysis_complete
+                        round(ai_confidence_avg, 2),
+                        ai_damages_detected,
+                        int(form.get('odometer_reading', 0)) if form.get('odometer_reading') else None,
+                        form.get('fuel_level', '') or None,
+                        'completed',
+                        len([k for k in form.keys() if k.startswith('photo_')])
+                    ))
+                    
+                    inspection_id = cursor.fetchone()[0]
+                    
+                    # Save photos
+                    photo_types = ['front', 'back', 'left', 'right', 'interior', 'odometer']
+                    for idx, photo_type in enumerate(photo_types):
+                        photo_file = form.get(f'photo_{photo_type}')
+                        if photo_file:
+                            photo_bytes = await photo_file.read()
+                            
+                            # Get AI result for this photo
+                            ai_result = ai_results.get(photo_type, {})
+                            
+                            cursor.execute("""
+                                INSERT INTO inspection_photos
+                                (inspection_id, photo_type, photo_order, image_data, image_filename,
+                                 image_size, image_format, ai_analyzed, ai_has_damage, ai_damage_type,
+                                 ai_confidence, ai_result)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (
+                                inspection_id,
+                                photo_type,
+                                idx + 1,
+                                photo_bytes,
+                                f"{photo_type}.jpg",
+                                len(photo_bytes),
+                                'jpg',
+                                ai_result.get('ok', False),
+                                ai_result.get('has_damage', False),
+                                ai_result.get('damage_type'),
+                                ai_result.get('confidence'),
+                                json.dumps(ai_result)
+                            ))
+                    
+                    conn.commit()
+                    cursor.close()
+                    
+                    logging.info(f"✅ Vehicle inspection saved: {inspection_number}")
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "inspection_number": inspection_number,
+                        "inspection_id": inspection_id,
+                        "has_damage": has_damage,
+                        "damage_count": damage_count
+                    })
+                
+                else:
+                    # SQLite - create tables if needed
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS vehicle_inspections (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            inspection_number TEXT UNIQUE,
+                            inspection_type TEXT,
+                            vehicle_plate TEXT,
+                            vehicle_brand TEXT,
+                            vehicle_model TEXT,
+                            contract_number TEXT,
+                            customer_name TEXT,
+                            customer_email TEXT,
+                            customer_phone TEXT,
+                            inspector_name TEXT,
+                            inspector_notes TEXT,
+                            has_damage INTEGER DEFAULT 0,
+                            damage_count INTEGER DEFAULT 0,
+                            damage_severity TEXT,
+                            ai_analysis_complete INTEGER DEFAULT 0,
+                            ai_confidence_avg REAL,
+                            ai_damages_detected TEXT,
+                            odometer_reading INTEGER,
+                            fuel_level TEXT,
+                            status TEXT DEFAULT 'draft',
+                            photo_count INTEGER DEFAULT 0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS inspection_photos (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            inspection_id INTEGER,
+                            photo_type TEXT,
+                            photo_order INTEGER,
+                            image_data BLOB,
+                            image_filename TEXT,
+                            image_size INTEGER,
+                            image_format TEXT,
+                            ai_analyzed INTEGER DEFAULT 0,
+                            ai_has_damage INTEGER DEFAULT 0,
+                            ai_damage_type TEXT,
+                            ai_confidence REAL,
+                            ai_result TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (inspection_id) REFERENCES vehicle_inspections(id)
+                        )
+                    """)
+                    
+                    # Insert inspection
+                    cursor = conn.execute("""
+                        INSERT INTO vehicle_inspections 
+                        (inspection_number, inspection_type, vehicle_plate, vehicle_brand, vehicle_model,
+                         contract_number, customer_name, customer_email, customer_phone,
+                         inspector_name, inspector_notes, has_damage, damage_count, damage_severity,
+                         ai_analysis_complete, ai_confidence_avg, ai_damages_detected,
+                         odometer_reading, fuel_level, status, photo_count)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        inspection_number,
+                        inspection_type,
+                        vehicle_plate,
+                        form.get('vehicle_brand', '').strip() or None,
+                        form.get('vehicle_model', '').strip() or None,
+                        form.get('contract_number', '').strip() or None,
+                        form.get('customer_name', '').strip() or None,
+                        form.get('customer_email', '').strip() or None,
+                        form.get('customer_phone', '').strip() or None,
+                        form.get('inspector_name', '').strip(),
+                        form.get('inspector_notes', '').strip() or None,
+                        1 if has_damage else 0,
+                        damage_count,
+                        damage_severity,
+                        1,  # ai_analysis_complete
+                        round(ai_confidence_avg, 2),
+                        ai_damages_detected,
+                        int(form.get('odometer_reading', 0)) if form.get('odometer_reading') else None,
+                        form.get('fuel_level', '') or None,
+                        'completed',
+                        len([k for k in form.keys() if k.startswith('photo_')])
+                    ))
+                    
+                    inspection_id = cursor.lastrowid
+                    
+                    # Save photos
+                    photo_types = ['front', 'back', 'left', 'right', 'interior', 'odometer']
+                    for idx, photo_type in enumerate(photo_types):
+                        photo_file = form.get(f'photo_{photo_type}')
+                        if photo_file:
+                            photo_bytes = await photo_file.read()
+                            ai_result = ai_results.get(photo_type, {})
+                            
+                            conn.execute("""
+                                INSERT INTO inspection_photos
+                                (inspection_id, photo_type, photo_order, image_data, image_filename,
+                                 image_size, image_format, ai_analyzed, ai_has_damage, ai_damage_type,
+                                 ai_confidence, ai_result)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                inspection_id,
+                                photo_type,
+                                idx + 1,
+                                photo_bytes,
+                                f"{photo_type}.jpg",
+                                len(photo_bytes),
+                                'jpg',
+                                1 if ai_result.get('ok', False) else 0,
+                                1 if ai_result.get('has_damage', False) else 0,
+                                ai_result.get('damage_type'),
+                                ai_result.get('confidence'),
+                                json.dumps(ai_result)
+                            ))
+                    
+                    conn.commit()
+                    
+                    logging.info(f"✅ Vehicle inspection saved (SQLite): {inspection_number}")
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "inspection_number": inspection_number,
+                        "inspection_id": inspection_id,
+                        "has_damage": has_damage,
+                        "damage_count": damage_count
+                    })
+            
+            finally:
+                conn.close()
+    
+    except Exception as e:
+        logging.error(f"Error creating inspection: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+# ============================================================
 # RENTAL AGREEMENT - Templates and Coordinates
 # ============================================================
 

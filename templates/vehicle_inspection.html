@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Vehicle Inspection - Check-in/Check-out</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/notifications.js"></script>
+    <style>
+        #cameraPreview {
+            transform: scaleX(-1); /* Mirror effect for front camera */
+        }
+        .photo-slot {
+            position: relative;
+            aspect-ratio: 4/3;
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .photo-slot:hover {
+            border-color: #009cb6;
+            background: #f0f9fb;
+        }
+        .photo-slot.captured {
+            border-color: #10b981;
+            border-style: solid;
+        }
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .camera-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            z-index: 9999;
+        }
+        .camera-modal.active {
+            display: flex;
+        }
+        video {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+        }
+        .shutter-animation {
+            animation: flash 0.3s ease-out;
+        }
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="text-[#009cb6] hover:text-[#007a8f]">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </a>
+                    <h1 class="text-2xl font-bold text-gray-900">Vehicle Inspection</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="inspectionType" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                        Check-in
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Step Indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex-1 text-center">
+                    <div id="step1" class="step-dot active">1</div>
+                    <div class="text-xs font-medium mt-1">Vehicle Info</div>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200"></div>
+                <div class="flex-1 text-center">
+                    <div id="step2" class="step-dot">2</div>
+                    <div class="text-xs font-medium mt-1">Photos</div>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200"></div>
+                <div class="flex-1 text-center">
+                    <div id="step3" class="step-dot">3</div>
+                    <div class="text-xs font-medium mt-1">AI Analysis</div>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200"></div>
+                <div class="flex-1 text-center">
+                    <div id="step4" class="step-dot">4</div>
+                    <div class="text-xs font-medium mt-1">Review</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 1: Vehicle Information -->
+        <div id="stepVehicleInfo" class="step-content">
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Vehicle & Contract Information</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Inspection Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Inspection Type *</label>
+                        <select id="inputInspectionType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" required>
+                            <option value="check_in">Check-in (Start of Rental)</option>
+                            <option value="check_out">Check-out (End of Rental)</option>
+                        </select>
+                    </div>
+
+                    <!-- Vehicle Plate -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Vehicle Plate *</label>
+                        <input type="text" id="inputPlate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="XX-XX-XX" required>
+                    </div>
+
+                    <!-- Vehicle Brand -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Brand</label>
+                        <input type="text" id="inputBrand" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="e.g., Toyota">
+                    </div>
+
+                    <!-- Vehicle Model -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                        <input type="text" id="inputModel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="e.g., Corolla">
+                    </div>
+
+                    <!-- Contract Number -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Contract Number</label>
+                        <input type="text" id="inputContract" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="XXXXX-XX">
+                    </div>
+
+                    <!-- Customer Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
+                        <input type="text" id="inputCustomerName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+
+                    <!-- Customer Email -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer Email</label>
+                        <input type="email" id="inputCustomerEmail" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+
+                    <!-- Customer Phone -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer Phone</label>
+                        <input type="tel" id="inputCustomerPhone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+
+                    <!-- Odometer -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Odometer Reading (km)</label>
+                        <input type="number" id="inputOdometer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                    </div>
+
+                    <!-- Fuel Level -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fuel Level</label>
+                        <select id="inputFuelLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]">
+                            <option value="">Select...</option>
+                            <option value="empty">Empty</option>
+                            <option value="1/4">1/4</option>
+                            <option value="1/2">1/2</option>
+                            <option value="3/4">3/4</option>
+                            <option value="full">Full</option>
+                        </select>
+                    </div>
+
+                    <!-- Inspector Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Inspector Name *</label>
+                        <input type="text" id="inputInspectorName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" required>
+                    </div>
+
+                    <!-- Inspector Notes -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Inspector Notes</label>
+                        <textarea id="inputNotes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="Any observations..."></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="nextStep()" class="flex-1 bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold">
+                        Next: Capture Photos →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Photo Capture -->
+        <div id="stepPhotos" class="step-content hidden">
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-2">Capture Vehicle Photos</h2>
+                <p class="text-sm text-gray-600 mb-6">Take 6 standard photos. Click any photo slot to open camera.</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="photoGrid">
+                    <!-- Photo slots will be generated by JS -->
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="prevStep()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        ← Back
+                    </button>
+                    <button onclick="nextStep()" id="btnNextToAnalysis" class="flex-1 bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold" disabled>
+                        Next: AI Analysis →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: AI Analysis -->
+        <div id="stepAnalysis" class="step-content hidden">
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">AI Damage Analysis</h2>
+                
+                <div id="analysisProgress" class="mb-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">Analyzing photos...</span>
+                        <span id="analysisPercent" class="text-sm font-bold text-[#009cb6]">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="analysisBar" class="bg-[#009cb6] h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="analysisResults" class="space-y-4 hidden">
+                    <!-- Results will be populated by JS -->
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="prevStep()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        ← Back
+                    </button>
+                    <button onclick="nextStep()" id="btnNextToReview" class="flex-1 bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold" disabled>
+                        Next: Review & Save →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 4: Review & Save -->
+        <div id="stepReview" class="step-content hidden">
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Review Inspection</h2>
+                
+                <div id="reviewSummary">
+                    <!-- Summary will be populated by JS -->
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="prevStep()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        ← Back
+                    </button>
+                    <button onclick="saveInspection()" class="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        </svg>
+                        Save Inspection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="camera-modal">
+        <div class="flex flex-col items-center justify-center w-full h-full p-4">
+            <div class="mb-4 text-white text-center">
+                <h3 id="cameraTitle" class="text-xl font-bold mb-2"></h3>
+                <p id="cameraInstruction" class="text-sm opacity-80"></p>
+            </div>
+            
+            <video id="cameraPreview" autoplay playsinline></video>
+            
+            <div class="mt-6 flex gap-4">
+                <button onclick="capturePhoto()" class="bg-white text-gray-900 px-8 py-4 rounded-full hover:bg-gray-100 transition-all font-semibold flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Capture
+                </button>
+                <button onclick="closeCamera()" class="bg-red-600 text-white px-8 py-4 rounded-full hover:bg-red-700 transition-all font-semibold">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .step-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin: 0 auto;
+        }
+        .step-dot.active {
+            background: #009cb6;
+            color: white;
+        }
+        .step-dot.completed {
+            background: #10b981;
+            color: white;
+        }
+    </style>
+
+    <script src="/static/vehicle_inspection.js"></script>
+</body>
+</html>
