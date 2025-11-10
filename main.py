@@ -20445,6 +20445,55 @@ async def generate_and_save_damage_report_pdf(request: Request, dr_number: str):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 # ============================================================
+# VEHICLE DAMAGE AI DETECTION (FREE - No API costs!)
+# ============================================================
+
+@app.post("/api/vehicle/detect-damage")
+async def detect_vehicle_damage(request: Request, file: UploadFile = File(...)):
+    """
+    Detect vehicle damage using FREE AI model (Hugging Face)
+    NO API COSTS - Model runs locally
+    
+    Returns:
+        - has_damage: bool
+        - damage_type: str (GLASS SHATTER, DENT, LAMP BROKEN, SCRATCH, CRACK)
+        - confidence: float (0-1)
+        - verdict: str
+    """
+    require_auth(request)
+    
+    try:
+        # Read image bytes
+        image_bytes = await file.read()
+        
+        # Import AI module
+        import vehicle_damage_ai
+        
+        # Analyze image (FREE!)
+        result = vehicle_damage_ai.analyze_vehicle_damage(image_bytes)
+        
+        return JSONResponse(result)
+    
+    except Exception as e:
+        logging.error(f"Error detecting damage: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.on_event("startup")
+async def load_ai_models():
+    """Load AI models at startup"""
+    try:
+        import vehicle_damage_ai
+        vehicle_damage_ai.load_damage_detection_model()
+        logging.info("✅ AI models loaded at startup")
+    except Exception as e:
+        logging.warning(f"⚠️ Could not load AI models: {e}")
+
+# ============================================================
 # RENTAL AGREEMENT - Templates and Coordinates
 # ============================================================
 
