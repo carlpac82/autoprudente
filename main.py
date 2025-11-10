@@ -10622,7 +10622,6 @@ async def save_vehicle(request: Request):
             try:
                 # Detectar tipo de BD
                 is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
-                now_func = "NOW()" if is_postgres else "datetime('now')"
                 param_placeholder = "%s" if is_postgres else "?"
                 
                 # Verificar se já existe
@@ -10641,12 +10640,12 @@ async def save_vehicle(request: Request):
                     if is_postgres:
                         with con.cursor() as cur:
                             cur.execute(
-                                f"UPDATE vehicle_name_overrides SET edited_name = {param_placeholder}, updated_at = {now_func} WHERE original_name = {param_placeholder}",
+                                f"UPDATE vehicle_name_overrides SET edited_name = {param_placeholder}, updated_at = NOW() WHERE original_name = {param_placeholder}",
                                 (clean_name, original_name)
                             )
                     else:
                         con.execute(
-                            f"UPDATE vehicle_name_overrides SET edited_name = {param_placeholder}, updated_at = {now_func} WHERE original_name = {param_placeholder}",
+                            f"UPDATE vehicle_name_overrides SET edited_name = {param_placeholder}, updated_at = datetime('now') WHERE original_name = {param_placeholder}",
                             (clean_name, original_name)
                         )
                 else:
@@ -10654,12 +10653,12 @@ async def save_vehicle(request: Request):
                     if is_postgres:
                         with con.cursor() as cur:
                             cur.execute(
-                                f"INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {now_func})",
+                                f"INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES ({param_placeholder}, {param_placeholder}, NOW())",
                                 (original_name, clean_name)
                             )
                     else:
                         con.execute(
-                            f"INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {now_func})",
+                            f"INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES ({param_placeholder}, {param_placeholder}, datetime('now'))",
                             (original_name, clean_name)
                         )
                 
