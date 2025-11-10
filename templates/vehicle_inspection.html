@@ -288,137 +288,16 @@
                         <h2 class="text-lg font-semibold">Capture Vehicle Photos</h2>
                         <p class="text-sm text-gray-600 mt-1">Choose your preferred method</p>
                     </div>
-                    <button onclick="startAutoSequence()" class="bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <button onclick="startAutoSequence()" class="bg-[#009cb6] text-white px-8 py-4 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold flex items-center gap-3 text-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
-                        Iniciar Inspeção Automática
+                        Iniciar Inspeção
                     </button>
                 </div>
                 
-                <!-- Visual Car Diagram -->
-                <div class="mb-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200">
-                    <div class="text-center mb-4">
-                        <h3 class="text-sm font-semibold text-gray-700">📸 Photo Guide</h3>
-                        <p class="text-xs text-gray-500">Click the numbered buttons below to capture each angle</p>
-                    </div>
-                    
-                    <!-- Car Diagram SVG -->
-                    <div class="flex items-center justify-center">
-                        <svg viewBox="0 0 400 300" class="w-full max-w-md">
-                            <!-- Car body (top view) -->
-                            <g id="car">
-                                <!-- Main body -->
-                                <rect x="140" y="80" width="120" height="180" rx="15" fill="#009cb6" opacity="0.2" stroke="#009cb6" stroke-width="2"/>
-                                
-                                <!-- Windshield -->
-                                <rect x="150" y="90" width="100" height="30" rx="5" fill="#4dd4f0" opacity="0.3"/>
-                                
-                                <!-- Rear window -->
-                                <rect x="150" y="220" width="100" height="30" rx="5" fill="#4dd4f0" opacity="0.3"/>
-                                
-                                <!-- Wheels -->
-                                <ellipse cx="145" cy="110" rx="12" ry="20" fill="#1f2937"/>
-                                <ellipse cx="255" cy="110" rx="12" ry="20" fill="#1f2937"/>
-                                <ellipse cx="145" cy="230" rx="12" ry="20" fill="#1f2937"/>
-                                <ellipse cx="255" cy="230" rx="12" ry="20" fill="#1f2937"/>
-                            </g>
-                            
-                            <!-- Photo indicators -->
-                            <!-- 1. Front -->
-                            <g class="photo-indicator" data-type="front">
-                                <circle cx="200" cy="40" r="18" fill="#10b981" stroke="white" stroke-width="2"/>
-                                <text x="200" y="46" text-anchor="middle" fill="white" font-size="16" font-weight="bold">1</text>
-                                <line x1="200" y1="58" x2="200" y2="75" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead)"/>
-                                <text x="200" y="30" text-anchor="middle" fill="#10b981" font-size="11" font-weight="600">FRONT</text>
-                            </g>
-                            
-                            <!-- 2. Back -->
-                            <g class="photo-indicator" data-type="back">
-                                <circle cx="200" cy="280" r="18" fill="#10b981" stroke="white" stroke-width="2"/>
-                                <text x="200" y="286" text-anchor="middle" fill="white" font-size="16" font-weight="bold">2</text>
-                                <line x1="200" y1="265" x2="200" y2="262" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead-up)"/>
-                                <text x="200" y="298" text-anchor="middle" fill="#10b981" font-size="11" font-weight="600">BACK</text>
-                            </g>
-                            
-                            <!-- 3. Left Side -->
-                            <g class="photo-indicator" data-type="left">
-                                <circle cx="60" cy="160" r="18" fill="#10b981" stroke="white" stroke-width="2"/>
-                                <text x="60" y="166" text-anchor="middle" fill="white" font-size="16" font-weight="bold">3</text>
-                                <line x1="78" y1="160" x2="135" y2="160" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead-right)"/>
-                                <text x="60" y="145" text-anchor="middle" fill="#10b981" font-size="11" font-weight="600">LEFT</text>
-                            </g>
-                            
-                            <!-- 4. Right Side -->
-                            <g class="photo-indicator" data-type="right">
-                                <circle cx="340" cy="160" r="18" fill="#10b981" stroke="white" stroke-width="2"/>
-                                <text x="340" y="166" text-anchor="middle" fill="white" font-size="16" font-weight="bold">4</text>
-                                <line x1="265" y1="160" x2="322" y2="160" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead-left)"/>
-                                <text x="340" y="145" text-anchor="middle" fill="#10b981" font-size="11" font-weight="600">RIGHT</text>
-                            </g>
-                            
-                            <!-- 5. Interior -->
-                            <g class="photo-indicator" data-type="interior">
-                                <circle cx="200" cy="140" r="18" fill="#f59e0b" stroke="white" stroke-width="2"/>
-                                <text x="200" y="146" text-anchor="middle" fill="white" font-size="16" font-weight="bold">5</text>
-                                <text x="200" y="130" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600">INTERIOR</text>
-                            </g>
-                            
-                            <!-- 6. Odometer -->
-                            <g class="photo-indicator" data-type="odometer">
-                                <circle cx="200" cy="180" r="18" fill="#8b5cf6" stroke="white" stroke-width="2"/>
-                                <text x="200" y="186" text-anchor="middle" fill="white" font-size="16" font-weight="bold">6</text>
-                                <text x="200" y="200" text-anchor="middle" fill="#8b5cf6" font-size="9" font-weight="600">ODOMETER</text>
-                            </g>
-                            
-                            <!-- Arrow markers -->
-                            <defs>
-                                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="3" orient="auto">
-                                    <polygon points="0 0, 10 3, 0 6" fill="#10b981"/>
-                                </marker>
-                                <marker id="arrowhead-up" markerWidth="10" markerHeight="10" refX="5" refY="7" orient="auto">
-                                    <polygon points="0 6, 5 0, 10 6" fill="#10b981"/>
-                                </marker>
-                                <marker id="arrowhead-right" markerWidth="10" markerHeight="10" refX="5" refY="3" orient="auto">
-                                    <polygon points="0 0, 10 3, 0 6" fill="#10b981"/>
-                                </marker>
-                                <marker id="arrowhead-left" markerWidth="10" markerHeight="10" refX="5" refY="3" orient="auto">
-                                    <polygon points="10 0, 0 3, 10 6" fill="#10b981"/>
-                                </marker>
-                            </defs>
-                        </svg>
-                    </div>
-                    
-                    <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">1</div>
-                            <span class="text-gray-700">Front view + plate</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">2</div>
-                            <span class="text-gray-700">Rear view + plate</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">3</div>
-                            <span class="text-gray-700">Left side complete</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">4</div>
-                            <span class="text-gray-700">Right side complete</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-white text-[10px] font-bold">5</div>
-                            <span class="text-gray-700">Interior condition</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center text-white text-[10px] font-bold">6</div>
-                            <span class="text-gray-700">Odometer reading</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="photoGrid">
+                <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4" id="photoGrid">
                     <!-- Photo slots will be generated by JS -->
                 </div>
 

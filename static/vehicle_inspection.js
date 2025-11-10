@@ -937,12 +937,14 @@ function startPositioningHints(photoType) {
     // Clear previous interval
     if (hintInterval) clearInterval(hintInterval);
     
-    const hintText = document.getElementById('hintText');
-    let hintIndex = 0;
-    let changeCount = 0;
-    
     // Change hints every 3 seconds to simulate positioning feedback
     hintInterval = setInterval(() => {
+        const hintText = document.getElementById('hintText');
+        if (!hintText) {
+            clearInterval(hintInterval);
+            return;
+        }
+        
         changeCount++;
         
         // After a few changes, show "perfect" hint
@@ -960,6 +962,8 @@ function startPositioningHints(photoType) {
         
     }, 3000);
 }
+
+let changeCount = 0;
 
 function closeCamera() {
     if (cameraStream) {
@@ -1132,12 +1136,21 @@ function acceptPhoto(photoType) {
     
     // Update UI
     const slot = document.getElementById(`slot-${photoType}`);
-    slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="${photoType}">`;
-    slot.classList.add('captured');
-    document.getElementById(`check-${photoType}`).classList.remove('hidden');
+    if (slot) {
+        slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="${photoType}">`;
+        slot.classList.add('captured');
+    }
     
-    // Update diagram indicator
-    updateDiagramIndicator(photoType, true);
+    // Update check icon if exists
+    const checkIcon = document.getElementById(`check-${photoType}`);
+    if (checkIcon) {
+        checkIcon.classList.remove('hidden');
+    }
+    
+    // Update diagram indicator if function exists
+    if (typeof updateDiagramIndicator === 'function') {
+        updateDiagramIndicator(photoType, true);
+    }
     
     // Show animation
     slot.classList.add('shutter-animation');
