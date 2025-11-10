@@ -404,17 +404,33 @@ function setupCameraOverlay(photoType) {
     setTimeout(() => init3DCar(photoType), 100);
 }
 
+let targetRotation = 0;
+let currentRotation = 0;
+let isRotating = false;
+
 function init3DCar(photoType) {
     const container = document.getElementById('threejs-container');
     if (!container) return;
     
-    // Clean up previous scene
-    if (renderer) {
-        cancelAnimationFrame(animationId);
-        renderer.dispose();
+    // Target rotation based on photo type
+    const rotations = {
+        'front': 0,
+        'left': Math.PI / 2,
+        'back': Math.PI,
+        'right': -Math.PI / 2,
+        'interior': 0,
+        'odometer': 0
+    };
+    
+    targetRotation = rotations[photoType] || 0;
+    
+    // If scene already exists, just animate to new rotation
+    if (renderer && carModel) {
+        isRotating = true;
+        return;
     }
     
-    // Create scene
+    // Create scene (first time only)
     scene = new THREE.Scene();
     
     // Create camera
@@ -436,21 +452,22 @@ function init3DCar(photoType) {
     directionalLight.position.set(5, 10, 5);
     scene.add(directionalLight);
     
+    // Add point lights for more drama
+    const pointLight1 = new THREE.PointLight(0xffffff, 0.5);
+    pointLight1.position.set(-5, 3, 5);
+    scene.add(pointLight1);
+    
+    const pointLight2 = new THREE.PointLight(0xffffff, 0.5);
+    pointLight2.position.set(5, 3, -5);
+    scene.add(pointLight2);
+    
     // Create 3D car model
     carModel = create3DCarModel();
     scene.add(carModel);
     
-    // Set initial rotation based on photo type
-    const rotations = {
-        'front': 0,
-        'left': Math.PI / 2,
-        'back': Math.PI,
-        'right': -Math.PI / 2,
-        'interior': 0,
-        'odometer': 0
-    };
-    
-    carModel.rotation.y = rotations[photoType] || 0;
+    // Set initial rotation
+    currentRotation = targetRotation;
+    carModel.rotation.y = currentRotation;
     
     // Animate
     animate3DCar();
@@ -560,9 +577,32 @@ function create3DCarModel() {
 function animate3DCar() {
     animationId = requestAnimationFrame(animate3DCar);
     
-    // Slow automatic rotation for visual effect
     if (carModel) {
-        carModel.rotation.y += 0.005;
+        // Smooth rotation to target angle
+        if (isRotating || Math.abs(targetRotation - currentRotation) > 0.01) {
+            // Calculate shortest rotation path
+            let diff = targetRotation - currentRotation;
+            
+            // Normalize to -PI to PI range
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            
+            // Smooth easing (ease-out cubic)
+            const rotationSpeed = diff * 0.08;
+            currentRotation += rotationSpeed;
+            
+            // Stop rotating when close enough
+            if (Math.abs(diff) < 0.01) {
+                currentRotation = targetRotation;
+                isRotating = false;
+            }
+            
+            carModel.rotation.y = currentRotation;
+        } else {
+            // Slow idle rotation when not transitioning
+            carModel.rotation.y += 0.003;
+            currentRotation = carModel.rotation.y;
+        }
     }
     
     renderer.render(scene, camera3D);
