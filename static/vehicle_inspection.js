@@ -402,114 +402,270 @@ function setupCameraOverlay(photoType) {
 
 function getCarFrontSVG() {
     return `
-        <g opacity="0.8">
-            <!-- Car outline - front view -->
-            <rect x="150" y="50" width="400" height="300" rx="20" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+        <g opacity="0.9" transform="scale(0.9)">
+            <!-- Main car body outline -->
+            <path d="M 200 100 L 200 280 Q 200 320 240 320 L 460 320 Q 500 320 500 280 L 500 100 Q 500 80 480 80 L 220 80 Q 200 80 200 100 Z" 
+                  fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="12,8"/>
             
             <!-- Hood -->
-            <rect x="180" y="80" width="340" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            <path d="M 230 110 L 230 160 L 470 160 L 470 110 Q 470 100 460 100 L 240 100 Q 230 100 230 110 Z" 
+                  fill="none" stroke="#10b981" stroke-width="2.5"/>
+            
+            <!-- Headlights (detailed) -->
+            <g>
+                <path d="M 240 120 Q 250 120 255 125 L 255 145 Q 255 150 250 150 L 240 150 Q 235 150 235 145 L 235 125 Q 235 120 240 120 Z" 
+                      fill="none" stroke="#10b981" stroke-width="2"/>
+                <circle cx="247" cy="135" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+                
+                <path d="M 460 120 Q 450 120 445 125 L 445 145 Q 445 150 450 150 L 460 150 Q 465 150 465 145 L 465 125 Q 465 120 460 120 Z" 
+                      fill="none" stroke="#10b981" stroke-width="2"/>
+                <circle cx="453" cy="135" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            </g>
+            
+            <!-- Grille (detailed) -->
+            <rect x="310" y="125" width="80" height="40" rx="4" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            <line x1="320" y1="135" x2="380" y2="135" stroke="#10b981" stroke-width="1"/>
+            <line x1="320" y1="145" x2="380" y2="145" stroke="#10b981" stroke-width="1"/>
+            <line x1="320" y1="155" x2="380" y2="155" stroke="#10b981" stroke-width="1"/>
             
             <!-- Windshield -->
-            <path d="M 200 140 L 220 170 L 480 170 L 500 140 Z" fill="none" stroke="#10b981" stroke-width="2"/>
+            <path d="M 240 170 L 250 190 Q 250 195 255 195 L 445 195 Q 450 195 450 190 L 460 170" 
+                  fill="none" stroke="#10b981" stroke-width="2.5"/>
             
-            <!-- Headlights -->
-            <ellipse cx="220" cy="100" rx="25" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
-            <ellipse cx="480" cy="100" rx="25" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Roof line -->
+            <path d="M 250 200 L 255 220 L 445 220 L 450 200" fill="none" stroke="#10b981" stroke-width="2"/>
             
-            <!-- Grille -->
-            <rect x="320" y="85" width="60" height="35" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Side mirrors -->
+            <ellipse cx="215" cy="210" rx="10" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            <ellipse cx="485" cy="210" rx="10" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
             
-            <!-- License plate area -->
-            <rect x="300" y="310" width="100" height="30" rx="3" fill="none" stroke="#f59e0b" stroke-width="3"/>
-            <text x="350" y="330" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">MATRÍCULA</text>
+            <!-- Front bumper -->
+            <path d="M 220 290 L 210 305 L 490 305 L 480 290" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            
+            <!-- License plate (highlighted) -->
+            <rect x="310" y="285" width="80" height="25" rx="3" fill="rgba(245, 158, 11, 0.1)" stroke="#f59e0b" stroke-width="3"/>
+            <text x="350" y="302" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="bold">XX-XX-XX</text>
+            
+            <!-- Wheel wells -->
+            <ellipse cx="260" cy="310" rx="35" ry="20" fill="none" stroke="#10b981" stroke-width="2"/>
+            <ellipse cx="440" cy="310" rx="35" ry="20" fill="none" stroke="#10b981" stroke-width="2"/>
         </g>
     `;
 }
 
 function getCarBackSVG() {
     return `
-        <g opacity="0.8">
-            <!-- Car outline - back view -->
-            <rect x="150" y="50" width="400" height="300" rx="20" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+        <g opacity="0.9" transform="scale(0.9)">
+            <!-- Main car body outline -->
+            <path d="M 200 100 L 200 280 Q 200 320 240 320 L 460 320 Q 500 320 500 280 L 500 100 Q 500 80 480 80 L 220 80 Q 200 80 200 100 Z" 
+                  fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="12,8"/>
             
-            <!-- Trunk -->
-            <rect x="180" y="260" width="340" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Roof line -->
+            <path d="M 250 100 L 255 120 L 445 120 L 450 100" fill="none" stroke="#10b981" stroke-width="2"/>
             
             <!-- Rear window -->
-            <path d="M 200 210 L 220 180 L 480 180 L 500 210 Z" fill="none" stroke="#10b981" stroke-width="2"/>
+            <path d="M 240 130 L 250 150 Q 250 155 255 155 L 445 155 Q 450 155 450 150 L 460 130" 
+                  fill="none" stroke="#10b981" stroke-width="2.5"/>
             
-            <!-- Tail lights -->
-            <rect x="190" y="270" width="40" height="35" rx="5" fill="none" stroke="#ef4444" stroke-width="2"/>
-            <rect x="470" y="270" width="40" height="35" rx="5" fill="none" stroke="#ef4444" stroke-width="2"/>
+            <!-- Trunk/Boot -->
+            <path d="M 230 165 L 230 270 L 470 270 L 470 165" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            <line x1="240" y1="180" x2="460" y2="180" stroke="#10b981" stroke-width="1.5"/>
             
-            <!-- License plate area -->
-            <rect x="300" y="280" width="100" height="30" rx="3" fill="none" stroke="#f59e0b" stroke-width="3"/>
-            <text x="350" y="300" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">MATRÍCULA</text>
+            <!-- Tail lights (detailed) -->
+            <g>
+                <!-- Left tail light -->
+                <rect x="235" y="245" width="45" height="50" rx="4" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" stroke-width="2.5"/>
+                <rect x="240" y="250" width="35" height="18" rx="2" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+                <rect x="240" y="272" width="35" height="18" rx="2" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+                
+                <!-- Right tail light -->
+                <rect x="420" y="245" width="45" height="50" rx="4" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" stroke-width="2.5"/>
+                <rect x="425" y="250" width="35" height="18" rx="2" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+                <rect x="425" y="272" width="35" height="18" rx="2" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+            </g>
+            
+            <!-- License plate (highlighted) -->
+            <rect x="310" y="255" width="80" height="28" rx="3" fill="rgba(245, 158, 11, 0.1)" stroke="#f59e0b" stroke-width="3"/>
+            <text x="350" y="274" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="bold">XX-XX-XX</text>
+            
+            <!-- Side mirrors -->
+            <ellipse cx="215" cy="160" rx="10" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            <ellipse cx="485" cy="160" rx="10" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Rear bumper -->
+            <path d="M 220 300 L 210 315 L 490 315 L 480 300" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            
+            <!-- Wheel wells -->
+            <ellipse cx="260" cy="310" rx="35" ry="20" fill="none" stroke="#10b981" stroke-width="2"/>
+            <ellipse cx="440" cy="310" rx="35" ry="20" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Exhaust -->
+            <ellipse cx="420" cy="313" rx="8" ry="5" fill="none" stroke="#10b981" stroke-width="1.5"/>
         </g>
     `;
 }
 
 function getCarSideSVG() {
     return `
-        <g opacity="0.8">
-            <!-- Car outline - side view -->
-            <rect x="100" y="100" width="500" height="200" rx="15" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+        <g opacity="0.9" transform="scale(0.85)">
+            <!-- Main body outline -->
+            <path d="M 120 240 L 120 200 Q 120 190 130 185 L 160 180 L 180 150 Q 185 140 195 135 L 250 120 L 450 120 Q 460 120 465 130 L 485 155 L 515 165 Q 525 170 525 180 L 550 185 Q 560 190 560 200 L 560 240 Q 560 255 550 260 L 530 265 L 150 265 Q 130 260 120 250 Z" 
+                  fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="12,8"/>
             
             <!-- Roof line -->
-            <path d="M 150 150 L 200 120 L 400 120 L 450 150" fill="none" stroke="#10b981" stroke-width="2"/>
+            <path d="M 190 140 L 250 125 L 450 125 L 470 140" fill="none" stroke="#10b981" stroke-width="2.5"/>
             
             <!-- Windows -->
-            <rect x="210" y="125" width="80" height="40" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
-            <rect x="310" y="125" width="80" height="40" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            <g>
+                <!-- Front window -->
+                <path d="M 195 145 L 205 135 L 265 130 L 275 145 L 270 175 L 200 175 Z" 
+                      fill="none" stroke="#10b981" stroke-width="2"/>
+                
+                <!-- Rear window -->
+                <path d="M 425 145 L 445 130 L 465 135 L 475 145 L 470 175 L 430 175 Z" 
+                      fill="none" stroke="#10b981" stroke-width="2"/>
+            </g>
             
-            <!-- Doors -->
-            <line x1="295" y1="150" x2="295" y2="280" stroke="#10b981" stroke-width="2"/>
+            <!-- Door lines -->
+            <g>
+                <!-- Front door -->
+                <path d="M 280 150 L 280 250" stroke="#10b981" stroke-width="2.5"/>
+                <ellipse cx="290" cy="200" rx="5" ry="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+                
+                <!-- Rear door -->
+                <path d="M 420 150 L 420 250" stroke="#10b981" stroke-width="2.5"/>
+                <ellipse cx="410" cy="200" rx="5" ry="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            </g>
             
-            <!-- Wheels -->
-            <circle cx="200" cy="285" r="35" fill="none" stroke="#10b981" stroke-width="3"/>
-            <circle cx="200" cy="285" r="20" fill="none" stroke="#10b981" stroke-width="2"/>
-            <circle cx="500" cy="285" r="35" fill="none" stroke="#10b981" stroke-width="3"/>
-            <circle cx="500" cy="285" r="20" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Side skirts -->
+            <path d="M 150 260 L 145 265 L 535 265 L 530 260" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Wheels (detailed) -->
+            <g>
+                <!-- Front wheel -->
+                <circle cx="210" cy="275" r="42" fill="none" stroke="#10b981" stroke-width="3"/>
+                <circle cx="210" cy="275" r="28" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                <circle cx="210" cy="275" r="15" fill="none" stroke="#10b981" stroke-width="2"/>
+                <!-- Spokes -->
+                <line x1="210" y1="260" x2="210" y2="290" stroke="#10b981" stroke-width="1.5"/>
+                <line x1="195" y1="275" x2="225" y2="275" stroke="#10b981" stroke-width="1.5"/>
+                
+                <!-- Rear wheel -->
+                <circle cx="470" cy="275" r="42" fill="none" stroke="#10b981" stroke-width="3"/>
+                <circle cx="470" cy="275" r="28" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                <circle cx="470" cy="275" r="15" fill="none" stroke="#10b981" stroke-width="2"/>
+                <!-- Spokes -->
+                <line x1="470" y1="260" x2="470" y2="290" stroke="#10b981" stroke-width="1.5"/>
+                <line x1="455" y1="275" x2="485" y2="275" stroke="#10b981" stroke-width="1.5"/>
+            </g>
             
             <!-- Bumpers -->
-            <rect x="90" y="220" width="15" height="50" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
-            <rect x="595" y="220" width="15" height="50" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            <g>
+                <!-- Front bumper -->
+                <path d="M 115 230 L 110 235 L 110 255 L 115 260" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                
+                <!-- Rear bumper -->
+                <path d="M 565 230 L 570 235 L 570 255 L 565 260" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            </g>
+            
+            <!-- Side mirror -->
+            <ellipse cx="185" cy="175" rx="15" ry="10" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Headlight & taillight indicators -->
+            <ellipse cx="125" cy="220" rx="8" ry="12" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            <rect x="545" y="215" width="15" height="25" rx="2" fill="rgba(239, 68, 68, 0.1)" stroke="#ef4444" stroke-width="2"/>
         </g>
     `;
 }
 
 function getInteriorSVG() {
     return `
-        <g opacity="0.8">
-            <!-- Interior outline -->
-            <rect x="200" y="100" width="300" height="200" rx="10" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+        <g opacity="0.9" transform="scale(0.9)">
+            <!-- Main interior frame -->
+            <rect x="180" y="80" width="340" height="260" rx="12" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="12,8"/>
             
-            <!-- Dashboard -->
-            <rect x="220" y="120" width="260" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Dashboard (detailed) -->
+            <path d="M 200 120 L 200 180 Q 200 190 210 190 L 490 190 Q 500 190 500 180 L 500 120 Q 500 110 490 110 L 210 110 Q 200 110 200 120 Z" 
+                  fill="none" stroke="#10b981" stroke-width="2.5"/>
             
-            <!-- Steering wheel -->
-            <circle cx="280" cy="150" r="25" fill="none" stroke="#10b981" stroke-width="3"/>
-            <circle cx="280" cy="150" r="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Instrument cluster -->
+            <g>
+                <circle cx="350" cy="145" r="28" fill="none" stroke="#10b981" stroke-width="2"/>
+                <circle cx="350" cy="145" r="20" fill="none" stroke="#10b981" stroke-width="1.5"/>
+                <text x="350" y="152" text-anchor="middle" fill="#10b981" font-size="14" font-weight="bold">km/h</text>
+            </g>
             
-            <!-- Seats -->
-            <rect x="350" y="200" width="50" height="70" rx="8" fill="none" stroke="#10b981" stroke-width="2"/>
-            <rect x="420" y="200" width="50" height="70" rx="8" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Center console -->
+            <rect x="290" y="195" width="120" height="35" rx="4" fill="none" stroke="#10b981" stroke-width="2"/>
+            <circle cx="325" cy="212" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            <circle cx="350" cy="212" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            <circle cx="375" cy="212" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            
+            <!-- Steering wheel (detailed) -->
+            <g>
+                <circle cx="260" cy="160" r="32" fill="none" stroke="#10b981" stroke-width="3"/>
+                <circle cx="260" cy="160" r="22" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                <circle cx="260" cy="160" r="10" fill="none" stroke="#10b981" stroke-width="2"/>
+                <line x1="240" y1="160" x2="228" y2="160" stroke="#10b981" stroke-width="2.5"/>
+                <line x1="280" y1="160" x2="292" y2="160" stroke="#10b981" stroke-width="2.5"/>
+            </g>
+            
+            <!-- Front seats (detailed) -->
+            <g>
+                <!-- Driver seat -->
+                <path d="M 220 240 L 220 260 Q 220 270 230 270 L 270 270 Q 280 270 280 260 L 280 240 Q 280 235 275 235 L 225 235 Q 220 235 220 240 Z" 
+                      fill="none" stroke="#10b981" stroke-width="2.5"/>
+                <path d="M 225 235 L 225 210 Q 225 200 235 200 L 265 200 Q 275 200 275 210 L 275 235" 
+                      fill="none" stroke="#10b981" stroke-width="2"/>
+                
+                <!-- Passenger seat -->
+                <path d="M 420 240 L 420 260 Q 420 270 430 270 L 470 270 Q 480 270 480 260 L 480 240 Q 480 235 475 235 L 425 235 Q 420 235 420 240 Z" 
+                      fill="none" stroke="#10b981" stroke-width="2.5"/>
+                <path d="M 425 235 L 425 210 Q 425 200 435 200 L 465 200 Q 475 200 475 210 L 475 235" 
+                      fill="none" stroke="#10b981" stroke-width="2"/>
+            </g>
+            
+            <!-- Gear shift -->
+            <ellipse cx="320" cy="245" rx="12" ry="20" fill="none" stroke="#10b981" stroke-width="2"/>
         </g>
     `;
 }
 
 function getOdometerSVG() {
     return `
-        <g opacity="0.8">
-            <!-- Odometer outline -->
-            <rect x="250" y="150" width="200" height="100" rx="8" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+        <g opacity="0.9" transform="scale(0.95)">
+            <!-- Instrument cluster frame -->
+            <rect x="220" y="130" width="260" height="140" rx="12" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="12,8"/>
             
-            <!-- Display -->
-            <rect x="270" y="170" width="160" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            <!-- Main display background -->
+            <rect x="240" y="150" width="220" height="100" rx="8" fill="rgba(16, 185, 129, 0.05)" stroke="#10b981" stroke-width="2.5"/>
             
-            <!-- Digital numbers placeholder -->
-            <text x="350" y="210" text-anchor="middle" fill="#10b981" font-size="24" font-family="monospace" font-weight="bold">88888</text>
-            <text x="350" y="230" text-anchor="middle" fill="#10b981" font-size="10">KM</text>
+            <!-- Digital display -->
+            <g>
+                <rect x="255" y="165" width="190" height="50" rx="6" fill="rgba(0, 0, 0, 0.1)" stroke="#10b981" stroke-width="2"/>
+                
+                <!-- Digital numbers (7-segment style) -->
+                <text x="350" y="200" text-anchor="middle" fill="#10b981" font-size="32" font-family="monospace" font-weight="bold" letter-spacing="4">123456</text>
+            </g>
+            
+            <!-- KM label -->
+            <rect x="320" y="220" width="60" height="22" rx="4" fill="none" stroke="#10b981" stroke-width="1.5"/>
+            <text x="350" y="236" text-anchor="middle" fill="#10b981" font-size="14" font-weight="bold">km</text>
+            
+            <!-- Side indicators -->
+            <g>
+                <!-- Fuel indicator -->
+                <circle cx="260" cy="185" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+                <text x="260" y="190" text-anchor="middle" fill="#10b981" font-size="10" font-weight="bold">F</text>
+                
+                <!-- Temperature indicator -->
+                <circle cx="440" cy="185" r="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+                <text x="440" y="190" text-anchor="middle" fill="#10b981" font-size="10" font-weight="bold">T</text>
+            </g>
+            
+            <!-- Border detail lines -->
+            <line x1="250" y1="220" x2="310" y2="220" stroke="#10b981" stroke-width="1"/>
+            <line x1="390" y1="220" x2="450" y2="220" stroke="#10b981" stroke-width="1"/>
         </g>
     `;
 }
@@ -648,13 +804,13 @@ function showPhotoPreview(blob, photoType) {
         </div>
         
         <div style="display: flex; gap: 16px; margin-top: 32px;">
-            <button onclick="retakePhoto()" style="display: flex; align-items: center; gap: 8px; background: #ef4444; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            <button id="btnRetake" style="display: flex; align-items: center; gap: 8px; background: #ef4444; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 Repetir
             </button>
-            <button onclick="acceptPhoto('${photoType}', ${Date.now()})" style="display: flex; align-items: center; gap: 8px; background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            <button id="btnAccept" style="display: flex; align-items: center; gap: 8px; background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
@@ -665,8 +821,13 @@ function showPhotoPreview(blob, photoType) {
     
     cameraModal.querySelector('.flex').appendChild(previewContainer);
     
-    // Store blob temporarily
+    // Store blob temporarily and photo type
     window.tempPhotoBlob = blob;
+    window.tempPhotoType = photoType;
+    
+    // Add event listeners to buttons
+    document.getElementById('btnRetake').addEventListener('click', retakePhoto);
+    document.getElementById('btnAccept').addEventListener('click', () => acceptPhoto(photoType));
 }
 
 function retakePhoto() {
