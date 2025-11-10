@@ -264,7 +264,7 @@
                 </div>
                 
                 <!-- Step Indicators - Inside Page (not fixed) -->
-                <div class="mt-16 mb-8">
+                <div class="mt-16 mb-6">
                     <div class="flex items-center justify-center gap-6">
                         <div class="step-indicator active" data-step="1">
                             <div class="inline-flex items-center gap-2">
@@ -290,6 +290,17 @@
                                 <span class="text-sm font-semibold text-white/70">Review</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Auto-filled Info - Inside Page (no labels) -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-center gap-3 text-xs text-white/70">
+                        <input type="text" id="inputReceptionist" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-28" readonly>
+                        <span class="text-white/30">|</span>
+                        <input type="text" id="inputDate" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-24" readonly>
+                        <span class="text-white/30">|</span>
+                        <input type="text" id="inputTime" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-16" readonly>
                     </div>
                 </div>
             </div>
@@ -348,33 +359,6 @@
             </div>
         </div>
     </main>
-
-    <!-- Bottom Info Bar - Auto-filled fields only (fixed) -->
-    <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 40;">
-        <div class="flex items-center gap-3 text-xs">
-            <!-- Rececionista -->
-            <div class="text-white/70">
-                <span class="font-medium">Rececionista:</span>
-                <input type="text" id="inputReceptionist" class="ml-1 px-2 py-1 text-xs border-0 rounded bg-white/20 text-white w-24" readonly>
-            </div>
-            
-            <span class="text-white/30">|</span>
-            
-            <!-- Data -->
-            <div class="text-white/70">
-                <span class="font-medium">Data:</span>
-                <input type="text" id="inputDate" class="ml-1 px-2 py-1 text-xs border-0 rounded bg-white/20 text-white w-20" readonly>
-            </div>
-            
-            <span class="text-white/30">|</span>
-            
-            <!-- Hora -->
-            <div class="text-white/70">
-                <span class="font-medium">Hora:</span>
-                <input type="text" id="inputTime" class="ml-1 px-2 py-1 text-xs border-0 rounded bg-white/20 text-white w-16" readonly>
-            </div>
-        </div>
-    </div>
 
     <!-- Camera Modal -->
     <div id="cameraModal" class="camera-modal">
