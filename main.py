@@ -12991,11 +12991,13 @@ async def export_configuration(request: Request):
                         if photo_data:
                             # Converter BLOB para base64
                             photo_base64 = base64.b64encode(photo_data).decode('utf-8')
+                            # Convert datetime to ISO string for JSON serialization
+                            updated_at_str = updated_at if isinstance(updated_at, str) else (updated_at.isoformat() if updated_at else None)
                             photos_data[vehicle_name] = {
                                 "data": photo_base64,
                                 "content_type": content_type,
                                 "url": photo_url,
-                                "updated_at": updated_at,
+                                "updated_at": updated_at_str,
                                 "size": len(photo_data)
                             }
                 finally:
@@ -13012,23 +13014,25 @@ async def export_configuration(request: Request):
                 conn = _db_connect()
                 try:
                     rows = conn.execute("""
-                        SELECT vehicle_name, image_data, source_url, updated_at
+                        SELECT vehicle_key, image_data, source_url, downloaded_at
                         FROM vehicle_images
                     """).fetchall()
                     
                     for row in rows:
-                        vehicle_name = row[0]
+                        vehicle_key = row[0]
                         image_data = row[1]
                         source_url = row[2]
-                        updated_at = row[3]
+                        downloaded_at = row[3]
                         
                         if image_data:
                             # Converter BLOB para base64
                             image_base64 = base64.b64encode(image_data).decode('utf-8')
-                            images_data[vehicle_name] = {
+                            # Convert datetime to ISO string for JSON serialization
+                            downloaded_at_str = downloaded_at if isinstance(downloaded_at, str) else (downloaded_at.isoformat() if downloaded_at else None)
+                            images_data[vehicle_key] = {
                                 "data": image_base64,
                                 "source_url": source_url,
-                                "updated_at": updated_at,
+                                "downloaded_at": downloaded_at_str,
                                 "size": len(image_data)
                             }
                 finally:
