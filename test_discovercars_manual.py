@@ -10,21 +10,23 @@ async def open_browser_for_manual_test():
     """Open browser and wait for manual interaction"""
     async with async_playwright() as p:
         # Launch browser in NON-headless mode (visible)
+        # Add flags to prevent detection and resizing
         browser = await p.chromium.launch(
             headless=False,  # VISIBLE BROWSER
+            devtools=False,  # NO DEVTOOLS (prevents resizing)
             args=[
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--start-maximized',  # Start maximized
             ]
         )
         
-        # Create context with iPhone mobile
+        # Create context with DESKTOP viewport (more stable)
         context = await browser.new_context(
-            viewport={'width': 390, 'height': 844},  # iPhone
-            user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
-            device_scale_factor=3,
-            is_mobile=True,
-            has_touch=True
+            viewport={'width': 1920, 'height': 1080},  # Desktop Full HD
+            user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         )
         
         # Create page
