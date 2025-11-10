@@ -7,7 +7,7 @@
         .header { background: linear-gradient(135deg, #009cb6 0%, #007a8f 100%); padding: 20px; text-align: center; color: white; }
         .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
         .logo { height: 60px; }
-        .dr-info { text-align: right; font-size: 14px; line-height: 1.4; }
+        .dr-info { text-align: right; font-size: 12px; line-height: 1.4; }
         .dr-info strong { display: block; }
         .content { max-width: 600px; margin: 20px auto; padding: 0 20px; }
         .footer { background: #009cb6; color: white; padding: 20px; margin-top: 40px; font-size: 12px; text-align: center; }
@@ -20,9 +20,9 @@
     <div class="header">
         <div class="header-content">
             <img src="https://carrental-api-5f8q.onrender.com/static/logos/logo_autoprudente_header.png" alt="Auto Prudente" class="logo">
-            <div class="dr-info">
-                <strong>Rapport de Dommages: {drNumber}</strong>
-                <strong>Contrat de Location: {raNumber}</strong>
+            <div class="dr-info" style="text-align: right; font-size: 12px; line-height: 1.4;">
+                <strong style="display: block;">DR: {drNumber}</strong>
+                <strong style="display: block;">RA: {raNumber}</strong>
             </div>
         </div>
     </div>
@@ -48,7 +48,7 @@
         <p><strong>Cordialement,</strong><br>
         Département Assistante Administrative</p>
         
-        <div class="footer-bar"></div>
+        <div class="footer-bar" style="background: #009cb6; height: 4px; margin: 20px 0;"></div>
         
         <p>Si vous avez des questions ou souhaitez faire des commentaires, n'hésitez pas à nous contacter.</p>
         
@@ -56,7 +56,7 @@
     </div>
     
     <!-- PIED DE PAGE AVEC INFORMATIONS LÉGALES -->
-    <div class="footer">
+    <div class="footer" style="background: #009cb6; color: white; padding: 20px; margin-top: 40px; font-size: 12px; text-align: center;">
         <p><strong>@ Auto Prudente Rent a Car</strong></p>
         
         <p style="margin: 15px 0;">Vous recevez cet e-mail car vous avez signé un contrat de location de véhicule avec Auto Prudente Rent a Car. En tant que responsable du traitement, Auto Prudente Rent a Car Unipessoal, Lda. traite vos données personnelles pour vous envoyer des informations et des services liés à votre location, dans le cadre de l'exécution de votre contrat de location de véhicule. Pour plus d'informations sur la manière dont Auto Prudente Rent a Car traite vos données personnelles et vos droits en vertu de la loi sur la protection des données, veuillez consulter notre politique de confidentialité.</p>
