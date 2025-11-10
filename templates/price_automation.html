@@ -1130,54 +1130,45 @@
             }
         }
         
-        // Get AI suggested price based on learning history
-        function getAIPrice(group, days, location) {
-            try {
-                let aiDataStr = localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}';
-                
-                // Fix corrupted data (if localStorage contains "[object Object]" literal)
-                if (aiDataStr === '[object Object]' || aiDataStr.includes('[object Object]')) {
-                    console.warn('⚠️ Corrupted priceAIData detected, resetting...');
-                    aiDataStr = '{"adjustments": [], "patterns": {}, "suggestions": []}';
-                    localStorage.setItem('priceAIData', aiDataStr);
+        // AI prices cache (populated on page load)
+        window.aiPricesCache = window.aiPricesCache || {};
+        
+        // Load ALL AI prices for current location into cache
+        async function loadAllAIPrices() {
+            const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
+            console.log(`🤖 Loading AI prices for ${currentLocation}...`);
+            
+            window.aiPricesCache = {};
+            
+            for (const grupo of grupos) {
+                for (const days of availableDays) {
+                    try {
+                        const response = await fetch(`/api/ai/get-price?grupo=${encodeURIComponent(grupo)}&days=${days}&location=${encodeURIComponent(currentLocation)}`);
+                        const result = await response.json();
+                        
+                        if (result.ok && result.price) {
+                            const key = `${grupo}_${days}_${currentLocation}`;
+                            window.aiPricesCache[key] = result.price;
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ Failed to load AI price for ${grupo}/${days}d:`, error);
+                    }
                 }
-                
-                const aiData = JSON.parse(aiDataStr);
-                
-                // Ensure structure exists
-                if (!aiData.adjustments || !Array.isArray(aiData.adjustments)) {
-                    console.warn('⚠️ Invalid priceAIData structure, resetting...');
-                    localStorage.setItem('priceAIData', '{"adjustments": [], "patterns": {}, "suggestions": []}');
-                    return null;
-                }
-                
-                // Filter adjustments for this group/days/location
-                const relevantAdjustments = aiData.adjustments.filter(adj => 
-                    adj.group === group && 
-                    adj.days === days && 
-                    adj.location === location
-                );
-                
-                if (relevantAdjustments.length === 0) {
-                    return null;
-                }
-                
-                // Calculate average of most recent adjustments (last 10)
-                const recentAdjustments = relevantAdjustments.slice(-10);
-                const avgPrice = recentAdjustments.reduce((sum, adj) => sum + adj.newPrice, 0) / recentAdjustments.length;
-                
-                console.log(`🤖 AI Learning: Found ${relevantAdjustments.length} adjustments for ${group}/${days}d`);
-                console.log(`   Recent avg: ${avgPrice.toFixed(2)}€ (from last ${recentAdjustments.length} adjustments)`);
-                
-                return avgPrice;
-            } catch (error) {
-                console.error('Error getting AI price:', error);
-                // Reset corrupted data
-                console.warn('⚠️ Resetting priceAIData due to error');
-                localStorage.setItem('priceAIData', '{"adjustments": [], "patterns": {}, "suggestions": []}');
-                return null;
             }
+            
+            console.log(`✅ Loaded ${Object.keys(window.aiPricesCache).length} AI prices into cache`);
         }
+        
+        // Get AI suggested price from cache (synchronous)
+        function getAIPrice(group, days, location) {
+            const key = `${group}_${days}_${location}`;
+            return window.aiPricesCache[key] || null;
+        }
+        
+        // Reload AI cache when location changes
+        document.getElementById('locationAuto')?.addEventListener('change', () => {
+            loadAllAIPrices();
+        });
         
         // Grupos que copiam preços de outros (C = D)
         const gruposCopia = {
@@ -2922,30 +2913,29 @@
             }
         }
         
-        function recordAIAdjustment(adjustment) {
+        async function recordAIAdjustment(adjustment) {
             console.log('🤖 AI Learning: Recording adjustment', adjustment);
             
-            // Load existing AI data
-            const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}');
-            
-            // Add new adjustment
-            aiData.adjustments.push(adjustment);
-            
-            // Keep only last 100 adjustments to avoid too much data
-            if (aiData.adjustments.length > 100) {
-                aiData.adjustments = aiData.adjustments.slice(-100);
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('priceAIData', JSON.stringify(aiData));
-            
-            console.log(` AI data saved. Total adjustments: ${aiData.adjustments.length}`);
-            
-            // Also save to database for persistence
-            if (window.dbSync && window.dbSync.saveAIAdjustment) {
-                window.dbSync.saveAIAdjustment(adjustment).catch(err => {
-                    console.warn(' Failed to save to database:', err);
+            // Save directly to PostgreSQL via API
+            try {
+                const response = await fetch('/api/ai/save-adjustment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(adjustment)
                 });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    console.log('✅ AI adjustment saved to database');
+                    
+                    // Reload AI cache to include this new adjustment
+                    loadAllAIPrices();
+                } else {
+                    console.error('❌ Failed to save AI adjustment:', result.error);
+                }
+            } catch (error) {
+                console.error('❌ Error saving AI adjustment:', error);
             }
         }
         
@@ -7858,6 +7848,15 @@ Continue?`);
                 }
             });
         }, 100);
+        
+        // Initialize AI prices cache on page load
+        setTimeout(() => {
+            loadAllAIPrices().then(() => {
+                console.log('✅ AI prices cache initialized');
+            }).catch(err => {
+                console.error('❌ Failed to initialize AI cache:', err);
+            });
+        }, 500);
     </script>
 </body>
 </html>

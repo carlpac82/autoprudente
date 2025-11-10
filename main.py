@@ -27128,6 +27128,120 @@ async def delete_automated_search(request: Request, search_id: int):
         logging.error(f"❌ Error deleting search ID {search_id}: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# ============================================================
+# AI PRICE LEARNING ENDPOINTS
+# ============================================================
+
+@app.post("/api/ai/save-adjustment")
+async def save_ai_adjustment(request: Request):
+    """Save AI price adjustment to PostgreSQL for learning"""
+    require_auth(request)
+    try:
+        body = await request.json()
+        grupo = body.get('grupo')
+        days = body.get('days')
+        location = body.get('location')
+        original_price = body.get('original_price')
+        new_price = body.get('new_price')
+        
+        if not all([grupo, days, location, new_price]):
+            return JSONResponse({"ok": False, "error": "Missing required fields"}, status_code=400)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            f"""INSERT INTO ai_learning_data 
+                                (grupo, days, location, original_price, new_price, timestamp, "user")
+                                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})""",
+                            (grupo, days, location, original_price, new_price, datetime.utcnow().isoformat(), 'admin')
+                        )
+                else:
+                    conn.execute(
+                        f"""INSERT INTO ai_learning_data 
+                            (grupo, days, location, original_price, new_price, timestamp, user)
+                            VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})""",
+                        (grupo, days, location, original_price, new_price, datetime.utcnow().isoformat(), 'admin')
+                    )
+                conn.commit()
+                logging.info(f"✅ AI adjustment saved: {grupo}/{days}d/{location}: {original_price}€ → {new_price}€")
+                return JSONResponse({"ok": True})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving AI adjustment: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/ai/get-price")
+async def get_ai_price(request: Request, grupo: str, days: int, location: str):
+    """Get AI-suggested price based on historical adjustments"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                # Get recent adjustments for this grupo/days/location (last 50)
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            f"""SELECT new_price, original_price, timestamp 
+                                FROM ai_learning_data 
+                                WHERE grupo = {placeholder} AND days = {placeholder} AND location = {placeholder}
+                                ORDER BY timestamp DESC 
+                                LIMIT 50""",
+                            (grupo, days, location)
+                        )
+                        rows = cur.fetchall()
+                else:
+                    cursor = conn.execute(
+                        f"""SELECT new_price, original_price, timestamp 
+                            FROM ai_learning_data 
+                            WHERE grupo = {placeholder} AND days = {placeholder} AND location = {placeholder}
+                            ORDER BY timestamp DESC 
+                            LIMIT 50""",
+                        (grupo, days, location)
+                    )
+                    rows = cursor.fetchall()
+                
+                if not rows:
+                    return JSONResponse({"ok": True, "price": None, "confidence": 0})
+                
+                # Calculate average of recent prices (weighted by recency)
+                total_weight = 0
+                weighted_sum = 0
+                
+                for i, row in enumerate(rows):
+                    new_price = float(row[0])
+                    # More recent = higher weight (exponential decay)
+                    weight = pow(0.95, i)  # 95% weight for each step back
+                    weighted_sum += new_price * weight
+                    total_weight += weight
+                
+                suggested_price = round(weighted_sum / total_weight, 2) if total_weight > 0 else None
+                confidence = min(len(rows) / 10.0, 1.0)  # Confidence grows with data (max at 10+ adjustments)
+                
+                logging.info(f"🤖 AI price for {grupo}/{days}d/{location}: {suggested_price}€ (confidence: {confidence:.0%}, samples: {len(rows)})")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "price": suggested_price,
+                    "confidence": confidence,
+                    "sample_count": len(rows)
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error getting AI price: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/clean-automated-history")
 async def clean_automated_history():
     """Delete all automated search history entries - NO AUTH REQUIRED"""
