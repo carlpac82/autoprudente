@@ -17129,6 +17129,130 @@ async def send_damage_report_email(request: Request):
         logging.error(f"Error in send_damage_report_email: {e}", exc_info=True)
         return {"ok": False, "error": str(e)}
 
+@app.post("/api/damage-reports/reload-email-templates")
+async def reload_damage_report_email_templates(request: Request):
+    """
+    Reload email templates from files to database
+    Updates all language templates (PT, EN, FR, DE) with corrected versions
+    """
+    require_auth(request)
+    
+    try:
+        import os
+        
+        # Templates to reload
+        templates = [
+            {
+                'code': 'pt',
+                'name': 'Português',
+                'subject': 'Relatório de Danos {drNumber} - Auto Prudente',
+                'file': 'email_template_pt_complete.html'
+            },
+            {
+                'code': 'en',
+                'name': 'English',
+                'subject': 'Damage Report {drNumber} - Auto Prudente',
+                'file': 'email_template_en_complete.html'
+            },
+            {
+                'code': 'fr',
+                'name': 'Français',
+                'subject': 'Rapport de Dommages {drNumber} - Auto Prudente',
+                'file': 'email_template_fr_complete.html'
+            },
+            {
+                'code': 'de',
+                'name': 'Deutsch',
+                'subject': 'Schadensbericht {drNumber} - Auto Prudente',
+                'file': 'email_template_de_complete.html'
+            }
+        ]
+        
+        updated = []
+        errors = []
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                for template in templates:
+                    try:
+                        # Read template file
+                        if not os.path.exists(template['file']):
+                            errors.append(f"{template['name']}: File not found - {template['file']}")
+                            continue
+                        
+                        with open(template['file'], 'r', encoding='utf-8') as f:
+                            body = f.read()
+                        
+                        # Update database
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    UPDATE dr_email_templates
+                                    SET body_template = %s,
+                                        subject_template = %s,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    WHERE language_code = %s
+                                """, (body, template['subject'], template['code']))
+                                
+                                if cur.rowcount == 0:
+                                    # Insert if not exists
+                                    cur.execute("""
+                                        INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template, updated_at)
+                                        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                                    """, (template['code'], template['name'], template['subject'], body))
+                        else:
+                            cursor = conn.execute("""
+                                UPDATE dr_email_templates
+                                SET body_template = ?,
+                                    subject_template = ?,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE language_code = ?
+                            """, (body, template['subject'], template['code']))
+                            
+                            if cursor.rowcount == 0:
+                                conn.execute("""
+                                    INSERT INTO dr_email_templates (language_code, language_name, subject_template, body_template, updated_at)
+                                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                                """, (template['code'], template['name'], template['subject'], body))
+                        
+                        updated.append({
+                            'code': template['code'],
+                            'name': template['name'],
+                            'size': len(body)
+                        })
+                        
+                        logging.info(f"✅ Template {template['name']} ({template['code']}) reloaded: {len(body)} chars")
+                        
+                    except Exception as e:
+                        errors.append(f"{template['name']}: {str(e)}")
+                        logging.error(f"Error reloading template {template['code']}: {e}")
+                
+                conn.commit()
+                
+            finally:
+                conn.close()
+        
+        if errors:
+            return {
+                "ok": len(updated) > 0,
+                "updated": updated,
+                "errors": errors,
+                "message": f"Reloaded {len(updated)} templates with {len(errors)} errors"
+            }
+        else:
+            return {
+                "ok": True,
+                "updated": updated,
+                "message": f"Successfully reloaded {len(updated)} email templates"
+            }
+        
+    except Exception as e:
+        logging.error(f"Error reloading email templates: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.post("/api/damage-reports/upload-pdfs-bulk")
 async def upload_damage_reports_pdfs_bulk(request: Request):
     """Upload múltiplos PDFs de uma vez, detectando DR number do nome do ficheiro"""
