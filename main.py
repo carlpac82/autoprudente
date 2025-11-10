@@ -13202,12 +13202,14 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                 conn = _db_connect()
                 try:
                     for group in car_groups_data:
-                        conn.execute("""
+                        query = _convert_query_for_db("""
                             INSERT OR REPLACE INTO car_groups 
                             (code, name, model, brand, category, doors, seats, 
                              transmission, luggage, photo_url, enabled)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (
+                        """, conn)
+                        
+                        params = (
                             group["code"],
                             group["name"],
                             group.get("model"),
@@ -13219,7 +13221,13 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                             group.get("luggage"),
                             group.get("photo_url"),
                             group.get("enabled", 1)
-                        ))
+                        )
+                        
+                        if conn.__class__.__module__ == 'psycopg2.extensions':
+                            with conn.cursor() as cur:
+                                cur.execute(query, params)
+                        else:
+                            conn.execute(query, params)
                         imported_groups += 1
                     conn.commit()
                 finally:
@@ -13302,10 +13310,16 @@ async def import_configuration(request: Request, file: UploadFile = File(...)):
                 try:
                     for user in users_data:
                         password_hash = user.get("password_hash") or user.get("password")
-                        conn.execute(
+                        query = _convert_query_for_db(
                             "INSERT OR REPLACE INTO users (username, password_hash) VALUES (?, ?)",
-                            (user["username"], password_hash)
+                            conn
                         )
+                        
+                        if conn.__class__.__module__ == 'psycopg2.extensions':
+                            with conn.cursor() as cur:
+                                cur.execute(query, (user["username"], password_hash))
+                        else:
+                            conn.execute(query, (user["username"], password_hash))
                         imported_users += 1
                     conn.commit()
                 finally:
