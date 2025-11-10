@@ -402,7 +402,7 @@ def generate_daily_report_html_by_location(search_data, location):
                     
                     <!-- Preço centralizado verticalmente -->
                     <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 100px;">
-                        <div style="font-size: 22px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap; text-align: center;">
+                        <div style="font-size: 14px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap; text-align: center;">
                             {price:.2f}€
                         </div>
                         {price_badge}
@@ -658,7 +658,7 @@ def generate_weekly_report_html_by_location(search_data, location):
                         
                         <!-- Preço centralizado verticalmente -->
                         <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 100px;">
-                            <div style="font-size: 22px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap; text-align: center;">
+                            <div style="font-size: 14px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap; text-align: center;">
                                 {price:.2f}€
                             </div>
                             {price_badge}
