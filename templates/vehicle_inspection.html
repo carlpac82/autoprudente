@@ -166,31 +166,40 @@
         .step-label {
             font-size: 12px;
             margin-top: 8px;
-            color: #6b7280;
+            color: white;
+            font-weight: 600;
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-[#009cb6] to-[#0284a8] shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+<body class="bg-[#009cb6] min-h-screen">
+    <!-- Header with Logo -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <a href="/" class="text-white hover:text-[#f59e0b] transition-colors">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="text-[#009cb6] hover:text-[#f59e0b] transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                         </svg>
                     </a>
-                    <h1 class="text-xl font-bold text-white">Inspeção de Veículo</h1>
-                    <span id="inspectionType" class="ml-3 px-3 py-1 text-sm bg-[#f59e0b] text-white rounded-full font-semibold">Check-in</span>
+                    <!-- Company Logo Placeholder -->
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 bg-[#009cb6] rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold text-[#009cb6]">Auto Rental</span>
+                    </div>
                 </div>
+                <span id="inspectionType" class="px-4 py-2 text-sm bg-[#f59e0b] text-white rounded-full font-semibold">Check-in</span>
             </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-6">
         <!-- Step Indicator -->
-        <div class="mb-8">
+        <div class="mb-8 bg-white/10 backdrop-blur-sm rounded-2xl p-4">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex-1 text-center">
                     <div class="step-indicator active" data-step="1">
@@ -198,21 +207,21 @@
                         <div class="step-label">Vehicle Info</div>
                     </div>
                 </div>
-                <div class="flex-1 border-t-2 border-gray-300 mx-4 mt-4"></div>
+                <div class="flex-1 border-t-2 border-white/30 mx-4 mt-4"></div>
                 <div class="flex-1 text-center">
                     <div class="step-indicator" data-step="2">
                         <div class="step-circle">2</div>
                         <div class="step-label">Photos</div>
                     </div>
                 </div>
-                <div class="flex-1 border-t-2 border-gray-300 mx-4 mt-4"></div>
+                <div class="flex-1 border-t-2 border-white/30 mx-4 mt-4"></div>
                 <div class="flex-1 text-center">
                     <div class="step-indicator" data-step="3">
                         <div class="step-circle">3</div>
                         <div class="step-label">AI Analysis</div>
                     </div>
                 </div>
-                <div class="flex-1 border-t-2 border-gray-300 mx-4 mt-4"></div>
+                <div class="flex-1 border-t-2 border-white/30 mx-4 mt-4"></div>
                 <div class="flex-1 text-center">
                     <div class="step-indicator" data-step="4">
                         <div class="step-circle">4</div>
@@ -224,68 +233,79 @@
 
         <!-- STEP 1: Photo Capture (previously Step 2) -->
         <div id="stepPhotos" class="step-content">
-            <div class="bg-white rounded-lg shadow-sm p-8 mb-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Inspeção Fotográfica do Veículo</h2>
-                
-                <!-- Inspection Info Form -->
-                <div class="max-w-2xl mx-auto mb-8 bg-gray-50 p-6 rounded-lg">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Rececionista (auto from user session) -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Rececionista *</label>
-                            <input type="text" id="inputReceptionist" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-[#009cb6]" readonly required>
+            <div class="max-w-4xl mx-auto">
+                <!-- Compact Inline Form -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mb-8">
+                    <div class="flex flex-wrap items-end gap-3 justify-center">
+                        <!-- Rececionista -->
+                        <div class="flex-shrink-0">
+                            <label class="block text-xs font-medium text-white/80 mb-1">Rececionista</label>
+                            <input type="text" id="inputReceptionist" class="px-3 py-2 text-sm border-0 rounded-lg bg-white/90 w-36" readonly>
                         </div>
 
-                        <!-- Data (auto) -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Data *</label>
-                            <input type="text" id="inputDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-[#009cb6]" readonly required>
+                        <!-- Data -->
+                        <div class="flex-shrink-0">
+                            <label class="block text-xs font-medium text-white/80 mb-1">Data</label>
+                            <input type="text" id="inputDate" class="px-3 py-2 text-sm border-0 rounded-lg bg-white/90 w-28" readonly>
                         </div>
 
-                        <!-- Hora (auto) -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Início *</label>
-                            <input type="text" id="inputTime" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-[#009cb6]" readonly required>
+                        <!-- Hora -->
+                        <div class="flex-shrink-0">
+                            <label class="block text-xs font-medium text-white/80 mb-1">Hora</label>
+                            <input type="text" id="inputTime" class="px-3 py-2 text-sm border-0 rounded-lg bg-white/90 w-20" readonly>
                         </div>
 
                         <!-- Matrícula -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Matrícula * 
-                                <span class="text-xs text-gray-500 ml-2">🤖 Auto-detectado da foto</span>
-                            </label>
-                            <input type="text" id="inputPlate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="XX-XX-XX" required>
+                        <div class="flex-shrink-0">
+                            <label class="block text-xs font-medium text-white/80 mb-1">Matrícula * 🤖</label>
+                            <input type="text" id="inputPlate" class="px-3 py-2 text-sm border-2 border-white rounded-lg bg-white focus:ring-2 focus:ring-[#f59e0b] w-32" placeholder="XX-XX-XX" required>
                         </div>
 
-                        <!-- RA (Rental Agreement) -->
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">RA (Rental Agreement) *</label>
-                            <input type="text" id="inputRA" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" placeholder="Número do Rental Agreement" required>
+                        <!-- RA -->
+                        <div class="flex-shrink-0">
+                            <label class="block text-xs font-medium text-white/80 mb-1">RA *</label>
+                            <input type="text" id="inputRA" class="px-3 py-2 text-sm border-2 border-white rounded-lg bg-white focus:ring-2 focus:ring-[#f59e0b] w-40" placeholder="RA-XXXX" required>
                         </div>
                     </div>
                 </div>
 
-                <!-- Instructions -->
-                <div class="max-w-2xl mx-auto mb-8 text-center">
-                    <p class="text-gray-600">
-                        Será guiado através de 6 fotografias do veículo. O sistema irá indicar cada ângulo necessário e o carro 3D mostrará a posição exacta para capturar cada foto.
-                    </p>
-                </div>
-
-                <!-- Start Button -->
-                <div class="text-center">
-                    <button onclick="startAutoSequence()" class="bg-[#009cb6] hover:bg-[#f59e0b] text-white px-12 py-6 rounded-xl transition-all transform hover:scale-105 shadow-xl font-bold flex items-center gap-4 text-xl mx-auto">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        Iniciar Inspeção
+                <!-- Large Centered Car Icon Button -->
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-white mb-6">Inspeção Fotográfica do Veículo</h2>
+                    
+                    <!-- GIANT CAR ICON (clickable) -->
+                    <button onclick="startAutoSequence()" class="group mx-auto block transition-all transform hover:scale-110" title="Iniciar Inspeção">
+                        <div class="relative">
+                            <!-- Car Icon SVG - Large White -->
+                            <svg class="w-64 h-64 mx-auto drop-shadow-2xl transition-all group-hover:drop-shadow-[0_0_30px_rgba(245,158,11,0.8)]" viewBox="0 0 24 24" fill="white">
+                                <!-- Front view car icon -->
+                                <path d="M18.92,6.01C18.72,5.42,18.16,5,17.5,5h-11C5.84,5,5.29,5.42,5.08,6.01L3,12v8c0,0.55,0.45,1,1,1h1c0.55,0,1-0.45,1-1v-1h12v1c0,0.55,0.45,1,1,1h1c0.55,0,1-0.45,1-1v-8L18.92,6.01z M6.5,16C5.67,16,5,15.33,5,14.5S5.67,13,6.5,13S8,13.67,8,14.5S7.33,16,6.5,16z M17.5,16c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S18.33,16,17.5,16z M5,11l1.5-4.5h11L19,11H5z"/>
+                            </svg>
+                            
+                            <!-- Pulsing ring animation -->
+                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div class="w-72 h-72 rounded-full border-4 border-white/30 animate-ping"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Text below icon -->
+                        <div class="mt-6">
+                            <span class="text-2xl font-bold text-white block group-hover:text-[#f59e0b] transition-colors">INICIAR INSPEÇÃO</span>
+                            <span class="text-sm text-white/80 block mt-2">Clique para começar</span>
+                        </div>
                     </button>
                 </div>
+
+                <!-- Instructions -->
+                <div class="text-center mb-6">
+                    <p class="text-white/90 text-sm max-w-xl mx-auto">
+                        Será guiado através de 6 fotografias. O sistema mostrará a posição exacta para cada foto.
+                    </p>
+                </div>
                 
-                <!-- Hidden Next Button (enabled after photos) -->
+                <!-- Hidden Next Button -->
                 <div class="text-center mt-6">
-                    <button onclick="nextStep()" id="btnNextToAnalysis" class="hidden bg-[#f59e0b] hover:bg-[#d97706] text-white px-8 py-4 rounded-lg transition-all font-semibold" disabled>
+                    <button onclick="nextStep()" id="btnNextToAnalysis" class="hidden bg-[#f59e0b] hover:bg-[#d97706] text-white px-8 py-4 rounded-xl transition-all font-bold shadow-xl" disabled>
                         Avançar para Análise AI →
                     </button>
                 </div>
