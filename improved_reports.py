@@ -100,15 +100,12 @@ def generate_report_header(title, subtitle=""):
                 margin-bottom: 10px;
             }}
             .competitor {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+                display: block;
                 padding: 16px 12px;
                 margin: 8px 0;
                 background: #fff;
                 border: 1px solid #e2e8f0;
                 border-radius: 6px;
-                min-height: 95px;
             }}
             .competitor.autoprudente {{
                 background: #e0f7fa;
@@ -386,21 +383,24 @@ def generate_daily_report_html_by_location(search_data, location):
                 
                 content_html += f"""
                 <div class="competitor {'autoprudente' if is_ap else ''}">
-                    <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
-                        <div style="flex-shrink: 0; width: 85px; display: flex; align-items: center; justify-content: center;">
-                            {car_visual}
+                    <!-- Foto no topo, centralizada -->
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        {car_visual}
+                    </div>
+                    
+                    <!-- Info do supplier e carro -->
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px; margin-bottom: 4px; line-height: 1.3;">
+                            {idx}. {supplier}
                         </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 14px; margin-bottom: 4px; line-height: 1.3;">
-                                {idx}. {supplier}
-                            </div>
-                            <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
-                                {car_name}
-                            </div>
+                        <div style="font-size: 13px; color: #64748b; line-height: 1.4;">
+                            {car_name}
                         </div>
                     </div>
-                    <div style="flex-shrink: 0; text-align: right; margin-left: 12px;">
-                        <div style="font-size: 19px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap;">
+                    
+                    <!-- Preço e badge -->
+                    <div style="text-align: right;">
+                        <div style="font-size: 20px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap;">
                             {price:.2f}€
                         </div>
                         {price_badge}
@@ -639,21 +639,24 @@ def generate_weekly_report_html_by_location(search_data, location):
                     
                     content_html += f"""
                     <div class="competitor {'autoprudente' if is_ap else ''}">
-                        <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
-                            <div style="flex-shrink: 0; width: 85px; display: flex; align-items: center; justify-content: center;">
-                                {car_visual}
+                        <!-- Foto no topo, centralizada -->
+                        <div style="text-align: center; margin-bottom: 12px;">
+                            {car_visual}
+                        </div>
+                        
+                        <!-- Info do supplier e carro -->
+                        <div style="margin-bottom: 10px;">
+                            <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px; margin-bottom: 4px; line-height: 1.3;">
+                                {idx}. {supplier}
                             </div>
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 14px; margin-bottom: 4px; line-height: 1.3;">
-                                    {idx}. {supplier}
-                                </div>
-                                <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
-                                    {car_name}
-                                </div>
+                            <div style="font-size: 13px; color: #64748b; line-height: 1.4;">
+                                {car_name}
                             </div>
                         </div>
-                        <div style="flex-shrink: 0; text-align: right; margin-left: 12px;">
-                            <div style="font-size: 19px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap;">
+                        
+                        <!-- Preço e badge -->
+                        <div style="text-align: right;">
+                            <div style="font-size: 20px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap;">
                                 {price:.2f}€
                             </div>
                             {price_badge}
