@@ -9546,6 +9546,55 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
     summary: List[Dict[str, Any]] = []
     import re as _re2
     
+    # Helper: Buscar foto de veículo por nome (vehicle_photos)
+    def _get_vehicle_photo_by_name(car_name: str) -> str:
+        """Busca foto na tabela vehicle_photos pelo nome do carro"""
+        if not car_name:
+            return ""
+        vehicle_key = car_name.lower().strip()
+        try:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    if conn.__class__.__module__ == 'psycopg2.extensions':
+                        # PostgreSQL
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT photo_url FROM vehicle_photos WHERE vehicle_name = %s", (vehicle_key,))
+                            row = cur.fetchone()
+                            if row and row[0]:
+                                return row[0]
+                    else:
+                        # SQLite
+                        row = conn.execute("SELECT photo_url FROM vehicle_photos WHERE vehicle_name = ?", (vehicle_key,)).fetchone()
+                        if row and row[0]:
+                            return row[0]
+                finally:
+                    conn.close()
+        except Exception:
+            pass
+        return ""
+    
+    # Helper: Buscar nome editado (vehicle_name_overrides)
+    def _get_edited_name(original_name: str) -> str:
+        """Busca nome editado na tabela vehicle_name_overrides"""
+        if not original_name:
+            return original_name
+        try:
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    row = conn.execute(
+                        "SELECT edited_name FROM vehicle_name_overrides WHERE LOWER(original_name) = ?",
+                        (original_name.lower().strip(),)
+                    ).fetchone()
+                    if row and row[0]:
+                        return row[0]
+                finally:
+                    conn.close()
+        except Exception:
+            pass
+        return original_name
+    
     # Carregar características do Admin Vehicles
     vehicle_groups = _get_vehicle_groups()
     import sys
@@ -9581,6 +9630,13 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         # Limpar nome do carro PRIMEIRO (remover "Autoautomático", "ou similar", etc)
         car_name_clean = clean_car_name(it.get("car", ""))
         
+        # APLICAR NOME EDITADO (vehicle_name_overrides) - PRIORIDADE MÁXIMA
+        car_name_final = _get_edited_name(car_name_clean)
+        if car_name_final != car_name_clean:
+            if len(detailed) == 0 and len(summary) == 0:
+                import sys
+                print(f"[NAMES] ✅ Using edited name: '{car_name_clean}' → '{car_name_final}'", file=sys.stderr, flush=True)
+        
         # Se não tiver grupo definido, usar Admin Vehicles (características)
         # IMPORTANTE: match baseado em categoria, transmissão, brand/model
         group_code = it.get("group", "")
@@ -9588,7 +9644,7 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
             from match_helper import match_vehicle_group_by_characteristics
             group_code = match_vehicle_group_by_characteristics(
                 it.get("category", ""),
-                car_name_clean,
+                car_name_final,  # Usar nome editado para matching
                 it.get("transmission", ""),
                 vehicle_groups,
                 map_category_to_group
@@ -9597,26 +9653,37 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         # DEBUG: Log primeiro item
         if len(detailed) == 0 and len(summary) == 0:
             import sys
-            print(f"[DEBUG] Primeiro item: cat={it.get('category')}, car_clean={car_name_clean}, group={group_code}", file=sys.stderr, flush=True)
+            print(f"[DEBUG] Primeiro item: cat={it.get('category')}, car_final={car_name_final}, group={group_code}", file=sys.stderr, flush=True)
         
-        # PRIORIDADE FOTOS:
-        # 1. Admin Vehicles (car_groups.photo_url) - CONTROLADO
-        # 2. Scraping CarJet (fallback)
+        # NOVA PRIORIDADE DE FOTOS:
+        # 1. vehicle_photos (por nome de carro) - CONTROLADO PELO USER
+        # 2. car_groups.photo_url (por código de grupo) - ADMIN
+        # 3. Scraping CarJet (fallback)
         photo_url = ""
-        if group_code and group_code in group_photos:
-            photo_url = group_photos[group_code]
+        
+        # 1º: Tentar buscar foto por nome de carro (vehicle_photos)
+        photo_url = _get_vehicle_photo_by_name(car_name_final)
+        if photo_url:
             if len(detailed) == 0 and len(summary) == 0:
                 import sys
-                print(f"[PHOTOS] ✅ Using Admin photo for group {group_code}: {photo_url[:80]}", file=sys.stderr, flush=True)
+                print(f"[PHOTOS] ✅ Using vehicle_photos for '{car_name_final}': {photo_url[:80]}", file=sys.stderr, flush=True)
         else:
-            photo_url = it.get("photo", "")
-            if len(detailed) == 0 and len(summary) == 0 and photo_url:
-                import sys
-                print(f"[PHOTOS] ⚠️ Fallback to scraped photo for group {group_code}: {photo_url[:80]}", file=sys.stderr, flush=True)
+            # 2º: Tentar buscar foto por código de grupo (car_groups)
+            if group_code and group_code in group_photos:
+                photo_url = group_photos[group_code]
+                if len(detailed) == 0 and len(summary) == 0:
+                    import sys
+                    print(f"[PHOTOS] ⚙️ Using car_groups photo for group {group_code}: {photo_url[:80]}", file=sys.stderr, flush=True)
+            else:
+                # 3º: Fallback para foto do scraping
+                photo_url = it.get("photo", "")
+                if len(detailed) == 0 and len(summary) == 0 and photo_url:
+                    import sys
+                    print(f"[PHOTOS] ⚠️ Fallback to scraped photo: {photo_url[:80]}", file=sys.stderr, flush=True)
         
         row = {
             "supplier": it.get("supplier", ""),
-            "car": car_name_clean,
+            "car": car_name_final,  # Usar nome editado final
             "price": price_text_in,
             "price_num": price_num,
             "currency": price_curr or it.get("currency", ""),
