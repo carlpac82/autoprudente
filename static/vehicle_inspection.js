@@ -200,6 +200,9 @@ async function openCamera(photoType) {
     document.getElementById('cameraInstruction').textContent = photo.instruction;
     document.getElementById('cameraModal').classList.add('active');
     
+    // Customize overlay for photo type
+    setupCameraOverlay(photoType);
+    
     try {
         // Request camera access
         cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -211,6 +214,9 @@ async function openCamera(photoType) {
         });
         
         document.getElementById('cameraPreview').srcObject = cameraStream;
+        
+        // Start positioning hints animation
+        startPositioningHints(photoType);
     } catch (error) {
         console.error('Camera error:', error);
         showNotification('Could not access camera: ' + error.message, 'error');
@@ -218,11 +224,111 @@ async function openCamera(photoType) {
     }
 }
 
+function setupCameraOverlay(photoType) {
+    const carGuide = document.getElementById('carGuide');
+    const carCutout = document.getElementById('carCutout');
+    const hintText = document.getElementById('hintText');
+    
+    // Different overlay shapes for different photo types
+    const overlays = {
+        'front': {
+            x: '20%', y: '30%', width: '60%', height: '40%', rx: '15',
+            hint: '📸 Encaixe a frente do carro na moldura'
+        },
+        'back': {
+            x: '20%', y: '30%', width: '60%', height: '40%', rx: '15',
+            hint: '📸 Encaixe a traseira do carro na moldura'
+        },
+        'left': {
+            x: '15%', y: '25%', width: '70%', height: '50%', rx: '20',
+            hint: '📸 Mostre todo o lado esquerdo do carro'
+        },
+        'right': {
+            x: '15%', y: '25%', width: '70%', height: '50%', rx: '20',
+            hint: '📸 Mostre todo o lado direito do carro'
+        },
+        'interior': {
+            x: '25%', y: '25%', width: '50%', height: '50%', rx: '10',
+            hint: '📸 Centre o interior do carro'
+        },
+        'odometer': {
+            x: '30%', y: '35%', width: '40%', height: '30%', rx: '8',
+            hint: '📸 Centre o odómetro para leitura clara'
+        }
+    };
+    
+    const config = overlays[photoType] || overlays['front'];
+    
+    // Update guide rectangle
+    carGuide.setAttribute('x', config.x);
+    carGuide.setAttribute('y', config.y);
+    carGuide.setAttribute('width', config.width);
+    carGuide.setAttribute('height', config.height);
+    carGuide.setAttribute('rx', config.rx);
+    
+    // Update cutout (mask)
+    carCutout.setAttribute('x', config.x);
+    carCutout.setAttribute('y', config.y);
+    carCutout.setAttribute('width', config.width);
+    carCutout.setAttribute('height', config.height);
+    carCutout.setAttribute('rx', config.rx);
+    
+    // Set initial hint
+    hintText.innerHTML = config.hint;
+}
+
+let hintInterval;
+const hints = [
+    '⬆️ Mais para cima',
+    '⬇️ Mais para baixo',
+    '⬅️ Mais para a esquerda',
+    '➡️ Mais para a direita',
+    '🔄 Rode o telemóvel',
+    '📏 Afaste-se um pouco',
+    '🔍 Aproxime-se mais',
+    '✨ Perfeito! Pode tirar'
+];
+
+function startPositioningHints(photoType) {
+    // Clear previous interval
+    if (hintInterval) clearInterval(hintInterval);
+    
+    const hintText = document.getElementById('hintText');
+    let hintIndex = 0;
+    let changeCount = 0;
+    
+    // Change hints every 3 seconds to simulate positioning feedback
+    hintInterval = setInterval(() => {
+        changeCount++;
+        
+        // After a few changes, show "perfect" hint
+        if (changeCount > 3) {
+            hintText.innerHTML = '✨ Perfeito! Pode tirar a foto';
+            hintText.style.background = 'rgba(16, 185, 129, 0.9)'; // Green
+            clearInterval(hintInterval);
+            return;
+        }
+        
+        // Show random positioning hint
+        const randomHint = hints[Math.floor(Math.random() * (hints.length - 1))];
+        hintText.innerHTML = randomHint;
+        hintText.style.background = 'rgba(0, 0, 0, 0.7)'; // Dark
+        
+    }, 3000);
+}
+
 function closeCamera() {
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
     }
+    
+    // Stop positioning hints
+    if (hintInterval) {
+        clearInterval(hintInterval);
+        hintInterval = null;
+    }
+    
     document.getElementById('cameraModal').classList.remove('active');
 }
 
