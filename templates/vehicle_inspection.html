@@ -263,44 +263,44 @@
                     </button>
                 </div>
                 
-                <!-- Step Indicators - Inside Page (not fixed) -->
-                <div class="mt-16 mb-6">
-                    <div class="flex items-center justify-center gap-6">
-                        <div class="step-indicator active" data-step="1">
-                            <div class="inline-flex items-center gap-2">
-                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base transition-all shadow-lg" style="background: #f59e0b; color: white;">1</div>
-                                <span class="text-sm font-bold text-white drop-shadow-lg">Photos</span>
-                            </div>
-                        </div>
-                        
-                        <div class="w-12 h-0.5 bg-white/40"></div>
-                        
-                        <div class="step-indicator" data-step="2">
-                            <div class="inline-flex items-center gap-2">
-                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base bg-white/30 text-white transition-all shadow-lg">2</div>
-                                <span class="text-sm font-semibold text-white/70">AI Analysis</span>
-                            </div>
-                        </div>
-                        
-                        <div class="w-12 h-0.5 bg-white/40"></div>
-                        
-                        <div class="step-indicator" data-step="3">
-                            <div class="inline-flex items-center gap-2">
-                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base bg-white/30 text-white transition-all shadow-lg">3</div>
-                                <span class="text-sm font-semibold text-white/70">Review</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Auto-filled Info - Inside Page (no labels) -->
-                <div class="mb-8">
+                <div class="mt-16 mb-12">
                     <div class="flex items-center justify-center gap-3 text-xs text-white/70">
                         <input type="text" id="inputReceptionist" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-28" readonly>
                         <span class="text-white/30">|</span>
                         <input type="text" id="inputDate" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-24" readonly>
                         <span class="text-white/30">|</span>
                         <input type="text" id="inputTime" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-16" readonly>
+                    </div>
+                </div>
+                
+                <!-- Step Indicators - End of Page (much smaller) -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-center gap-3 opacity-70">
+                        <div class="step-indicator active" data-step="1">
+                            <div class="inline-flex items-center gap-1">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center font-semibold text-[10px] transition-all" style="background: #f59e0b; color: white;">1</div>
+                                <span class="text-[10px] font-semibold text-white/80">Photos</span>
+                            </div>
+                        </div>
+                        
+                        <div class="w-6 h-px bg-white/30"></div>
+                        
+                        <div class="step-indicator" data-step="2">
+                            <div class="inline-flex items-center gap-1">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center font-semibold text-[10px] bg-white/20 text-white transition-all">2</div>
+                                <span class="text-[10px] font-medium text-white/60">AI Analysis</span>
+                            </div>
+                        </div>
+                        
+                        <div class="w-6 h-px bg-white/30"></div>
+                        
+                        <div class="step-indicator" data-step="3">
+                            <div class="inline-flex items-center gap-1">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center font-semibold text-[10px] bg-white/20 text-white transition-all">3</div>
+                                <span class="text-[10px] font-medium text-white/60">Review</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
