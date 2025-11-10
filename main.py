@@ -17324,24 +17324,24 @@ async def reload_email_templates_page(request: Request):
                 
                 if (data.ok) {
                     resultDiv.className = 'result success';
-                    let html = `✅ SUCCESS!\\n\\n${data.message}\\n\\n`;
-                    html += '📧 Updated Templates:\\n';
+                    let html = '✅ SUCCESS!' + String.fromCharCode(10) + String.fromCharCode(10) + data.message + String.fromCharCode(10) + String.fromCharCode(10);
+                    html += '📧 Updated Templates:' + String.fromCharCode(10);
                     data.updated.forEach(t => {
-                        html += `   • ${t.name} (${t.code}): ${t.size.toLocaleString()} characters\\n`;
+                        html += '   • ' + t.name + ' (' + t.code + '): ' + t.size.toLocaleString() + ' characters' + String.fromCharCode(10);
                     });
                     if (data.errors && data.errors.length > 0) {
-                        html += '\\n⚠️ Errors:\\n';
-                        data.errors.forEach(e => { html += `   • ${e}\\n`; });
+                        html += String.fromCharCode(10) + '⚠️ Errors:' + String.fromCharCode(10);
+                        data.errors.forEach(e => { html += '   • ' + e + String.fromCharCode(10); });
                     }
                     resultDiv.textContent = html;
                 } else {
                     resultDiv.className = 'result error';
-                    resultDiv.textContent = `❌ ERROR:\\n\\n${data.error || JSON.stringify(data, null, 2)}`;
+                    resultDiv.textContent = '❌ ERROR:' + String.fromCharCode(10) + String.fromCharCode(10) + (data.error || JSON.stringify(data, null, 2));
                 }
                 
             } catch (error) {
                 resultDiv.className = 'result error';
-                resultDiv.textContent = `❌ NETWORK ERROR:\\n\\n${error.message}`;
+                resultDiv.textContent = '❌ NETWORK ERROR:' + String.fromCharCode(10) + String.fromCharCode(10) + error.message;
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🔄 Reload Templates Now';
