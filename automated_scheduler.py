@@ -298,6 +298,8 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         rows = cursor.fetchall()
         
         print(f"   📊 Query: search_date >= '{cutoff_time}' AND search_type = 'automated'", flush=True)
+        print(f"   📊 Current time: {now.isoformat()}", flush=True)
+        print(f"   📊 Cutoff time (2h ago): {cutoff_time}", flush=True)
         print(f"   📊 Found {len(rows)} recent search records", flush=True)
         
         all_results = []
@@ -571,7 +573,10 @@ def _save_search_results(all_results, days, locations, pickup_date):
             search_dt = pickup_date
         
         month_key = f"{search_dt.year}-{str(search_dt.month).zfill(2)}"
-        search_date = search_dt.isoformat()
+        
+        # CRITICAL: Use CURRENT datetime for search_date (when search was executed)
+        # NOT pickup_date (when car will be picked up)
+        search_date = datetime.now().isoformat()
         
         for location in locations:
             location_results = all_results.get(location, {})
@@ -619,6 +624,9 @@ def _save_search_results(all_results, days, locations, pickup_date):
                 
                 conn.commit()
                 print(f"   ✅ {location}: {total_price_count} prices saved!", flush=True)
+                print(f"      search_date: {search_date} (current time)", flush=True)
+                print(f"      month_key: {month_key}", flush=True)
+                print(f"      groups: {list(prices_by_group.keys())}", flush=True)
                 
     except Exception as e:
         print(f"❌ Save error: {str(e)}", flush=True)
