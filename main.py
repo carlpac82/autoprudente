@@ -12459,7 +12459,7 @@ def _ensure_vehicle_images_table():
                     )
                 """)
                 
-                # Migration: Add source_url if not exists (PostgreSQL)
+                # Migration: Add source_url and downloaded_at if not exists (PostgreSQL)
                 is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
                 if is_postgres:
                     try:
@@ -12468,9 +12468,13 @@ def _ensure_vehicle_images_table():
                                 ALTER TABLE vehicle_images 
                                 ADD COLUMN IF NOT EXISTS source_url TEXT
                             """)
+                            cur.execute("""
+                                ALTER TABLE vehicle_images 
+                                ADD COLUMN IF NOT EXISTS downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            """)
                     except Exception as e:
                         import logging
-                        logging.warning(f"⚠️ Could not add vehicle_images.source_url: {e}")
+                        logging.warning(f"⚠️ Could not add vehicle_images columns: {e}")
                 
                 con.commit()
             finally:
@@ -12826,13 +12830,32 @@ async def get_uncategorized_vehicles(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                query = """
-                    SELECT DISTINCT car 
-                    FROM price_snapshots 
-                    WHERE ts >= datetime('now', '-30 days')
-                    ORDER BY car
-                """
-                rows = conn.execute(query).fetchall()
+                # Detect PostgreSQL vs SQLite
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    is_postgres = False
+                
+                # Use appropriate date function
+                if is_postgres:
+                    query = """
+                        SELECT DISTINCT car 
+                        FROM price_snapshots 
+                        WHERE ts >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+                        ORDER BY car
+                    """
+                    with conn.cursor() as cur:
+                        cur.execute(query)
+                        rows = cur.fetchall()
+                else:
+                    query = """
+                        SELECT DISTINCT car 
+                        FROM price_snapshots 
+                        WHERE ts >= datetime('now', '-30 days')
+                        ORDER BY car
+                    """
+                    rows = conn.execute(query).fetchall()
             finally:
                 conn.close()
         
