@@ -255,12 +255,12 @@ async function openCameraAutoSequence(index) {
     
     // Show instruction before opening camera
     const instructions = [
-        '📍 Dirija-se à FRENTE do carro',
-        '📍 Dirija-se à TRASEIRA do carro', 
-        '📍 Dirija-se ao LADO ESQUERDO do carro',
-        '📍 Dirija-se ao LADO DIREITO do carro',
-        '📍 Entre no carro e aponte para o INTERIOR',
-        '📍 Aponte para o ODÓMETRO no painel'
+        'Dirija-se à FRENTE do carro',
+        'Dirija-se à TRASEIRA do carro', 
+        'Dirija-se ao LADO ESQUERDO do carro',
+        'Dirija-se ao LADO DIREITO do carro',
+        'Entre no carro e aponte para o INTERIOR',
+        'Aponte para o ODÓMETRO no painel'
     ];
     
     // Show big instruction overlay
@@ -287,7 +287,10 @@ function showBigInstruction(text, callback) {
     
     overlay.innerHTML = `
         <div style="text-align: center; color: white; padding: 40px;">
-            <div style="font-size: 72px; margin-bottom: 30px;">📸</div>
+            <svg style="width: 96px; height: 96px; margin: 0 auto 30px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
             <h2 style="font-size: 32px; font-weight: bold; margin-bottom: 20px;">${text}</h2>
             <p style="font-size: 18px; opacity: 0.9; margin-bottom: 40px;">Posicione-se e prepare a câmera</p>
             <div style="font-size: 48px; font-weight: bold;" id="countdown">3</div>
@@ -305,7 +308,12 @@ function showBigInstruction(text, callback) {
         if (count > 0) {
             countdownEl.textContent = count;
         } else {
-            countdownEl.textContent = '📸';
+            countdownEl.innerHTML = `
+                <svg style="width: 64px; height: 64px; display: inline-block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            `;
             clearInterval(countInterval);
             
             // Remove overlay and open camera
@@ -351,68 +359,171 @@ async function openCamera(photoType) {
 }
 
 function setupCameraOverlay(photoType) {
-    const carGuide = document.getElementById('carGuide');
-    const carCutout = document.getElementById('carCutout');
+    const overlayContainer = document.getElementById('cameraOverlay');
     const hintText = document.getElementById('hintText');
     
-    // Different overlay shapes for different photo types
-    const overlays = {
-        'front': {
-            x: '20%', y: '30%', width: '60%', height: '40%', rx: '15',
-            hint: '📸 Encaixe a frente do carro na moldura'
-        },
-        'back': {
-            x: '20%', y: '30%', width: '60%', height: '40%', rx: '15',
-            hint: '📸 Encaixe a traseira do carro na moldura'
-        },
-        'left': {
-            x: '15%', y: '25%', width: '70%', height: '50%', rx: '20',
-            hint: '📸 Mostre todo o lado esquerdo do carro'
-        },
-        'right': {
-            x: '15%', y: '25%', width: '70%', height: '50%', rx: '20',
-            hint: '📸 Mostre todo o lado direito do carro'
-        },
-        'interior': {
-            x: '25%', y: '25%', width: '50%', height: '50%', rx: '10',
-            hint: '📸 Centre o interior do carro'
-        },
-        'odometer': {
-            x: '30%', y: '35%', width: '40%', height: '30%', rx: '8',
-            hint: '📸 Centre o odómetro para leitura clara'
-        }
+    // Clear existing overlay
+    overlayContainer.innerHTML = '';
+    
+    // Car diagrams for each view
+    const carDiagrams = {
+        'front': getCarFrontSVG(),
+        'back': getCarBackSVG(),
+        'left': getCarSideSVG(),
+        'right': getCarSideSVG(),
+        'interior': getInteriorSVG(),
+        'odometer': getOdometerSVG()
     };
     
-    const config = overlays[photoType] || overlays['front'];
+    const hints = {
+        'front': 'Alinhe a frente do veículo com o diagrama',
+        'back': 'Alinhe a traseira do veículo com o diagrama',
+        'left': 'Alinhe o lado esquerdo com o diagrama',
+        'right': 'Alinhe o lado direito com o diagrama',
+        'interior': 'Centre o interior do veículo',
+        'odometer': 'Centre o odómetro para leitura clara'
+    };
     
-    // Update guide rectangle
-    carGuide.setAttribute('x', config.x);
-    carGuide.setAttribute('y', config.y);
-    carGuide.setAttribute('width', config.width);
-    carGuide.setAttribute('height', config.height);
-    carGuide.setAttribute('rx', config.rx);
-    
-    // Update cutout (mask)
-    carCutout.setAttribute('x', config.x);
-    carCutout.setAttribute('y', config.y);
-    carCutout.setAttribute('width', config.width);
-    carCutout.setAttribute('height', config.height);
-    carCutout.setAttribute('rx', config.rx);
-    
-    // Set initial hint
-    hintText.innerHTML = config.hint;
+    // Create new overlay with car diagram
+    overlayContainer.innerHTML = `
+        <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
+            <rect width="100%" height="100%" fill="black" opacity="0.4"/>
+            <g transform="translate(50, 50)">
+                ${carDiagrams[photoType] || carDiagrams['front']}
+            </g>
+        </svg>
+        <div id="positionHints" style="position: absolute; bottom: 100px; left: 0; right: 0; text-align: center;">
+            <div id="hintText" style="display: inline-block; background: rgba(0,0,0,0.7); color: white; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: 600; backdrop-filter: blur(8px);">
+                ${hints[photoType]}
+            </div>
+        </div>
+    `;
+}
+
+function getCarFrontSVG() {
+    return `
+        <g opacity="0.8">
+            <!-- Car outline - front view -->
+            <rect x="150" y="50" width="400" height="300" rx="20" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+            
+            <!-- Hood -->
+            <rect x="180" y="80" width="340" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Windshield -->
+            <path d="M 200 140 L 220 170 L 480 170 L 500 140 Z" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Headlights -->
+            <ellipse cx="220" cy="100" rx="25" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            <ellipse cx="480" cy="100" rx="25" ry="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Grille -->
+            <rect x="320" y="85" width="60" height="35" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- License plate area -->
+            <rect x="300" y="310" width="100" height="30" rx="3" fill="none" stroke="#f59e0b" stroke-width="3"/>
+            <text x="350" y="330" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">MATRÍCULA</text>
+        </g>
+    `;
+}
+
+function getCarBackSVG() {
+    return `
+        <g opacity="0.8">
+            <!-- Car outline - back view -->
+            <rect x="150" y="50" width="400" height="300" rx="20" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+            
+            <!-- Trunk -->
+            <rect x="180" y="260" width="340" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Rear window -->
+            <path d="M 200 210 L 220 180 L 480 180 L 500 210 Z" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Tail lights -->
+            <rect x="190" y="270" width="40" height="35" rx="5" fill="none" stroke="#ef4444" stroke-width="2"/>
+            <rect x="470" y="270" width="40" height="35" rx="5" fill="none" stroke="#ef4444" stroke-width="2"/>
+            
+            <!-- License plate area -->
+            <rect x="300" y="280" width="100" height="30" rx="3" fill="none" stroke="#f59e0b" stroke-width="3"/>
+            <text x="350" y="300" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">MATRÍCULA</text>
+        </g>
+    `;
+}
+
+function getCarSideSVG() {
+    return `
+        <g opacity="0.8">
+            <!-- Car outline - side view -->
+            <rect x="100" y="100" width="500" height="200" rx="15" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+            
+            <!-- Roof line -->
+            <path d="M 150 150 L 200 120 L 400 120 L 450 150" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Windows -->
+            <rect x="210" y="125" width="80" height="40" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            <rect x="310" y="125" width="80" height="40" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Doors -->
+            <line x1="295" y1="150" x2="295" y2="280" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Wheels -->
+            <circle cx="200" cy="285" r="35" fill="none" stroke="#10b981" stroke-width="3"/>
+            <circle cx="200" cy="285" r="20" fill="none" stroke="#10b981" stroke-width="2"/>
+            <circle cx="500" cy="285" r="35" fill="none" stroke="#10b981" stroke-width="3"/>
+            <circle cx="500" cy="285" r="20" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Bumpers -->
+            <rect x="90" y="220" width="15" height="50" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+            <rect x="595" y="220" width="15" height="50" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+        </g>
+    `;
+}
+
+function getInteriorSVG() {
+    return `
+        <g opacity="0.8">
+            <!-- Interior outline -->
+            <rect x="200" y="100" width="300" height="200" rx="10" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+            
+            <!-- Dashboard -->
+            <rect x="220" y="120" width="260" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Steering wheel -->
+            <circle cx="280" cy="150" r="25" fill="none" stroke="#10b981" stroke-width="3"/>
+            <circle cx="280" cy="150" r="15" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Seats -->
+            <rect x="350" y="200" width="50" height="70" rx="8" fill="none" stroke="#10b981" stroke-width="2"/>
+            <rect x="420" y="200" width="50" height="70" rx="8" fill="none" stroke="#10b981" stroke-width="2"/>
+        </g>
+    `;
+}
+
+function getOdometerSVG() {
+    return `
+        <g opacity="0.8">
+            <!-- Odometer outline -->
+            <rect x="250" y="150" width="200" height="100" rx="8" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5"/>
+            
+            <!-- Display -->
+            <rect x="270" y="170" width="160" height="60" rx="5" fill="none" stroke="#10b981" stroke-width="2"/>
+            
+            <!-- Digital numbers placeholder -->
+            <text x="350" y="210" text-anchor="middle" fill="#10b981" font-size="24" font-family="monospace" font-weight="bold">88888</text>
+            <text x="350" y="230" text-anchor="middle" fill="#10b981" font-size="10">KM</text>
+        </g>
+    `;
 }
 
 let hintInterval;
 const hints = [
-    '⬆️ Mais para cima',
-    '⬇️ Mais para baixo',
-    '⬅️ Mais para a esquerda',
-    '➡️ Mais para a direita',
-    '🔄 Rode o telemóvel',
-    '📏 Afaste-se um pouco',
-    '🔍 Aproxime-se mais',
-    '✨ Perfeito! Pode tirar'
+    'Mova para cima',
+    'Mova para baixo',
+    'Mova para a esquerda',
+    'Mova para a direita',
+    'Ajuste o ângulo',
+    'Afaste-se um pouco',
+    'Aproxime-se mais',
+    'Posicionamento correto'
 ];
 
 function startPositioningHints(photoType) {
@@ -497,38 +608,169 @@ function capturePhoto() {
         }
         
         console.log('Photo blob created:', blob.size, 'bytes');
-        // Store photo
-        inspectionData.photos[currentPhotoType] = blob;
         
-        // Update UI
-        const slot = document.getElementById(`slot-${currentPhotoType}`);
-        slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="${currentPhotoType}">`;
-        slot.classList.add('captured');
-        document.getElementById(`check-${currentPhotoType}`).classList.remove('hidden');
+        // Show preview with options
+        showPhotoPreview(blob, currentPhotoType);
         
-        // Update diagram indicator
-        updateDiagramIndicator(currentPhotoType, true);
-        
-        // Show animation
-        slot.classList.add('shutter-animation');
-        setTimeout(() => slot.classList.remove('shutter-animation'), 300);
-        
-        showNotification(`${photoTypes.find(p => p.type === currentPhotoType).label} captured!`, 'success');
-        
-        // Enable next button if all photos captured
-        if (Object.keys(inspectionData.photos).length === 6) {
-            document.getElementById('btnNextToAnalysis').disabled = false;
-        }
-        
-        closeCamera();
-        
-        // If in auto sequence mode, move to next photo
-        if (autoSequenceMode) {
-            setTimeout(() => {
-                openCameraAutoSequence(currentPhotoIndex + 1);
-            }, 1500); // Wait 1.5s before showing next instruction
-        }
     }, 'image/jpeg', 0.9);
+}
+
+function showPhotoPreview(blob, photoType) {
+    // Hide camera video
+    document.getElementById('cameraPreview').style.display = 'none';
+    document.getElementById('cameraOverlay').style.display = 'none';
+    
+    // Create preview overlay
+    const cameraModal = document.getElementById('cameraModal');
+    const previewContainer = document.createElement('div');
+    previewContainer.id = 'photoPreviewContainer';
+    previewContainer.style.cssText = `
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    const photoLabel = photoTypes.find(p => p.type === photoType).label;
+    
+    previewContainer.innerHTML = `
+        <div style="text-align: center; color: white; margin-bottom: 20px;">
+            <h3 style="font-size: 24px; font-weight: 600;">${photoLabel}</h3>
+            <p style="font-size: 14px; opacity: 0.8; margin-top: 8px;">Verifique a qualidade da foto</p>
+        </div>
+        
+        <div style="position: relative; max-width: 90%; max-height: 60vh;">
+            <img src="${URL.createObjectURL(blob)}" style="max-width: 100%; max-height: 60vh; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+        </div>
+        
+        <div style="display: flex; gap: 16px; margin-top: 32px;">
+            <button onclick="retakePhoto()" style="display: flex; align-items: center; gap: 8px; background: #ef4444; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Repetir
+            </button>
+            <button onclick="acceptPhoto('${photoType}', ${Date.now()})" style="display: flex; align-items: center; gap: 8px; background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Próxima
+            </button>
+        </div>
+    `;
+    
+    cameraModal.querySelector('.flex').appendChild(previewContainer);
+    
+    // Store blob temporarily
+    window.tempPhotoBlob = blob;
+}
+
+function retakePhoto() {
+    // Remove preview
+    const preview = document.getElementById('photoPreviewContainer');
+    if (preview) preview.remove();
+    
+    // Show camera again
+    document.getElementById('cameraPreview').style.display = 'block';
+    document.getElementById('cameraOverlay').style.display = 'block';
+    
+    // Clear temp blob
+    window.tempPhotoBlob = null;
+}
+
+function acceptPhoto(photoType, timestamp) {
+    const blob = window.tempPhotoBlob;
+    
+    if (!blob) {
+        alert('Erro: Foto não encontrada');
+        return;
+    }
+    
+    // Store photo
+    inspectionData.photos[photoType] = blob;
+    
+    // Update UI
+    const slot = document.getElementById(`slot-${photoType}`);
+    slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="${photoType}">`;
+    slot.classList.add('captured');
+    document.getElementById(`check-${photoType}`).classList.remove('hidden');
+    
+    // Update diagram indicator
+    updateDiagramIndicator(photoType, true);
+    
+    // Show animation
+    slot.classList.add('shutter-animation');
+    setTimeout(() => slot.classList.remove('shutter-animation'), 300);
+    
+    showNotification(`${photoTypes.find(p => p.type === photoType).label} guardada`, 'success');
+    
+    // Enable next button if all photos captured
+    if (Object.keys(inspectionData.photos).length === 6) {
+        document.getElementById('btnNextToAnalysis').disabled = false;
+        
+        // Show completion message if in auto mode
+        if (autoSequenceMode) {
+            showCompletionMessage();
+            return;
+        }
+    }
+    
+    // Remove preview
+    const preview = document.getElementById('photoPreviewContainer');
+    if (preview) preview.remove();
+    
+    // Clear temp blob
+    window.tempPhotoBlob = null;
+    
+    closeCamera();
+    
+    // If in auto sequence mode, move to next photo
+    if (autoSequenceMode) {
+        setTimeout(() => {
+            openCameraAutoSequence(currentPhotoIndex + 1);
+        }, 800);
+    }
+}
+
+function showCompletionMessage() {
+    // Close camera
+    closeCamera();
+    
+    // Show completion screen
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(16, 185, 129, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(10px);
+    `;
+    
+    overlay.innerHTML = `
+        <div style="text-align: center; color: white; padding: 40px;">
+            <svg style="width: 120px; height: 120px; margin: 0 auto 30px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h2 style="font-size: 36px; font-weight: bold; margin-bottom: 16px;">Inspeção Terminada</h2>
+            <p style="font-size: 18px; opacity: 0.9;">Todas as 6 fotos foram capturadas com sucesso</p>
+            <p style="font-size: 16px; opacity: 0.8; margin-top: 12px;">A processar com AI...</p>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+        document.body.removeChild(overlay);
+        autoSequenceMode = false;
+    }, 3000);
 }
 
 // AI Analysis
