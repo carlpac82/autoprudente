@@ -2479,12 +2479,32 @@
           return logo;
         }
         
-        // Tentar match parcial (case insensitive)
+        // Tentar match case insensitive exato
         const nameLower = supplierName.toLowerCase();
         for (const [key, logo] of Object.entries(supplierLogoMap)) {
-          if (key.toLowerCase() === nameLower || nameLower.includes(key.toLowerCase())) {
-            console.log(`[LOGO PARTIAL] "${supplierName}" → ${logo} (matched "${key}")`);
+          if (key.toLowerCase() === nameLower) {
+            console.log(`[LOGO EXACT] "${supplierName}" → ${logo}`);
             return logo;
+          }
+        }
+        
+        // Match parcial - priorizar keys longas (>= 4 chars) para evitar "CAR" em "EuropCAR"
+        const sortedKeys = Object.keys(supplierLogoMap).sort((a, b) => b.length - a.length);
+        
+        for (const key of sortedKeys) {
+          if (key.length < 4) continue;
+          if (nameLower.includes(key.toLowerCase())) {
+            console.log(`[LOGO PARTIAL LONG] "${supplierName}" → ${supplierLogoMap[key]} (matched "${key}")`);
+            return supplierLogoMap[key];
+          }
+        }
+        
+        // Second pass: try short keys if no long match
+        for (const key of sortedKeys) {
+          if (key.length >= 4) continue;
+          if (nameLower.includes(key.toLowerCase())) {
+            console.log(`[LOGO PARTIAL SHORT] "${supplierName}" → ${supplierLogoMap[key]} (matched "${key}")`);
+            return supplierLogoMap[key];
           }
         }
         

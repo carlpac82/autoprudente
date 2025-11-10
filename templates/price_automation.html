@@ -3185,6 +3185,18 @@
             const sortedKeys = Object.keys(supplierLogoMap).sort((a, b) => b.length - a.length);
             
             for (const key of sortedKeys) {
+                // Skip very short keys (< 4 chars) to avoid false matches like "CAR" in "Keddy by EuropCAR"
+                if (key.length < 4) continue;
+                
+                if (nameLower.includes(key.toLowerCase())) {
+                    return supplierLogoMap[key];
+                }
+            }
+            
+            // Second pass: try short keys (3 chars) only if no long match found
+            for (const key of sortedKeys) {
+                if (key.length >= 4) continue; // Already tested above
+                
                 if (nameLower.includes(key.toLowerCase())) {
                     return supplierLogoMap[key];
                 }
