@@ -49,8 +49,21 @@ async def click_dropdown_and_select(page: Page, input_selector: str, location: s
     Similar to CarJet scraper methodology
     """
     try:
-        # Click on input to open dropdown
-        await page.click(input_selector, timeout=5000)
+        # Try to scroll to make element visible
+        try:
+            await page.evaluate('''(selector) => {
+                const el = document.querySelector(selector);
+                if (el) {
+                    el.scrollIntoView({behavior: "auto", block: "center", inline: "center"});
+                    window.scrollBy(0, -100); // Adjust for fixed header
+                }
+            }''', input_selector)
+            await asyncio.sleep(0.8)
+        except:
+            pass
+        
+        # Force click (bypasses viewport checks - useful for fixed headers)
+        await page.click(input_selector, timeout=5000, force=True)
         await asyncio.sleep(1)
         
         # Wait for dropdown to appear
@@ -109,36 +122,68 @@ async def fill_search_form(
         # Wait for page to load
         await wait_for_network_idle(page)
         
+        # Debug: Save HTML
+        html_content = await page.content()
+        with open('/tmp/discovercars_page.html', 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        logger.info("HTML saved to: /tmp/discovercars_page.html")
+        
+        # Screenshot before searching
+        await page.screenshot(path='/tmp/discovercars_03_before_search.png', full_page=True)
+        logger.info("Screenshot saved: /tmp/discovercars_03_before_search.png")
+        
         # Find pickup location input
         # DiscoverCars typically uses specific IDs or classes
         pickup_selectors = [
+            'input[type="text"]',  # Try generic first
             'input[name="pickupLocation"]',
             'input[placeholder*="Local de recolha"]',
             'input[placeholder*="Pick-up"]',
+            'input[placeholder*="recolha"]',
             '#pickupLocation',
             '[data-testid="pickup-location"]',
+            'input[id*="pickup"]',
+            'input[class*="location"]',
         ]
         
         pickup_input = None
         for selector in pickup_selectors:
             try:
-                pickup_input = await page.wait_for_selector(selector, timeout=3000)
-                if pickup_input:
-                    logger.info(f"Found pickup input: {selector}")
+                elements = await page.query_selector_all(selector)
+                if elements:
+                    logger.info(f"Found {len(elements)} elements with selector: {selector}")
+                    pickup_input = elements[0]
+                    # Log element attributes
+                    attrs = await pickup_input.evaluate('el => Array.from(el.attributes).map(a => `${a.name}="${a.value}"`).join(" ")')
+                    logger.info(f"First element attributes: {attrs}")
                     break
-            except:
+            except Exception as e:
+                logger.debug(f"Selector {selector} failed: {e}")
                 continue
         
         if not pickup_input:
             logger.error("Could not find pickup location input")
+            # List all input elements for debug
+            all_inputs = await page.query_selector_all('input')
+            logger.error(f"Found {len(all_inputs)} total input elements on page")
+            for idx, inp in enumerate(all_inputs[:10]):
+                try:
+                    attrs = await inp.evaluate('el => Array.from(el.attributes).map(a => `${a.name}="${a.value}"`).join(" ")')
+                    logger.error(f"Input {idx}: {attrs}")
+                except:
+                    pass
             return False
         
         # Click and select pickup location
+        # Use name="PickupLocation" which we found in debug
+        pickup_input_selector = 'input[name="PickupLocation"]'
+        
         pickup_dropdown_selectors = [
             'ul[role="listbox"]',
             '.dropdown-menu',
             '[data-testid="location-dropdown"]',
             '.suggestions-list',
+            '.Autocomplete-Results',  # DiscoverCars specific
         ]
         
         success = False
@@ -146,13 +191,14 @@ async def fill_search_form(
             try:
                 success = await click_dropdown_and_select(
                     page,
-                    pickup_selectors[0],
+                    pickup_input_selector,
                     pickup_location,
                     dropdown_sel
                 )
                 if success:
                     break
-            except:
+            except Exception as e:
+                logger.warning(f"Dropdown selector {dropdown_sel} failed: {e}")
                 continue
         
         if not success:
@@ -417,7 +463,7 @@ async def scrape_discovercars(
         logger.info(f"Dropoff: {dropoff_location} @ {dropoff_date} {dropoff_time}")
         
         async with async_playwright() as p:
-            # Launch browser
+            # Launch browser (like CarJet - mobile iPhone)
             browser = await p.chromium.launch(
                 headless=headless,
                 args=[
@@ -428,10 +474,13 @@ async def scrape_discovercars(
                 ]
             )
             
-            # Create context with user agent
+            # Create context with iPhone mobile user agent (like CarJet)
             context = await browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                viewport={'width': 390, 'height': 844},  # iPhone 13/14 viewport
+                user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+                device_scale_factor=3,
+                is_mobile=True,
+                has_touch=True
             )
             
             # Create page
@@ -440,25 +489,36 @@ async def scrape_discovercars(
             # Navigate to DiscoverCars
             logger.info("Navigating to DiscoverCars...")
             await page.goto('https://www.discovercars.com/pt', wait_until='domcontentloaded')
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
+            
+            # Screenshot for debug
+            await page.screenshot(path='/tmp/discovercars_01_initial.png', full_page=True)
+            logger.info("Screenshot saved: /tmp/discovercars_01_initial.png")
             
             # Handle cookie consent if present
             try:
                 cookie_selectors = [
                     'button:has-text("Aceitar")',
                     'button:has-text("Accept")',
+                    'button:has-text("Aceito")',
                     '[data-testid="cookie-accept"]',
+                    '#onetrust-accept-btn-handler',
+                    '.accept-cookies',
                 ]
                 for selector in cookie_selectors:
                     try:
                         await page.click(selector, timeout=2000)
-                        logger.info("Accepted cookies")
+                        logger.info(f"Accepted cookies with: {selector}")
                         await asyncio.sleep(0.5)
                         break
                     except:
                         continue
             except:
                 pass
+            
+            # Screenshot after cookies
+            await page.screenshot(path='/tmp/discovercars_02_after_cookies.png', full_page=True)
+            logger.info("Screenshot saved: /tmp/discovercars_02_after_cookies.png")
             
             # Fill search form
             success = await fill_search_form(
