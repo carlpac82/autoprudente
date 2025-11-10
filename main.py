@@ -9681,13 +9681,18 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
                     import sys
                     print(f"[PHOTOS] ⚠️ Fallback to scraped photo: {photo_url[:80]}", file=sys.stderr, flush=True)
         
+        # Use car_groups category if group is known, otherwise use scraped category
+        category_display = it.get("category", "")
+        if group_code and group_code in groups:
+            category_display = groups[group_code].get('category', category_display)
+        
         row = {
             "supplier": it.get("supplier", ""),
             "car": car_name_final,  # Usar nome editado final
             "price": price_text_in,
             "price_num": price_num,
             "currency": price_curr or it.get("currency", ""),
-            "category": it.get("category", ""),
+            "category": category_display,
             "group": group_code,
             "category_code": it.get("category_code", ""),
             "transmission": it.get("transmission", ""),
