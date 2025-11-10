@@ -3093,6 +3093,7 @@
             // K
             'KED': '/static/logos/logo_KED.png.avif',
             'Keddy': '/static/logos/logo_KED.png.avif',
+            'Keddy by Europcar': '/static/logos/logo_KED.png.avif',
             'KLA': '/static/logos/logo_KLA.png',
             'Klass Wagen': '/static/logos/logo_KLA.png',
             // L
@@ -3161,16 +3162,28 @@
         };
         
         function getSupplierLogo(supplierName) {
-            // Tentar match direto
+            if (!supplierName) return null;
+            
+            // Tentar match direto (case sensitive)
             if (supplierLogoMap[supplierName]) {
                 return supplierLogoMap[supplierName];
             }
             
-            // Tentar match parcial (case insensitive)
+            // Tentar match case insensitive exato
             const nameLower = supplierName.toLowerCase();
             for (const [key, logo] of Object.entries(supplierLogoMap)) {
-                if (key.toLowerCase() === nameLower || nameLower.includes(key.toLowerCase())) {
+                if (key.toLowerCase() === nameLower) {
                     return logo;
+                }
+            }
+            
+            // Tentar match parcial (priorizar matches mais longos)
+            // Sort keys by length DESC para evitar "Europcar" fazer match antes de "Keddy by Europcar"
+            const sortedKeys = Object.keys(supplierLogoMap).sort((a, b) => b.length - a.length);
+            
+            for (const key of sortedKeys) {
+                if (nameLower.includes(key.toLowerCase())) {
+                    return supplierLogoMap[key];
                 }
             }
             
