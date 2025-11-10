@@ -3188,22 +3188,22 @@
             return null;
         }
         
-        // Mapeamento de fotos por GRUPO da AutoPrudente
+        // Mapeamento de fotos por GRUPO da AutoPrudente (usando Vehicles Editor API)
         const GROUP_IMAGES = {
-            'B1': 'https://www.carjet.com/cdn/img/cars/M/car_C15.jpg',  // Peugeot 108
-            'B2': 'https://www.carjet.com/cdn/img/cars/M/car_C30.jpg',  // Fiat Panda
-            'D': 'https://www.carjet.com/cdn/img/cars/M/car_C60.jpg',   // Peugeot 208
-            'E1': 'https://www.carjet.com/cdn/img/cars/M/car_C59.jpg',  // Kia Picanto
-            'E2': 'https://www.carjet.com/cdn/img/cars/M/car_C08.jpg',  // Opel Corsa
-            'F': 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg',  // Seat Arona
-            'G': 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg',  // Fiat 500 Cabrio
-            'J1': 'https://www.carjet.com/cdn/img/cars/M/car_F91.jpg',  // Peugeot 2008
-            'J2': 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg',  // Peugeot 308 SW
-            'L1': 'https://www.carjet.com/cdn/img/cars/M/car_A782.jpg', // Citroen C3 Aircross
-            'L2': 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg',  // Peugeot 308 SW
-            'M1': 'https://www.carjet.com/cdn/img/cars/M/car_A1027.jpg', // Dacia Jogger
-            'M2': 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg', // Citroen C4 Grand Picasso
-            'N': 'https://www.carjet.com/cdn/img/cars/M/car_A1026.jpg'  // Toyota Proace
+            'B1': '/api/vehicles/peugeot%20108/photo',  // Peugeot 108
+            'B2': '/api/vehicles/fiat%20panda/photo',  // Fiat Panda
+            'D': '/api/vehicles/peugeot%20208/photo',   // Peugeot 208
+            'E1': '/api/vehicles/toyota%20aygo/photo',  // Toyota Aygo
+            'E2': '/api/vehicles/opel%20corsa/photo',  // Opel Corsa
+            'F': '/api/vehicles/seat%20arona/photo',  // Seat Arona
+            'G': '/api/vehicles/fiat%20500%20cabrio/photo',  // Fiat 500 Cabrio
+            'J1': '/api/vehicles/peugeot%202008/photo',  // Peugeot 2008
+            'J2': '/api/vehicles/peugeot%20308%20sw/photo',  // Peugeot 308 SW
+            'L1': '/api/vehicles/citroen%20c3%20aircross/photo', // Citroen C3 Aircross
+            'L2': '/api/vehicles/peugeot%20308%20sw%20automatic/photo',  // Peugeot 308 SW Automatic
+            'M1': '/api/vehicles/dacia%20jogger/photo', // Dacia Jogger
+            'M2': '/api/vehicles/citroen%20c4%20grand%20picasso/photo', // Citroen C4 Grand Picasso
+            'N': '/api/vehicles/toyota%20proace/photo'  // Toyota Proace
         };
         
         function imageUrlFor(it) {
