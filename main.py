@@ -9297,6 +9297,37 @@ async def track_by_url(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+def _get_group_photos() -> Dict[str, str]:
+    """
+    Carrega fotos do Admin Vehicles (car_groups.photo_url) indexadas por código de grupo
+    Cache em memória para performance
+    """
+    photos = {}
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # PostgreSQL ou SQLite
+                if conn.__class__.__module__ == 'psycopg2.extensions':
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT code, photo_url FROM car_groups WHERE photo_url IS NOT NULL AND photo_url != ''")
+                    rows = cursor.fetchall()
+                    for code, photo_url in rows:
+                        if code and photo_url:
+                            photos[code] = photo_url
+                else:
+                    cursor = conn.execute("SELECT code, photo_url FROM car_groups WHERE photo_url IS NOT NULL AND photo_url != ''")
+                    for row in cursor.fetchall():
+                        if row[0] and row[1]:
+                            photos[row[0]] = row[1]
+            finally:
+                conn.close()
+    except Exception as e:
+        import sys
+        print(f"[WARNING] Failed to load group photos: {e}", file=sys.stderr, flush=True)
+    
+    return photos
+
 def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[str]) -> List[Dict[str, Any]]:
     # Secondary guard: blocklist filter to ensure unwanted vehicles never appear
     _blocked_models = [
@@ -9375,6 +9406,12 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
     detailed: List[Dict[str, Any]] = []
     summary: List[Dict[str, Any]] = []
     import re as _re2
+    
+    # Carregar fotos do Admin Vehicles
+    group_photos = _get_group_photos()
+    import sys
+    print(f"[PHOTOS] Loaded {len(group_photos)} group photos from Admin Vehicles", file=sys.stderr, flush=True)
+    
     # Use dynamic FX with 1h cache; fallback 1.16
     try:
         GBP_TO_EUR = float(_fx_rate_gbp_eur())
@@ -9413,6 +9450,21 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
             import sys
             print(f"[DEBUG] Primeiro item: cat={it.get('category')}, car_clean={car_name_clean}, group={group_code}", file=sys.stderr, flush=True)
         
+        # PRIORIDADE FOTOS:
+        # 1. Admin Vehicles (car_groups.photo_url) - CONTROLADO
+        # 2. Scraping CarJet (fallback)
+        photo_url = ""
+        if group_code and group_code in group_photos:
+            photo_url = group_photos[group_code]
+            if len(detailed) == 0 and len(summary) == 0:
+                import sys
+                print(f"[PHOTOS] ✅ Using Admin photo for group {group_code}: {photo_url[:80]}", file=sys.stderr, flush=True)
+        else:
+            photo_url = it.get("photo", "")
+            if len(detailed) == 0 and len(summary) == 0 and photo_url:
+                import sys
+                print(f"[PHOTOS] ⚠️ Fallback to scraped photo for group {group_code}: {photo_url[:80]}", file=sys.stderr, flush=True)
+        
         row = {
             "supplier": it.get("supplier", ""),
             "car": car_name_clean,
@@ -9423,7 +9475,7 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
             "group": group_code,
             "category_code": it.get("category_code", ""),
             "transmission": it.get("transmission", ""),
-            "photo": it.get("photo", ""),
+            "photo": photo_url,
             "link": it.get("link", ""),
         }
         
