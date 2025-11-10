@@ -184,11 +184,17 @@
                     </a>
                     <!-- Autoprudente Logo -->
                     <div class="flex items-center gap-3">
-                        <!-- Logo image placeholder - replace with actual Autoprudente logo -->
-                        <img src="/static/autoprudente-logo.png" alt="Autoprudente" class="h-12" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <!-- Fallback if logo not found -->
-                        <div class="h-12 w-12 bg-[#009cb6] rounded-lg flex items-center justify-center" style="display:none;">
-                            <span class="text-white font-bold text-xl">AP</span>
+                        <!-- Autoprudente Logo with yellow oval and aP -->
+                        <div class="relative h-12 w-16 flex items-center justify-center">
+                            <!-- Yellow oval background -->
+                            <svg viewBox="0 0 100 70" class="absolute w-full h-full">
+                                <ellipse cx="50" cy="35" rx="48" ry="32" fill="#f59e0b" stroke="#f59e0b" stroke-width="2"/>
+                                <ellipse cx="50" cy="35" rx="38" ry="26" fill="#009cb6"/>
+                            </svg>
+                            <!-- aP text -->
+                            <div class="relative text-white font-bold" style="font-size: 20px; font-family: Arial, sans-serif; letter-spacing: -2px;">
+                                <span style="text-transform: lowercase;">a</span><span style="text-transform: uppercase;">P</span>
+                            </div>
                         </div>
                         <div>
                             <div class="text-xl font-bold text-[#009cb6]">Autoprudente</div>
@@ -219,7 +225,7 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-white mb-2">RA (Rental Agreement) *</label>
-                        <input type="text" id="inputRA" class="px-4 py-2 border-2 border-white rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#f59e0b] w-48 text-center font-semibold" placeholder="RA-XXXX" required>
+                        <input type="text" id="inputRA" class="px-4 py-2 border-2 border-white rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#f59e0b] w-48 text-center font-semibold" placeholder="00000-09" maxlength="8" required>
                     </div>
                 </div>
                 

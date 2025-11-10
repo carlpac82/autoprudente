@@ -91,6 +91,39 @@ document.addEventListener('DOMContentLoaded', function() {
     if (timeField) {
         timeField.value = timeStr;
     }
+    
+    // Auto-format RA field: 5 digits + "-09"
+    const raField = document.getElementById('inputRA');
+    if (raField) {
+        raField.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^0-9-]/g, ''); // Only numbers and dash
+            
+            // Remove any existing dash
+            value = value.replace(/-/g, '');
+            
+            // Limit to 5 digits
+            if (value.length > 5) {
+                value = value.substring(0, 5);
+            }
+            
+            // Auto-add -09 after 5 digits
+            if (value.length === 5) {
+                value = value + '-09';
+            }
+            
+            e.target.value = value;
+        });
+        
+        // Also format on blur if user enters exactly 5 digits
+        raField.addEventListener('blur', function(e) {
+            let value = e.target.value.replace(/[^0-9-]/g, '');
+            value = value.replace(/-/g, '');
+            
+            if (value.length === 5) {
+                e.target.value = value + '-09';
+            }
+        });
+    }
 });
 
 function initializePhotoGrid() {
