@@ -361,6 +361,9 @@ async function openCamera(photoType) {
 let scene, camera3D, renderer, carModel, animationId;
 
 function setupCameraOverlay(photoType) {
+    console.log('setupCameraOverlay called for:', photoType);
+    console.log('THREE.js available?', typeof THREE !== 'undefined');
+    
     const overlayContainer = document.getElementById('cameraOverlay');
     
     // Clear existing overlay
@@ -376,6 +379,25 @@ function setupCameraOverlay(photoType) {
     };
     
     const isInteriorOrOdo = photoType === 'interior' || photoType === 'odometer';
+    
+    // Check if THREE.js is loaded
+    if (typeof THREE === 'undefined') {
+        console.error('THREE.js not loaded! Showing fallback.');
+        overlayContainer.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="text-align: center; color: white;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(0,156,182,0.9); padding: 16px 32px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+                        <svg style="width: 32px; height: 32px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        <span style="font-size: 20px; font-weight: 700;">${hints[photoType]}</span>
+                    </div>
+                    <p style="margin-top: 16px; font-size: 14px; opacity: 0.9;">Posicione-se e alinhe o veículo</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
     
     // Create container for 3D scene
     overlayContainer.innerHTML = `
@@ -409,8 +431,15 @@ let currentRotation = 0;
 let isRotating = false;
 
 function init3DCar(photoType) {
+    console.log('init3DCar called for:', photoType);
+    
     const container = document.getElementById('threejs-container');
-    if (!container) return;
+    console.log('Container found:', !!container);
+    
+    if (!container) {
+        console.error('threejs-container not found!');
+        return;
+    }
     
     // Target rotation based on photo type
     const rotations = {
@@ -423,12 +452,16 @@ function init3DCar(photoType) {
     };
     
     targetRotation = rotations[photoType] || 0;
+    console.log('Target rotation:', targetRotation);
     
     // If scene already exists, just animate to new rotation
     if (renderer && carModel) {
+        console.log('Reusing existing scene, animating to new rotation');
         isRotating = true;
         return;
     }
+    
+    console.log('Creating new Three.js scene...');
     
     // Create scene (first time only)
     scene = new THREE.Scene();
@@ -461,16 +494,25 @@ function init3DCar(photoType) {
     pointLight2.position.set(5, 3, -5);
     scene.add(pointLight2);
     
-    // Create 3D car model
-    carModel = create3DCarModel();
-    scene.add(carModel);
-    
-    // Set initial rotation
-    currentRotation = targetRotation;
-    carModel.rotation.y = currentRotation;
-    
-    // Animate
-    animate3DCar();
+    try {
+        // Create 3D car model
+        console.log('Creating 3D car model...');
+        carModel = create3DCarModel();
+        scene.add(carModel);
+        
+        // Set initial rotation
+        currentRotation = targetRotation;
+        carModel.rotation.y = currentRotation;
+        
+        console.log('3D car created successfully!');
+        console.log('Starting animation loop...');
+        
+        // Animate
+        animate3DCar();
+    } catch (error) {
+        console.error('Error creating 3D car:', error);
+        alert('Erro ao criar carro 3D: ' + error.message);
+    }
 }
 
 function create3DCarModel() {
