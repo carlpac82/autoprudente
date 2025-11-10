@@ -63,10 +63,33 @@ const photoTypes = [
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Load inspector name from localStorage
-    const savedInspector = localStorage.getItem('inspectorName');
-    if (savedInspector) {
-        document.getElementById('inputInspector').value = savedInspector;
+    // Auto-fill Rececionista from logged-in user
+    const userName = localStorage.getItem('userName') || 'Rececionista';
+    const receptionistField = document.getElementById('inputReceptionist');
+    if (receptionistField) {
+        receptionistField.value = userName;
+    }
+    
+    // Auto-fill current Date
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('pt-PT', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+    });
+    const dateField = document.getElementById('inputDate');
+    if (dateField) {
+        dateField.value = dateStr;
+    }
+    
+    // Auto-fill current Time
+    const timeStr = now.toLocaleTimeString('pt-PT', { 
+        hour: '2-digit', 
+        minute: '2-digit'
+    });
+    const timeField = document.getElementById('inputTime');
+    if (timeField) {
+        timeField.value = timeStr;
     }
 });
 
@@ -118,15 +141,12 @@ function updateDiagramIndicator(photoType, captured) {
     // Diagram was removed, keeping function for compatibility
 }
 
-// Step navigation
+// Step navigation (now 3 steps: Photos -> Analysis -> Review)
 function nextStep() {
     if (currentStep === 1) {
-        if (!validateVehicleInfo()) return;
-        saveVehicleInfo();
-    } else if (currentStep === 2) {
         if (!validatePhotos()) return;
         startAIAnalysis();
-    } else if (currentStep === 3) {
+    } else if (currentStep === 2) {
         generateReview();
     }
     
@@ -143,39 +163,43 @@ function updateStepDisplay() {
     // Hide all steps
     document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
     
-    // Show current step
-    const steps = ['stepVehicleInfo', 'stepPhotos', 'stepAnalysis', 'stepReview'];
-    document.getElementById(steps[currentStep - 1]).classList.remove('hidden');
-    
-    // Update step indicators
-    for (let i = 1; i <= 4; i++) {
-        const dot = document.getElementById(`step${i}`);
-        dot.classList.remove('active', 'completed');
-        if (i < currentStep) {
-            dot.classList.add('completed');
-        } else if (i === currentStep) {
-            dot.classList.add('active');
-        }
+    // Show current step (now: stepPhotos, stepAnalysis, stepReview)
+    const steps = ['stepPhotos', 'stepAnalysis', 'stepReview'];
+    const currentStepElement = document.getElementById(steps[currentStep - 1]);
+    if (currentStepElement) {
+        currentStepElement.classList.remove('hidden');
     }
+    
+    // Update step indicators (3 steps only)
+    const indicators = document.querySelectorAll('.step-indicator');
+    indicators.forEach((indicator, index) => {
+        const stepNum = index + 1;
+        indicator.classList.remove('active', 'completed');
+        if (stepNum < currentStep) {
+            indicator.classList.add('completed'); // Blue
+        } else if (stepNum === currentStep) {
+            indicator.classList.add('active'); // Yellow
+        }
+    });
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Validation
-function validateVehicleInfo() {
+function validateInspectionInfo() {
     const plate = document.getElementById('inputPlate').value.trim();
-    const inspector = document.getElementById('inputInspectorName').value.trim();
+    const ra = document.getElementById('inputRA').value.trim();
     
     if (!plate) {
-        showNotification('Please enter vehicle plate', 'error');
+        showNotification('Por favor insira a matrícula', 'error');
         document.getElementById('inputPlate').focus();
         return false;
     }
     
-    if (!inspector) {
-        showNotification('Please enter inspector name', 'error');
-        document.getElementById('inputInspectorName').focus();
+    if (!ra) {
+        showNotification('Por favor insira o RA (Rental Agreement)', 'error');
+        document.getElementById('inputRA').focus();
         return false;
     }
     
@@ -217,6 +241,11 @@ function saveVehicleInfo() {
 
 // Auto Sequence Mode
 function startAutoSequence() {
+    // Validate inspection info first
+    if (!validateInspectionInfo()) {
+        return;
+    }
+    
     autoSequenceMode = true;
     currentPhotoIndex = 0;
     
