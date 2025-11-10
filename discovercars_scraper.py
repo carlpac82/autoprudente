@@ -54,7 +54,14 @@ async def fill_location_input(page: Page, input_selector: str, location: str) ->
     try:
         # STEP 1: Click input first to open dropdown
         logger.info(f"Step 1: Clicking input to open dropdown...")
-        await page.click(input_selector)
+        # Use JavaScript click to completely bypass viewport restrictions
+        await page.evaluate('''(selector) => {
+            const input = document.querySelector(selector);
+            if (input) {
+                input.click();
+                input.focus();
+            }
+        }''', input_selector)
         await asyncio.sleep(0.5)
         
         # STEP 2: Fill input with full location text
@@ -567,10 +574,10 @@ async def test_scraper():
     
     result = await scrape_discovercars(
         pickup_location="Aeroporto de Faro",
-        dropoff_location="Albufeira Centro da cidade",
+        dropoff_location="Aeroporto de Faro",  # Same location for now
         pickup_date=pickup,
         dropoff_date=dropoff,
-        headless=False  # Set to True for production
+        headless=False  # VISIBLE for demo!
     )
     
     print(json.dumps(result, indent=2, ensure_ascii=False))
