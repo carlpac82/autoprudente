@@ -550,6 +550,18 @@ except ImportError:
     logging.warning("⚠️  Could not import VEHICLES from carjet_direct")
     VEHICLES = {}
 
+# Import match helper
+try:
+    from match_helper import match_vehicle_group_by_characteristics
+except ImportError:
+    logging.warning("⚠️  Could not import match_helper")
+    match_vehicle_group_by_characteristics = None
+
+# Cache global para veículos do Admin
+_admin_vehicles_cache = None
+_admin_vehicles_cache_time = 0
+ADMIN_VEHICLES_CACHE_TTL = 300  # 5 minutos
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -1680,7 +1692,88 @@ def capitalize_car_name(car_name: str) -> str:
     
     return ' '.join(capitalized)
 
-def map_category_to_group(category: str, car_name: str = "") -> str:
+def load_admin_vehicles() -> dict:
+    """Carrega características dos veículos parametrizados no Admin Vehicles
+    
+    Retorna dict:
+    {
+        'B1': {
+            'brand': 'Fiat',
+            'model': '500',
+            'category': 'Mini',
+            'transmission': 'Manual',
+            'doors': 3,
+            'seats': 4,
+            'luggage': 1,
+            'photo_url': 'https://...'
+        },
+        ...
+    }
+    """
+    global _admin_vehicles_cache, _admin_vehicles_cache_time
+    
+    # Usar cache se ainda válido
+    now = time.time()
+    if _admin_vehicles_cache and (now - _admin_vehicles_cache_time) < ADMIN_VEHICLES_CACHE_TTL:
+        return _admin_vehicles_cache
+    
+    vehicle_groups = {}
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    # PostgreSQL
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT code, brand, model, category, transmission, 
+                                   doors, seats, luggage, photo_url
+                            FROM car_groups
+                            WHERE enabled = 1
+                        """)
+                        rows = cur.fetchall()
+                else:
+                    # SQLite
+                    rows = conn.execute("""
+                        SELECT code, brand, model, category, transmission,
+                               doors, seats, luggage, photo_url
+                        FROM car_groups
+                        WHERE enabled = 1
+                    """).fetchall()
+                
+                for row in rows:
+                    full_code = row[0]  # ex: B1-FIAT500
+                    # Extrair apenas o código do grupo (B1, D, F, etc)
+                    group_code = full_code.split('-')[0] if '-' in full_code else full_code
+                    
+                    vehicle_groups[group_code] = {
+                        'brand': row[1],
+                        'model': row[2],
+                        'category': row[3],
+                        'transmission': row[4],
+                        'doors': row[5],
+                        'seats': row[6],
+                        'luggage': row[7],
+                        'photo_url': row[8]
+                    }
+                    
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"[ADMIN-VEHICLES] Error loading vehicles: {e}")
+        return {}
+    
+    # Atualizar cache
+    _admin_vehicles_cache = vehicle_groups
+    _admin_vehicles_cache_time = now
+    
+    logging.info(f"[ADMIN-VEHICLES] Loaded {len(vehicle_groups)} groups from Admin Vehicles")
+    return vehicle_groups
+
+def map_category_to_group(category: str, car_name: str = "", transmission: str = "") -> str:
     """
     Mapeia categorias descritivas para códigos de grupos definidos:
     B1, B2, D, E1, E2, F, G, X, J1, J2, L1, L2, M1, M2, N, Others
@@ -1696,12 +1789,38 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     - Toyota Aygo X → F (SUV)
     - Mini 4 lugares Automático → E1
     - Premium/Luxury → X
-    """
-    # NÃO retornar "Others" aqui! Primeiro tentar categorias explícitas, depois car_groups e VEHICLES
     
+    Args:
+        category: Categoria do carro (ex: "Mini", "Economy", "SUV")
+        car_name: Nome do carro (ex: "Fiat 500", "VW Golf")
+        transmission: Transmissão (ex: "Manual", "Automatic")
+    """
+    # PRIORIDADE 0: Matching inteligente baseado em Admin Vehicles
+    if match_vehicle_group_by_characteristics and car_name:
+        vehicle_groups = load_admin_vehicles()
+        if vehicle_groups:
+            # Criar função fallback que é a lógica atual
+            def fallback(cat, name):
+                return _map_category_fallback(cat, name, transmission)
+            
+            matched_group = match_vehicle_group_by_characteristics(
+                category, car_name, transmission, vehicle_groups, fallback
+            )
+            
+            # Se encontrou match válido (não "Others"), usar
+            if matched_group and matched_group != "Others":
+                logging.info(f"[SMART-MATCH] {car_name} ({category}) → {matched_group} (via Admin characteristics)")
+                return matched_group
+    
+    # Fallback para lógica original
+    return _map_category_fallback(category, car_name, transmission)
+
+def _map_category_fallback(category: str, car_name: str = "", transmission: str = "") -> str:
+    """Lógica de fallback original para mapeamento de categorias"""
     # Converter para lowercase para mapeamento case-insensitive
     cat = category.strip().lower() if category else ""
     car_lower = car_name.lower() if car_name else ""
+    trans_lower = transmission.lower() if transmission else ""
     
     # PRIORIDADE -1: CABRIO/CABRIOLET no NOME → SEMPRE Grupo G
     # Independente da categoria (Luxury, Mini, SUV, etc), se tem "cabrio" no nome = G
@@ -1713,13 +1832,17 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
     
     # Mini 4 Seats / Mini 4 Lugares → B1 ou E1 (se automático)
     if cat in ['mini 4 seats', 'mini 4 doors', 'mini 4 portas', 'mini 4 lugares']:
-        if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
+                  any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        if is_auto:
             return "E1"
         return "B1"
     
     # Mini 5 Seats / Mini 5 Lugares → B2 ou E1 (se automático)
     if cat in ['mini 5 seats', 'mini 5 doors', 'mini 5 portas', 'mini 5 lugares']:
-        if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
+                  any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        if is_auto:
             return "E1"
         return "B2"
     
@@ -1897,7 +2020,9 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
             for model in b1_4_lugares_models:
                 if model in car_lower:
                     # Se é automático de 4 lugares → E1 (Mini Automatic)
-                    if any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico']):
+                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
+                              any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+                    if is_auto:
                         return "E1"
                     # Se é manual de 4 lugares → B1
                     return "B1"
@@ -2015,8 +2140,10 @@ def map_category_to_group(category: str, car_name: str = "") -> str:
         return category_map[cat]
     
     # FALLBACK: Análise inteligente por palavras-chave
-    # Verificar se é automático
-    is_auto = any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico'])
+    # Verificar se é automático (priorizar transmission, depois category, depois car_name)
+    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
+              any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico']) or \
+              any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
     
     # Verificar tipo de veículo por palavras-chave
     if '9' in cat or 'minivan' in cat or 'van' in cat:
@@ -8257,7 +8384,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             #     cards_blocked += 1
             #     continue
             # Mapear categoria para código de grupo
-            group_code = map_category_to_group(category, car_name)
+            group_code = map_category_to_group(category, car_name, transmission_label)
             # Capitalizar nome para display (Peugeot 2008 Auto, Renault Megane SW Auto)
             car_name_display = capitalize_car_name(car_name)
             items.append({
@@ -8351,7 +8478,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         # detect currency symbol present in the text
         curr = "EUR" if re.search(r"EUR", price_text, re.I) else ("EUR" if "€" in price_text else "")
         # Mapear categoria para código de grupo
-        group_code = map_category_to_group(category, car_name)
+        group_code = map_category_to_group(category, car_name, transmission_label)
         items.append({
             "id": idx,
             "car": car_name,
@@ -9297,36 +9424,32 @@ async def track_by_url(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
-def _get_group_photos() -> Dict[str, str]:
-    """
-    Carrega fotos do Admin Vehicles (car_groups.photo_url) indexadas por código de grupo
-    Cache em memória para performance
-    """
-    photos = {}
+def _get_vehicle_groups() -> Dict[str, Dict[str, Any]]:
+    """Carrega características completas dos grupos do Admin Vehicles"""
+    groups = {}
     try:
         with _db_lock:
             conn = _db_connect()
             try:
-                # PostgreSQL ou SQLite
                 if conn.__class__.__module__ == 'psycopg2.extensions':
                     cursor = conn.cursor()
-                    cursor.execute("SELECT code, photo_url FROM car_groups WHERE photo_url IS NOT NULL AND photo_url != ''")
-                    rows = cursor.fetchall()
-                    for code, photo_url in rows:
-                        if code and photo_url:
-                            photos[code] = photo_url
-                else:
-                    cursor = conn.execute("SELECT code, photo_url FROM car_groups WHERE photo_url IS NOT NULL AND photo_url != ''")
+                    cursor.execute("SELECT code, brand, model, category, transmission, photo_url FROM car_groups WHERE enabled = 1")
                     for row in cursor.fetchall():
-                        if row[0] and row[1]:
-                            photos[row[0]] = row[1]
+                        if row[0]:
+                            groups[row[0]] = {'code': row[0], 'brand': row[1] or '', 'model': row[2] or '', 
+                                            'category': row[3] or '', 'transmission': row[4] or '', 'photo_url': row[5] or ''}
+                else:
+                    cursor = conn.execute("SELECT code, brand, model, category, transmission, photo_url FROM car_groups WHERE enabled = 1")
+                    for row in cursor.fetchall():
+                        if row[0]:
+                            groups[row[0]] = {'code': row[0], 'brand': row[1] or '', 'model': row[2] or '', 
+                                            'category': row[3] or '', 'transmission': row[4] or '', 'photo_url': row[5] or ''}
             finally:
                 conn.close()
     except Exception as e:
         import sys
-        print(f"[WARNING] Failed to load group photos: {e}", file=sys.stderr, flush=True)
-    
-    return photos
+        print(f"[WARNING] Failed to load vehicle groups: {e}", file=sys.stderr, flush=True)
+    return groups
 
 def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[str]) -> List[Dict[str, Any]]:
     # Secondary guard: blocklist filter to ensure unwanted vehicles never appear
@@ -9407,10 +9530,10 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
     summary: List[Dict[str, Any]] = []
     import re as _re2
     
-    # Carregar fotos do Admin Vehicles
-    group_photos = _get_group_photos()
+    # Carregar características do Admin Vehicles
+    vehicle_groups = _get_vehicle_groups()
     import sys
-    print(f"[PHOTOS] Loaded {len(group_photos)} group photos from Admin Vehicles", file=sys.stderr, flush=True)
+    print(f"[VEHICLES] Loaded {len(vehicle_groups)} vehicle groups from Admin", file=sys.stderr, flush=True)
     
     # Use dynamic FX with 1h cache; fallback 1.16
     try:
@@ -9439,11 +9562,18 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         # Limpar nome do carro PRIMEIRO (remover "Autoautomático", "ou similar", etc)
         car_name_clean = clean_car_name(it.get("car", ""))
         
-        # Se não tiver grupo definido, mapear a partir da categoria
-        # IMPORTANTE: usar nome LIMPO para mapeamento correto
+        # Se não tiver grupo definido, usar Admin Vehicles (características)
+        # IMPORTANTE: match baseado em categoria, transmissão, brand/model
         group_code = it.get("group", "")
         if not group_code:
-            group_code = map_category_to_group(it.get("category", ""), car_name_clean)
+            from match_helper import match_vehicle_group_by_characteristics
+            group_code = match_vehicle_group_by_characteristics(
+                it.get("category", ""),
+                car_name_clean,
+                it.get("transmission", ""),
+                vehicle_groups,
+                map_category_to_group
+            )
         
         # DEBUG: Log primeiro item
         if len(detailed) == 0 and len(summary) == 0:
