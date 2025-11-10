@@ -339,6 +339,9 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                         seen_cars.add(unique_key)
                         
                         # Add location and search_date to each item
+                        # NOTE: The scraping saves 'photo' field, not 'image_url'
+                        photo_url = item.get('photo', '') or item.get('image_url', '')
+                        
                         result_item = {
                             'group': item.get('group', 'Unknown'),
                             'days': int(day_str),
@@ -348,14 +351,16 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                             'search_date': search_date,
                             'car_name': item.get('car_clean', 'Unknown'),
                             'supplier': supplier,
-                            'photo': item.get('image_url', ''),  # Map image_url -> photo for HTML
-                            'image_url': item.get('image_url', ''),
+                            'photo': photo_url,  # For HTML rendering
+                            'image_url': photo_url,  # Backup field
                             'car': car,
                         }
                         
                         # Debug first item
                         if len(all_results) == 0:
-                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}, photo={bool(result_item['photo'])}", flush=True)
+                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}", flush=True)
+                            print(f"   [DEBUG] Photo URL: {result_item['photo'][:100] if result_item['photo'] else 'EMPTY'}", flush=True)
+                            print(f"   [DEBUG] Item keys from DB: {list(item.keys())}", flush=True)
                         
                         all_results.append(result_item)
                 

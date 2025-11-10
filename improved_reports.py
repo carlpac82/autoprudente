@@ -377,10 +377,10 @@ def generate_daily_report_html_by_location(search_data, location):
                 # Check if this is the lowest price FOR THIS DAY
                 is_lowest = abs(price - lowest_price_per_day[days]) < 0.01
                 
-                # Badge for lowest price
+                # Badge for lowest price - smaller and vertically centered
                 price_badge = ''
                 if is_lowest:
-                    price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">MELHOR PREÇO</span>'
+                    price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-left: 6px; vertical-align: middle;">MELHOR</span>'
                 
                 content_html += f"""
                 <div class="competitor {'autoprudente' if is_ap else ''}">
@@ -626,10 +626,10 @@ def generate_weekly_report_html_by_location(search_data, location):
                     # Check if this is the lowest price FOR THIS DAY
                     is_lowest = abs(price - lowest_price_per_day[days]) < 0.01
                     
-                    # Badge for lowest price
+                    # Badge for lowest price - smaller and vertically centered
                     price_badge = ''
                     if is_lowest:
-                        price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">MELHOR PREÇO</span>'
+                        price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-left: 6px; vertical-align: middle;">MELHOR</span>'
                     
                     content_html += f"""
                     <div class="competitor {'autoprudente' if is_ap else ''}">
