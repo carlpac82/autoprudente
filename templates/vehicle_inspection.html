@@ -260,8 +260,19 @@
         <!-- STEP 2: Photo Capture -->
         <div id="stepPhotos" class="step-content hidden">
             <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h2 class="text-lg font-semibold mb-2">Capture Vehicle Photos</h2>
-                <p class="text-sm text-gray-600 mb-4">Take 6 standard photos. Click any photo slot to open camera.</p>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold">Capture Vehicle Photos</h2>
+                        <p class="text-sm text-gray-600 mt-1">Choose your preferred method</p>
+                    </div>
+                    <button onclick="startAutoSequence()" class="bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Iniciar Inspeção Automática
+                    </button>
+                </div>
                 
                 <!-- Visual Car Diagram -->
                 <div class="mb-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200">

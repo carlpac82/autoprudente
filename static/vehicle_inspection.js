@@ -13,6 +13,8 @@ let inspectionData = {
 
 let cameraStream = null;
 let currentPhotoType = null;
+let autoSequenceMode = false;
+let currentPhotoIndex = 0;
 
 // Photo types and instructions
 const photoTypes = [
@@ -189,6 +191,95 @@ function saveVehicleInfo() {
     // Update header
     document.getElementById('inspectionType').textContent = 
         inspectionData.vehicleInfo.inspection_type === 'check_in' ? 'Check-in' : 'Check-out';
+}
+
+// Auto Sequence Mode
+function startAutoSequence() {
+    autoSequenceMode = true;
+    currentPhotoIndex = 0;
+    
+    showNotification('Modo automático ativado! Siga as instruções', 'info');
+    
+    // Start with first photo
+    setTimeout(() => {
+        openCameraAutoSequence(0);
+    }, 1000);
+}
+
+async function openCameraAutoSequence(index) {
+    if (index >= photoTypes.length) {
+        // All photos captured!
+        autoSequenceMode = false;
+        showNotification('✅ Todas as 6 fotos capturadas! A processar com AI...', 'success');
+        document.getElementById('btnNextToAnalysis').disabled = false;
+        return;
+    }
+    
+    currentPhotoIndex = index;
+    const photoType = photoTypes[index].type;
+    
+    // Show instruction before opening camera
+    const instructions = [
+        '📍 Dirija-se à FRENTE do carro',
+        '📍 Dirija-se à TRASEIRA do carro', 
+        '📍 Dirija-se ao LADO ESQUERDO do carro',
+        '📍 Dirija-se ao LADO DIREITO do carro',
+        '📍 Entre no carro e aponte para o INTERIOR',
+        '📍 Aponte para o ODÓMETRO no painel'
+    ];
+    
+    // Show big instruction overlay
+    showBigInstruction(instructions[index], () => {
+        openCamera(photoType);
+    });
+}
+
+function showBigInstruction(text, callback) {
+    // Create fullscreen instruction overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'instructionOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 156, 182, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(10px);
+    `;
+    
+    overlay.innerHTML = `
+        <div style="text-align: center; color: white; padding: 40px;">
+            <div style="font-size: 72px; margin-bottom: 30px;">📸</div>
+            <h2 style="font-size: 32px; font-weight: bold; margin-bottom: 20px;">${text}</h2>
+            <p style="font-size: 18px; opacity: 0.9; margin-bottom: 40px;">Posicione-se e prepare a câmera</p>
+            <div style="font-size: 48px; font-weight: bold;" id="countdown">3</div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Countdown 3, 2, 1
+    let count = 3;
+    const countdownEl = document.getElementById('countdown');
+    
+    const countInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+            countdownEl.textContent = count;
+        } else {
+            countdownEl.textContent = '📸';
+            clearInterval(countInterval);
+            
+            // Remove overlay and open camera
+            setTimeout(() => {
+                document.body.removeChild(overlay);
+                callback();
+            }, 500);
+        }
+    }, 1000);
 }
 
 // Camera functions
@@ -370,6 +461,13 @@ function capturePhoto() {
         }
         
         closeCamera();
+        
+        // If in auto sequence mode, move to next photo
+        if (autoSequenceMode) {
+            setTimeout(() => {
+                openCameraAutoSequence(currentPhotoIndex + 1);
+            }, 1500); // Wait 1.5s before showing next instruction
+        }
     }, 'image/jpeg', 0.9);
 }
 
