@@ -63,9 +63,11 @@ const photoTypes = [
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    initializePhotoGrid();
-    loadInspectorName();
-    initializeDiagramInteraction();
+    // Load inspector name from localStorage
+    const savedInspector = localStorage.getItem('inspectorName');
+    if (savedInspector) {
+        document.getElementById('inputInspector').value = savedInspector;
+    }
 });
 
 function initializePhotoGrid() {
@@ -113,22 +115,7 @@ function initializeDiagramInteraction() {
 }
 
 function updateDiagramIndicator(photoType, captured) {
-    // Update diagram indicator when photo is captured
-    const indicator = document.querySelector(`.photo-indicator[data-type="${photoType}"]`);
-    if (indicator) {
-        if (captured) {
-            indicator.classList.add('captured');
-        } else {
-            indicator.classList.remove('captured');
-        }
-    }
-}
-
-function loadInspectorName() {
-    const saved = localStorage.getItem('inspectorName');
-    if (saved) {
-        document.getElementById('inputInspectorName').value = saved;
-    }
+    // Diagram was removed, keeping function for compatibility
 }
 
 // Step navigation
@@ -1160,7 +1147,12 @@ function acceptPhoto(photoType) {
     
     // Enable next button if all photos captured
     if (Object.keys(inspectionData.photos).length === 6) {
-        document.getElementById('btnNextToAnalysis').disabled = false;
+        const nextBtn = document.getElementById('btnNextToAnalysis');
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('hidden');
+            nextBtn.classList.add('inline-block');
+        }
         
         // Show completion message if in auto mode
         if (autoSequenceMode) {

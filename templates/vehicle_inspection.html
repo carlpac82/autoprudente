@@ -137,21 +137,17 @@
 </head>
 <body class="bg-gray-50">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
+    <header class="bg-gradient-to-r from-[#009cb6] to-[#0284a8] shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <a href="/" class="text-[#009cb6] hover:text-[#007a8f]">
+                    <a href="/" class="text-white hover:text-[#f59e0b] transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                         </svg>
                     </a>
-                    <h1 class="text-2xl font-bold text-gray-900">Vehicle Inspection</h1>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span id="inspectionType" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-                        Check-in
-                    </span>
+                    <h1 class="text-xl font-bold text-white">Inspeção de Veículo</h1>
+                    <span id="inspectionType" class="ml-3 px-3 py-1 text-sm bg-[#f59e0b] text-white rounded-full font-semibold">Check-in</span>
                 </div>
             </div>
         </div>
@@ -273,8 +269,8 @@
                 </div>
 
                 <div class="mt-6 flex gap-3">
-                    <button onclick="nextStep()" class="flex-1 bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold">
-                        Next: Capture Photos →
+                    <button onclick="nextStep()" class="flex-1 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white px-6 py-3 rounded-lg hover:from-[#d97706] hover:to-[#b45309] transition-all font-semibold">
+                        Avançar para Fotos →
                     </button>
                 </div>
             </div>
@@ -282,33 +278,35 @@
 
         <!-- STEP 2: Photo Capture -->
         <div id="stepPhotos" class="step-content hidden">
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 class="text-lg font-semibold">Capture Vehicle Photos</h2>
-                        <p class="text-sm text-gray-600 mt-1">Choose your preferred method</p>
-                    </div>
-                    <button onclick="startAutoSequence()" class="bg-[#009cb6] text-white px-8 py-4 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold flex items-center gap-3 text-lg">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        Iniciar Inspeção
+            <div class="bg-white rounded-lg shadow-sm p-12 mb-6 text-center">
+                <!-- Instructions -->
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-3">Inspeção Fotográfica do Veículo</h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto">
+                        Será guiado através de 6 fotografias do veículo. O sistema irá indicar cada ângulo necessário e o carro 3D mostrará a posição exacta para capturar cada foto.
+                    </p>
+                </div>
+
+                <!-- Start Button -->
+                <button onclick="startAutoSequence()" class="bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white px-12 py-6 rounded-xl hover:from-[#d97706] hover:to-[#b45309] transition-all transform hover:scale-105 shadow-xl font-bold flex items-center gap-4 text-xl mx-auto">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Iniciar Inspeção
+                </button>
+
+                <!-- Back Button -->
+                <div class="mt-8">
+                    <button onclick="prevStep()" class="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium">
+                        ← Voltar
                     </button>
                 </div>
                 
-                <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4" id="photoGrid">
-                    <!-- Photo slots will be generated by JS -->
-                </div>
-
-                <div class="mt-6 flex gap-3">
-                    <button onclick="prevStep()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        ← Back
-                    </button>
-                    <button onclick="nextStep()" id="btnNextToAnalysis" class="flex-1 bg-[#009cb6] text-white px-6 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold" disabled>
-                        Next: AI Analysis →
-                    </button>
-                </div>
+                <!-- Hidden Next Button (enabled after photos) -->
+                <button onclick="nextStep()" id="btnNextToAnalysis" class="hidden bg-[#009cb6] text-white px-8 py-4 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold mt-6" disabled>
+                    Avançar para Análise AI →
+                </button>
             </div>
         </div>
 
