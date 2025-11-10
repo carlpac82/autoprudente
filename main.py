@@ -10537,24 +10537,48 @@ async def save_vehicle(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
+                # Detectar tipo de BD
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                now_func = "NOW()" if is_postgres else "datetime('now')"
+                param_placeholder = "%s" if is_postgres else "?"
+                
                 # Verificar se já existe
-                existing = con.execute(
-                    "SELECT edited_name FROM vehicle_name_overrides WHERE original_name = ?",
-                    (original_name,)
-                ).fetchone()
+                if is_postgres:
+                    with con.cursor() as cur:
+                        cur.execute(f"SELECT edited_name FROM vehicle_name_overrides WHERE original_name = {param_placeholder}", (original_name,))
+                        existing = cur.fetchone()
+                else:
+                    existing = con.execute(
+                        f"SELECT edited_name FROM vehicle_name_overrides WHERE original_name = {param_placeholder}",
+                        (original_name,)
+                    ).fetchone()
                 
                 if existing:
                     # Atualizar
-                    con.execute(
-                        "UPDATE vehicle_name_overrides SET edited_name = ?, updated_at = datetime('now') WHERE original_name = ?",
-                        (clean_name, original_name)
-                    )
+                    if is_postgres:
+                        with con.cursor() as cur:
+                            cur.execute(
+                                f"UPDATE vehicle_name_overrides SET edited_name = {param_placeholder}, updated_at = {now_func} WHERE original_name = {param_placeholder}",
+                                (clean_name, original_name)
+                            )
+                    else:
+                        con.execute(
+                            f"UPDATE vehicle_name_overrides SET edited_name = {param_placeholder}, updated_at = {now_func} WHERE original_name = {param_placeholder}",
+                            (clean_name, original_name)
+                        )
                 else:
                     # Inserir novo
-                    con.execute(
-                        "INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES (?, ?, datetime('now'))",
-                        (original_name, clean_name)
-                    )
+                    if is_postgres:
+                        with con.cursor() as cur:
+                            cur.execute(
+                                f"INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {now_func})",
+                                (original_name, clean_name)
+                            )
+                    else:
+                        con.execute(
+                            f"INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {now_func})",
+                            (original_name, clean_name)
+                        )
                 
                 con.commit()
             finally:
@@ -13587,24 +13611,48 @@ async def download_vehicle_photo_from_carjet(vehicle_name: str, request: Request
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detectar tipo de BD
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                now_func = "NOW()" if is_postgres else "datetime('now')"
+                param_placeholder = "%s" if is_postgres else "?"
+                
                 # Verificar se já existe
-                existing = conn.execute(
-                    "SELECT id FROM vehicle_photos WHERE vehicle_name = ?",
-                    (car_clean,)
-                ).fetchone()
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(f"SELECT id FROM vehicle_photos WHERE vehicle_name = {param_placeholder}", (car_clean,))
+                        existing = cur.fetchone()
+                else:
+                    existing = conn.execute(
+                        f"SELECT id FROM vehicle_photos WHERE vehicle_name = {param_placeholder}",
+                        (car_clean,)
+                    ).fetchone()
                 
                 if existing:
                     # Atualizar
-                    conn.execute(
-                        "UPDATE vehicle_photos SET photo_data = ?, photo_url = ?, updated_at = datetime('now') WHERE vehicle_name = ?",
-                        (photo_data, photo_url, car_clean)
-                    )
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                f"UPDATE vehicle_photos SET photo_data = {param_placeholder}, photo_url = {param_placeholder}, updated_at = {now_func} WHERE vehicle_name = {param_placeholder}",
+                                (photo_data, photo_url, car_clean)
+                            )
+                    else:
+                        conn.execute(
+                            f"UPDATE vehicle_photos SET photo_data = {param_placeholder}, photo_url = {param_placeholder}, updated_at = {now_func} WHERE vehicle_name = {param_placeholder}",
+                            (photo_data, photo_url, car_clean)
+                        )
                 else:
                     # Inserir novo
-                    conn.execute(
-                        "INSERT INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at) VALUES (?, ?, ?, datetime('now'))",
-                        (car_clean, photo_data, photo_url)
-                    )
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                f"INSERT INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {param_placeholder}, {now_func})",
+                                (car_clean, photo_data, photo_url)
+                            )
+                    else:
+                        conn.execute(
+                            f"INSERT INTO vehicle_photos (vehicle_name, photo_data, photo_url, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {param_placeholder}, {now_func})",
+                            (car_clean, photo_data, photo_url)
+                        )
                 
                 conn.commit()
             finally:
@@ -13614,21 +13662,45 @@ async def download_vehicle_photo_from_carjet(vehicle_name: str, request: Request
         with _db_lock:
             conn = _db_connect()
             try:
-                existing = conn.execute(
-                    "SELECT id FROM vehicle_images WHERE vehicle_name = ?",
-                    (car_clean,)
-                ).fetchone()
+                # Detectar tipo de BD
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                now_func = "NOW()" if is_postgres else "datetime('now')"
+                param_placeholder = "%s" if is_postgres else "?"
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(f"SELECT id FROM vehicle_images WHERE vehicle_name = {param_placeholder}", (car_clean,))
+                        existing = cur.fetchone()
+                else:
+                    existing = conn.execute(
+                        f"SELECT id FROM vehicle_images WHERE vehicle_name = {param_placeholder}",
+                        (car_clean,)
+                    ).fetchone()
                 
                 if existing:
-                    conn.execute(
-                        "UPDATE vehicle_images SET image_data = ?, source_url = ?, updated_at = datetime('now') WHERE vehicle_name = ?",
-                        (photo_data, photo_url, car_clean)
-                    )
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                f"UPDATE vehicle_images SET image_data = {param_placeholder}, source_url = {param_placeholder}, updated_at = {now_func} WHERE vehicle_name = {param_placeholder}",
+                                (photo_data, photo_url, car_clean)
+                            )
+                    else:
+                        conn.execute(
+                            f"UPDATE vehicle_images SET image_data = {param_placeholder}, source_url = {param_placeholder}, updated_at = {now_func} WHERE vehicle_name = {param_placeholder}",
+                            (photo_data, photo_url, car_clean)
+                        )
                 else:
-                    conn.execute(
-                        "INSERT INTO vehicle_images (vehicle_name, image_data, source_url, updated_at) VALUES (?, ?, ?, datetime('now'))",
-                        (car_clean, photo_data, photo_url)
-                    )
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                f"INSERT INTO vehicle_images (vehicle_name, image_data, source_url, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {param_placeholder}, {now_func})",
+                                (car_clean, photo_data, photo_url)
+                            )
+                    else:
+                        conn.execute(
+                            f"INSERT INTO vehicle_images (vehicle_name, image_data, source_url, updated_at) VALUES ({param_placeholder}, {param_placeholder}, {param_placeholder}, {now_func})",
+                            (car_clean, photo_data, photo_url)
+                        )
                 
                 conn.commit()
             finally:
