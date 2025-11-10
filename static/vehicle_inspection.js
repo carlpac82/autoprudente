@@ -817,7 +817,7 @@ function startPositioningHints(photoType) {
         
         // After a few changes, show "perfect" hint
         if (changeCount > 3) {
-            hintText.innerHTML = '✨ Perfeito! Pode tirar a foto';
+            hintText.innerHTML = 'Posicionamento correto - Pode tirar a foto';
             hintText.style.background = 'rgba(16, 185, 129, 0.9)'; // Green
             clearInterval(hintInterval);
             return;
@@ -946,9 +946,31 @@ function showPhotoPreview(blob, photoType) {
     window.tempPhotoBlob = blob;
     window.tempPhotoType = photoType;
     
-    // Add event listeners to buttons
-    document.getElementById('btnRetake').addEventListener('click', retakePhoto);
-    document.getElementById('btnAccept').addEventListener('click', () => acceptPhoto(photoType));
+    // Add event listeners to buttons after a small delay to ensure DOM is ready
+    setTimeout(() => {
+        const btnRetake = document.getElementById('btnRetake');
+        const btnAccept = document.getElementById('btnAccept');
+        
+        console.log('Adding event listeners. btnRetake:', btnRetake, 'btnAccept:', btnAccept);
+        
+        if (btnRetake) {
+            btnRetake.addEventListener('click', function() {
+                console.log('Retake button clicked!');
+                retakePhoto();
+            });
+        } else {
+            console.error('btnRetake not found!');
+        }
+        
+        if (btnAccept) {
+            btnAccept.addEventListener('click', function() {
+                console.log('Accept button clicked! PhotoType:', photoType);
+                acceptPhoto(photoType);
+            });
+        } else {
+            console.error('btnAccept not found!');
+        }
+    }, 100);
 }
 
 function retakePhoto() {
