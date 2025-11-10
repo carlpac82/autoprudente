@@ -102,11 +102,13 @@ def generate_report_header(title, subtitle=""):
             .competitor {{
                 display: flex;
                 justify-content: space-between;
-                padding: 10px;
-                margin: 5px 0;
+                align-items: center;
+                padding: 16px 12px;
+                margin: 8px 0;
                 background: #fff;
                 border: 1px solid #e2e8f0;
                 border-radius: 6px;
+                min-height: 95px;
             }}
             .competitor.autoprudente {{
                 background: #e0f7fa;
@@ -369,7 +371,7 @@ def generate_daily_report_html_by_location(search_data, location):
                 
                 # Usar imagem REAL
                 if car_photo and car_photo.startswith('http'):
-                    car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 80px; height: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
+                    car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 85px; max-height: 60px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
                 else:
                     # Fallback: ícone SVG pequeno
                     car_visual = icon_car
@@ -377,26 +379,30 @@ def generate_daily_report_html_by_location(search_data, location):
                 # Check if this is the lowest price FOR THIS DAY
                 is_lowest = abs(price - lowest_price_per_day[days]) < 0.01
                 
-                # Badge for lowest price - smaller and vertically centered
+                # Badge for lowest price - below price
                 price_badge = ''
                 if is_lowest:
-                    price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-left: 6px; vertical-align: middle;">MELHOR</span>'
+                    price_badge = '<div style="margin-top: 4px;"><span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">MELHOR</span></div>'
                 
                 content_html += f"""
                 <div class="competitor {'autoprudente' if is_ap else ''}">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        {car_visual}
-                        <div>
-                            <div style="font-weight: {'bold' if is_ap else '500'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px;">
+                    <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
+                        <div style="flex-shrink: 0; width: 85px; display: flex; align-items: center; justify-content: center;">
+                            {car_visual}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 14px; margin-bottom: 4px; line-height: 1.3;">
                                 {idx}. {supplier}
                             </div>
-                            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                            <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
                                 {car_name}
                             </div>
                         </div>
                     </div>
-                    <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; display: flex; align-items: center;">
-                        {price:.2f}€
+                    <div style="flex-shrink: 0; text-align: right; margin-left: 12px;">
+                        <div style="font-size: 19px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap;">
+                            {price:.2f}€
+                        </div>
                         {price_badge}
                     </div>
                 </div>
@@ -619,33 +625,37 @@ def generate_weekly_report_html_by_location(search_data, location):
                     car_name = car.get('car', 'Unknown')
                     
                     if car_photo and car_photo.startswith('http'):
-                        car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 80px; height: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
+                        car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 85px; max-height: 60px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
                     else:
                         car_visual = icon_car
                     
                     # Check if this is the lowest price FOR THIS DAY
                     is_lowest = abs(price - lowest_price_per_day[days]) < 0.01
                     
-                    # Badge for lowest price - smaller and vertically centered
+                    # Badge for lowest price - below price
                     price_badge = ''
                     if is_lowest:
-                        price_badge = '<span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-left: 6px; vertical-align: middle;">MELHOR</span>'
+                        price_badge = '<div style="margin-top: 4px;"><span style="display: inline-block; background: #f4ad0f; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">MELHOR</span></div>'
                     
                     content_html += f"""
                     <div class="competitor {'autoprudente' if is_ap else ''}">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            {car_visual}
-                            <div>
-                                <div style="font-weight: {'bold' if is_ap else '500'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px;">
+                        <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
+                            <div style="flex-shrink: 0; width: 85px; display: flex; align-items: center; justify-content: center;">
+                                {car_visual}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 14px; margin-bottom: 4px; line-height: 1.3;">
                                     {idx}. {supplier}
                                 </div>
-                                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                                <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
                                     {car_name}
                                 </div>
                             </div>
                         </div>
-                        <div style="font-size: 18px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; display: flex; align-items: center;">
-                            {price:.2f}€
+                        <div style="flex-shrink: 0; text-align: right; margin-left: 12px;">
+                            <div style="font-size: 19px; font-weight: bold; color: {'#009cb6' if is_ap else '#1e293b'}; white-space: nowrap;">
+                                {price:.2f}€
+                            </div>
                             {price_badge}
                         </div>
                     </div>
