@@ -13000,7 +13000,7 @@ async def export_configuration(request: Request):
                 conn = _db_connect()
                 try:
                     rows = conn.execute("""
-                        SELECT vehicle_name, photo_data, content_type, photo_url, updated_at
+                        SELECT vehicle_name, photo_data, content_type, photo_url, uploaded_at
                         FROM vehicle_photos
                     """).fetchall()
                     
@@ -13009,18 +13009,18 @@ async def export_configuration(request: Request):
                         photo_data = row[1]
                         content_type = row[2] or "image/jpeg"
                         photo_url = row[3]
-                        updated_at = row[4]
+                        uploaded_at = row[4]
                         
                         if photo_data:
                             # Converter BLOB para base64
                             photo_base64 = base64.b64encode(photo_data).decode('utf-8')
                             # Convert datetime to ISO string for JSON serialization
-                            updated_at_str = updated_at if isinstance(updated_at, str) else (updated_at.isoformat() if updated_at else None)
+                            uploaded_at_str = uploaded_at if isinstance(uploaded_at, str) else (uploaded_at.isoformat() if uploaded_at else None)
                             photos_data[vehicle_name] = {
                                 "data": photo_base64,
                                 "content_type": content_type,
                                 "url": photo_url,
-                                "updated_at": updated_at_str,
+                                "uploaded_at": uploaded_at_str,
                                 "size": len(photo_data)
                             }
                 finally:
