@@ -9683,8 +9683,8 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         
         # Use car_groups category if group is known, otherwise use scraped category
         category_display = it.get("category", "")
-        if group_code and group_code in groups:
-            category_display = groups[group_code].get('category', category_display)
+        if group_code and group_code in vehicle_groups:
+            category_display = vehicle_groups[group_code].get('category', category_display)
         
         row = {
             "supplier": it.get("supplier", ""),
