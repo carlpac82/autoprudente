@@ -245,7 +245,7 @@ async function openCameraAutoSequence(index) {
     if (index >= photoTypes.length) {
         // All photos captured!
         autoSequenceMode = false;
-        showNotification('✅ Todas as 6 fotos capturadas! A processar com AI...', 'success');
+        showNotification('Todas as 6 fotos capturadas! A processar com AI...', 'success');
         document.getElementById('btnNextToAnalysis').disabled = false;
         return;
     }
@@ -574,13 +574,13 @@ function capturePhoto() {
     
     // Validate video is ready
     if (!video || !video.videoWidth || !video.videoHeight) {
-        alert('⚠️ Câmera ainda não está pronta. Aguarde um momento.');
+        alert('Câmera ainda não está pronta. Aguarde um momento.');
         console.error('Video not ready:', video);
         return;
     }
     
     if (!currentPhotoType) {
-        alert('⚠️ Erro: Tipo de foto não definido.');
+        alert('Erro: Tipo de foto não definido.');
         console.error('currentPhotoType is null');
         return;
     }
@@ -602,7 +602,7 @@ function capturePhoto() {
     // Convert to blob
     canvas.toBlob(blob => {
         if (!blob) {
-            alert('⚠️ Erro ao criar imagem. Tente novamente.');
+            alert('Erro ao criar imagem. Tente novamente.');
             console.error('Blob creation failed');
             return;
         }
@@ -830,17 +830,17 @@ function addAnalysisResult(photoType, result) {
     
     let badgeClass = 'bg-green-100 text-green-800';
     let badgeText = 'No Damage';
-    let icon = '✅';
+    let icon = '';
     
     if (result.ok && result.has_damage) {
         if (result.confidence_percent > 70) {
             badgeClass = 'bg-red-100 text-red-800';
             badgeText = `${result.damage_type} (${result.confidence_percent}%)`;
-            icon = '🔴';
+            icon = '';
         } else {
             badgeClass = 'bg-yellow-100 text-yellow-800';
             badgeText = `Possible ${result.damage_type} (${result.confidence_percent}%)`;
-            icon = '🟡';
+            icon = '';
         }
     }
     
@@ -909,7 +909,7 @@ function generateReview() {
                 <h3 class="font-semibold text-gray-900 mb-3">Damage Assessment</h3>
                 <div class="p-4 rounded-lg ${hasDamage ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}">
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="text-2xl">${hasDamage ? '⚠️' : '✅'}</span>
+                        <span class="text-2xl"></span>
                         <span class="font-bold text-lg">${hasDamage ? `${damageCount} Damage(s) Detected` : 'No Damage Detected'}</span>
                     </div>
                     ${highConfidenceDamages.length > 0 ? `
