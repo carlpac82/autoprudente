@@ -925,13 +925,13 @@ function showPhotoPreview(blob, photoType) {
         </div>
         
         <div style="display: flex; gap: 16px; margin-top: 32px;">
-            <button id="btnRetake" style="display: flex; align-items: center; gap: 8px; background: #ef4444; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            <button id="btnRetake" onclick="window.retakePhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #ef4444; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 Repetir
             </button>
-            <button id="btnAccept" style="display: flex; align-items: center; gap: 8px; background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            <button id="btnAccept" onclick="window.acceptPhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
@@ -946,31 +946,16 @@ function showPhotoPreview(blob, photoType) {
     window.tempPhotoBlob = blob;
     window.tempPhotoType = photoType;
     
-    // Add event listeners to buttons after a small delay to ensure DOM is ready
-    setTimeout(() => {
-        const btnRetake = document.getElementById('btnRetake');
-        const btnAccept = document.getElementById('btnAccept');
-        
-        console.log('Adding event listeners. btnRetake:', btnRetake, 'btnAccept:', btnAccept);
-        
-        if (btnRetake) {
-            btnRetake.addEventListener('click', function() {
-                console.log('Retake button clicked!');
-                retakePhoto();
-            });
-        } else {
-            console.error('btnRetake not found!');
-        }
-        
-        if (btnAccept) {
-            btnAccept.addEventListener('click', function() {
-                console.log('Accept button clicked! PhotoType:', photoType);
-                acceptPhoto(photoType);
-            });
-        } else {
-            console.error('btnAccept not found!');
-        }
-    }, 100);
+    // Create global functions for onclick handlers
+    window.retakePhotoAction = function() {
+        console.log('Retake button clicked via onclick!');
+        retakePhoto();
+    };
+    
+    window.acceptPhotoAction = function() {
+        console.log('Accept button clicked via onclick! PhotoType:', photoType);
+        acceptPhoto(photoType);
+    };
 }
 
 function retakePhoto() {
