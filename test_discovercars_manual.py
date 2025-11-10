@@ -39,21 +39,33 @@ async def open_browser_for_manual_test():
         print("✅ Browser aberto!")
         print("="*60)
         print("\n📋 INSTRUÇÕES:")
-        print("1. ❌ REJEITAR cookies")
+        print("1. ❌ ACEITAR/REJEITAR cookies")
         print("2. 📍 Clicar na caixa 'Local de levantamento'")
         print("3. ⌨️  Digitar: Aeroporto de Faro (FAO)")
         print("4. 🖱️  Escolher do dropdown menu")
         print("5. 📅 Inserir datas e hora")
         print("6. 🔍 Clicar em 'Pesquisar agora'")
+        print("\n🎥 VOU GRAVAR SCREENSHOTS A CADA 3 SEGUNDOS!")
         print("\n" + "="*60)
         print("💡 Quando terminares, fecha o browser ou pressiona Ctrl+C aqui")
         print("="*60 + "\n")
         
         # Keep browser open until user closes it or presses Ctrl+C
+        # Take screenshots every 3 seconds to record the process
+        screenshot_counter = 0
         try:
-            # Wait indefinitely (until browser closed or Ctrl+C)
             while True:
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
+                
+                # Take screenshot
+                try:
+                    screenshot_path = f'/tmp/manual_demo_{screenshot_counter:03d}.png'
+                    await page.screenshot(path=screenshot_path, full_page=True)
+                    print(f"📸 Screenshot {screenshot_counter} salvo: {screenshot_path}")
+                    screenshot_counter += 1
+                except:
+                    pass
+                
                 # Check if page is still alive
                 try:
                     await page.evaluate('() => true')

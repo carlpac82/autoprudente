@@ -46,41 +46,96 @@ async def wait_for_network_idle(page: Page, timeout: int = 5000):
 async def fill_location_input(page: Page, input_selector: str, location: str) -> bool:
     """
     Fill location input and select first dropdown item
-    User demo: paste full text, click first item from dropdown
+    CORRECT ORDER (as per user demo):
+    1. Click input (to open dropdown)
+    2. Fill with text
+    3. Select first item from dropdown
     """
     try:
-        # Fill input with full location text (paste like user)
+        # STEP 1: Click input first to open dropdown
+        logger.info(f"Step 1: Clicking input to open dropdown...")
+        await page.click(input_selector)
+        await asyncio.sleep(0.5)
+        
+        # STEP 2: Fill input with full location text
+        logger.info(f"Step 2: Filling input with: {location}")
         await page.fill(input_selector, location)
-        logger.info(f"Filled input with: {location}")
         await asyncio.sleep(1.5)
         
-        # Wait for dropdown to appear and click FIRST item
-        # Try multiple dropdown selectors
+        # Screenshot after filling
+        await page.screenshot(path='/tmp/discovercars_after_fill.png', full_page=True)
+        logger.info("Screenshot saved: /tmp/discovercars_after_fill.png")
+        
+        # STEP 3: Wait for dropdown to appear and click FIRST item
+        logger.info("Step 3: Waiting for dropdown and clicking first item...")
+        
+        # Wait a bit more for dropdown to appear
+        await asyncio.sleep(2)
+        
+        # Try JavaScript detection and click (avoids bot detection)
+        try:
+            dropdown_found = await page.evaluate('''() => {
+                // Try to find dropdown with various selectors
+                const selectors = [
+                    '.Autocomplete-Results li',
+                    'ul[role="listbox"] li',
+                    '.dropdown-menu li',
+                    '.suggestions-list li',
+                    'div[class*="suggestion"] li',
+                    'div[class*="autocomplete"] li'
+                ];
+                
+                for (const sel of selectors) {
+                    const items = document.querySelectorAll(sel);
+                    if (items && items.length > 0) {
+                        // Click first item
+                        items[0].click();
+                        return {found: true, selector: sel, count: items.length};
+                    }
+                }
+                return {found: false};
+            }''')
+            
+            if dropdown_found and dropdown_found.get('found'):
+                logger.info(f"✅ JavaScript clicked dropdown! Selector: {dropdown_found.get('selector')}, Items: {dropdown_found.get('count')}")
+                await asyncio.sleep(1)
+                return True
+            else:
+                logger.warning("JavaScript didn't find dropdown - trying Playwright selectors...")
+        except Exception as e:
+            logger.warning(f"JavaScript approach failed: {e}")
+        
+        # Fallback: Try Playwright selectors
         dropdown_selectors = [
-            '.Autocomplete-Results li:first-child',  # DiscoverCars specific
+            '.Autocomplete-Results li:first-child',
+            '.Autocomplete-Results li',
             'ul[role="listbox"] li:first-child',
             '.dropdown-menu li:first-child',
             '.suggestions-list li:first-child',
-            '[data-testid="location-dropdown"] li:first-child',
         ]
         
         for selector in dropdown_selectors:
             try:
-                first_item = await page.wait_for_selector(selector, state='visible', timeout=3000)
+                first_item = await page.wait_for_selector(selector, state='visible', timeout=2000)
                 if first_item:
+                    await page.screenshot(path='/tmp/discovercars_dropdown_visible.png', full_page=True)
+                    logger.info("Dropdown visible - screenshot saved")
+                    
                     await first_item.click()
-                    logger.info(f"Clicked first dropdown item with selector: {selector}")
+                    logger.info(f"✅ Clicked dropdown with Playwright: {selector}")
                     await asyncio.sleep(1)
                     return True
-            except Exception as e:
-                logger.debug(f"Dropdown selector {selector} failed: {e}")
+            except:
                 continue
         
-        logger.warning(f"Could not find dropdown, but input filled - continuing")
-        return True  # Continue even if dropdown not found (input filled)
+        logger.error(f"❌ Could not find dropdown - checking if location accepted anyway...")
+        # Sometimes DiscoverCars accepts without clicking dropdown
+        return True  # Try to continue anyway
         
     except Exception as e:
         logger.error(f"Error filling location: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 async def fill_search_form(
