@@ -3275,13 +3275,23 @@
         function getCarImage(carItem, supplierType = 'competitor') {
             const itemGroup = carItem.group || extractGroup(carItem.car || '');
             
-            // PRIORITY 1: Use GROUP_IMAGES for AutoPrudente, Automated, and AI prices
-            if ((supplierType === 'autoprudente' || supplierType === 'automated' || supplierType === 'ai') && itemGroup && GROUP_IMAGES[itemGroup]) {
-                console.log(`📸 Using GROUP_IMAGES for ${itemGroup}: ${GROUP_IMAGES[itemGroup]}`);
+            // PRIORITY 0: Try Vehicles Editor API for ALL cars (not just autoprudente/automated/ai)
+            // This ensures photos uploaded via Vehicles > Upload Photo appear everywhere
+            if (itemGroup && GROUP_IMAGES[itemGroup]) {
+                console.log(`📸 Using GROUP_IMAGES (Vehicles API) for ${itemGroup}: ${GROUP_IMAGES[itemGroup]}`);
                 return GROUP_IMAGES[itemGroup];
             }
             
-            // PRIORITY 2: Use imageUrlFor mapping function (same as index.html)
+            // PRIORITY 1: If no group match, try by car name (for competitors with specific names)
+            const carName = (carItem.car || '').toLowerCase().trim();
+            if (carName) {
+                const encodedName = encodeURIComponent(carName);
+                const vehiclePhotoUrl = `/api/vehicles/${encodedName}/photo`;
+                // Return the URL - browser will try to load it (404 if not exists, then fallback)
+                return vehiclePhotoUrl;
+            }
+            
+            // PRIORITY 2: Use imageUrlFor mapping function (fallback to CarJet URLs)
             const mappedUrl = imageUrlFor(carItem);
             
             if (mappedUrl && mappedUrl !== '') {
@@ -3717,7 +3727,8 @@
                                         ${position}
                                     </div>
                                     <img src="${getCarImage(item.car, 'autoprudente')}" alt="${item.car.car}" 
-                                         class="w-12 h-8 object-cover rounded flex-shrink-0">
+                                         class="w-12 h-8 object-cover rounded flex-shrink-0"
+                                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'80\' viewBox=\'0 0 120 80\'%3E%3Crect fill=\'%23009cb6\' width=\'120\' height=\'80\'/%3E%3Ctext x=\'60\' y=\'45\' font-family=\'Arial\' font-size=\'12\' fill=\'white\' text-anchor=\'middle\'%3E${encodeURIComponent(item.car.group || 'CAR')}%3C/text%3E%3C/svg%3E'">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-1 mb-1">
                                             ${getSupplierLogo(item.car.supplier) ? `
@@ -3738,7 +3749,8 @@
                                         ${position}
                                     </div>
                                     <img src="${getCarImage(item.car, 'competitor')}" alt="${item.car.car}" 
-                                         class="w-10 h-7 object-cover rounded flex-shrink-0">
+                                         class="w-10 h-7 object-cover rounded flex-shrink-0"
+                                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'80\' viewBox=\'0 0 120 80\'%3E%3Crect fill=\'%23cccccc\' width=\'120\' height=\'80\'/%3E%3Ctext x=\'60\' y=\'45\' font-family=\'Arial\' font-size=\'12\' fill=\'%23666666\' text-anchor=\'middle\'%3E${encodeURIComponent(item.car.group || 'CAR')}%3C/text%3E%3C/svg%3E'">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-1 mb-1">
                                             ${getSupplierLogo(item.car.supplier) ? `
