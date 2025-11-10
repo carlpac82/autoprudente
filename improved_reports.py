@@ -107,7 +107,7 @@ def generate_report_header(title, subtitle=""):
                 background: #fff;
                 border: 1px solid #e2e8f0;
                 border-radius: 6px;
-                gap: 16px;
+                gap: 20px;
             }}
             .competitor.autoprudente {{
                 background: #e0f7fa;
@@ -392,10 +392,10 @@ def generate_daily_report_html_by_location(search_data, location):
                     
                     <!-- Info do supplier e carro (grow) -->
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px; margin-bottom: 5px; line-height: 1.3;">
+                        <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 13px; margin-bottom: 4px; line-height: 1.4;">
                             {idx}. {supplier}
                         </div>
-                        <div style="font-size: 13px; color: #64748b; line-height: 1.4;">
+                        <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
                             {car_name}
                         </div>
                     </div>
@@ -648,10 +648,10 @@ def generate_weekly_report_html_by_location(search_data, location):
                         
                         <!-- Info do supplier e carro (grow) -->
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 15px; margin-bottom: 5px; line-height: 1.3;">
+                            <div style="font-weight: {'bold' if is_ap else '600'}; color: {'#009cb6' if is_ap else '#1e293b'}; font-size: 13px; margin-bottom: 4px; line-height: 1.4;">
                                 {idx}. {supplier}
                             </div>
-                            <div style="font-size: 13px; color: #64748b; line-height: 1.4;">
+                            <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
                                 {car_name}
                             </div>
                         </div>
