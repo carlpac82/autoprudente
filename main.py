@@ -13796,13 +13796,27 @@ async def save_vehicle_name_override(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                con.execute("""
-                    INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at)
-                    VALUES (?, ?, datetime('now'))
-                    ON CONFLICT(original_name) DO UPDATE SET
-                        edited_name = excluded.edited_name,
-                        updated_at = excluded.updated_at
-                """, (original_name, edited_name))
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                now_func = "NOW()" if is_postgres else "datetime('now')"
+                param_placeholder = "%s" if is_postgres else "?"
+                
+                if is_postgres:
+                    with con.cursor() as cur:
+                        cur.execute(f"""
+                            INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at)
+                            VALUES ({param_placeholder}, {param_placeholder}, {now_func})
+                            ON CONFLICT(original_name) DO UPDATE SET
+                                edited_name = excluded.edited_name,
+                                updated_at = {now_func}
+                        """, (original_name, edited_name))
+                else:
+                    con.execute(f"""
+                        INSERT INTO vehicle_name_overrides (original_name, edited_name, updated_at)
+                        VALUES ({param_placeholder}, {param_placeholder}, {now_func})
+                        ON CONFLICT(original_name) DO UPDATE SET
+                            edited_name = excluded.edited_name,
+                            updated_at = {now_func}
+                    """, (original_name, edited_name))
                 con.commit()
             finally:
                 con.close()
