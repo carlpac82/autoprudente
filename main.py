@@ -9535,6 +9535,9 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
     import sys
     print(f"[VEHICLES] Loaded {len(vehicle_groups)} vehicle groups from Admin", file=sys.stderr, flush=True)
     
+    # Create group_photos dict from vehicle_groups
+    group_photos = {g['code']: g.get('photo_url', '') for g in vehicle_groups if g.get('photo_url')}
+    
     # Use dynamic FX with 1h cache; fallback 1.16
     try:
         GBP_TO_EUR = float(_fx_rate_gbp_eur())
