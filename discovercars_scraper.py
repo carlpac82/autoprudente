@@ -43,61 +43,44 @@ async def wait_for_network_idle(page: Page, timeout: int = 5000):
     except PlaywrightTimeout:
         logger.warning("Network idle timeout - continuing anyway")
 
-async def click_dropdown_and_select(page: Page, input_selector: str, location: str, dropdown_selector: str) -> bool:
+async def fill_location_input(page: Page, input_selector: str, location: str) -> bool:
     """
-    Click on dropdown input and select location from dropdown menu
-    Similar to CarJet scraper methodology
+    Fill location input and select first dropdown item
+    User demo: paste full text, click first item from dropdown
     """
     try:
-        # Try to scroll to make element visible
-        try:
-            await page.evaluate('''(selector) => {
-                const el = document.querySelector(selector);
-                if (el) {
-                    el.scrollIntoView({behavior: "auto", block: "center", inline: "center"});
-                    window.scrollBy(0, -100); // Adjust for fixed header
-                }
-            }''', input_selector)
-            await asyncio.sleep(0.8)
-        except:
-            pass
-        
-        # Force click (bypasses viewport checks - useful for fixed headers)
-        await page.click(input_selector, timeout=5000, force=True)
-        await asyncio.sleep(1)
-        
-        # Wait for dropdown to appear
-        await page.wait_for_selector(dropdown_selector, state='visible', timeout=5000)
-        
-        # Type location to filter results
+        # Fill input with full location text (paste like user)
         await page.fill(input_selector, location)
+        logger.info(f"Filled input with: {location}")
         await asyncio.sleep(1.5)
         
-        # Click on first matching result
-        # Try multiple selectors for dropdown items
-        dropdown_item_selectors = [
-            f"{dropdown_selector} li:has-text('{location}')",
-            f"{dropdown_selector} div:has-text('{location}')",
-            f"{dropdown_selector} [role='option']:has-text('{location}')",
-            f"{dropdown_selector} button:has-text('{location}')",
+        # Wait for dropdown to appear and click FIRST item
+        # Try multiple dropdown selectors
+        dropdown_selectors = [
+            '.Autocomplete-Results li:first-child',  # DiscoverCars specific
+            'ul[role="listbox"] li:first-child',
+            '.dropdown-menu li:first-child',
+            '.suggestions-list li:first-child',
+            '[data-testid="location-dropdown"] li:first-child',
         ]
         
-        for selector in dropdown_item_selectors:
+        for selector in dropdown_selectors:
             try:
-                elements = await page.query_selector_all(selector)
-                if elements:
-                    await elements[0].click(timeout=3000)
-                    logger.info(f"Selected location: {location}")
+                first_item = await page.wait_for_selector(selector, state='visible', timeout=3000)
+                if first_item:
+                    await first_item.click()
+                    logger.info(f"Clicked first dropdown item with selector: {selector}")
                     await asyncio.sleep(1)
                     return True
             except Exception as e:
+                logger.debug(f"Dropdown selector {selector} failed: {e}")
                 continue
         
-        logger.error(f"Could not find dropdown item for: {location}")
-        return False
+        logger.warning(f"Could not find dropdown, but input filled - continuing")
+        return True  # Continue even if dropdown not found (input filled)
         
     except Exception as e:
-        logger.error(f"Error in click_dropdown_and_select: {e}")
+        logger.error(f"Error filling location: {e}")
         return False
 
 async def fill_search_form(
@@ -174,134 +157,67 @@ async def fill_search_form(
                     pass
             return False
         
-        # Click and select pickup location
+        # Fill pickup location
         # Use name="PickupLocation" which we found in debug
         pickup_input_selector = 'input[name="PickupLocation"]'
         
-        pickup_dropdown_selectors = [
-            'ul[role="listbox"]',
-            '.dropdown-menu',
-            '[data-testid="location-dropdown"]',
-            '.suggestions-list',
-            '.Autocomplete-Results',  # DiscoverCars specific
-        ]
-        
-        success = False
-        for dropdown_sel in pickup_dropdown_selectors:
-            try:
-                success = await click_dropdown_and_select(
-                    page,
-                    pickup_input_selector,
-                    pickup_location,
-                    dropdown_sel
-                )
-                if success:
-                    break
-            except Exception as e:
-                logger.warning(f"Dropdown selector {dropdown_sel} failed: {e}")
-                continue
-        
+        success = await fill_location_input(page, pickup_input_selector, pickup_location)
         if not success:
-            logger.error("Failed to select pickup location")
+            logger.error("Failed to fill pickup location")
             return False
         
         await asyncio.sleep(1)
         
-        # Check if different dropoff location
+        # Dropoff location (same as pickup for now - simplify)
+        # If different, enable checkbox and fill
         if pickup_location != dropoff_location:
-            # Enable "Different dropoff location" if available
-            try:
-                different_location_checkbox = await page.query_selector('input[type="checkbox"]')
-                if different_location_checkbox:
-                    await different_location_checkbox.click()
-                    await asyncio.sleep(0.5)
-            except:
-                pass
-            
-            # Find dropoff location input
-            dropoff_selectors = [
-                'input[name="dropoffLocation"]',
-                'input[placeholder*="Local de devolução"]',
-                'input[placeholder*="Drop-off"]',
-                '#dropoffLocation',
-            ]
-            
-            for selector in dropoff_selectors:
-                try:
-                    dropoff_input = await page.wait_for_selector(selector, timeout=3000)
-                    if dropoff_input:
-                        for dropdown_sel in pickup_dropdown_selectors:
-                            try:
-                                await click_dropdown_and_select(
-                                    page,
-                                    selector,
-                                    dropoff_location,
-                                    dropdown_sel
-                                )
-                                break
-                            except:
-                                continue
-                        break
-                except:
-                    continue
+            logger.info("Different dropoff not implemented yet - using same as pickup")
+            # TODO: Enable checkbox and fill dropoff if needed
         
-        # Fill dates
-        # Date pickers usually have specific formats
-        pickup_date_obj = datetime.strptime(pickup_date, '%d/%m/%Y')
-        dropoff_date_obj = datetime.strptime(dropoff_date, '%d/%m/%Y')
+        # Dates and times - let DiscoverCars use defaults for now
+        # User demo showed dates were filled automatically or via calendar
+        logger.info("Using default dates from DiscoverCars (or clicking calendar if needed)")
         
-        # Try to fill date inputs
-        date_selectors = [
-            'input[name="pickupDate"]',
-            'input[placeholder*="Data de recolha"]',
-            'input[type="date"]',
-        ]
+        # Screenshot before search
+        await page.screenshot(path='/tmp/discovercars_04_before_search_button.png', full_page=True)
+        logger.info("Screenshot saved: /tmp/discovercars_04_before_search_button.png")
         
-        for selector in date_selectors:
-            try:
-                await page.fill(selector, pickup_date_obj.strftime('%Y-%m-%d'))
-                break
-            except:
-                continue
-        
-        await asyncio.sleep(0.5)
-        
-        # Fill times if available
-        time_selectors = [
-            'select[name="pickupTime"]',
-            'input[name="pickupTime"]',
-        ]
-        
-        for selector in time_selectors:
-            try:
-                await page.select_option(selector, pickup_time)
-                break
-            except:
-                try:
-                    await page.fill(selector, pickup_time)
-                    break
-                except:
-                    continue
-        
-        # Submit search
+        # Click search button
         search_button_selectors = [
-            'button[type="submit"]',
             'button:has-text("Pesquisar")',
+            'button:has-text("Pesquisar agora")',
             'button:has-text("Search")',
+            'button[type="submit"]',
             '[data-testid="search-button"]',
+            'button.SearchForm-Submit',
         ]
         
+        search_clicked = False
         for selector in search_button_selectors:
             try:
-                await page.click(selector, timeout=3000)
-                logger.info("Clicked search button")
-                break
-            except:
+                button = await page.query_selector(selector)
+                if button:
+                    await button.click()
+                    logger.info(f"Clicked search button: {selector}")
+                    search_clicked = True
+                    break
+            except Exception as e:
+                logger.debug(f"Search button selector {selector} failed: {e}")
                 continue
         
-        # Wait for results page
-        await asyncio.sleep(3)
-        await wait_for_network_idle(page, timeout=10000)
+        if not search_clicked:
+            logger.warning("Could not find search button - trying enter key")
+            await page.keyboard.press('Enter')
+        
+        # Wait for results page to load
+        logger.info("Waiting for results page...")
+        await asyncio.sleep(5)
+        await wait_for_network_idle(page, timeout=15000)
+        
+        # Screenshot after search (results page)
+        await page.screenshot(path='/tmp/discovercars_05_results_page.png', full_page=True)
+        logger.info("Screenshot saved: /tmp/discovercars_05_results_page.png")
+        logger.info(f"Current URL: {page.url}")
         
         return True
         
@@ -317,17 +233,30 @@ async def extract_car_results(page: Page) -> List[Dict[str, Any]]:
     """
     try:
         logger.info("Extracting car results...")
+        logger.info(f"Page URL: {page.url}")
+        logger.info(f"Page title: {await page.title()}")
         
         # Wait for results to load
         await asyncio.sleep(2)
         
+        # Save HTML for debugging
+        html_content = await page.content()
+        with open('/tmp/discovercars_results.html', 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        logger.info("Results HTML saved to: /tmp/discovercars_results.html")
+        
         # Common selectors for car listings
         result_selectors = [
+            'div[data-testid="vehicle-card"]',  # Try specific testid
+            '.VehicleCard',  # DiscoverCars specific
             '.car-list-item',
             '[data-testid="car-result"]',
             '.vehicle-card',
             '.car-item',
             '.result-item',
+            'article',  # Generic article tags
+            'div[class*="vehicle"]',  # Any div with "vehicle" in class
+            'div[class*="car"]',  # Any div with "car" in class
         ]
         
         results = []
