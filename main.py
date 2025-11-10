@@ -17253,6 +17253,107 @@ async def reload_damage_report_email_templates(request: Request):
         logging.error(f"Error reloading email templates: {e}")
         return {"ok": False, "error": str(e)}
 
+@app.get("/reload-email-templates")
+async def reload_email_templates_page(request: Request):
+    """
+    Serve a página HTML para recarregar os templates de email
+    """
+    require_auth(request)
+    
+    html_content = """
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reload DR Email Templates</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #009cb6; margin-top: 0; }
+        button { background: #009cb6; color: white; border: none; padding: 15px 30px; font-size: 16px; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+        button:hover { background: #007a8f; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .instructions { background: #e7f3ff; padding: 15px; border-left: 4px solid #009cb6; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Reload Damage Report Email Templates</h1>
+        
+        <div class="instructions">
+            <strong>📋 Instruções:</strong>
+            <ol>
+                <li>Este endpoint atualiza os templates de email na BD</li>
+                <li>Lê os ficheiros HTML corrigidos (PT, EN, FR, DE)</li>
+                <li>Atualiza automaticamente a base de dados PostgreSQL</li>
+                <li>Clica no botão abaixo para executar</li>
+            </ol>
+        </div>
+        
+        <p><strong>Endpoint:</strong> <code>POST /api/damage-reports/reload-email-templates</code></p>
+        
+        <button id="reloadBtn" onclick="reloadTemplates()">🔄 Reload Templates Now</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function reloadTemplates() {
+            const btn = document.getElementById('reloadBtn');
+            const resultDiv = document.getElementById('result');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Loading...';
+            
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Connecting to API...';
+            
+            try {
+                const response = await fetch('/api/damage-reports/reload-email-templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    resultDiv.className = 'result success';
+                    let html = `✅ SUCCESS!\\n\\n${data.message}\\n\\n`;
+                    html += '📧 Updated Templates:\\n';
+                    data.updated.forEach(t => {
+                        html += `   • ${t.name} (${t.code}): ${t.size.toLocaleString()} characters\\n`;
+                    });
+                    if (data.errors && data.errors.length > 0) {
+                        html += '\\n⚠️ Errors:\\n';
+                        data.errors.forEach(e => { html += `   • ${e}\\n`; });
+                    }
+                    resultDiv.textContent = html;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ ERROR:\\n\\n${data.error || JSON.stringify(data, null, 2)}`;
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ NETWORK ERROR:\\n\\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Reload Templates Now';
+            }
+        }
+    </script>
+</body>
+</html>
+    """
+    
+    return HTMLResponse(content=html_content)
+
 @app.post("/api/damage-reports/upload-pdfs-bulk")
 async def upload_damage_reports_pdfs_bulk(request: Request):
     """Upload múltiplos PDFs de uma vez, detectando DR number do nome do ficheiro"""
