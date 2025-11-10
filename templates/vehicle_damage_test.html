@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 AI Vehicle Damage Detection - TEST</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/notifications.js"></script>
+    <style>
+        .damage-card {
+            transition: all 0.3s ease;
+        }
+        .damage-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 156, 182, 0.2);
+        }
+        .upload-zone {
+            border: 2px dashed #009cb6;
+            background: linear-gradient(135deg, #f0f9fb 0%, #ffffff 100%);
+            transition: all 0.3s ease;
+        }
+        .upload-zone.drag-over {
+            border-color: #007a8f;
+            background: #e0f4f7;
+            transform: scale(1.02);
+        }
+        .preview-image {
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .badge-damage {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #009cb6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">AI Vehicle Damage Detection</h1>
+                        <p class="text-sm text-gray-600">FREE - Powered by Hugging Face AI</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                        💰 €0 Cost
+                    </span>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                        🤖 AI Powered
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Left: Upload & Analysis -->
+            <div class="space-y-6">
+                <!-- Upload Zone -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">📸 Upload Vehicle Photo</h2>
+                    
+                    <div id="uploadZone" class="upload-zone rounded-lg p-8 text-center cursor-pointer">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                        
+                        <svg class="w-16 h-16 mx-auto text-[#009cb6] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        
+                        <p class="text-lg font-medium text-gray-700 mb-2">
+                            Click to upload or drag & drop
+                        </p>
+                        <p class="text-sm text-gray-500">
+                            Supports: JPG, PNG, WebP
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Image Preview -->
+                <div id="previewSection" class="bg-white rounded-lg shadow-sm p-6 hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">🖼️ Preview</h2>
+                    <img id="previewImage" class="preview-image w-full" alt="Preview">
+                    <div class="mt-4 flex gap-3">
+                        <button onclick="analyzeImage()" class="flex-1 bg-[#009cb6] text-white px-4 py-3 rounded-lg hover:bg-[#007a8f] transition-colors font-semibold flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            Analyze with AI
+                        </button>
+                        <button onclick="clearImage()" class="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div id="loadingSection" class="bg-white rounded-lg shadow-sm p-8 text-center hidden">
+                    <div class="spinner mx-auto mb-4"></div>
+                    <p class="text-lg font-medium text-gray-700">Analyzing with AI...</p>
+                    <p class="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+                </div>
+            </div>
+
+            <!-- Right: Results -->
+            <div class="space-y-6">
+                <!-- Results Card -->
+                <div id="resultsSection" class="bg-white rounded-lg shadow-sm p-6 hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">🎯 Analysis Results</h2>
+                    
+                    <!-- Verdict Badge -->
+                    <div id="verdictBadge" class="mb-6"></div>
+                    
+                    <!-- Main Result -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-600">Top Prediction</span>
+                            <span id="topConfidence" class="text-sm font-bold text-[#009cb6]"></span>
+                        </div>
+                        <div id="topPrediction" class="text-2xl font-bold text-gray-900"></div>
+                    </div>
+
+                    <!-- All Predictions -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">All Detections:</h3>
+                        <div id="allPredictions" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="mt-6 flex gap-3">
+                        <button onclick="saveResult()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                            💾 Save to History
+                        </button>
+                        <button onclick="newAnalysis()" class="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                            🔄 New Analysis
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Card -->
+                <div class="bg-gradient-to-br from-[#f0f9fb] to-white rounded-lg shadow-sm p-6 border border-[#009cb6]">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="text-sm">
+                            <p class="font-semibold text-[#009cb6] mb-2">💡 How it works:</p>
+                            <ul class="space-y-1 text-gray-700">
+                                <li>• Upload a vehicle photo</li>
+                                <li>• AI analyzes in 2-5 seconds</li>
+                                <li>• Detects 5 damage types</li>
+                                <li>• 100% FREE (no API costs)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Damage Types -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">🔍 Detectable Damage Types:</h3>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <span class="text-lg">🔴</span>
+                            <span>GLASS SHATTER</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <span class="text-lg">🔴</span>
+                            <span>DENT</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <span class="text-lg">🔴</span>
+                            <span>LAMP BROKEN</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <span class="text-lg">🔴</span>
+                            <span>SCRATCH</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <span class="text-lg">🔴</span>
+                            <span>CRACK</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-green-50 rounded">
+                            <span class="text-lg">✅</span>
+                            <span>NO DAMAGE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div id="historySection" class="mt-8 bg-white rounded-lg shadow-sm p-6 hidden">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Analysis History</h2>
+            <div id="historyList" class="space-y-3"></div>
+        </div>
+    </main>
+
+    <script>
+        let currentFile = null;
+        let currentResult = null;
+        let history = JSON.parse(localStorage.getItem('damageHistory') || '[]');
+
+        // Setup
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const previewImage = document.getElementById('previewImage');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+
+        // Click to upload
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        // Drag & drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showNotification('Please select an image file', 'error');
+                return;
+            }
+
+            currentFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewSection.classList.remove('hidden');
+                resultsSection.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            currentFile = null;
+            previewSection.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            fileInput.value = '';
+        }
+
+        async function analyzeImage() {
+            if (!currentFile) return;
+
+            // Show loading
+            previewSection.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            loadingSection.classList.remove('hidden');
+
+            try {
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', currentFile);
+
+                // Call API
+                const response = await fetch('/api/vehicle/detect-damage', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    currentResult = result;
+                    displayResults(result);
+                    showNotification('Analysis complete!', 'success');
+                } else {
+                    showNotification('Analysis failed: ' + (result.error || 'Unknown error'), 'error');
+                    previewSection.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Network error: ' + error.message, 'error');
+                previewSection.classList.remove('hidden');
+            } finally {
+                loadingSection.classList.add('hidden');
+            }
+        }
+
+        function displayResults(result) {
+            // Show results section
+            resultsSection.classList.remove('hidden');
+
+            // Verdict badge
+            const verdictBadge = document.getElementById('verdictBadge');
+            let badgeClass = 'badge-ok';
+            let badgeIcon = '✅';
+            
+            if (result.has_damage) {
+                if (result.confidence_percent > 70) {
+                    badgeClass = 'badge-damage';
+                    badgeIcon = '🔴';
+                } else {
+                    badgeClass = 'badge-warning';
+                    badgeIcon = '🟡';
+                }
+            }
+
+            verdictBadge.innerHTML = `
+                <div class="result-badge ${badgeClass}">
+                    <span>${badgeIcon}</span>
+                    <span>${result.verdict}</span>
+                </div>
+            `;
+
+            // Top prediction
+            document.getElementById('topPrediction').textContent = result.damage_type || 'NO DAMAGE';
+            document.getElementById('topConfidence').textContent = `${result.confidence_percent}%`;
+
+            // All predictions
+            const allPredictions = document.getElementById('allPredictions');
+            allPredictions.innerHTML = result.all_predictions.map(pred => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span class="text-sm font-medium text-gray-700">${pred.type}</span>
+                    <div class="flex items-center gap-3">
+                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                            <div class="bg-[#009cb6] h-2 rounded-full" style="width: ${pred.confidence_percent}%"></div>
+                        </div>
+                        <span class="text-sm font-bold text-[#009cb6] w-12 text-right">${pred.confidence_percent}%</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveResult() {
+            if (!currentResult) return;
+
+            const entry = {
+                timestamp: new Date().toISOString(),
+                verdict: currentResult.verdict,
+                damage_type: currentResult.damage_type,
+                confidence: currentResult.confidence_percent,
+                has_damage: currentResult.has_damage
+            };
+
+            history.unshift(entry);
+            if (history.length > 20) history = history.slice(0, 20); // Keep last 20
+            
+            localStorage.setItem('damageHistory', JSON.stringify(history));
+            
+            showNotification('Result saved to history', 'success');
+            displayHistory();
+        }
+
+        function displayHistory() {
+            if (history.length === 0) return;
+
+            const historySection = document.getElementById('historySection');
+            const historyList = document.getElementById('historyList');
+
+            historySection.classList.remove('hidden');
+
+            historyList.innerHTML = history.map((entry, index) => {
+                const date = new Date(entry.timestamp);
+                const dateStr = date.toLocaleString('pt-PT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const badgeClass = entry.has_damage ? 'badge-damage' : 'badge-ok';
+                const icon = entry.has_damage ? '🔴' : '✅';
+
+                return `
+                    <div class="damage-card flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-[#009cb6]">
+                        <div class="flex items-center gap-4">
+                            <div class="result-badge ${badgeClass} text-xs">
+                                ${icon} ${entry.verdict}
+                            </div>
+                            <span class="text-sm text-gray-600">${dateStr}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-bold text-[#009cb6]">${entry.confidence}%</span>
+                            <button onclick="deleteHistory(${index})" class="text-red-600 hover:text-red-800 text-sm">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteHistory(index) {
+            if (confirm('Delete this entry?')) {
+                history.splice(index, 1);
+                localStorage.setItem('damageHistory', JSON.stringify(history));
+                displayHistory();
+                showNotification('Entry deleted', 'success');
+            }
+        }
+
+        function newAnalysis() {
+            clearImage();
+            resultsSection.classList.add('hidden');
+        }
+
+        // Load history on startup
+        displayHistory();
+    </script>
+</body>
+</html>

@@ -3615,6 +3615,18 @@ async def rental_agreement_debug_page(request: Request):
         "request": request
     })
 
+@app.get("/vehicle-damage-test", response_class=HTMLResponse)
+async def vehicle_damage_test_page(request: Request):
+    """🚗 AI Vehicle Damage Detection Test Page - FREE (No API costs)"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("vehicle_damage_test.html", {
+        "request": request
+    })
+
 # --- Admin: environment summary and adjustment preview ---
 @app.get("/admin/env-summary")
 async def admin_env_summary(request: Request):
