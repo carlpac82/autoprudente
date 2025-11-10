@@ -981,6 +981,96 @@ function startPositioningHints(photoType) {
 
 let changeCount = 0;
 
+// OCR License Plate Detection
+async function detectLicensePlate(blob) {
+    console.log('🔍 Detectando matrícula com OCR...');
+    
+    // Check if license plate field is already filled
+    const plateField = document.getElementById('inputPlate');
+    if (plateField && plateField.value.trim()) {
+        console.log('Matrícula já preenchida, saltando OCR');
+        return;
+    }
+    
+    showNotification('🔍 A detectar matrícula...', 'info');
+    
+    try {
+        // Convert blob to image URL
+        const imageUrl = URL.createObjectURL(blob);
+        
+        // Process with Tesseract OCR
+        const result = await Tesseract.recognize(
+            imageUrl,
+            'eng', // English works better for alphanumeric
+            {
+                logger: info => {
+                    if (info.status === 'recognizing text') {
+                        console.log(`OCR Progress: ${Math.round(info.progress * 100)}%`);
+                    }
+                }
+            }
+        );
+        
+        console.log('OCR Text detected:', result.data.text);
+        
+        // Extract license plate pattern
+        // Portuguese format: XX-XX-XX or XX-00-XX or 00-XX-00
+        const text = result.data.text.toUpperCase();
+        
+        // Try multiple patterns
+        const patterns = [
+            /([A-Z0-9]{2}[-\s]?[A-Z0-9]{2}[-\s]?[A-Z0-9]{2})/g,  // XX-XX-XX
+            /([A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{2})/g,              // AA-00-AA
+            /(\d{2}[-\s]?[A-Z]{2}[-\s]?\d{2})/g,                // 00-AA-00
+            /([A-Z]{2}[-\s]?\d{2}[-\s]?\d{2})/g,                // AA-00-00
+        ];
+        
+        let detectedPlate = null;
+        for (const pattern of patterns) {
+            const matches = text.match(pattern);
+            if (matches && matches.length > 0) {
+                // Get the match and format it
+                detectedPlate = matches[0].replace(/\s+/g, '-');
+                // Ensure format XX-XX-XX
+                if (detectedPlate.length >= 6 && detectedPlate.length <= 10) {
+                    break;
+                }
+            }
+        }
+        
+        if (detectedPlate) {
+            // Format properly: XX-XX-XX
+            detectedPlate = detectedPlate.replace(/[^A-Z0-9]/g, '');
+            if (detectedPlate.length >= 6) {
+                const formatted = `${detectedPlate.slice(0,2)}-${detectedPlate.slice(2,4)}-${detectedPlate.slice(4,6)}`;
+                
+                // Fill the field
+                if (plateField) {
+                    plateField.value = formatted;
+                    plateField.style.background = '#fef3c7'; // Highlight yellow
+                    setTimeout(() => {
+                        plateField.style.background = '';
+                    }, 2000);
+                }
+                
+                showNotification(`✅ Matrícula detectada: ${formatted}`, 'success');
+                console.log('✅ License plate detected:', formatted);
+            } else {
+                throw new Error('Formato inválido');
+            }
+        } else {
+            throw new Error('Matrícula não encontrada');
+        }
+        
+        // Clean up
+        URL.revokeObjectURL(imageUrl);
+        
+    } catch (error) {
+        console.warn('OCR failed:', error);
+        showNotification('⚠️ Não foi possível detectar a matrícula automaticamente. Por favor, insira manualmente.', 'warning');
+    }
+}
+
 function closeCamera() {
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
@@ -1173,6 +1263,11 @@ function acceptPhoto(photoType) {
     setTimeout(() => slot.classList.remove('shutter-animation'), 300);
     
     showNotification(`${photoTypes.find(p => p.type === photoType).label} guardada`, 'success');
+    
+    // OCR: Auto-detect license plate from front photo
+    if (photoType === 'front') {
+        detectLicensePlate(blob);
+    }
     
     // Enable next button if all photos captured
     if (Object.keys(inspectionData.photos).length === 6) {
