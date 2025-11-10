@@ -16,6 +16,41 @@ let currentPhotoType = null;
 let autoSequenceMode = false;
 let currentPhotoIndex = 0;
 
+// Notification helper
+function showNotification(message, type = 'info') {
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#009cb6'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10001;
+        font-weight: 500;
+        max-width: 300px;
+        animation: slideIn 0.3s ease-out;
+    `;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
 // Photo types and instructions
 const photoTypes = [
     {type: 'front', label: 'Front View', instruction: 'Center the front of the vehicle, include license plate'},
@@ -425,6 +460,22 @@ function closeCamera() {
 
 function capturePhoto() {
     const video = document.getElementById('cameraPreview');
+    
+    // Validate video is ready
+    if (!video || !video.videoWidth || !video.videoHeight) {
+        alert('⚠️ Câmera ainda não está pronta. Aguarde um momento.');
+        console.error('Video not ready:', video);
+        return;
+    }
+    
+    if (!currentPhotoType) {
+        alert('⚠️ Erro: Tipo de foto não definido.');
+        console.error('currentPhotoType is null');
+        return;
+    }
+    
+    console.log('Capturing photo:', currentPhotoType, `${video.videoWidth}x${video.videoHeight}`);
+    
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -435,8 +486,17 @@ function capturePhoto() {
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0);
     
+    console.log('Canvas created, converting to blob...');
+    
     // Convert to blob
     canvas.toBlob(blob => {
+        if (!blob) {
+            alert('⚠️ Erro ao criar imagem. Tente novamente.');
+            console.error('Blob creation failed');
+            return;
+        }
+        
+        console.log('Photo blob created:', blob.size, 'bytes');
         // Store photo
         inspectionData.photos[currentPhotoType] = blob;
         
