@@ -360,42 +360,163 @@ async function openCamera(photoType) {
 
 function setupCameraOverlay(photoType) {
     const overlayContainer = document.getElementById('cameraOverlay');
-    const hintText = document.getElementById('hintText');
     
     // Clear existing overlay
     overlayContainer.innerHTML = '';
     
-    // Car diagrams for each view
-    const carDiagrams = {
-        'front': getCarFrontSVG(),
-        'back': getCarBackSVG(),
-        'left': getCarSideSVG(),
-        'right': getCarSideSVG(),
-        'interior': getInteriorSVG(),
-        'odometer': getOdometerSVG()
+    // Rotation angles for each view
+    const rotations = {
+        'front': 0,
+        'left': 90,
+        'back': 180,
+        'right': 270,
+        'interior': 0,
+        'odometer': 0
     };
     
     const hints = {
-        'front': 'Alinhe a frente do veículo com o diagrama',
-        'back': 'Alinhe a traseira do veículo com o diagrama',
-        'left': 'Alinhe o lado esquerdo com o diagrama',
-        'right': 'Alinhe o lado direito com o diagrama',
-        'interior': 'Centre o interior do veículo',
-        'odometer': 'Centre o odómetro para leitura clara'
+        'front': 'Dirija-se à FRENTE do veículo',
+        'back': 'Dirija-se à TRASEIRA do veículo',
+        'left': 'Dirija-se ao LADO ESQUERDO',
+        'right': 'Dirija-se ao LADO DIREITO',
+        'interior': 'Entre no veículo - INTERIOR',
+        'odometer': 'Aponte para o ODÓMETRO'
     };
     
-    // Create new overlay with car diagram
+    const rotation = rotations[photoType] || 0;
+    const isInteriorOrOdo = photoType === 'interior' || photoType === 'odometer';
+    
+    // Create animated 3D car overlay
     overlayContainer.innerHTML = `
-        <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
-            <rect width="100%" height="100%" fill="black" opacity="0.4"/>
-            <g transform="translate(50, 50)">
-                ${carDiagrams[photoType] || carDiagrams['front']}
-            </g>
-        </svg>
-        <div id="positionHints" style="position: absolute; bottom: 100px; left: 0; right: 0; text-align: center;">
-            <div id="hintText" style="display: inline-block; background: rgba(0,0,0,0.7); color: white; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: 600; backdrop-filter: blur(8px);">
-                ${hints[photoType]}
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            
+            <!-- 3D Car Animation -->
+            <div style="perspective: 1000px; margin-bottom: 40px;">
+                <div id="car3D" style="
+                    width: 300px;
+                    height: 180px;
+                    transform-style: preserve-3d;
+                    transform: rotateY(${rotation}deg);
+                    transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                ">
+                    ${get3DCarHTML()}
+                </div>
             </div>
+            
+            <!-- Direction hint with icon -->
+            <div style="text-align: center; color: white;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(0,156,182,0.9); padding: 16px 32px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+                    <svg style="width: 32px; height: 32px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${isInteriorOrOdo ? 
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>' :
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>'
+                        }
+                    </svg>
+                    <span style="font-size: 20px; font-weight: 700;">${hints[photoType]}</span>
+                </div>
+                <p style="margin-top: 16px; font-size: 14px; opacity: 0.9;">Posicione-se e alinhe o veículo</p>
+            </div>
+        </div>
+    `;
+}
+
+function get3DCarHTML() {
+    return `
+        <!-- Simple 3D car using CSS -->
+        <div style="
+            position: absolute;
+            width: 300px;
+            height: 180px;
+            transform-style: preserve-3d;
+        ">
+            <!-- Car body -->
+            <div style="
+                position: absolute;
+                width: 240px;
+                height: 100px;
+                left: 30px;
+                top: 50px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                border-radius: 20px 20px 8px 8px;
+                transform: translateZ(30px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            "></div>
+            
+            <!-- Roof -->
+            <div style="
+                position: absolute;
+                width: 140px;
+                height: 70px;
+                left: 80px;
+                top: 20px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                border-radius: 12px 12px 0 0;
+                transform: translateZ(30px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            "></div>
+            
+            <!-- Windshield -->
+            <div style="
+                position: absolute;
+                width: 100px;
+                height: 50px;
+                left: 100px;
+                top: 30px;
+                background: rgba(100, 200, 255, 0.3);
+                border-radius: 8px;
+                transform: translateZ(31px);
+                border: 2px solid rgba(255,255,255,0.5);
+            "></div>
+            
+            <!-- Front -->
+            <div style="
+                position: absolute;
+                width: 60px;
+                height: 100px;
+                left: 30px;
+                top: 50px;
+                background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+                border-radius: 20px 0 0 8px;
+                transform: rotateY(-90deg) translateZ(30px);
+            "></div>
+            
+            <!-- Back -->
+            <div style="
+                position: absolute;
+                width: 60px;
+                height: 100px;
+                right: 30px;
+                top: 50px;
+                background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+                border-radius: 0 20px 8px 0;
+                transform: rotateY(90deg) translateZ(0px);
+            "></div>
+            
+            <!-- Wheels -->
+            <div style="
+                position: absolute;
+                width: 40px;
+                height: 40px;
+                left: 50px;
+                top: 120px;
+                background: #1f2937;
+                border-radius: 50%;
+                transform: translateZ(35px);
+                border: 4px solid #374151;
+                box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+            "></div>
+            <div style="
+                position: absolute;
+                width: 40px;
+                height: 40px;
+                right: 50px;
+                top: 120px;
+                background: #1f2937;
+                border-radius: 50%;
+                transform: translateZ(35px);
+                border: 4px solid #374151;
+                box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+            "></div>
         </div>
     `;
 }
@@ -843,11 +964,13 @@ function retakePhoto() {
     window.tempPhotoBlob = null;
 }
 
-function acceptPhoto(photoType, timestamp) {
+function acceptPhoto(photoType) {
+    console.log('acceptPhoto called for:', photoType);
     const blob = window.tempPhotoBlob;
     
     if (!blob) {
         alert('Erro: Foto não encontrada');
+        console.error('No blob found in window.tempPhotoBlob');
         return;
     }
     
