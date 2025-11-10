@@ -10220,6 +10220,58 @@ async def fetch_carjet_results(page, location_name, start_dt, end_dt, lang: str,
         pass
 
 
+@app.post("/api/discovercars-search")
+async def discovercars_search(request: Request):
+    """
+    DiscoverCars AI Price Comparison Endpoint
+    Scrapes prices from discovercars.com for competitive analysis
+    """
+    require_auth(request)
+    
+    try:
+        body = await request.json()
+        
+        pickup_location = body.get("pickup_location")
+        dropoff_location = body.get("dropoff_location", pickup_location)
+        pickup_date = body.get("pickup_date")  # DD/MM/YYYY
+        dropoff_date = body.get("dropoff_date")
+        pickup_time = body.get("pickup_time", "10:00")
+        dropoff_time = body.get("dropoff_time", "10:00")
+        headless = body.get("headless", True)
+        
+        if not pickup_location or not pickup_date or not dropoff_date:
+            return JSONResponse({
+                "success": False,
+                "error": "Missing required parameters: pickup_location, pickup_date, dropoff_date"
+            }, status_code=400)
+        
+        # Import scraper
+        import discovercars_scraper
+        
+        # Run scraper
+        result = await discovercars_scraper.scrape_discovercars(
+            pickup_location=pickup_location,
+            dropoff_location=dropoff_location,
+            pickup_date=pickup_date,
+            dropoff_date=dropoff_date,
+            pickup_time=pickup_time,
+            dropoff_time=dropoff_time,
+            headless=headless
+        )
+        
+        return JSONResponse(result)
+    
+    except Exception as e:
+        logger.error(f"Error in discovercars_search: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status_code=500)
+
+
 @app.get("/api/debug_html")
 async def debug_html(request: Request):
     params = request.query_params
