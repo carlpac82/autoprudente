@@ -278,11 +278,11 @@ def send_daily_report_for_schedule(schedule, schedule_index):
         conn = _get_db_connection()
         cursor = conn.cursor()
         
-        # Get records from last 2 hours only (search was just executed before email)
+        # Get records from last 3 hours (to handle delay between searchTime and sendTime)
         from datetime import datetime, timedelta
         now = datetime.now()
-        two_hours_ago = now - timedelta(hours=2)
-        cutoff_time = two_hours_ago.isoformat()
+        three_hours_ago = now - timedelta(hours=3)
+        cutoff_time = three_hours_ago.isoformat()
         
         cursor.execute(
             """
