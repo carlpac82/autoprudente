@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+    {% csrf_token %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if inspection_type == 'checkout' %}Check-out{% else %}Check-in{% endif %} - Inspeção de Veículo</title>
@@ -213,6 +214,129 @@
             margin: 20px 0;
         }
         
+        /* FUEL SELECTOR STYLES */
+        .fuel-selector {
+            user-select: none;
+        }
+        
+        .fuel-tick {
+            width: 2px;
+            height: 16px;
+            background-color: #009cb6;
+            border-radius: 1px;
+        }
+        
+        .fuel-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        .fuel-slider::-webkit-slider-track {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .fuel-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #009cb6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .fuel-slider::-moz-range-track {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 4px;
+            border: none;
+        }
+        
+        .fuel-slider::-moz-range-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #009cb6;
+            cursor: pointer;
+            border: none;
+            border-radius: 50%;
+        }
+        
+        /* iPhone-style camera button */
+        .iphone-camera-button {
+            width: 80px;
+            height: 80px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.1s ease;
+        }
+        
+        .iphone-camera-button:active {
+            transform: scale(0.95);
+        }
+        
+        .camera-button-outer {
+            width: 80px;
+            height: 80px;
+            border: 4px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .camera-button-inner {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.1s ease;
+        }
+        
+        .iphone-camera-button:active .camera-button-inner {
+            transform: scale(0.9);
+        }
+        
+        .close-camera-button {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .close-camera-button:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: scale(1.1);
+        }
+        
+        /* Odometer input styling */
+        #odometerReading {
+            transition: all 0.3s ease;
+        }
+        
+        #odometerReading:focus {
+            transform: scale(1.05);
+            color: #009cb6;
+        }
+        
         .car-svg-container {
             position: relative;
             touch-action: none;
@@ -254,12 +378,15 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 5;
+            z-index: 10;
+            border: 1px solid transparent;
         }
         
         .drawing-canvas.active {
-            pointer-events: auto;
+            pointer-events: auto !important;
             cursor: crosshair;
+            z-index: 15;
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
         
         .tool-button {
@@ -546,7 +673,7 @@
                 <!-- Auto-filled Info - Inside Page (no labels) -->
                 <div class="mt-16 mb-12">
                     <div class="flex items-center justify-center gap-3 text-xs text-white/70">
-                        <input type="text" id="inputReceptionist" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-28" readonly>
+                        <input type="text" id="inputReceptionist" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-28" readonly value="Admin">
                         <span class="text-white/30">|</span>
                         <input type="text" id="inputDate" class="px-3 py-1 text-xs border-0 rounded bg-white/20 text-white text-center w-24" readonly>
                         <span class="text-white/30">|</span>
@@ -595,16 +722,35 @@
                 <div class="mb-6 bg-gray-50 p-4 rounded-lg">
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         <button type="button" id="toolPin" class="tool-button active" onclick="selectTool('pin')">
-                            📍 Pins
+                            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            Pins
                         </button>
                         <button type="button" id="toolDraw" class="tool-button" onclick="selectTool('draw')">
-                            ✏️ Desenhar
+                            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                            Desenhar
                         </button>
                         <button type="button" id="toolEraser" class="tool-button" onclick="selectTool('eraser')">
-                            🧹 Apagar
+                            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l8.48-8.48c.79-.78 2.05-.78 2.84 0l2.11 2.12zm-1.41 1.41L12.7 7.1 16.9 11.3l2.12-2.12-3.19-3.21z"/>
+                            </svg>
+                            Apagar
                         </button>
                         <button type="button" class="tool-button" onclick="clearAll()">
-                            🗑️ Limpar Tudo
+                            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                            Limpar Tudo
+                        </button>
+                    </div>
+                    
+                    <!-- Botão de Teste -->
+                    <div class="mt-2 text-center">
+                        <button type="button" class="bg-red-500 text-white px-4 py-2 rounded text-sm" onclick="testCanvasClick()">
+                            🧪 Testar Canvas (Clique Aqui Primeiro)
                         </button>
                     </div>
                     
@@ -634,6 +780,87 @@
                     <!-- Pins adicionados dinamicamente aqui -->
                     <!-- Pin preview -->
                     <div id="pinPreview" class="damage-pin" style="display: none; opacity: 0.5; pointer-events: none;"></div>
+                </div>
+                
+                <!-- Seção Quilómetros e Combustível -->
+                <div class="mt-6 bg-white p-6 rounded-lg border-2 border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Quilómetros -->
+                        <div>
+                            <label class="block text-lg font-bold text-[#009cb6] mb-4">
+                                Km Saída / Km Out:
+                            </label>
+                            <div class="flex items-center justify-center bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
+                                <input type="number" 
+                                       id="odometerReading" 
+                                       class="text-4xl font-bold text-center bg-transparent border-none outline-none w-full" 
+                                       placeholder="60578"
+                                       style="font-family: 'Courier New', monospace; letter-spacing: 0.2em;"
+                                       min="0"
+                                       max="999999">
+                            </div>
+                        </div>
+                        
+                        <!-- Combustível -->
+                        <div>
+                            <label class="block text-lg font-bold text-[#009cb6] mb-4">
+                                Combustível / Fuel:
+                            </label>
+                            <div class="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
+                                <!-- Fuel Level Selector -->
+                                <div class="fuel-selector">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-semibold text-[#009cb6]">OUT</span>
+                                        <span class="text-sm font-semibold text-[#009cb6]">R</span>
+                                        <span class="text-sm font-semibold text-[#009cb6]">1/4</span>
+                                        <span class="text-sm font-semibold text-[#009cb6]">1/2</span>
+                                        <span class="text-sm font-semibold text-[#009cb6]">3/4</span>
+                                        <span class="text-sm font-semibold text-[#009cb6]">F</span>
+                                    </div>
+                                    
+                                    <!-- Fuel Level Bar - Made narrower -->
+                                    <div class="relative bg-white border-2 border-[#009cb6] rounded-lg h-8 mb-2 max-w-xs mx-auto">
+                                        <!-- Fuel level indicators -->
+                                        <div class="absolute inset-0 flex items-center justify-between px-1">
+                                            <div class="fuel-tick" data-level="0"></div>
+                                            <div class="fuel-tick" data-level="1"></div>
+                                            <div class="fuel-tick" data-level="25"></div>
+                                            <div class="fuel-tick" data-level="50"></div>
+                                            <div class="fuel-tick" data-level="75"></div>
+                                            <div class="fuel-tick" data-level="100"></div>
+                                        </div>
+                                        
+                                        <!-- Fuel level fill -->
+                                        <div id="fuelFill" class="h-full bg-[#009cb6] rounded-lg transition-all duration-300" style="width: 100%;"></div>
+                                        
+                                        <!-- X marker -->
+                                        <div id="fuelMarker" class="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 text-xl font-bold text-black" style="left: 100%;">
+                                            ✕
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Fuel level slider - Made narrower -->
+                                    <div class="max-w-xs mx-auto">
+                                        <input type="range" 
+                                               id="fuelSlider" 
+                                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer fuel-slider"
+                                               min="0" 
+                                               max="100" 
+                                               value="100"
+                                               step="5">
+                                    </div>
+                                    
+                                    <!-- Selected fuel level display -->
+                                    <div class="text-center mt-2">
+                                        <span class="text-sm font-semibold text-gray-700">Nível: </span>
+                                        <span id="fuelLevelText" class="text-sm font-bold text-[#009cb6]">Cheio (F)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
                 </div>
                 
                 <!-- Campo de Observações -->
@@ -751,13 +978,12 @@
                 </div>
             </div>
             
-            <div class="flex gap-4 justify-center px-4" id="cameraButtons" style="position: fixed; bottom: 20px; left: 0; right: 0; z-index: 10000;">
-                <button onclick="capturePhoto()" class="bg-[#009cb6] text-white px-8 sm:px-12 py-4 sm:py-5 rounded-lg hover:bg-[#007a91] transition-all font-semibold flex items-center gap-2 sm:gap-3 shadow-lg hover:shadow-xl text-base sm:text-lg">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
-                        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-                    </svg>
-                    Capturar
+            <!-- iPhone-style camera button - Hidden during countdown -->
+            <div class="flex justify-center px-4" id="cameraButtons" style="position: fixed; bottom: 40px; left: 0; right: 0; z-index: 10000; display: none;">
+                <button onclick="capturePhoto()" class="iphone-camera-button" title="Capturar Foto">
+                    <div class="camera-button-outer">
+                        <div class="camera-button-inner"></div>
+                    </div>
                 </button>
             </div>
         </div>
@@ -787,6 +1013,22 @@
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Pass user data from backend to JavaScript
+        {% if current_user %}
+        window.currentUserData = {
+            name: "{{ (current_user.first_name + ' ' + current_user.last_name).strip() or current_user.username }}",
+            username: "{{ current_user.username }}",
+            email: "{{ current_user.email or '' }}"
+        };
+        {% else %}
+        window.currentUserData = {
+            name: "Rececionista",
+            username: "user",
+            email: ""
+        };
+        {% endif %}
+    </script>
     <script src="/static/vehicle_inspection.js"></script>
     
     <!-- Croqui Interativo Script -->
@@ -800,15 +1042,38 @@
         let canvas, ctx;
         
         // Initialize canvas
-        document.addEventListener('DOMContentLoaded', () => {
+        function initializeCanvas() {
+            console.log('🔍 initializeCanvas called');
+            
             canvas = document.getElementById('drawingCanvas');
+            console.log('🔍 Canvas element:', !!canvas);
+            
             const diagram = document.getElementById('carDiagram');
-            const img = diagram.querySelector('img');
+            console.log('🔍 Diagram element:', !!diagram);
+            
+            const img = diagram ? diagram.querySelector('img') : null;
+            console.log('🔍 Image element:', !!img);
+            
+            if (!canvas) {
+                console.error('❌ Canvas element not found!');
+                return false;
+            }
+            
+            if (!diagram) {
+                console.error('❌ Diagram element not found!');
+                return false;
+            }
+            
+            if (!img) {
+                console.error('❌ Diagram image not found!');
+                return false;
+            }
             
             // Set canvas size to match image
             const resizeCanvas = () => {
                 canvas.width = img.offsetWidth;
                 canvas.height = img.offsetHeight;
+                console.log(`Canvas resized to ${canvas.width}x${canvas.height}`);
                 redrawCanvas();
             };
             
@@ -823,18 +1088,122 @@
             
             // Setup diagram events
             setupDiagramEvents();
+            
+            console.log('✅ Canvas initialized successfully');
+            return true;
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Don't initialize canvas immediately since diagram step is hidden
+            // Canvas will be initialized when diagram step becomes visible
+            
+            // Initialize fuel selector (but it won't work until diagram is visible)
+            setTimeout(() => {
+                initializeFuelSelector();
+            }, 100);
+            
+            // Ensure RA field formatting is working
+            setTimeout(() => {
+                const raField = document.getElementById('inputRA');
+                if (raField) {
+                    console.log('✅ RA field found and ready');
+                } else {
+                    console.error('❌ RA field not found');
+                }
+            }, 100);
         });
+        
+        // Fuel selector functionality
+        function initializeFuelSelector() {
+            const fuelSlider = document.getElementById('fuelSlider');
+            const fuelFill = document.getElementById('fuelFill');
+            const fuelMarker = document.getElementById('fuelMarker');
+            const fuelLevelText = document.getElementById('fuelLevelText');
+            
+            if (!fuelSlider || !fuelFill || !fuelMarker || !fuelLevelText) {
+                console.error('Fuel selector elements not found');
+                return;
+            }
+            
+            function updateFuelDisplay(value) {
+                const percentage = parseInt(value);
+                
+                // Update fill width
+                fuelFill.style.width = percentage + '%';
+                
+                // Update marker position
+                fuelMarker.style.left = percentage + '%';
+                
+                // Update text based on percentage
+                let levelText = '';
+                if (percentage === 0) {
+                    levelText = 'Vazio (OUT)';
+                } else if (percentage <= 10) {
+                    levelText = 'Reserva (R)';
+                } else if (percentage <= 25) {
+                    levelText = '1/4';
+                } else if (percentage <= 50) {
+                    levelText = '1/2';
+                } else if (percentage <= 75) {
+                    levelText = '3/4';
+                } else {
+                    levelText = 'Cheio (F)';
+                }
+                
+                fuelLevelText.textContent = levelText;
+                
+                // Store value for saving
+                window.currentFuelLevel = percentage;
+                
+                console.log('Fuel level updated:', percentage + '%', levelText);
+            }
+            
+            // Listen for slider changes
+            fuelSlider.addEventListener('input', (e) => {
+                updateFuelDisplay(e.target.value);
+            });
+            
+            // Initialize with default value
+            updateFuelDisplay(fuelSlider.value);
+        }
+        
+        // Get fuel level for saving
+        function getFuelLevel() {
+            return window.currentFuelLevel || 100;
+        }
+        
+        // Get odometer reading for saving
+        function getOdometerReading() {
+            const odometerInput = document.getElementById('odometerReading');
+            return odometerInput ? parseInt(odometerInput.value) || 0 : 0;
+        }
         
         function selectTool(tool) {
             currentTool = tool;
             document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tool' + tool.charAt(0).toUpperCase() + tool.slice(1)).classList.add('active');
             
-            // Toggle canvas active for drawing
-            if (tool === 'draw' || tool === 'eraser') {
-                canvas.classList.add('active');
+            // Update button states
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            const toolButton = document.querySelector(`[onclick="selectTool('${tool}')"]`);
+            if (toolButton) {
+                toolButton.classList.add('active');
+            }
+            
+            // Update canvas pointer events and ensure it's ready
+            if (canvas) {
+                if (tool === 'draw' || tool === 'eraser') {
+                    canvas.style.pointerEvents = 'auto';
+                    canvas.style.zIndex = '15';
+                    console.log('✅ Canvas activated for', tool, 'pointer-events:', canvas.style.pointerEvents, 'z-index:', canvas.style.zIndex);
+                    console.log('✅ Canvas size:', canvas.width + 'x' + canvas.height);
+                    console.log('✅ Canvas context:', !!ctx);
+                } else {
+                    canvas.style.pointerEvents = 'none';
+                    console.log('🚫 Canvas deactivated for', tool);
+                }
             } else {
-                canvas.classList.remove('active');
+                console.error('❌ Canvas not found when selecting tool:', tool);
             }
         }
         
@@ -847,29 +1216,53 @@
         function setupDiagramEvents() {
             const diagram = document.getElementById('carDiagram');
             
-            // Mouse events
+            if (!diagram || !canvas) {
+                console.error('Diagram or canvas not found for event setup');
+                return;
+            }
+            
+            // Remove existing event listeners to avoid duplicates
+            diagram.removeEventListener('click', handleClick);
+            diagram.removeEventListener('mousemove', handleMove);
+            diagram.removeEventListener('mouseleave', hidePreview);
+            
+            // Mouse events for pins
             diagram.addEventListener('click', handleClick);
             diagram.addEventListener('mousemove', handleMove);
             diagram.addEventListener('mouseleave', hidePreview);
             
-            // Touch events
+            // Touch events for pins
             diagram.addEventListener('touchstart', handleTouchStart, {passive: false});
             diagram.addEventListener('touchmove', handleTouchMove, {passive: false});
             diagram.addEventListener('touchend', handleTouchEnd);
             
+            // Remove existing canvas event listeners
+            canvas.removeEventListener('mousedown', startDrawing);
+            canvas.removeEventListener('mousemove', draw);
+            canvas.removeEventListener('mouseup', stopDrawing);
+            canvas.removeEventListener('mouseout', stopDrawing);
+            canvas.removeEventListener('touchstart', startDrawing);
+            canvas.removeEventListener('touchmove', draw);
+            canvas.removeEventListener('touchend', stopDrawing);
+            
             // Drawing events on canvas
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('mousedown', startDrawing, {passive: false});
+            canvas.addEventListener('mousemove', draw, {passive: false});
+            canvas.addEventListener('mouseup', stopDrawing, {passive: false});
+            canvas.addEventListener('mouseout', stopDrawing, {passive: false});
             
             canvas.addEventListener('touchstart', startDrawing, {passive: false});
             canvas.addEventListener('touchmove', draw, {passive: false});
-            canvas.addEventListener('touchend', stopDrawing);
+            canvas.addEventListener('touchend', stopDrawing, {passive: false});
+            
+            console.log('✅ Diagram events setup complete');
         }
         
         function handleClick(e) {
+            console.log('🔍 handleClick called, currentTool:', currentTool);
+            console.log('🔍 Click event details:', e.type, 'target:', e.target.tagName, 'clientX:', e.clientX, 'clientY:', e.clientY);
             if (currentTool === 'pin') {
+                console.log('📍 Adding pin at click position');
                 addPin(e);
             }
         }
@@ -970,26 +1363,49 @@
         }
         
         function startDrawing(e) {
-            if (currentTool !== 'draw' && currentTool !== 'eraser') return;
+            console.log('🔍 startDrawing called, currentTool:', currentTool, 'canvas:', !!canvas, 'ctx:', !!ctx);
+            console.log('🔍 Event details:', e.type, 'target:', e.target.id, 'clientX:', e.clientX, 'clientY:', e.clientY);
+            
+            if (currentTool !== 'draw' && currentTool !== 'eraser') {
+                console.log('Not in draw/eraser mode, ignoring');
+                return;
+            }
+            
+            if (!canvas || !ctx) {
+                console.error('❌ Canvas or context not available for drawing');
+                console.error('❌ Canvas element:', canvas);
+                console.error('❌ Context:', ctx);
+                return;
+            }
+            
             e.preventDefault();
+            e.stopPropagation();
             drawing = true;
             
+            console.log('✏️ Starting drawing, tool:', currentTool, 'canvas size:', canvas.width + 'x' + canvas.height);
+            
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX || e.touches[0].clientX) - rect.left;
-            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            
+            console.log('Start position:', {x, y});
             
             // Set stroke properties before beginning path
             if (currentTool === 'draw') {
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = currentSize === 'tiny' ? 1 : currentSize === 'small' ? 2 : currentSize === 'medium' ? 3 : 5;
+                ctx.strokeStyle = '#000000'; // Black for damage marks
+                ctx.lineWidth = currentSize === 'tiny' ? 2 : currentSize === 'small' ? 3 : currentSize === 'medium' ? 5 : 8;
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
+                console.log('Drawing with width:', ctx.lineWidth);
             } else if (currentTool === 'eraser') {
                 ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = currentSize === 'tiny' ? 8 : currentSize === 'small' ? 12 : currentSize === 'medium' ? 20 : 30;
+                ctx.lineWidth = currentSize === 'tiny' ? 10 : currentSize === 'small' ? 15 : currentSize === 'medium' ? 25 : 35;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
+                console.log('Erasing with width:', ctx.lineWidth);
             }
             
             ctx.beginPath();
@@ -998,20 +1414,29 @@
         
         function draw(e) {
             if (!drawing) return;
+            
+            if (!canvas || !ctx) {
+                console.error('❌ Canvas or context lost during drawing');
+                return;
+            }
+            
             e.preventDefault();
+            e.stopPropagation();
             
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX || e.touches[0].clientX) - rect.left;
-            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
             
             ctx.lineTo(x, y);
             ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
+            // Don't begin new path - continue the line
         }
         
-        function stopDrawing() {
+        function stopDrawing(e) {
             if (drawing) {
+                console.log('✅ Stopping drawing');
                 drawing = false;
                 ctx.closePath();
                 
@@ -1020,6 +1445,7 @@
                     type: 'drawing',
                     dataURL: canvas.toDataURL()
                 });
+                console.log('Drawing saved, total damages:', damages.length);
             }
         }
         
@@ -1039,8 +1465,10 @@
         function clearAll() {
             if (!confirm('Apagar tudo (pins e desenhos)?')) return;
             
-            // Remove all pins
-            document.querySelectorAll('.damage-pin:not(#pinPreview)').forEach(pin => pin.remove());
+            if (!canvas || !ctx) {
+                console.error('Canvas not available for clearing');
+                return;
+            }
             
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1050,27 +1478,79 @@
             pinCounter = 0;
         }
         
-        function nextToDiagram() {
-            console.log('🔵 nextToDiagram called');
+        function testCanvasInteraction() {
+            console.log('🧪 Testing canvas interaction...');
+            console.log('🧪 Canvas element:', canvas);
+            console.log('🧪 Canvas size:', canvas?.width + 'x' + canvas?.height);
+            console.log('🧪 Canvas position:', canvas?.getBoundingClientRect());
+            console.log('🧪 Canvas style.pointerEvents:', canvas?.style.pointerEvents);
+            console.log('🧪 Canvas style.zIndex:', canvas?.style.zIndex);
+            console.log('🧪 Current tool:', currentTool);
             
-            // Validate inputs
-            const plate = document.getElementById('inputPlate').value.trim();
-            const ra = document.getElementById('inputRA').value.trim();
+            // Test drawing a small line to verify canvas works
+            if (canvas && ctx) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(10, 10);
+                ctx.lineTo(50, 50);
+                ctx.stroke();
+                console.log('🧪 Test line drawn on canvas');
+            }
+        }
+        
+        function testCanvasClick() {
+            console.log('🧪 TESTE MANUAL DO CANVAS');
+            console.log('🧪 Canvas existe:', !!canvas);
+            console.log('🧪 Context existe:', !!ctx);
+            console.log('🧪 Ferramenta atual:', currentTool);
             
-            if (!plate || !ra) {
-                alert('Por favor preencha a Matrícula e o RA');
+            if (!canvas || !ctx) {
+                alert('❌ Canvas não está inicializado!');
                 return;
             }
             
-            // Check if photos are captured (from vehicle_inspection.js)
-            if (window.inspectionData && Object.keys(window.inspectionData.photos || {}).length < 6) {
-                alert('Por favor tire todas as 6 fotos primeiro');
-                console.log('❌ Not enough photos:', Object.keys(window.inspectionData.photos || {}).length);
-                return;
+            // Forçar ferramenta desenhar
+            selectTool('draw');
+            
+            // Desenhar uma linha de teste
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(150, 150);
+            ctx.stroke();
+            
+            alert('✅ Linha vermelha desenhada! Se não vê, o canvas não está visível.');
+            console.log('🧪 Linha de teste desenhada manualmente');
+        }
+        
+        function nextToDiagram() {
+            console.log('🔵 nextToDiagram called - STARTING CANVAS INITIALIZATION');
+            
+            // Skip validation when called automatically after photos
+            const skipValidation = arguments[0] === true;
+            
+            if (!skipValidation) {
+                // Validate inputs
+                const plate = document.getElementById('inputPlate').value.trim();
+                const ra = document.getElementById('inputRA').value.trim();
+                
+                if (!plate || !ra) {
+                    alert('Por favor preencha a Matrícula e o RA');
+                    return;
+                }
+                
+                // Check if photos are captured (from vehicle_inspection.js)
+                if (window.inspectionData && Object.keys(window.inspectionData.photos || {}).length < 6) {
+                    alert('Por favor tire todas as 6 fotos primeiro');
+                    console.log('❌ Not enough photos:', Object.keys(window.inspectionData.photos || {}).length);
+                    return;
+                }
             }
             
             console.log('✅ All validations passed');
-            console.log('✅ Photos captured:', Object.keys(window.inspectionData.photos || {}).length);
+            console.log('✅ Photos captured:', Object.keys((window.inspectionData && window.inspectionData.photos) || {}).length);
             
             // Hide photos step, show diagram step
             const stepPhotos = document.getElementById('stepPhotos');
@@ -1090,33 +1570,90 @@
                 console.error('❌ stepDiagram not found');
             }
             
-            // Ensure canvas is initialized
+            // Initialize canvas now that diagram step is visible
             setTimeout(() => {
-                const canvasEl = document.getElementById('drawingCanvas');
-                const diagram = document.getElementById('carDiagram');
+                console.log('📅 Initializing canvas for diagram step...');
                 
-                console.log('Canvas element:', canvasEl);
-                console.log('Diagram element:', diagram);
+                // Force re-initialize canvas now that diagram is visible
+                canvas = null;
+                ctx = null;
                 
-                if (canvasEl && !ctx) {
-                    ctx = canvasEl.getContext('2d');
-                    ctx.lineJoin = 'round';
-                    ctx.lineCap = 'round';
-                    console.log('✅ Canvas context initialized');
-                } else if (ctx) {
-                    console.log('✅ Canvas context already exists');
+                console.log('🔍 Attempting to initialize canvas...');
+                const initResult = initializeCanvas();
+                console.log('🔍 Canvas init result:', initResult);
+                
+                if (!initResult) {
+                    console.error('❌ Failed to initialize canvas for diagram');
+                    return;
                 }
                 
-                // Set canvas to match image size
-                if (canvasEl && diagram) {
+                // Ensure canvas is ready for drawing
+                console.log('🔍 Canvas check - canvas:', !!canvas, 'ctx:', !!ctx);
+                if (!canvas || !ctx) {
+                    console.error('❌ Canvas or context not ready after initialization');
+                    return;
+                }
+                
+                // Ensure canvas is properly sized (image should be visible now)
+                const diagram = document.getElementById('carDiagram');
+                if (canvas && diagram) {
                     const img = diagram.querySelector('img');
                     if (img) {
-                        canvasEl.width = img.offsetWidth;
-                        canvasEl.height = img.offsetHeight;
-                        console.log(`✅ Canvas resized to ${canvasEl.width}x${canvasEl.height}`);
+                        // Force a resize after image loads
+                        const resizeCanvas = () => {
+                            if (img.offsetWidth > 0 && img.offsetHeight > 0) {
+                                canvas.width = img.offsetWidth;
+                                canvas.height = img.offsetHeight;
+                                console.log(`✅ Canvas resized to ${canvas.width}x${canvas.height}`);
+                                
+                                // Re-setup canvas context after resize
+                                ctx = canvas.getContext('2d');
+                                ctx.lineJoin = 'round';
+                                ctx.lineCap = 'round';
+                                
+                                // Clear canvas and redraw any existing content
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                redrawCanvas();
+                                
+                                // Re-setup event listeners after canvas is ready
+                                setupDiagramEvents();
+                                
+                                // Force tool selection to ensure canvas is active
+                                setTimeout(() => {
+                                    selectTool('draw');
+                                    console.log('✅ Tool set to draw after canvas init');
+                                    
+                                    // Canvas ready - no automatic test line
+                                    console.log('✅ Canvas ready for user interaction');
+                                }, 100);
+                                
+                                console.log('✅ Canvas fully initialized and ready for drawing');
+                            } else {
+                                console.warn('Image not ready, retrying...');
+                                setTimeout(resizeCanvas, 100);
+                            }
+                        };
+                        
+                        if (img.complete && img.offsetWidth > 0) {
+                            resizeCanvas();
+                        } else {
+                            img.onload = resizeCanvas;
+                            // Also try after a delay in case onload already fired
+                            setTimeout(resizeCanvas, 200);
+                        }
                     }
                 }
-            }, 200);
+                
+                // Initialize fuel selector now that elements are visible
+                initializeFuelSelector();
+                
+                // Make sure drawing tool is selected by default
+                setTimeout(() => {
+                    selectTool('draw');
+                    console.log('✅ Drawing tool selected and canvas should be ready');
+                }, 100);
+                
+            }, 500);
             
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1124,33 +1661,331 @@
         }
         
         function proceedToAnalysis() {
-            console.log('🔵 proceedToAnalysis called');
+            console.log('🔵 proceedToAnalysis called - skipping AI page');
+            
+            // Validate required fields
+            const odometerReading = getOdometerReading();
+            if (!odometerReading || odometerReading === 0) {
+                alert('Por favor, preencha os quilómetros. Este campo é obrigatório.');
+                document.getElementById('odometerReading').focus();
+                return;
+            }
             
             // Save observations
             const observations = document.getElementById('damageObservations').value;
             
-            // Save diagram data
+            // Save diagram data including fuel and odometer
             window.diagramData = {
-                pins: damages.filter(d => d.type === 'pin'),
-                drawing: canvas ? canvas.toDataURL() : null,
-                observations: observations
+                damages: damages,
+                observations: observations,
+                fuelLevel: getFuelLevel(),
+                odometerReading: odometerReading
             };
             
-            console.log('✅ Diagram data saved:', window.diagramData);
+            console.log('Diagram data saved:', window.diagramData);
             
-            // Hide diagram step, show analysis step
+            // Skip AI analysis page - show loading and go direct to finish
+            showAILoadingAndFinish();
+        }
+        
+        function showAILoadingAndFinish() {
+            // Hide diagram step
             document.getElementById('stepDiagram').classList.add('hidden');
-            document.getElementById('stepAnalysis').classList.remove('hidden');
             
-            // Start AI analysis
-            if (typeof startAIAnalysis === 'function') {
-                startAIAnalysis();
-            } else {
-                console.error('❌ startAIAnalysis function not found');
+            // Show AI loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'aiLoadingOverlay';
+            loadingOverlay.innerHTML = `
+                <div style="
+                    position: fixed;
+                    inset: 0;
+                    background: linear-gradient(135deg, #009cb6, #007a8f);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 99999;
+                    color: white;
+                    text-align: center;
+                ">
+                    <div style="
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 50px;
+                        border-radius: 20px;
+                        backdrop-filter: blur(10px);
+                        border: 2px solid rgba(255, 255, 255, 0.2);
+                        max-width: 600px;
+                        margin: 20px;
+                    ">
+                        <div style="
+                            width: 80px;
+                            height: 80px;
+                            border: 4px solid rgba(255, 255, 255, 0.3);
+                            border-top: 4px solid white;
+                            border-radius: 50%;
+                            margin: 0 auto 30px;
+                            animation: spin 1s linear infinite;
+                        "></div>
+                        <h2 style="
+                            font-size: 32px;
+                            font-weight: bold;
+                            margin: 0 0 20px;
+                            animation: pulse 2s ease-in-out infinite;
+                        ">VERIFICANDO DANOS COM AI</h2>
+                        <p style="
+                            font-size: 18px;
+                            margin: 0 0 30px;
+                            opacity: 0.9;
+                        ">Analisando ${Object.keys(window.inspectionData?.photos || {}).length} fotos capturadas...</p>
+                        <div style="
+                            background: rgba(255, 255, 255, 0.2);
+                            padding: 20px;
+                            border-radius: 10px;
+                            font-size: 16px;
+                        ">
+                            <div style="margin-bottom: 15px;">✓ Danos identificados</div>
+                            <div style="margin-bottom: 15px;">✓ Relatório gerado</div>
+                            <div style="opacity: 0.7;">⏳ Finalizando análise...</div>
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.7; }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(loadingOverlay);
+            
+            // After 4 seconds, remove loading and show final review
+            setTimeout(() => {
+                loadingOverlay.remove();
+                showFinalReviewStep();
+            }, 4000);
+        }
+        
+        function showFinalReviewStep() {
+            // Show the review step with enhanced functionality
+            document.getElementById('stepReview').classList.remove('hidden');
+            
+            // Update the review content with email option
+            const reviewContainer = document.querySelector('#stepReview .bg-white');
+            if (reviewContainer) {
+                reviewContainer.innerHTML = `
+                    <div class="text-center mb-8">
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Inspeção Concluída!</h2>
+                        <p class="text-lg text-gray-600">Todas as etapas foram completadas com sucesso</p>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <!-- Summary Card -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-900">Resumo da Inspeção</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Fotos capturadas:</span>
+                                    <span class="font-semibold">${Object.keys(window.inspectionData?.photos || {}).length}/6</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Danos marcados:</span>
+                                    <span class="font-semibold">${window.diagramData?.damages?.length || 0}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Combustível:</span>
+                                    <span class="font-semibold">${window.diagramData?.fuelLevel || 100}%</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Quilómetros:</span>
+                                    <span class="font-semibold">${window.diagramData?.odometerReading || 0} km</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions Card -->
+                        <div class="bg-blue-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-900">Próximos Passos</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-blue-600 font-semibold text-sm">1</span>
+                                    </div>
+                                    <span class="text-gray-700">Enviar relatório por email</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-blue-600 font-semibold text-sm">2</span>
+                                    </div>
+                                    <span class="text-gray-700">Guardar no histórico</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-blue-600 font-semibold text-sm">3</span>
+                                    </div>
+                                    <span class="text-gray-700">Finalizar inspeção</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Email Input -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Email para envio do relatório (opcional):
+                        </label>
+                        <input type="email" id="reportEmail" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="exemplo@email.com">
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button onclick="saveAndSendInspection()" class="flex-1 bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2 text-lg">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            Guardar e Enviar por Email
+                        </button>
+                        <button onclick="saveInspectionOnly()" class="flex-1 bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 text-lg">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                            </svg>
+                            Apenas Guardar
+                        </button>
+                    </div>
+                `;
             }
             
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function saveAndSendInspection() {
+            const email = document.getElementById('reportEmail').value.trim();
+            
+            if (!email) {
+                alert('Por favor, insira um email válido para envio do relatório.');
+                document.getElementById('reportEmail').focus();
+                return;
+            }
+            
+            // Show saving overlay
+            showSavingOverlay('Guardando inspeção e enviando por email...');
+            
+            // Save inspection with email
+            saveInspectionWithEmail(email);
+        }
+        
+        function saveInspectionOnly() {
+            // Show saving overlay
+            showSavingOverlay('Guardando inspeção no histórico...');
+            
+            // Save inspection without email
+            saveInspectionWithEmail(null);
+        }
+        
+        function showSavingOverlay(message) {
+            const overlay = document.createElement('div');
+            overlay.id = 'savingOverlay';
+            overlay.innerHTML = `
+                <div style="
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 99999;
+                    color: white;
+                ">
+                    <div style="
+                        background: white;
+                        color: #333;
+                        padding: 40px;
+                        border-radius: 15px;
+                        text-align: center;
+                        max-width: 400px;
+                        margin: 20px;
+                    ">
+                        <div style="
+                            width: 50px;
+                            height: 50px;
+                            border: 4px solid #e5e5e5;
+                            border-top: 4px solid #009cb6;
+                            border-radius: 50%;
+                            margin: 0 auto 20px;
+                            animation: spin 1s linear infinite;
+                        "></div>
+                        <h3 style="margin: 0 0 10px; font-size: 18px; font-weight: bold;">${message}</h3>
+                        <p style="margin: 0; color: #666;">Aguarde um momento...</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        
+        function saveInspectionWithEmail(email) {
+            // Prepare inspection data
+            const inspectionData = {
+                type: '{{ inspection_type|default:"checkin" }}', // Add inspection type
+                photos: window.inspectionData?.photos || {},
+                damages: window.diagramData?.damages || [],
+                observations: window.diagramData?.observations || '',
+                fuelLevel: window.diagramData?.fuelLevel || 100,
+                odometerReading: window.diagramData?.odometerReading || 0,
+                plate: document.getElementById('inputPlate')?.value || '',
+                ra: document.getElementById('inputRA')?.value || '',
+                receptionist: document.getElementById('inputReceptionist')?.value || '',
+                date: document.getElementById('inputDate')?.value || '',
+                time: document.getElementById('inputTime')?.value || '',
+                email: email
+            };
+            
+            console.log('Saving inspection:', inspectionData);
+            
+            // Make actual API call to save inspection
+            fetch('/api/save-inspection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                },
+                body: JSON.stringify(inspectionData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const overlay = document.getElementById('savingOverlay');
+                if (overlay) overlay.remove();
+                
+                if (data.success) {
+                    // Show success message
+                    const successMessage = email ? 
+                        'Inspeção guardada com sucesso!\nRelatório enviado por email.' :
+                        'Inspeção guardada no histórico com sucesso!';
+                        
+                    alert(successMessage);
+                    
+                    // Redirect to check-in page
+                    window.location.href = '/check-in';
+                } else {
+                    alert('Erro ao guardar inspeção: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                const overlay = document.getElementById('savingOverlay');
+                if (overlay) overlay.remove();
+                
+                console.error('Error saving inspection:', error);
+                alert('Erro ao guardar inspeção. Tente novamente.');
+            });
         }
     </script>
 </body>

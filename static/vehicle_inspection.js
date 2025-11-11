@@ -20,6 +20,11 @@ let currentPhotoIndex = 0;
 function showNotification(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
     
+    // Only show visual notifications for errors and warnings
+    if (type !== 'error' && type !== 'warning') {
+        return;
+    }
+    
     // Create toast notification
     const toast = document.createElement('div');
     toast.style.cssText = `
@@ -53,21 +58,37 @@ function showNotification(message, type = 'info') {
 
 // Photo types and instructions
 const photoTypes = [
-    {type: 'front', label: 'Front View', instruction: 'Center the front of the vehicle, include license plate'},
-    {type: 'back', label: 'Rear View', instruction: 'Center the rear of the vehicle, include license plate'},
-    {type: 'left', label: 'Left Side', instruction: 'Show the entire left side, include all doors and wheels'},
-    {type: 'right', label: 'Right Side', instruction: 'Show the entire right side, include all doors and wheels'},
-    {type: 'interior', label: 'Interior', instruction: 'Show seats and dashboard, focus on condition'},
-    {type: 'odometer', label: 'Odometer', instruction: 'Clear view of odometer showing mileage'}
+    {type: 'front', label: 'Vista Frontal', instruction: 'Centre a frente do veículo, inclua a matrícula'},
+    {type: 'back', label: 'Vista Traseira', instruction: 'Centre a traseira do veículo, inclua a matrícula'},
+    {type: 'left', label: 'Lado Esquerdo', instruction: 'Mostre todo o lado esquerdo, inclua todas as portas e rodas'},
+    {type: 'right', label: 'Lado Direito', instruction: 'Mostre todo o lado direito, inclua todas as portas e rodas'},
+    {type: 'interior', label: 'Interior', instruction: 'Mostre o painel, bancos e condição geral do interior'},
+    {type: 'odometer', label: 'Conta-Quilómetros', instruction: 'Foto clara do conta-quilómetros/display da quilometragem'}
 ];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-fill Rececionista from logged-in user
-    const userName = localStorage.getItem('userName') || 'Rececionista';
+    let userName = 'Rececionista'; // fallback
+    
+    // Get user name from backend data
+    if (window.currentUserData && window.currentUserData.name) {
+        userName = window.currentUserData.name;
+        console.log('✅ User name from backend:', userName);
+    } else if (localStorage.getItem('userName')) {
+        userName = localStorage.getItem('userName');
+        console.log('✅ User name from localStorage:', userName);
+    } else {
+        console.log('⚠️ No user data found, using fallback:', userName);
+    }
+    
     const receptionistField = document.getElementById('inputReceptionist');
     if (receptionistField) {
-        receptionistField.value = userName;
+        // Only override if current value is default
+        if (!receptionistField.value || receptionistField.value === 'Admin' || receptionistField.value === 'Rececionista') {
+            receptionistField.value = userName;
+        }
+        console.log('✅ Rececionista preenchido automaticamente:', receptionistField.value);
     }
     
     // Set user initials in avatar
@@ -106,8 +127,56 @@ document.addEventListener('DOMContentLoaded', function() {
         timeField.value = timeStr;
     }
     
-    // Auto-format RA field: 5 digits + "-09"
+    // Auto-focus RA field when license plate is filled
+    const plateField = document.getElementById('inputPlate');
     const raField = document.getElementById('inputRA');
+    
+    if (plateField && raField) {
+        plateField.addEventListener('input', function() {
+            // Count only alphanumeric characters (excluding dashes)
+            const cleanValue = this.value.replace(/[^A-Za-z0-9]/g, '');
+            
+            // When plate reaches exactly 6 alphanumeric characters, focus RA field
+            if (cleanValue.length === 6) {
+                setTimeout(() => {
+                    raField.focus();
+                    console.log('✅ Auto-focused RA field after 6 alphanumeric characters in license plate');
+                }, 100);
+            }
+        });
+        
+        plateField.addEventListener('keypress', function(e) {
+            // On Enter key, focus RA field
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                raField.focus();
+                console.log('✅ Focused RA field on Enter key');
+            }
+        });
+    }
+    
+    // Auto-format license plate field: AA-03-AA (reuse existing plateField)
+    if (plateField) {
+        plateField.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase(); // Only letters and numbers
+            
+            // Limit to 6 characters
+            if (value.length > 6) {
+                value = value.substring(0, 6);
+            }
+            
+            // Auto-format with dashes: AA-03-AA (2-2-2 format)
+            if (value.length >= 5) {
+                value = value.substring(0, 2) + '-' + value.substring(2, 4) + '-' + value.substring(4);
+            } else if (value.length >= 3) {
+                value = value.substring(0, 2) + '-' + value.substring(2);
+            }
+            
+            e.target.value = value;
+        });
+    }
+    
+    // Auto-format RA field: 5 digits + "-09" (reuse existing raField)
     if (raField) {
         raField.addEventListener('input', function(e) {
             let value = e.target.value.replace(/[^0-9-]/g, ''); // Only numbers and dash
@@ -219,6 +288,16 @@ function showDiagramStep() {
     document.getElementById('stepDiagram').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     console.log('✅ Showing diagram step');
+    
+    // Initialize canvas after diagram is visible
+    setTimeout(() => {
+        console.log('🔵 Calling nextToDiagram to initialize canvas...');
+        if (typeof nextToDiagram === 'function') {
+            nextToDiagram(true); // Skip validation when called automatically
+        } else {
+            console.error('❌ nextToDiagram function not found');
+        }
+    }, 100);
 }
 
 function prevStep() {
@@ -283,6 +362,9 @@ function validatePhotos() {
 }
 
 function saveVehicleInfo() {
+    // Get diagram data if available (fuel level and odometer from diagram step)
+    const diagramData = window.diagramData || {};
+    
     inspectionData.vehicleInfo = {
         inspection_type: document.getElementById('inputInspectionType').value,
         vehicle_plate: document.getElementById('inputPlate').value.trim(),
@@ -292,8 +374,9 @@ function saveVehicleInfo() {
         customer_name: document.getElementById('inputCustomerName').value.trim(),
         customer_email: document.getElementById('inputCustomerEmail').value.trim(),
         customer_phone: document.getElementById('inputCustomerPhone').value.trim(),
-        odometer_reading: document.getElementById('inputOdometer').value,
-        fuel_level: document.getElementById('inputFuelLevel').value,
+        // Use diagram data if available, otherwise use form inputs
+        odometer_reading: diagramData.odometerReading || document.getElementById('inputOdometer')?.value || '',
+        fuel_level: diagramData.fuelLevel || document.getElementById('inputFuelLevel')?.value || '',
         inspector_name: document.getElementById('inputInspectorName').value.trim(),
         inspector_notes: document.getElementById('inputNotes').value.trim()
     };
@@ -304,6 +387,8 @@ function saveVehicleInfo() {
     // Update header
     document.getElementById('inspectionType').textContent = 
         inspectionData.vehicleInfo.inspection_type === 'check_in' ? 'Check-in' : 'Check-out';
+    
+    console.log('Vehicle info saved:', inspectionData.vehicleInfo);
 }
 
 // Auto Sequence Mode
@@ -347,6 +432,12 @@ async function openCamera(photoType) {
     document.getElementById('cameraInstruction').textContent = photo.instruction;
     document.getElementById('cameraModal').classList.add('active');
     
+    // Hide camera buttons initially
+    const cameraButtons = document.getElementById('cameraButtons');
+    if (cameraButtons) {
+        cameraButtons.style.display = 'none';
+    }
+    
     // Customize overlay for photo type
     setupCameraOverlay(photoType);
     
@@ -375,6 +466,34 @@ async function openCamera(photoType) {
 }
 
 function startCameraCountdown() {
+    // Prevent multiple countdowns running simultaneously
+    if (window.countdownRunning) {
+        console.log('⚠️ Countdown already running, skipping...');
+        return;
+    }
+    
+    window.countdownRunning = true;
+    
+    // Remove any existing countdown and clear any running intervals
+    const existingCountdown = document.getElementById('cameraCountdown');
+    if (existingCountdown) {
+        existingCountdown.remove();
+    }
+    
+    // Clear any existing countdown intervals
+    if (window.countdownInterval) {
+        clearInterval(window.countdownInterval);
+        window.countdownInterval = null;
+    }
+    
+    // Hide camera buttons during countdown
+    const cameraButtons = document.getElementById('cameraButtons');
+    if (cameraButtons) {
+        cameraButtons.style.display = 'none';
+    }
+    
+    console.log('🔄 Starting new countdown...');
+    
     // Create countdown overlay that doesn't cover buttons
     const countdownOverlay = document.createElement('div');
     countdownOverlay.id = 'cameraCountdown';
@@ -385,8 +504,9 @@ function startCameraCountdown() {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 9999;
+        z-index: 99999;
         pointer-events: none;
+        background: rgba(0, 0, 0, 0.8);
     `;
     
     // Get photo label and instruction
@@ -425,7 +545,7 @@ function startCameraCountdown() {
     const numberEl = document.getElementById('countdownNumber');
     const circumference = 440; // 2 * PI * 70
     
-    const countInterval = setInterval(() => {
+    window.countdownInterval = setInterval(() => {
         count--;
         const progress = count / 3;
         circle.style.strokeDashoffset = circumference * (1 - progress);
@@ -433,9 +553,16 @@ function startCameraCountdown() {
         if (count > 0) {
             numberEl.textContent = count;
         } else {
-            clearInterval(countInterval);
+            clearInterval(window.countdownInterval);
+            window.countdownInterval = null;
+            window.countdownRunning = false; // Reset flag
             countdownOverlay.remove();
-            // No auto-capture - user must click capture button
+            // Show camera button after countdown
+            const cameraButtons = document.getElementById('cameraButtons');
+            if (cameraButtons) {
+                cameraButtons.style.display = 'flex';
+                console.log('📷 Camera buttons shown after countdown');
+            }
             console.log('Countdown finished - ready to capture');
         }
     }, 1000);
@@ -1292,7 +1419,27 @@ function retakePhoto() {
     if (preview) preview.remove();
     
     // Show camera again
-    document.getElementById('cameraPreview').style.display = 'block';
+    const video = document.getElementById('cameraPreview');
+    video.style.display = 'block';
+    
+    // Restart camera stream if not active
+    if (!video.srcObject || !video.srcObject.active) {
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
+        }).then(stream => {
+            video.srcObject = stream;
+            video.play();
+        }).catch(err => {
+            console.error('Error restarting camera:', err);
+            showNotification('Erro ao reiniciar a câmera', 'error');
+        });
+    }
+    
+    // Show overlay
     document.getElementById('cameraOverlay').style.display = 'block';
     
     // Clear temp blob
@@ -1335,11 +1482,105 @@ function showSavingAnimation() {
     
     document.body.appendChild(savingOverlay);
     
-    // Remove after 1.5 seconds
+    // Remove after 2.5 seconds (longer delay)
     setTimeout(() => {
         savingOverlay.style.animation = 'fadeOut 0.3s ease-out';
         setTimeout(() => savingOverlay.remove(), 300);
-    }, 1500);
+    }, 2500);
+}
+
+function showFinalPhotoCompletionMessage() {
+    const completionOverlay = document.createElement('div');
+    completionOverlay.id = 'finalPhotoCompletion';
+    completionOverlay.innerHTML = `
+        <div style="
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #10b981, #059669);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            color: white;
+            text-align: center;
+            animation: slideIn 0.5s ease-out;
+        ">
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                padding: 40px;
+                border-radius: 20px;
+                backdrop-filter: blur(10px);
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                max-width: 500px;
+                margin: 20px;
+            ">
+                <div style="
+                    width: 80px;
+                    height: 80px;
+                    background: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                    animation: checkmark 0.8s ease-out 0.3s both;
+                ">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                    </svg>
+                </div>
+                <h2 style="
+                    font-size: 28px;
+                    font-weight: bold;
+                    margin: 0 0 15px;
+                    animation: fadeInUp 0.6s ease-out 0.5s both, pulse 2s ease-in-out 1s infinite;
+                ">INSPEÇÃO FOTOGRÁFICA TERMINADA</h2>
+                <p style="
+                    font-size: 18px;
+                    margin: 0 0 20px;
+                    opacity: 0.9;
+                    animation: fadeInUp 0.6s ease-out 0.7s both;
+                ">6 fotos processadas com sucesso</p>
+                <div style="
+                    background: rgba(255, 255, 255, 0.2);
+                    padding: 15px;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    animation: fadeInUp 0.6s ease-out 0.9s both;
+                ">
+                    Prosseguindo para marcação de danos...
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes slideIn {
+                from { transform: translateY(-100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes fadeInUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes checkmark {
+                0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+                50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+                100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            }
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+        </style>
+    `;
+    
+    document.body.appendChild(completionOverlay);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        completionOverlay.style.animation = 'slideIn 0.5s ease-out reverse';
+        setTimeout(() => completionOverlay.remove(), 500);
+    }, 3000);
 }
 
 function acceptPhoto(photoType) {
@@ -1352,12 +1593,88 @@ function acceptPhoto(photoType) {
         return;
     }
     
-    // Show saving animation
-    showSavingAnimation();
+    // Show blue processing window between photos
+    showPhotoProcessingWindow(photoType);
     
-    // Store photo
-    inspectionData.photos[photoType] = blob;
+    // Store photo after a delay
+    setTimeout(() => {
+        inspectionData.photos[photoType] = blob;
+        continuePhotoProcessing(photoType, blob);
+    }, 2000); // 2 second delay
+}
+
+function showPhotoProcessingWindow(photoType) {
+    const photoLabel = photoTypes.find(p => p.type === photoType)?.label || 'Foto';
     
+    const processingOverlay = document.createElement('div');
+    processingOverlay.id = 'photoProcessingOverlay';
+    processingOverlay.innerHTML = `
+        <div style="
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #009cb6, #007a8f);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            color: white;
+            text-align: center;
+        ">
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                padding: 40px;
+                border-radius: 20px;
+                backdrop-filter: blur(10px);
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                max-width: 500px;
+                margin: 20px;
+            ">
+                <div style="
+                    width: 60px;
+                    height: 60px;
+                    border: 4px solid rgba(255, 255, 255, 0.3);
+                    border-top: 4px solid white;
+                    border-radius: 50%;
+                    margin: 0 auto 25px;
+                    animation: spin 1s linear infinite;
+                "></div>
+                <h2 style="
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin: 0 0 15px;
+                ">PROCESSANDO FOTO</h2>
+                <p style="
+                    font-size: 18px;
+                    margin: 0 0 20px;
+                    opacity: 0.9;
+                ">${photoLabel}</p>
+                <p style="
+                    font-size: 16px;
+                    margin: 0;
+                    opacity: 0.8;
+                ">
+                    ✓ Foto capturada com sucesso
+                </p>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    
+    document.body.appendChild(processingOverlay);
+    
+    // Remove after 2 seconds
+    setTimeout(() => {
+        processingOverlay.remove();
+    }, 2000);
+}
+
+function continuePhotoProcessing(photoType, blob) {
     // Update UI
     const slot = document.getElementById(`slot-${photoType}`);
     if (slot) {
@@ -1389,7 +1706,8 @@ function acceptPhoto(photoType) {
     
     // Auto-open diagram if all photos captured
     if (Object.keys(inspectionData.photos).length === 6) {
-        showNotification('Todas as fotos capturadas! A abrir marcação de danos...', 'success');
+        // Show special completion message
+        showFinalPhotoCompletionMessage();
         
         // Wait a bit then auto-navigate to diagram
         setTimeout(() => {
@@ -1405,12 +1723,66 @@ function acceptPhoto(photoType) {
                     console.log('✅ Canvas auto-initialized');
                 }
             }
-        }, 1500);
+        }, 3500); // Longer delay to show completion message
     }
     
     // Remove preview
     const preview = document.getElementById('photoPreviewContainer');
     if (preview) preview.remove();
+    
+    // ✅ FIX: Keep camera modal open and restart stream for next photo
+    const video = document.getElementById('cameraPreview');
+    if (video && Object.keys(inspectionData.photos).length < 6) {
+        video.style.display = 'block';
+        
+        // Restart camera stream for next photo
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
+        }).then(stream => {
+            cameraStream = stream;
+            video.srcObject = stream;
+            video.play();
+            
+            // Show overlay again
+            const overlay = document.getElementById('cameraOverlay');
+            if (overlay) overlay.style.display = 'block';
+            
+            // Hide camera buttons before restarting countdown
+            const cameraButtons = document.getElementById('cameraButtons');
+            if (cameraButtons) {
+                cameraButtons.style.display = 'none';
+                console.log('🔒 Camera buttons hidden for next photo');
+            }
+            
+            // Update camera title and instruction for next photo
+            const nextPhotoType = photoTypes.find(pt => !inspectionData.photos[pt.type]);
+            if (nextPhotoType) {
+                currentPhotoType = nextPhotoType.type;
+                document.getElementById('cameraTitle').textContent = nextPhotoType.label;
+                document.getElementById('cameraInstruction').textContent = nextPhotoType.instruction;
+                setupCameraOverlay(nextPhotoType.type);
+            }
+            
+            // Restart countdown
+            startCameraCountdown();
+            
+            console.log('✅ Camera restarted for next photo:', nextPhotoType?.type);
+        }).catch(err => {
+            console.error('Error restarting camera:', err);
+            showNotification('Erro ao reiniciar a câmera', 'error');
+        });
+    }
+    
+    // Close modal if all photos are captured
+    if (Object.keys(inspectionData.photos).length >= 6) {
+        setTimeout(() => {
+            closeCamera();
+        }, 1000);
+    }
     
     // Clear temp blob
     window.tempPhotoBlob = null;
@@ -1568,6 +1940,40 @@ function addAnalysisResult(photoType, result) {
     resultsDiv.insertAdjacentHTML('beforeend', resultHtml);
 }
 
+// Formatting functions
+function formatFuelLevel(fuelLevel) {
+    if (!fuelLevel && fuelLevel !== 0) return 'N/A';
+    
+    const percentage = parseInt(fuelLevel);
+    let levelText = '';
+    
+    if (percentage === 0) {
+        levelText = 'Vazio (OUT)';
+    } else if (percentage <= 10) {
+        levelText = 'Reserva (R)';
+    } else if (percentage <= 25) {
+        levelText = '1/4';
+    } else if (percentage <= 50) {
+        levelText = '1/2';
+    } else if (percentage <= 75) {
+        levelText = '3/4';
+    } else {
+        levelText = 'Cheio (F)';
+    }
+    
+    return `${levelText} (${percentage}%)`;
+}
+
+function formatOdometerReading(reading) {
+    if (!reading && reading !== 0) return 'N/A';
+    
+    const km = parseInt(reading);
+    if (isNaN(km)) return 'N/A';
+    
+    // Format with thousands separator
+    return `${km.toLocaleString('pt-PT')} km`;
+}
+
 // Review
 function generateReview() {
     const summary = document.getElementById('reviewSummary');
@@ -1602,8 +2008,8 @@ function generateReview() {
                     <div><span class="text-gray-600">Brand:</span> <span class="font-medium">${inspectionData.vehicleInfo.vehicle_brand || 'N/A'}</span></div>
                     <div><span class="text-gray-600">Model:</span> <span class="font-medium">${inspectionData.vehicleInfo.vehicle_model || 'N/A'}</span></div>
                     <div><span class="text-gray-600">Contract:</span> <span class="font-medium">${inspectionData.vehicleInfo.contract_number || 'N/A'}</span></div>
-                    <div><span class="text-gray-600">Odometer:</span> <span class="font-medium">${inspectionData.vehicleInfo.odometer_reading || 'N/A'} km</span></div>
-                    <div><span class="text-gray-600">Fuel:</span> <span class="font-medium">${inspectionData.vehicleInfo.fuel_level || 'N/A'}</span></div>
+                    <div><span class="text-gray-600">Odometer:</span> <span class="font-medium">${formatOdometerReading(inspectionData.vehicleInfo.odometer_reading)}</span></div>
+                    <div><span class="text-gray-600">Fuel:</span> <span class="font-medium">${formatFuelLevel(inspectionData.vehicleInfo.fuel_level)}</span></div>
                     <div><span class="text-gray-600">Inspector:</span> <span class="font-medium">${inspectionData.vehicleInfo.inspector_name}</span></div>
                 </div>
             </div>
@@ -1666,6 +2072,9 @@ async function saveInspection() {
     showNotification('Saving inspection...', 'info');
     
     try {
+        // Ensure we have the latest vehicle info with fuel and odometer data
+        saveVehicleInfo();
+        
         // Create form data with all information
         const formData = new FormData();
         
