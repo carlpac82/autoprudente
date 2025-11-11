@@ -3954,9 +3954,13 @@ async def admin_contracts_page(request: Request):
         'company_nif': _get_setting('company_nif', ''),
     }
     
+    # Get T&C filename
+    tc_filename = _get_setting('checkout_tc_filename', None)
+    
     return templates.TemplateResponse("admin_contracts.html", {
         "request": request,
         "contract_settings": contract_settings,
+        "tc_filename": tc_filename,
         "saved": False,
         "error": None
     })
@@ -4012,6 +4016,62 @@ async def admin_contracts_save(request: Request):
             "contract_settings": contract_settings,
             "saved": False,
             "error": str(e)
+        })
+
+@app.post("/admin/contracts/upload-tc")
+async def upload_checkout_terms_conditions(request: Request, tc_file: UploadFile = File(...)):
+    """Upload do PDF dos Termos e Condições para Check-out"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=302)
+    
+    try:
+        # Validate file type
+        if not tc_file.filename.endswith('.pdf'):
+            raise ValueError("Apenas ficheiros PDF são permitidos")
+        
+        # Create uploads directory if it doesn't exist
+        uploads_dir = Path("static/uploads")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save file with timestamp to avoid conflicts
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"checkout_tc_{timestamp}.pdf"
+        file_path = uploads_dir / safe_filename
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            content = await tc_file.read()
+            f.write(content)
+        
+        # Save filename in database
+        _set_setting('checkout_tc_filename', safe_filename)
+        _set_setting('checkout_tc_path', str(file_path))
+        
+        # Redirect back with success message
+        return RedirectResponse(
+            url="/admin?section=inspections",
+            status_code=303
+        )
+        
+    except Exception as e:
+        logging.error(f"Error uploading T&C file: {e}")
+        
+        # Get current settings
+        contract_settings = {
+            'company_name': _get_setting('company_name', 'Auto Prudente'),
+            'company_nif': _get_setting('company_nif', ''),
+        }
+        tc_filename = _get_setting('checkout_tc_filename', None)
+        
+        return templates.TemplateResponse("admin_contracts.html", {
+            "request": request,
+            "contract_settings": contract_settings,
+            "tc_filename": tc_filename,
+            "saved": False,
+            "error": f"Erro ao fazer upload: {str(e)}"
         })
 
 @app.post("/admin/users/{user_id}/toggle-enabled")
