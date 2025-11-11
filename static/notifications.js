@@ -1,7 +1,11 @@
 /**
  * Unified Notification System
  * Monocromatic design matching progress bar style
+ * Popups vermelhos desativados conforme solicitação
  */
+
+// Desativar popups vermelhos
+const DISABLE_ERROR_POPUPS = true;
 
 // Add CSS for notifications
 const notificationStyles = document.createElement('style');
@@ -76,6 +80,12 @@ document.head.appendChild(notificationStyles);
  * @param {number} duration - Duration in ms (0 = no auto-close)
  */
 function showNotification(message, type = 'info', duration = 5000) {
+    // Desativar popups vermelhos (error) conforme solicitado
+    if (DISABLE_ERROR_POPUPS && type === 'error') {
+        console.log(`[ERROR POPUP DISABLED] ${message}`);
+        return;
+    }
+    
     // Remove existing notifications
     const existing = document.querySelectorAll('.app-notification');
     existing.forEach(n => n.remove());

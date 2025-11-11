@@ -67,9 +67,16 @@
             50% { opacity: 0; }
         }
         
+        /* Header da câmera com fundo preto e transparência */
+        .camera-modal .absolute.top-0 {
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0) 100%) !important;
+            backdrop-filter: blur(2px);
+        }
+        
         /* Garantir cor verde do título em fullscreen */
         .camera-modal #cameraLocation {
             color: #10b981 !important; /* Verde Tailwind green-400 */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         
         /* Garantir que funciona em todos os estados de fullscreen */
@@ -77,6 +84,12 @@
         :-webkit-full-screen .camera-modal #cameraLocation,
         :-moz-full-screen .camera-modal #cameraLocation {
             color: #10b981 !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        /* Texto de instrução com sombra para melhor legibilidade */
+        .camera-modal #cameraInstruction {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         
         /* Car diagram interactive */
@@ -736,26 +749,20 @@
                 
                 <!-- Ferramentas -->
                 <div class="mb-6 bg-gray-50 p-4 rounded-lg">
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                        <button type="button" id="toolPin" class="tool-button active" onclick="selectTool('pin')">
+                    <div class="flex justify-center gap-2 mb-4">
+                        <button type="button" id="toolPin" class="tool-button active flex-1 max-w-[120px]" onclick="selectTool('pin')">
                             <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                             </svg>
                             Pins
                         </button>
-                        <button type="button" id="toolDraw" class="tool-button" onclick="selectTool('draw')">
+                        <button type="button" id="toolDraw" class="tool-button flex-1 max-w-[120px]" onclick="selectTool('draw')">
                             <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                             </svg>
                             Desenhar
                         </button>
-                        <button type="button" id="toolEraser" class="tool-button" onclick="selectTool('eraser')">
-                            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l8.48-8.48c.79-.78 2.05-.78 2.84 0l2.11 2.12zm-1.41 1.41L12.7 7.1 16.9 11.3l2.12-2.12-3.19-3.21z"/>
-                            </svg>
-                            Apagar
-                        </button>
-                        <button type="button" class="tool-button" onclick="clearAll()">
+                        <button type="button" class="tool-button flex-1 max-w-[120px]" onclick="clearAll()">
                             <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                             </svg>
@@ -1484,12 +1491,26 @@
                 return;
             }
             
-            // Clear canvas
+            // Clear canvas (desenhos)
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Reset
+            // Clear pins do SVG
+            const svgElement = document.querySelector('#carDiagram svg');
+            if (svgElement) {
+                // Remove todos os pins (círculos vermelhos) do SVG
+                const pins = svgElement.querySelectorAll('circle[fill="#ef4444"]');
+                pins.forEach(pin => pin.remove());
+                
+                // Remove todos os números dos pins
+                const pinNumbers = svgElement.querySelectorAll('text[fill="white"]');
+                pinNumbers.forEach(number => number.remove());
+            }
+            
+            // Reset arrays e contadores
             damages = [];
             pinCounter = 0;
+            
+            console.log('Tudo limpo: pins e desenhos removidos');
         }
         
         function testCanvasInteraction() {
