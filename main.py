@@ -20870,32 +20870,46 @@ async def upload_checkout_template(request: Request, file: UploadFile = File(...
         from io import BytesIO
         from datetime import datetime
         
+        logging.info(f"📤 Starting upload of: {file.filename}")
         contents = await file.read()
         filename = file.filename
+        file_size = len(contents)
+        
+        logging.info(f"✅ File read: {file_size} bytes ({file_size / 1024 / 1024:.2f} MB)")
         
         # Verificar se é PDF válido e contar páginas
         try:
             pdf_reader = PdfReader(BytesIO(contents))
             num_pages = len(pdf_reader.pages)
+            logging.info(f"✅ PDF validated: {num_pages} páginas")
         except Exception as e:
+            logging.error(f"❌ Invalid PDF: {e}")
             return {"ok": False, "error": f"PDF inválido: {str(e)}"}
         
+        # Converter para hex
+        logging.info("🔄 Converting to hex...")
+        hex_data = contents.hex()
+        hex_size = len(hex_data)
+        logging.info(f"✅ Hex conversion complete: {hex_size} chars ({hex_size / 1024 / 1024:.2f} MB)")
+        
         # Salvar em settings
+        logging.info("💾 Saving to settings...")
         _set_setting('checkout_template_filename', filename)
-        _set_setting('checkout_template_data', contents.hex())
+        _set_setting('checkout_template_data', hex_data)
         _set_setting('checkout_template_pages', str(num_pages))
         _set_setting('checkout_template_uploaded_at', datetime.now().isoformat())
         
-        logging.info(f"✅ Check-out Template uploaded: {filename}, {num_pages} páginas")
+        logging.info(f"✅ Check-out Template uploaded: {filename}, {num_pages} páginas, {file_size / 1024:.1f} KB")
         
         return {
             "ok": True,
             "message": "Template Check-out carregado com sucesso",
             "num_pages": num_pages,
-            "filename": filename
+            "filename": filename,
+            "size_bytes": file_size
         }
     except Exception as e:
-        logging.error(f"Error uploading checkout template: {e}")
+        logging.error(f"❌ Error uploading checkout template: {e}")
         import traceback
         logging.error(traceback.format_exc())
         return {"ok": False, "error": str(e)}
@@ -20909,30 +20923,46 @@ async def get_active_checkout_template(request: Request):
         from starlette.responses import Response
         
         # Buscar template dos settings
+        logging.info("🔍 Fetching checkout template from settings...")
         template_data_hex = _get_setting('checkout_template_data')
         filename = _get_setting('checkout_template_filename', 'checkout_template.pdf')
         
         if not template_data_hex:
+            logging.warning("❌ No checkout template found in settings")
             return Response(
                 content=b"No Check-out template available. Please upload a PDF first.",
                 status_code=404,
                 media_type="text/plain"
             )
         
-        # Converter hex para bytes
-        pdf_data = bytes.fromhex(template_data_hex)
+        logging.info(f"✅ Template found: {filename}, hex length: {len(template_data_hex)}")
         
-        logging.info(f"📄 Serving active Check-out template: {filename}")
+        # Converter hex para bytes
+        try:
+            pdf_data = bytes.fromhex(template_data_hex)
+            logging.info(f"✅ PDF decoded: {len(pdf_data)} bytes")
+        except Exception as hex_error:
+            logging.error(f"❌ Failed to decode hex: {hex_error}")
+            return Response(
+                content=f"Failed to decode PDF data: {str(hex_error)}".encode(),
+                status_code=500,
+                media_type="text/plain"
+            )
+        
+        logging.info(f"📄 Serving active Check-out template: {filename} ({len(pdf_data)} bytes)")
         
         return Response(
             content=pdf_data,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f'inline; filename="{filename}"'
+                "Content-Disposition": f'inline; filename="{filename}"',
+                "Content-Length": str(len(pdf_data))
             }
         )
     except Exception as e:
-        logging.error(f"Error getting active Check-out template: {e}")
+        logging.error(f"❌ Error getting active Check-out template: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         return Response(
             content=str(e).encode(),
             status_code=500,
