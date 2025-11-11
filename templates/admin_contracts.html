@@ -6,6 +6,7 @@
     <title>Admin • Inspeções</title>
     <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/notifications.js"></script>
     <script>
         // Hide header if in iframe
         if (window.location.search.includes('iframe=1')) {
@@ -81,10 +82,6 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-        /* Success message fade */
-        .mb-6 {
-            transition: opacity 0.5s ease-out;
-        }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50">
@@ -113,29 +110,17 @@
         <!-- Success Message -->
         <script>
             // Check for success parameter in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('success') === 'tc_uploaded') {
-                // Show success notification
-                const successDiv = document.createElement('div');
-                successDiv.className = 'mb-6 p-4 rounded-lg border-l-4 border-green-500 bg-green-50 flex items-start gap-3';
-                successDiv.innerHTML = `
-                    <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <div>
-                        <p class="font-semibold text-green-800">Termos e Condições carregados com sucesso!</p>
-                        <p class="text-sm text-green-700 mt-1">O ficheiro PDF será anexado automaticamente aos emails de Check-out.</p>
-                    </div>
-                `;
-                document.querySelector('main').insertBefore(successDiv, document.querySelector('.section-card'));
-                
-                // Remove parameter from URL after 3 seconds
-                setTimeout(() => {
+            document.addEventListener('DOMContentLoaded', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('success') === 'tc_uploaded') {
+                    // Show clean notification
+                    if (typeof showNotification === 'function') {
+                        showNotification('Termos e Condições carregados com sucesso!', 'success');
+                    }
+                    // Remove parameter from URL
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    successDiv.style.opacity = '0';
-                    setTimeout(() => successDiv.remove(), 500);
-                }, 3000);
-            }
+                }
+            });
         </script>
 
         <!-- Mapper Section -->
