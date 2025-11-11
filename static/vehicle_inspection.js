@@ -1322,7 +1322,7 @@ function acceptPhoto(photoType) {
         if (nextBtn) {
             nextBtn.disabled = false;
             nextBtn.classList.remove('hidden');
-            nextBtn.classList.add('inline-block');
+            nextBtn.classList.add('flex');
         }
         
         // Show completion message if in auto mode
