@@ -79,27 +79,21 @@
         }
         
         .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }
-        .mobile-menu { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; backdrop-filter: blur(4px); }
+        .mobile-menu { display: none; position: fixed; inset: 0; background: white; z-index: 9999; }
         .mobile-menu.active { display: block; overflow-y: auto; }
-        .mobile-menu-container { padding: 20px; max-width: 500px; margin: 0 auto; }
-        .mobile-menu-header { display: flex; justify-content: flex-end; margin-bottom: 20px; }
-        .mobile-menu-close { background: white; border: none; color: #1f2937; font-size: 28px; font-weight: 300; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-        .mobile-menu-section { margin-bottom: 24px; }
-        .mobile-menu-section-title { color: #f4ad0f; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 4px; }
-        .mobile-menu-section a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-radius: 12px; margin-bottom: 8px; color: #1f2937; font-size: 16px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; }
-        .mobile-menu-section a:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); background: #f8fafc; }
-        .mobile-menu-section a svg { width: 22px; height: 22px; color: #009cb6; flex-shrink: 0; }
+        .mobile-menu-container { padding: 0; max-width: 500px; margin: 0 auto; height: 100%; background: white; display: flex; flex-direction: column; }
+        .mobile-menu-header { display: flex; justify-content: flex-end; padding: 16px; background: white; border-bottom: 1px solid #e5e7eb; }
+        .mobile-menu-close { background: #009cb6; border: none; color: white; font-size: 24px; font-weight: 300; cursor: pointer; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+        .mobile-menu-section { margin: 0; padding: 0; flex: 1; overflow-y: auto; }
+        .mobile-menu-section-title { color: #f4ad0f; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; padding: 16px 20px 8px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .mobile-menu-section a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-bottom: 1px solid #e5e7eb; color: #1f2937; font-size: 16px; font-weight: 400; transition: all 0.2s; }
+        .mobile-menu-section a:hover { background: #f0f9fb; }
+        .mobile-menu-section a svg { width: 20px; height: 20px; color: #009cb6; flex-shrink: 0; }
         .mobile-menu-section a span { flex: 1; }
-        /* Mobile check-in/out hover colors */
-        .mobile-menu-section a:hover svg[fill="#009cb6"],
-        .mobile-menu-section a:hover svg[fill="#dc2626"] {
-            fill: #f59e0b !important;
-            color: #f59e0b !important;
-        }
-        .mobile-menu-logout { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.2); }
-        .mobile-menu-logout a { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(239,68,68,0.1); border-radius: 12px; color: #ef4444; font-size: 16px; font-weight: 600; transition: all 0.2s; }
-        .mobile-menu-logout a:hover { background: rgba(239,68,68,0.2); }
-        .mobile-menu-logout a svg { width: 22px; height: 22px; }
+        .mobile-menu-logout { margin: 0; padding: 0; }
+        .mobile-menu-logout a { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px; background: white; border-top: 2px solid #e5e7eb; color: #ef4444; font-size: 16px; font-weight: 600; transition: all 0.2s; margin-top: auto; }
+        .mobile-menu-logout a:hover { background: #fef2f2; }
+        .mobile-menu-logout a svg { width: 20px; height: 20px; }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50">
