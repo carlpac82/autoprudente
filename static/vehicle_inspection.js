@@ -368,17 +368,18 @@ async function openCamera(photoType) {
 }
 
 function startCameraCountdown() {
-    // Create fullscreen countdown overlay
+    // Create countdown overlay that doesn't cover buttons
     const countdownOverlay = document.createElement('div');
     countdownOverlay.id = 'cameraCountdown';
     countdownOverlay.style.cssText = `
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.85);
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 10000;
+        z-index: 9999;
+        pointer-events: none;
     `;
     
     // Get photo label
@@ -386,18 +387,23 @@ function startCameraCountdown() {
     const photoLabel = photo ? photo.label : 'Foto';
     
     countdownOverlay.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-            <h3 style="font-size: 20px; font-weight: 500; color: white; opacity: 0.9; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);">${photoLabel}</h3>
-            <div style="text-align: center; position: relative;">
-                <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
-                    <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"/>
-                    <circle id="countdownCircle" cx="80" cy="80" r="70" fill="none" stroke="#009cb6" stroke-width="10" 
-                        stroke-dasharray="440" stroke-dashoffset="0" 
-                        style="transition: stroke-dashoffset 1s linear;"/>
-                </svg>
-                <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 72px; font-weight: 800; color: white;">3</div>
-            </div>
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: -1;"></div>
+        
+        <!-- Text at top -->
+        <h3 style="position: absolute; top: 60px; font-size: 22px; font-weight: 600; color: white; z-index: 10; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">${photoLabel}</h3>
+        
+        <!-- Countdown circle in center -->
+        <div style="text-align: center; position: relative; z-index: 10;">
+            <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"/>
+                <circle id="countdownCircle" cx="80" cy="80" r="70" fill="none" stroke="#009cb6" stroke-width="10" 
+                    stroke-dasharray="440" stroke-dashoffset="0" 
+                    style="transition: stroke-dashoffset 1s linear;"/>
+            </svg>
+            <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 72px; font-weight: 800; color: white; text-shadow: 0 4px 12px rgba(0,0,0,0.5);">3</div>
         </div>
+        
+        <!-- Space for buttons at bottom (they will be visible underneath) -->
     `;
     
     document.body.appendChild(countdownOverlay);
