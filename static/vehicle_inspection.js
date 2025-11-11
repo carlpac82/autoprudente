@@ -188,17 +188,30 @@ function updateDiagramIndicator(photoType, captured) {
     // Diagram was removed, keeping function for compatibility
 }
 
-// Step navigation (now 3 steps: Photos -> Analysis -> Review)
+// Step navigation (4 steps: Photos -> Diagram -> Analysis -> Review)
 function nextStep() {
     if (currentStep === 1) {
+        // Go to diagram after photos
         if (!validatePhotos()) return;
-        startAIAnalysis();
+        showDiagramStep();
     } else if (currentStep === 2) {
+        // Go to analysis after diagram
+        startAIAnalysis();
+    } else if (currentStep === 3) {
+        // Go to review after analysis
         generateReview();
     }
     
     currentStep++;
     updateStepDisplay();
+}
+
+function showDiagramStep() {
+    // Navigate to diagram from photos
+    document.getElementById('stepPhotos').classList.add('hidden');
+    document.getElementById('stepDiagram').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    console.log('✅ Showing diagram step');
 }
 
 function prevStep() {
@@ -210,8 +223,8 @@ function updateStepDisplay() {
     // Hide all steps
     document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
     
-    // Show current step (now: stepPhotos, stepAnalysis, stepReview)
-    const steps = ['stepPhotos', 'stepAnalysis', 'stepReview'];
+    // Show current step (now: stepPhotos, stepDiagram, stepAnalysis, stepReview)
+    const steps = ['stepPhotos', 'stepDiagram', 'stepAnalysis', 'stepReview'];
     const currentStepElement = document.getElementById(steps[currentStep - 1]);
     if (currentStepElement) {
         currentStepElement.classList.remove('hidden');
@@ -1320,8 +1333,17 @@ function acceptPhoto(photoType) {
         
         // Wait a bit then auto-navigate to diagram
         setTimeout(() => {
-            if (typeof nextToDiagram === 'function') {
-                nextToDiagram();
+            console.log('🔵 Auto-opening diagram after 6 photos');
+            showDiagramStep();
+            // Also initialize canvas
+            const canvasEl = document.getElementById('drawingCanvas');
+            if (canvasEl && window.canvas) {
+                const img = document.querySelector('#carDiagram img');
+                if (img) {
+                    canvasEl.width = img.offsetWidth;
+                    canvasEl.height = img.offsetHeight;
+                    console.log('✅ Canvas auto-initialized');
+                }
             }
         }, 1500);
     }

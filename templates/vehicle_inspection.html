@@ -1141,24 +1141,33 @@
         }
         
         function proceedToAnalysis() {
+            console.log('🔵 proceedToAnalysis called');
+            
             // Save observations
             const observations = document.getElementById('damageObservations').value;
             
             // Save diagram data
             window.diagramData = {
                 pins: damages.filter(d => d.type === 'pin'),
-                drawing: canvas.toDataURL(),
+                drawing: canvas ? canvas.toDataURL() : null,
                 observations: observations
             };
+            
+            console.log('✅ Diagram data saved:', window.diagramData);
             
             // Hide diagram step, show analysis step
             document.getElementById('stepDiagram').classList.add('hidden');
             document.getElementById('stepAnalysis').classList.remove('hidden');
             
-            // Scroll to top
-            window.scrollTo(0, 0);
+            // Start AI analysis
+            if (typeof startAIAnalysis === 'function') {
+                startAIAnalysis();
+            } else {
+                console.error('❌ startAIAnalysis function not found');
+            }
             
-            console.log('Diagram data saved:', window.diagramData);
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>
