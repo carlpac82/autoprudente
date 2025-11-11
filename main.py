@@ -28792,6 +28792,11 @@ async def send_inspection_email(inspection_number: str, request: Request):
     - Anexa PDF Check-in mapeado (sem T&C)
     
     NÃO usa coordenadas do Damage Report!
+    
+    PÁGINAS DO PDF:
+    - PDF tem 3 páginas total
+    - Check-out: Gerar PDF apenas com páginas 1 e 2 + anexar T&C
+    - Check-in: Gerar PDF apenas com página 3 (sem T&C)
     """
     try:
         data = await request.json()
@@ -28799,11 +28804,16 @@ async def send_inspection_email(inspection_number: str, request: Request):
         
         # TODO: Implementar geração de PDF Check-out com coordenadas corretas
         # 1. Buscar inspeção da base de dados
-        # 2. Buscar coordenadas de Check-out (não Damage Report)
-        # 3. Gerar PDF com campos mapeados
-        # 4. Buscar T&C: _get_setting('checkout_tc_path')
-        # 5. Anexar ambos os PDFs ao email
-        # 6. Enviar email
+        # 2. Identificar tipo (checkout vs checkin)
+        # 3. Buscar coordenadas de Check-out (não Damage Report)
+        # 4. Gerar PDF com campos mapeados:
+        #    - Check-out: páginas 1 e 2
+        #    - Check-in: página 3 (futuro)
+        # 5. Se Check-out, buscar T&C: _get_setting('checkout_tc_path')
+        # 6. Anexar PDFs ao email:
+        #    - Check-out: PDF inspeção (pág 1-2) + T&C
+        #    - Check-in: PDF inspeção (pág 3) apenas
+        # 7. Enviar email
         
         logging.info(f"Sending inspection {inspection_number} to email: {email}")
         logging.warning("⚠️  Email implementation needed: use checkout coordinates + attach T&C")
@@ -28829,6 +28839,11 @@ async def preview_inspection_pdf(inspection_number: str, request: Request):
     - Check-out: Usa coordenadas de /admin/contracts (checkout-mapper)
     - Check-in: Usa coordenadas próprias (quando implementado)
     - NÃO usa coordenadas do Damage Report!
+    
+    PÁGINAS DO PDF:
+    - PDF tem 3 páginas total
+    - Check-out: USA apenas páginas 1 e 2
+    - Check-in: USA apenas página 3 (futuro)
     """
     try:
         require_inspection_access(request)
@@ -28837,10 +28852,12 @@ async def preview_inspection_pdf(inspection_number: str, request: Request):
         # 1. Buscar inspeção da base de dados
         # 2. Identificar tipo (checkout vs checkin)
         # 3. Buscar coordenadas corretas:
-        #    - Check-out: coordenadas de checkout-mapper
-        #    - Check-in: coordenadas de checkin-mapper (futuro)
+        #    - Check-out: coordenadas de checkout-mapper (páginas 1 e 2)
+        #    - Check-in: coordenadas de checkin-mapper (página 3, futuro)
         # 4. Gerar PDF com campos mapeados
-        # 5. Retornar PDF para preview
+        # 5. Retornar apenas páginas relevantes:
+        #    - Check-out: páginas 1 e 2
+        #    - Check-in: página 3
         
         logging.warning("⚠️  Preview implementation needed: use checkout coordinates (not damage report)")
         
@@ -28865,6 +28882,11 @@ async def download_inspection_pdf(inspection_number: str, request: Request):
     - Check-out: Usa coordenadas de /admin/contracts (checkout-mapper)
     - Check-in: Usa coordenadas próprias (quando implementado)
     - NÃO usa coordenadas do Damage Report!
+    
+    PÁGINAS DO PDF:
+    - PDF tem 3 páginas total
+    - Check-out: USA apenas páginas 1 e 2
+    - Check-in: USA apenas página 3 (futuro)
     """
     try:
         require_inspection_access(request)
@@ -28873,10 +28895,12 @@ async def download_inspection_pdf(inspection_number: str, request: Request):
         # 1. Buscar inspeção da base de dados
         # 2. Identificar tipo (checkout vs checkin)
         # 3. Buscar coordenadas corretas:
-        #    - Check-out: coordenadas de checkout-mapper
-        #    - Check-in: coordenadas de checkin-mapper (futuro)
+        #    - Check-out: coordenadas de checkout-mapper (páginas 1 e 2)
+        #    - Check-in: coordenadas de checkin-mapper (página 3, futuro)
         # 4. Gerar PDF com campos mapeados
-        # 5. Retornar PDF para download
+        # 5. Retornar apenas páginas relevantes:
+        #    - Check-out: páginas 1 e 2
+        #    - Check-in: página 3
         
         logging.warning("⚠️  Download implementation needed: use checkout coordinates (not damage report)")
         

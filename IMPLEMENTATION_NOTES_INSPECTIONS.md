@@ -100,6 +100,40 @@ checkin_coordinates
 
 ---
 
+## 📄 PÁGINAS DO PDF
+
+### IMPORTANTE: O PDF tem 3 páginas
+
+**PDF Upload:** O mesmo PDF de 3 páginas é usado para ambos, mas cada tipo usa páginas diferentes!
+
+#### Check-out (Entrega)
+- ✅ **USA:** Páginas 1 e 2
+- ❌ **NÃO USA:** Página 3
+- Campos mapeados em páginas 1 e 2 apenas
+
+#### Check-in (Devolução) - FUTURO
+- ✅ **USA:** Página 3
+- ❌ **NÃO USA:** Páginas 1 e 2
+- Campos mapeados na página 3 apenas
+
+```
+┌─────────────────────────────────────┐
+│  PDF DE 3 PÁGINAS                   │
+├─────────────────────────────────────┤
+│  Página 1: Check-out                │ ← Check-out usa
+│  Página 2: Check-out                │ ← Check-out usa
+│  Página 3: Check-in                 │ ← Check-in usa (futuro)
+└─────────────────────────────────────┘
+```
+
+### Ao Gerar PDFs:
+- **Preview/Download Check-out:** Incluir apenas páginas 1 e 2
+- **Preview/Download Check-in:** Incluir apenas página 3
+- **Email Check-out:** PDF com páginas 1 e 2 + T&C
+- **Email Check-in:** PDF com página 3 (sem T&C)
+
+---
+
 ## 📝 CAMPOS DO CHECK-OUT
 
 30 campos disponíveis:
