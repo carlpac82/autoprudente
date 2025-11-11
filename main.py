@@ -20869,6 +20869,7 @@ async def upload_checkout_template(request: Request, file: UploadFile = File(...
         from PyPDF2 import PdfReader
         from io import BytesIO
         from datetime import datetime
+        import base64
         
         logging.info(f"📤 Starting upload of: {file.filename}")
         contents = await file.read()
@@ -20886,18 +20887,21 @@ async def upload_checkout_template(request: Request, file: UploadFile = File(...
             logging.error(f"❌ Invalid PDF: {e}")
             return {"ok": False, "error": f"PDF inválido: {str(e)}"}
         
-        # Converter para hex
-        logging.info("🔄 Converting to hex...")
-        hex_data = contents.hex()
-        hex_size = len(hex_data)
-        logging.info(f"✅ Hex conversion complete: {hex_size} chars ({hex_size / 1024 / 1024:.2f} MB)")
+        # Usar base64 em vez de hex (mais eficiente - 33% overhead vs 100%)
+        logging.info("🔄 Encoding to base64...")
+        base64_data = base64.b64encode(contents).decode('utf-8')
+        encoded_size = len(base64_data)
+        logging.info(f"✅ Base64 encoding complete: {encoded_size} chars ({encoded_size / 1024 / 1024:.2f} MB)")
         
-        # Salvar em settings
-        logging.info("💾 Saving to settings...")
+        # Salvar em settings usando base64
+        logging.info("💾 Saving to settings (base64)...")
         _set_setting('checkout_template_filename', filename)
-        _set_setting('checkout_template_data', hex_data)
+        _set_setting('checkout_template_data_b64', base64_data)
         _set_setting('checkout_template_pages', str(num_pages))
         _set_setting('checkout_template_uploaded_at', datetime.now().isoformat())
+        
+        # Remover hex antigo se existir
+        _set_setting('checkout_template_data', '')
         
         logging.info(f"✅ Check-out Template uploaded: {filename}, {num_pages} páginas, {file_size / 1024:.1f} KB")
         
@@ -20921,33 +20925,53 @@ async def get_active_checkout_template(request: Request):
     
     try:
         from starlette.responses import Response
+        import base64
         
         # Buscar template dos settings
         logging.info("🔍 Fetching checkout template from settings...")
-        template_data_hex = _get_setting('checkout_template_data')
+        
+        # Tentar base64 primeiro (novo formato)
+        template_data_b64 = _get_setting('checkout_template_data_b64')
         filename = _get_setting('checkout_template_filename', 'checkout_template.pdf')
         
-        if not template_data_hex:
-            logging.warning("❌ No checkout template found in settings")
-            return Response(
-                content=b"No Check-out template available. Please upload a PDF first.",
-                status_code=404,
-                media_type="text/plain"
-            )
-        
-        logging.info(f"✅ Template found: {filename}, hex length: {len(template_data_hex)}")
-        
-        # Converter hex para bytes
-        try:
-            pdf_data = bytes.fromhex(template_data_hex)
-            logging.info(f"✅ PDF decoded: {len(pdf_data)} bytes")
-        except Exception as hex_error:
-            logging.error(f"❌ Failed to decode hex: {hex_error}")
-            return Response(
-                content=f"Failed to decode PDF data: {str(hex_error)}".encode(),
-                status_code=500,
-                media_type="text/plain"
-            )
+        if template_data_b64:
+            # Novo formato: base64
+            logging.info(f"✅ Template found (base64): {filename}, length: {len(template_data_b64)}")
+            
+            try:
+                pdf_data = base64.b64decode(template_data_b64)
+                logging.info(f"✅ PDF decoded from base64: {len(pdf_data)} bytes ({len(pdf_data) / 1024 / 1024:.2f} MB)")
+            except Exception as b64_error:
+                logging.error(f"❌ Failed to decode base64: {b64_error}")
+                return Response(
+                    content=f"Failed to decode PDF data (base64): {str(b64_error)}".encode(),
+                    status_code=500,
+                    media_type="text/plain"
+                )
+        else:
+            # Fallback: tentar formato antigo (hex)
+            template_data_hex = _get_setting('checkout_template_data')
+            
+            if not template_data_hex:
+                logging.warning("❌ No checkout template found in settings")
+                return Response(
+                    content=b"No Check-out template available. Please upload a PDF first.",
+                    status_code=404,
+                    media_type="text/plain"
+                )
+            
+            logging.info(f"⚠️  Template found (hex - old format): {filename}, length: {len(template_data_hex)}")
+            
+            try:
+                pdf_data = bytes.fromhex(template_data_hex)
+                logging.info(f"✅ PDF decoded from hex: {len(pdf_data)} bytes")
+            except Exception as hex_error:
+                logging.error(f"❌ Failed to decode hex: {hex_error}")
+                return Response(
+                    content=f"Failed to decode PDF data (hex): {str(hex_error)}".encode(),
+                    status_code=500,
+                    media_type="text/plain"
+                )
         
         logging.info(f"📄 Serving active Check-out template: {filename} ({len(pdf_data)} bytes)")
         
@@ -20956,7 +20980,8 @@ async def get_active_checkout_template(request: Request):
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f'inline; filename="{filename}"',
-                "Content-Length": str(len(pdf_data))
+                "Content-Length": str(len(pdf_data)),
+                "Cache-Control": "no-cache"
             }
         )
     except Exception as e:
