@@ -317,88 +317,19 @@ function startAutoSequence() {
     }, 1000);
 }
 
-async function openCameraAutoSequence(index) {
+function capturePhotoSequence(index) {
     if (index >= photoTypes.length) {
-        // All photos captured!
-        autoSequenceMode = false;
-        showNotification('Todas as 6 fotos capturadas! A processar com AI...', 'success');
-        document.getElementById('btnNextToAnalysis').disabled = false;
+        console.log('All photos captured');
         return;
     }
     
-    currentPhotoIndex = index;
     const photoType = photoTypes[index].type;
     
-    // Show instruction before opening camera
-    const instructions = [
-        'Dirija-se à FRENTE do carro',
-        'Dirija-se à TRASEIRA do carro', 
-        'Dirija-se ao LADO ESQUERDO do carro',
-        'Dirija-se ao LADO DIREITO do carro',
-        'Entre no carro e aponte para o INTERIOR',
-        'Aponte para o ODÓMETRO no painel'
-    ];
-    
-    // Show big instruction overlay
-    showBigInstruction(instructions[index], () => {
-        openCamera(photoType);
-    });
+    // Open camera directly - countdown will happen inside modal
+    openCamera(photoType);
 }
 
-function showBigInstruction(text, callback) {
-    // Create fullscreen instruction overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'instructionOverlay';
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 156, 182, 0.95);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        backdrop-filter: blur(10px);
-    `;
-    
-    overlay.innerHTML = `
-        <div style="text-align: center; color: white; padding: 40px;">
-            <svg style="width: 80px; height: 80px; margin: 0 auto 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">${text}</h2>
-            <div style="font-size: 64px; font-weight: bold;" id="countdown">3</div>
-        </div>
-    `;
-    
-    document.body.appendChild(overlay);
-    
-    // Countdown 3, 2, 1
-    let count = 3;
-    const countdownEl = document.getElementById('countdown');
-    
-    const countInterval = setInterval(() => {
-        count--;
-        if (count > 0) {
-            countdownEl.textContent = count;
-        } else {
-            countdownEl.innerHTML = `
-                <svg style="width: 64px; height: 64px; display: inline-block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-            `;
-            clearInterval(countInterval);
-            
-            // Remove overlay and open camera
-            setTimeout(() => {
-                document.body.removeChild(overlay);
-                callback();
-            }, 500);
-        }
-    }, 1000);
-}
+// Countdown removed - now happens in camera modal
 
 // Camera functions
 async function openCamera(photoType) {
@@ -424,6 +355,9 @@ async function openCamera(photoType) {
         
         document.getElementById('cameraPreview').srcObject = cameraStream;
         
+        // Start countdown animation (3, 2, 1, then capture)
+        startCameraCountdown();
+        
         // Start positioning hints animation
         startPositioningHints(photoType);
     } catch (error) {
@@ -431,6 +365,59 @@ async function openCamera(photoType) {
         showNotification('Could not access camera: ' + error.message, 'error');
         closeCamera();
     }
+}
+
+function startCameraCountdown() {
+    // Create countdown overlay in camera modal
+    const modal = document.getElementById('cameraModal');
+    const countdownOverlay = document.createElement('div');
+    countdownOverlay.id = 'cameraCountdown';
+    countdownOverlay.style.cssText = `
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    `;
+    
+    countdownOverlay.innerHTML = `
+        <div style="text-align: center;">
+            <svg width="120" height="120" viewBox="0 0 120 120" style="transform: rotate(-90deg);">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
+                <circle id="countdownCircle" cx="60" cy="60" r="50" fill="none" stroke="#10b981" stroke-width="8" 
+                    stroke-dasharray="314" stroke-dashoffset="0" 
+                    style="transition: stroke-dashoffset 1s linear;"/>
+            </svg>
+            <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 48px; font-weight: bold; color: white;">3</div>
+        </div>
+    `;
+    
+    modal.appendChild(countdownOverlay);
+    
+    // Countdown animation
+    let count = 3;
+    const circle = document.getElementById('countdownCircle');
+    const numberEl = document.getElementById('countdownNumber');
+    const circumference = 314; // 2 * PI * 50
+    
+    const countInterval = setInterval(() => {
+        count--;
+        const progress = count / 3;
+        circle.style.strokeDashoffset = circumference * (1 - progress);
+        
+        if (count > 0) {
+            numberEl.textContent = count;
+        } else {
+            clearInterval(countInterval);
+            countdownOverlay.remove();
+            // Auto-capture photo
+            setTimeout(() => {
+                capturePhoto();
+            }, 200);
+        }
+    }, 1000);
 }
 
 let scene, camera3D, renderer, carModel, animationId;
