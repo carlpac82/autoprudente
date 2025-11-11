@@ -542,10 +542,12 @@
                     </p>
                 </div>
                 
-                <!-- Hidden Next Button -->
+                <!-- Next Button - Circular Icon -->
                 <div class="text-center mt-6">
-                    <button onclick="nextStep()" id="btnNextToAnalysis" class="hidden bg-[#f59e0b] hover:bg-[#d97706] text-white px-8 py-4 rounded-xl transition-all font-bold shadow-xl" disabled>
-                        Avançar para Análise AI →
+                    <button onclick="nextToDiagram()" id="btnNextToAnalysis" class="hidden w-16 h-16 rounded-full bg-[#009cb6] hover:bg-[#10b981] text-white transition-all shadow-xl flex items-center justify-center mx-auto" disabled title="Próximo: Marcar Danos">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
                     </button>
                 </div>
                 
@@ -1069,6 +1071,24 @@
             pinCounter = 0;
         }
         
+        function nextToDiagram() {
+            // Validate inputs
+            const plate = document.getElementById('inputPlate').value.trim();
+            const ra = document.getElementById('inputRA').value.trim();
+            
+            if (!plate || !ra) {
+                alert('Por favor preencha a Matrícula e o RA');
+                return;
+            }
+            
+            // Hide photos step, show diagram step
+            document.getElementById('stepPhotos').classList.add('hidden');
+            document.getElementById('stepDiagram').classList.remove('hidden');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+        
         function proceedToAnalysis() {
             // Save observations
             const observations = document.getElementById('damageObservations').value;
@@ -1083,6 +1103,9 @@
             // Hide diagram step, show analysis step
             document.getElementById('stepDiagram').classList.add('hidden');
             document.getElementById('stepAnalysis').classList.remove('hidden');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
             
             console.log('Diagram data saved:', window.diagramData);
         }

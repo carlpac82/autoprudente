@@ -1292,6 +1292,10 @@ function acceptPhoto(photoType) {
     if (slot) {
         slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="${photoType}">`;
         slot.classList.add('captured');
+        
+        // Show animation
+        slot.classList.add('shutter-animation');
+        setTimeout(() => slot.classList.remove('shutter-animation'), 300);
     }
     
     // Update check icon if exists
@@ -1304,10 +1308,6 @@ function acceptPhoto(photoType) {
     if (typeof updateDiagramIndicator === 'function') {
         updateDiagramIndicator(photoType, true);
     }
-    
-    // Show animation
-    slot.classList.add('shutter-animation');
-    setTimeout(() => slot.classList.remove('shutter-animation'), 300);
     
     showNotification(`${photoTypes.find(p => p.type === photoType).label} guardada`, 'success');
     
