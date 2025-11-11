@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚗 Vehicle Inspection - Check-in/Check-out</title>
+    <title>{% if inspection_type == 'checkout' %}Check-out{% else %}Check-in{% endif %} - Inspeção de Veículo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/static/notifications.js"></script>
     <!-- Tesseract.js for OCR -->
@@ -169,6 +169,37 @@
             color: white;
             font-weight: 600;
         }
+        
+        /* Header navigation icons */
+        .nav-icon-checkin svg { color: #009cb6; fill: #009cb6; }
+        .nav-icon-checkout svg { color: #dc2626; fill: #dc2626; }
+        .nav-icon-history svg { color: #009cb6; fill: none; stroke: #009cb6; }
+        .nav-icon-checkin:hover svg,
+        .nav-icon-checkout:hover svg,
+        .nav-icon-history:hover svg { 
+            color: #f59e0b; 
+            fill: #f59e0b; 
+            stroke: #f59e0b; 
+        }
+        
+        /* Big car icon animations - dynamic based on inspection type */
+        {% if inspection_type == 'checkout' %}
+        /* Checkout page: hover turns RED */
+        .group:hover svg {
+            filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.8)) !important;
+        }
+        .group:hover .animate-ping {
+            border-color: rgba(220, 38, 38, 0.3) !important;
+        }
+        {% else %}
+        /* Check-in page: hover turns GREEN */
+        .group:hover svg {
+            filter: drop-shadow(0 0 30px rgba(16, 185, 129, 0.8)) !important;
+        }
+        .group:hover .animate-ping {
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+        {% endif %}
     </style>
 </head>
 <body class="bg-[#009cb6] min-h-screen">
@@ -177,60 +208,60 @@
         <div class="max-w-7xl mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <a href="/" class="text-[#009cb6] hover:text-[#f59e0b] transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                        </svg>
-                    </a>
                     <!-- Autoprudente Logo -->
-                    <div class="flex items-center gap-3">
-                        <!-- Autoprudente Logo with yellow oval and aP -->
-                        <div class="relative h-12 w-16 flex items-center justify-center">
-                            <!-- Yellow oval background -->
-                            <svg viewBox="0 0 100 70" class="absolute w-full h-full">
-                                <ellipse cx="50" cy="35" rx="48" ry="32" fill="#f59e0b" stroke="#f59e0b" stroke-width="2"/>
-                                <ellipse cx="50" cy="35" rx="38" ry="26" fill="#009cb6"/>
-                            </svg>
-                            <!-- aP text -->
-                            <div class="relative text-white font-bold" style="font-size: 20px; font-family: Arial, sans-serif; letter-spacing: -2px;">
-                                <span style="text-transform: lowercase;">a</span><span style="text-transform: uppercase;">P</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="text-xl font-bold text-[#009cb6]">Autoprudente</div>
-                            <div class="text-xs text-gray-600">Car Rental</div>
-                        </div>
-                    </div>
+                    <img src="/static/Icon_AP.png" alt="Autoprudente" class="h-12 w-auto" />
                 </div>
                 
-                <!-- Right Side: History, Check-in, User Avatar -->
-                <div class="flex items-center gap-4">
-                    <!-- Inspection History Button -->
-                    <button onclick="window.location.href='/inspection-history'" class="text-[#009cb6] hover:text-[#f59e0b] transition-colors" title="Histórico de Inspeções">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <!-- Right Side: Home, Check-in, Check-out, History, User -->
+                <div class="flex items-center gap-3">
+                    {% if request.session.get('is_admin') or request.session.get('role') in ['admin', 'user'] %}
+                    <!-- Home Icon (Blue) - Only for admin and regular users -->
+                    <a href="/" class="p-2 hover:bg-gray-50 rounded-lg transition-all" title="Voltar à Homepage">
+                        <svg class="w-6 h-6 text-[#009cb6] hover:text-[#f59e0b] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
-                    </button>
+                    </a>
+                    {% endif %}
                     
-                    <!-- Check-in Badge (Monocromatic Website Colors) -->
-                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f59e0b] rounded-full">
-                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+                    <!-- Check-in Icon (Blue Car) -->
+                    <a href="/vehicle-checkin" class="nav-icon-checkin p-2 hover:bg-gray-50 rounded-lg transition-all" title="Check-in">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
                         </svg>
-                        <span class="text-sm text-white font-semibold">Check-in</span>
-                    </div>
+                    </a>
+                    
+                    <!-- Check-out Icon (Red Car) -->
+                    <a href="/vehicle-checkout" class="nav-icon-checkout p-2 hover:bg-gray-50 rounded-lg transition-all" title="Check-out">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                        </svg>
+                    </a>
+                    
+                    <!-- History Icon (Blue) -->
+                    <a href="/inspection-history" class="nav-icon-history p-2 hover:bg-gray-50 rounded-lg transition-all" title="Histórico">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </a>
                     
                     <!-- User Avatar with Logout -->
+                    {% if current_user %}
                     <div class="relative group">
-                        <button class="w-10 h-10 rounded-full bg-gradient-to-br from-[#009cb6] to-[#0077a3] flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg hover:scale-105 transition-transform">
-                            <span id="userInitials">U</span>
+                        <button class="flex items-center hover:scale-105 transition-transform">
+                            {% if current_user.profile_picture_path %}
+                            <img src="{{ current_user.profile_picture_path }}" alt="Profile" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-lg" />
+                            {% else %}
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#009cb6] to-[#0077a3] flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg">
+                                {{ (current_user.first_name[:1] or current_user.username[:1] or 'U') | upper }}
+                            </div>
+                            {% endif %}
                         </button>
                         
                         <!-- Logout Dropdown -->
                         <div class="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                             <div class="p-3 border-b border-gray-100">
-                                <p class="text-sm font-semibold text-gray-900" id="userNameDisplay">Utilizador</p>
-                                <p class="text-xs text-gray-500">Rececionista</p>
+                                <p class="text-sm font-semibold text-gray-900">{{ (current_user.first_name + ' ' + current_user.last_name).strip() or current_user.username }}</p>
+                                <p class="text-xs text-gray-500">{{ current_user.email or current_user.username }}</p>
                             </div>
                             <button onclick="logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,6 +271,7 @@
                             </button>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -251,7 +283,13 @@
             <div class="max-w-4xl mx-auto">
                 <!-- Title -->
                 <div class="text-center mb-6">
-                    <h2 class="text-3xl font-bold text-white mb-6">Inspeção Fotográfica do Veículo</h2>
+                    {% if inspection_type == 'checkout' %}
+                    <h2 class="text-3xl font-bold text-white mb-2">Check-out - Devolução do Veículo</h2>
+                    <p class="text-white/80 text-sm">Documente o estado do veículo na devolução</p>
+                    {% else %}
+                    <h2 class="text-3xl font-bold text-white mb-2">Check-in - Recolha do Veículo</h2>
+                    <p class="text-white/80 text-sm">Documente o estado inicial do veículo</p>
+                    {% endif %}
                 </div>
                 
                 <!-- Matrícula and RA - Above Car -->
@@ -273,8 +311,8 @@
                     <!-- GIANT CAR ICON (clickable) -->
                     <button onclick="startAutoSequence()" class="group mx-auto block transition-all transform hover:scale-110" title="Iniciar Inspeção">
                         <div class="relative">
-                            <!-- Car Icon SVG - Large White -->
-                            <svg class="w-64 h-64 mx-auto drop-shadow-2xl transition-all group-hover:drop-shadow-[0_0_30px_rgba(245,158,11,0.8)]" viewBox="0 0 24 24" fill="white">
+                            <!-- Car Icon SVG - Always White -->
+                            <svg class="w-64 h-64 mx-auto drop-shadow-2xl transition-all" viewBox="0 0 24 24" fill="white">
                                 <!-- Front view car icon -->
                                 <path d="M18.92,6.01C18.72,5.42,18.16,5,17.5,5h-11C5.84,5,5.29,5.42,5.08,6.01L3,12v8c0,0.55,0.45,1,1,1h1c0.55,0,1-0.45,1-1v-1h12v1c0,0.55,0.45,1,1,1h1c0.55,0,1-0.45,1-1v-8L18.92,6.01z M6.5,16C5.67,16,5,15.33,5,14.5S5.67,13,6.5,13S8,13.67,8,14.5S7.33,16,6.5,16z M17.5,16c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S18.33,16,17.5,16z M5,11l1.5-4.5h11L19,11H5z"/>
                             </svg>
@@ -287,7 +325,7 @@
                         
                         <!-- Text below icon -->
                         <div class="mt-6">
-                            <span class="text-2xl font-bold text-white block group-hover:text-[#f59e0b] transition-colors">INICIAR INSPEÇÃO</span>
+                            <span class="text-2xl font-bold text-white block {% if inspection_type == 'checkout' %}group-hover:text-[#dc2626]{% else %}group-hover:text-[#10b981]{% endif %} transition-colors">INICIAR INSPEÇÃO</span>
                             <span class="text-sm text-white/80 block mt-2">Clique para começar</span>
                         </div>
                     </button>
@@ -296,7 +334,11 @@
                 <!-- Instructions -->
                 <div class="text-center mb-6">
                     <p class="text-white/90 text-sm max-w-xl mx-auto">
-                        Será guiado através de 6 fotografias. O sistema mostrará a posição exacta para cada foto.
+                        {% if inspection_type == 'checkout' %}
+                        Fotografe o veículo na devolução. Documente todos os danos existentes e o estado final do combustível e quilómetros.
+                        {% else %}
+                        Fotografe o veículo antes do cliente partir. Documente o estado inicial, combustível e quilómetros de partida.
+                        {% endif %}
                     </p>
                 </div>
                 

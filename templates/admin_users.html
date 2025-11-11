@@ -56,16 +56,31 @@
               <th class="text-left px-4 py-2">Username</th>
               <th class="text-left px-4 py-2">Name</th>
               <th class="text-left px-4 py-2">Admin</th>
+              <th class="text-left px-4 py-2">Role</th>
+              <th class="text-left px-4 py-2">Inspection</th>
               <th class="text-left px-4 py-2">Enabled</th>
               <th class="text-left px-4 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
             {% for u in users %}
-            <tr class="border-t">
+            <tr class="border-t" data-user-id="{{ u.id }}">
               <td class="px-4 py-2">{{ u.username }}</td>
               <td class="px-4 py-2">{{ u.first_name }} {{ u.last_name }}</td>
               <td class="px-4 py-2">{% if u.is_admin %}Yes{% else %}No{% endif %}</td>
+              <td class="px-4 py-2">
+                <select class="text-xs px-2 py-1 rounded border role-select" data-user-id="{{ u.id }}" onchange="handlePermissionChange({{ u.id }})">
+                  <option value="user" {% if u.role == 'user' %}selected{% endif %}>User</option>
+                  <option value="receptionist" {% if u.role == 'receptionist' %}selected{% endif %}>Receptionist</option>
+                  <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                </select>
+              </td>
+              <td class="px-4 py-2">
+                <label class="inline-flex items-center cursor-pointer">
+                  <input type="checkbox" class="inspection-toggle" data-user-id="{{ u.id }}" {% if u.can_access_inspection %}checked{% endif %} onchange="handlePermissionChange({{ u.id }})">
+                  <span class="ml-2 text-xs">{% if u.can_access_inspection %}Yes{% else %}No{% endif %}</span>
+                </label>
+              </td>
               <td class="px-4 py-2">{% if u.enabled %}Yes{% else %}No{% endif %}</td>
               <td class="px-4 py-2">
                 <div class="flex items-center gap-3">
@@ -87,5 +102,63 @@
         </table>
       </div>
     </main>
+    
+    <script>
+      function handlePermissionChange(userId) {
+        const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+        const roleSelect = row.querySelector('.role-select');
+        const inspectionToggle = row.querySelector('.inspection-toggle');
+        
+        const role = roleSelect.value;
+        const canAccess = inspectionToggle.checked ? 1 : 0;
+        
+        updateInspectionPermission(userId, role, canAccess);
+      }
+      
+      async function updateInspectionPermission(userId, role, canAccess) {
+        try {
+          const response = await fetch(`/api/admin/users/${userId}/update-inspection-permissions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              role: role,
+              can_access_inspection: canAccess
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (data.ok) {
+            // Update the Yes/No text next to checkbox
+            const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+            const checkboxLabel = row.querySelector('.inspection-toggle + span');
+            if (checkboxLabel) {
+              checkboxLabel.textContent = canAccess ? 'Yes' : 'No';
+            }
+            
+            // Show success feedback
+            showNotification('Permissions updated successfully', 'success');
+          } else {
+            showNotification('Error: ' + data.error, 'error');
+          }
+        } catch (error) {
+          console.error('Error updating permissions:', error);
+          showNotification('Failed to update permissions', 'error');
+        }
+      }
+      
+      function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-4 py-2 rounded shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+    </script>
   </body>
  </html>

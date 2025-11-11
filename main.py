@@ -1487,6 +1487,23 @@ def _ensure_users_table():
                 # Column already exists, ignore
                 pass
             
+            # Migration: Add role and can_access_inspection columns
+            try:
+                con.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
+                con.commit()
+                logging.info("✅ Added role column to users table")
+            except Exception as e:
+                con.rollback()
+                pass
+            
+            try:
+                con.execute("ALTER TABLE users ADD COLUMN can_access_inspection INTEGER DEFAULT 0")
+                con.commit()
+                logging.info("✅ Added can_access_inspection column to users table")
+            except Exception as e:
+                con.rollback()
+                pass
+            
             # Migration: Add profile_picture_data column if it doesn't exist
             try:
                 con.execute("ALTER TABLE users ADD COLUMN profile_picture_data BLOB")
@@ -3336,6 +3353,33 @@ def require_admin(request: Request):
     if not request.session.get("is_admin", False):
         raise HTTPException(status_code=403, detail="Forbidden")
 
+def require_inspection_access(request: Request):
+    """
+    Check if user has permission to access vehicle inspection.
+    - Admins always have access
+    - Users with role='receptionist' always have access  
+    - Other users need can_access_inspection=1
+    """
+    require_auth(request)
+    
+    # Admin always has access
+    if request.session.get("is_admin", False):
+        return
+    
+    # Check role and permission
+    role = request.session.get("user_role", "user")
+    can_access = request.session.get("can_access_inspection", 0)
+    
+    # Receptionist role always has access
+    if role == "receptionist":
+        return
+    
+    # Check explicit permission
+    if can_access == 1:
+        return
+    
+    raise HTTPException(status_code=403, detail="Sem permissão para aceder às inspeções")
+
 @app.get("/api/current-user")
 async def get_current_user(request: Request):
     """Retorna informações do utilizador logado"""
@@ -3388,16 +3432,20 @@ async def login_action(request: Request, username: str = Form(...), password: st
             pass
         # Check DB users
         is_admin_flag = False
+        user_role = "user"
+        can_access_inspection = 0
         ok = False
         try:
             with _db_lock:
                 con = _db_connect()
                 try:
-                    cur = con.execute("SELECT id, password_hash, is_admin, enabled FROM users WHERE username=?", (u,))
+                    cur = con.execute("SELECT id, password_hash, is_admin, enabled, role, can_access_inspection FROM users WHERE username=?", (u,))
                     row = cur.fetchone()
                     if row and row[3]:
                         ok = _verify_password(p, row[1])
                         is_admin_flag = bool(row[2])
+                        user_role = row[4] if row[4] else "user"
+                        can_access_inspection = row[5] if row[5] is not None else 0
                 finally:
                     con.close()
         except Exception:
@@ -3411,6 +3459,8 @@ async def login_action(request: Request, username: str = Form(...), password: st
                 request.session["auth"] = True
                 request.session["username"] = u
                 request.session["is_admin"] = bool(is_admin_flag)
+                request.session["user_role"] = user_role
+                request.session["can_access_inspection"] = can_access_inspection
                 request.session["last_active_ts"] = int(datetime.now(timezone.utc).timestamp())
                 log_activity(request, "login_success", details="", username=u)
                 try:
@@ -4043,6 +4093,47 @@ async def admin_users_delete(request: Request, user_id: int):
             con.close()
     return RedirectResponse(url="/admin/users", status_code=HTTP_303_SEE_OTHER)
 
+@app.post("/api/admin/users/{user_id}/update-inspection-permissions")
+async def admin_update_inspection_permissions(request: Request, user_id: int):
+    """
+    Update user role and inspection access permission.
+    Body: {role: "user|receptionist|admin", can_access_inspection: 0|1}
+    """
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        body = await request.json()
+        role = body.get("role", "user")
+        can_access = int(body.get("can_access_inspection", 0))
+        
+        # Validate role
+        if role not in ["user", "receptionist", "admin"]:
+            return JSONResponse({"ok": False, "error": "Invalid role"}, status_code=400)
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Check if user exists
+                cur = con.execute("SELECT id FROM users WHERE id=?", (user_id,))
+                if not cur.fetchone():
+                    return JSONResponse({"ok": False, "error": "User not found"}, status_code=404)
+                
+                # Update role and permission
+                con.execute(
+                    "UPDATE users SET role=?, can_access_inspection=? WHERE id=?",
+                    (role, can_access, user_id)
+                )
+                con.commit()
+                
+                return JSONResponse({"ok": True, "message": "Permissions updated successfully"})
+            finally:
+                con.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # --- Admin UI ---
 @app.get("/test/carjet-mobile", response_class=HTMLResponse)
 async def test_carjet_mobile(request: Request):
@@ -4163,11 +4254,12 @@ async def admin_users(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                cur = con.execute("SELECT id, username, first_name, last_name, email, mobile, is_admin, enabled FROM users ORDER BY id DESC")
+                cur = con.execute("SELECT id, username, first_name, last_name, email, mobile, is_admin, enabled, role, can_access_inspection FROM users ORDER BY id DESC")
                 for r in cur.fetchall():
                     users.append({
                         "id": r[0], "username": r[1], "first_name": r[2] or "", "last_name": r[3] or "",
-                        "email": r[4] or "", "mobile": r[5] or "", "is_admin": bool(r[6]), "enabled": bool(r[7])
+                        "email": r[4] or "", "mobile": r[5] or "", "is_admin": bool(r[6]), "enabled": bool(r[7]),
+                        "role": r[8] if r[8] else "user", "can_access_inspection": bool(r[9] if r[9] is not None else 0)
                     })
             finally:
                 con.close()
@@ -20513,12 +20605,87 @@ async def load_ai_models():
 async def vehicle_inspection_page(request: Request):
     """Vehicle inspection page with real-time camera"""
     try:
-        require_auth(request)
-    except HTTPException:
+        require_inspection_access(request)
+    except HTTPException as e:
+        if e.status_code == 403:
+            # User is authenticated but doesn't have permission
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error_title": "Acesso Negado",
+                "error_message": "Não tem permissão para aceder às inspeções de veículos. Contacte o administrador."
+            }, status_code=403)
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
+    # Load current user
+    current_user = None
+    try:
+        username = request.session.get('username')
+        if username:
+            current_user = _get_user_by_username(username)
+    except Exception:
+        current_user = None
+    
     return templates.TemplateResponse("vehicle_inspection.html", {
-        "request": request
+        "request": request,
+        "current_user": current_user
+    })
+
+@app.get("/vehicle-checkin", response_class=HTMLResponse)
+async def vehicle_checkin_page(request: Request):
+    """Vehicle check-in page"""
+    try:
+        require_inspection_access(request)
+    except HTTPException as e:
+        if e.status_code == 403:
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error_title": "Acesso Negado",
+                "error_message": "Não tem permissão para aceder ao check-in de veículos. Contacte o administrador."
+            }, status_code=403)
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    # Load current user
+    current_user = None
+    try:
+        username = request.session.get('username')
+        if username:
+            current_user = _get_user_by_username(username)
+    except Exception:
+        current_user = None
+    
+    return templates.TemplateResponse("vehicle_inspection.html", {
+        "request": request,
+        "inspection_type": "checkin",
+        "current_user": current_user
+    })
+
+@app.get("/vehicle-checkout", response_class=HTMLResponse)
+async def vehicle_checkout_page(request: Request):
+    """Vehicle check-out page"""
+    try:
+        require_inspection_access(request)
+    except HTTPException as e:
+        if e.status_code == 403:
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error_title": "Acesso Negado",
+                "error_message": "Não tem permissão para aceder ao check-out de veículos. Contacte o administrador."
+            }, status_code=403)
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    # Load current user
+    current_user = None
+    try:
+        username = request.session.get('username')
+        if username:
+            current_user = _get_user_by_username(username)
+    except Exception:
+        current_user = None
+    
+    return templates.TemplateResponse("vehicle_inspection.html", {
+        "request": request,
+        "inspection_type": "checkout",
+        "current_user": current_user
     })
 
 @app.get("/vehicle-inspections", response_class=HTMLResponse)
