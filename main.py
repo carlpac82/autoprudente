@@ -4050,9 +4050,9 @@ async def upload_checkout_terms_conditions(request: Request, tc_file: UploadFile
         _set_setting('checkout_tc_filename', safe_filename)
         _set_setting('checkout_tc_path', str(file_path))
         
-        # Redirect back with success message
+        # Redirect back to inspections page with success message
         return RedirectResponse(
-            url="/admin?section=inspections",
+            url="/admin/contracts?success=tc_uploaded",
             status_code=303
         )
         
