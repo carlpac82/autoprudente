@@ -382,15 +382,19 @@ function startCameraCountdown() {
         pointer-events: none;
     `;
     
-    // Get photo label
+    // Get photo label and instruction
     const photo = photoTypes.find(p => p.type === currentPhotoType);
     const photoLabel = photo ? photo.label : 'Foto';
+    const photoInstruction = photo ? photo.instruction : '';
     
     countdownOverlay.innerHTML = `
         <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: -1;"></div>
         
         <!-- Text at top -->
-        <h3 style="position: absolute; top: 60px; font-size: 22px; font-weight: 600; color: white; z-index: 10; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">${photoLabel}</h3>
+        <div style="position: absolute; top: 50px; left: 0; right: 0; text-align: center; z-index: 10;">
+            <h3 style="font-size: 22px; font-weight: 600; color: white; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">${photoLabel}</h3>
+            <p style="font-size: 14px; font-weight: 400; color: white; opacity: 0.8; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">${photoInstruction}</p>
+        </div>
         
         <!-- Countdown circle in center -->
         <div style="text-align: center; position: relative; z-index: 10;">
