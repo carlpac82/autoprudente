@@ -223,8 +223,15 @@
                     </div>
                 </div>
                 
-                <!-- Right Side: Home, Check-in, Check-out, History, User -->
-                <div class="flex items-center gap-3">
+                <!-- Mobile Menu Button -->
+                <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-[#009cb6] hover:bg-gray-50 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                
+                <!-- Desktop Icons -->
+                <div class="hidden md:flex items-center gap-3">
                     {% if request.session.get('is_admin') or request.session.get('role') in ['admin', 'user'] %}
                     <!-- Home Icon (Blue) - Only for admin and regular users -->
                     <a href="/" class="p-2 hover:bg-gray-50 rounded-lg transition-all" title="Voltar à Homepage">
@@ -289,45 +296,116 @@
         </div>
     </header>
 
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="fixed right-0 top-0 bottom-0 w-64 bg-white shadow-xl transform transition-transform">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-[#009cb6]">Menu</h2>
+                    <button onclick="toggleMobileMenu()" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <nav class="space-y-2">
+                    {% if request.session.get('is_admin') or request.session.get('role') in ['admin', 'user'] %}
+                    <a href="/" onclick="toggleMobileMenu()" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-[#009cb6] hover:text-white rounded-lg transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span>Homepage</span>
+                    </a>
+                    {% endif %}
+                    
+                    <a href="/vehicle-checkin" onclick="toggleMobileMenu()" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors" style="border-left: 3px solid #009cb6;">
+                        <svg class="w-6 h-6" style="color: #009cb6;" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                        </svg>
+                        <span style="color: #009cb6; font-weight: 600;">Check-in</span>
+                    </a>
+                    
+                    <a href="/vehicle-checkout" onclick="toggleMobileMenu()" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-red-50 rounded-lg transition-colors" style="border-left: 3px solid #dc2626;">
+                        <svg class="w-6 h-6" style="color: #dc2626;" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                        </svg>
+                        <span style="color: #dc2626; font-weight: 600;">Check-out</span>
+                    </a>
+                    
+                    <a href="/inspection-history" onclick="toggleMobileMenu()" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors" style="border-left: 3px solid #009cb6;">
+                        <svg class="w-6 h-6" style="color: #009cb6;" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span style="color: #009cb6; font-weight: 600;">Histórico</span>
+                    </a>
+                    
+                    <hr class="my-4">
+                    
+                    <button onclick="logout()" class="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span class="font-semibold">Terminar Sessão</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        function logout() {
+            if (confirm('Terminar sessão?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+
     <main class="max-w-7xl mx-auto px-4 py-6">
         <!-- STEP 1: Photo Capture (previously Step 2) -->
         <div id="stepPhotos" class="step-content">
             <div class="max-w-4xl mx-auto">
                 <!-- Matrícula and RA - Above Car -->
-                <div class="flex items-center justify-center gap-4 mb-8">
-                    <div>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+                    <div class="w-full sm:w-auto">
                         <label class="block text-sm font-medium text-white mb-2">Matrícula * <span class="text-xs opacity-70">(Auto-detectada)</span></label>
-                        <input type="text" id="inputPlate" class="px-4 py-2 border-2 border-white rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#f59e0b] w-40 text-center font-semibold" placeholder="XX-XX-XX" required>
+                        <input type="text" id="inputPlate" class="px-4 py-3 border-2 border-white rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#f59e0b] w-full sm:w-40 text-center font-semibold text-lg" placeholder="XX-XX-XX" required>
                     </div>
                     
-                    <div>
+                    <div class="w-full sm:w-auto">
                         <label class="block text-sm font-medium text-white mb-2">RA (Rental Agreement) *</label>
-                        <input type="text" id="inputRA" class="px-4 py-2 border-2 border-white rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#f59e0b] w-48 text-center font-semibold" placeholder="00000-09" maxlength="8" required>
+                        <input type="text" id="inputRA" class="px-4 py-3 border-2 border-white rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#f59e0b] w-full sm:w-48 text-center font-semibold text-lg" placeholder="00000-09" maxlength="8" required>
                     </div>
                 </div>
                 
                 <!-- Large Centered Car Icon Button -->
                 <div class="text-center mb-6">
                     
-                    <!-- GIANT CAR ICON (clickable) -->
-                    <button onclick="startAutoSequence()" class="group mx-auto block transition-all transform hover:scale-110" title="Iniciar Inspeção">
+                    <!-- GIANT CAR ICON (clickable) - Responsive -->
+                    <button onclick="startAutoSequence()" class="group mx-auto block transition-all transform hover:scale-105 active:scale-95" title="Iniciar Inspeção">
                         <div class="relative">
-                            <!-- Car Icon SVG - Always White -->
-                            <svg class="w-64 h-64 mx-auto drop-shadow-2xl transition-all" viewBox="0 0 24 24" fill="white">
+                            <!-- Car Icon SVG - Always White - Responsive size -->
+                            <svg class="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 mx-auto drop-shadow-2xl transition-all" viewBox="0 0 24 24" fill="white">
                                 <!-- Front view car icon -->
                                 <path d="M18.92,6.01C18.72,5.42,18.16,5,17.5,5h-11C5.84,5,5.29,5.42,5.08,6.01L3,12v8c0,0.55,0.45,1,1,1h1c0.55,0,1-0.45,1-1v-1h12v1c0,0.55,0.45,1,1,1h1c0.55,0,1-0.45,1-1v-8L18.92,6.01z M6.5,16C5.67,16,5,15.33,5,14.5S5.67,13,6.5,13S8,13.67,8,14.5S7.33,16,6.5,16z M17.5,16c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S18.33,16,17.5,16z M5,11l1.5-4.5h11L19,11H5z"/>
                             </svg>
                             
-                            <!-- Pulsing ring animation -->
+                            <!-- Pulsing ring animation - Responsive -->
                             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div class="w-72 h-72 rounded-full border-4 border-white/30 animate-ping"></div>
+                                <div class="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 rounded-full border-4 border-white/30 animate-ping"></div>
                             </div>
                         </div>
                         
-                        <!-- Text below icon -->
-                        <div class="mt-6">
-                            <span class="text-2xl font-bold text-white block {% if inspection_type == 'checkout' %}group-hover:text-[#dc2626]{% else %}group-hover:text-[#10b981]{% endif %} transition-colors">INICIAR INSPEÇÃO</span>
-                            <span class="text-sm text-white/80 block mt-2">Clique para começar</span>
+                        <!-- Text below icon - Responsive -->
+                        <div class="mt-4 sm:mt-6">
+                            <span class="text-xl sm:text-2xl font-bold text-white block {% if inspection_type == 'checkout' %}group-hover:text-[#dc2626]{% else %}group-hover:text-[#10b981]{% endif %} transition-colors">INICIAR INSPEÇÃO</span>
+                            <span class="text-xs sm:text-sm text-white/80 block mt-2">Toque para começar</span>
                         </div>
                     </button>
                 </div>
