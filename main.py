@@ -12717,6 +12717,119 @@ async def startup_vehicle_photos():
     _ensure_vehicle_images_table()
 
 @app.on_event("startup")
+async def startup_vehicle_inspections():
+    """Create vehicle inspection tables on startup"""
+    try:
+        conn = _db_connect()
+        is_postgres = os.getenv('DATABASE_URL') is not None
+        
+        if is_postgres:
+            # PostgreSQL
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS vehicle_inspections (
+                    id SERIAL PRIMARY KEY,
+                    inspection_number TEXT UNIQUE,
+                    inspection_type TEXT,
+                    vehicle_plate TEXT,
+                    vehicle_brand TEXT,
+                    vehicle_model TEXT,
+                    contract_number TEXT,
+                    customer_name TEXT,
+                    customer_email TEXT,
+                    customer_phone TEXT,
+                    inspector_name TEXT,
+                    inspector_notes TEXT,
+                    has_damage BOOLEAN DEFAULT FALSE,
+                    damage_count INTEGER DEFAULT 0,
+                    damage_severity TEXT,
+                    ai_analysis_complete BOOLEAN DEFAULT FALSE,
+                    ai_confidence_avg REAL,
+                    ai_damages_detected TEXT,
+                    odometer_reading INTEGER,
+                    fuel_level TEXT,
+                    status TEXT DEFAULT 'draft',
+                    photo_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS inspection_photos (
+                    id SERIAL PRIMARY KEY,
+                    inspection_id INTEGER,
+                    photo_type TEXT,
+                    photo_order INTEGER,
+                    image_data BYTEA,
+                    image_filename TEXT,
+                    image_size INTEGER,
+                    image_format TEXT,
+                    ai_analyzed BOOLEAN DEFAULT FALSE,
+                    ai_has_damage BOOLEAN DEFAULT FALSE,
+                    ai_damage_type TEXT,
+                    ai_confidence REAL,
+                    ai_result TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (inspection_id) REFERENCES vehicle_inspections(id) ON DELETE CASCADE
+                )
+            """)
+            
+        else:
+            # SQLite
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS vehicle_inspections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    inspection_number TEXT UNIQUE,
+                    inspection_type TEXT,
+                    vehicle_plate TEXT,
+                    vehicle_brand TEXT,
+                    vehicle_model TEXT,
+                    contract_number TEXT,
+                    customer_name TEXT,
+                    customer_email TEXT,
+                    customer_phone TEXT,
+                    inspector_name TEXT,
+                    inspector_notes TEXT,
+                    has_damage INTEGER DEFAULT 0,
+                    damage_count INTEGER DEFAULT 0,
+                    damage_severity TEXT,
+                    ai_analysis_complete INTEGER DEFAULT 0,
+                    ai_confidence_avg REAL,
+                    ai_damages_detected TEXT,
+                    odometer_reading INTEGER,
+                    fuel_level TEXT,
+                    status TEXT DEFAULT 'draft',
+                    photo_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS inspection_photos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    inspection_id INTEGER,
+                    photo_type TEXT,
+                    photo_order INTEGER,
+                    image_data BLOB,
+                    image_filename TEXT,
+                    image_size INTEGER,
+                    image_format TEXT,
+                    ai_analyzed INTEGER DEFAULT 0,
+                    ai_has_damage INTEGER DEFAULT 0,
+                    ai_damage_type TEXT,
+                    ai_confidence REAL,
+                    ai_result TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (inspection_id) REFERENCES vehicle_inspections(id)
+                )
+            """)
+        
+        conn.commit()
+        conn.close()
+        logging.info("✅ Vehicle inspection tables ready")
+    except Exception as e:
+        logging.error(f"Error creating vehicle inspection tables: {e}")
+
+@app.on_event("startup")
 async def startup_migrate_automated_reports():
     """Migrate automated reports settings from user_settings to price_automation_settings"""
     try:
