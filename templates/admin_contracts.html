@@ -308,47 +308,98 @@
         }
         
         // Handle PDF upload for Check-out
-        document.getElementById('checkout-pdf-upload').addEventListener('change', function(e) {
+        document.getElementById('checkout-pdf-upload').addEventListener('change', async function(e) {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    checkoutPdfFile = event.target.result;
-                    alert('✓ PDF Check-out carregado: ' + file.name + '\n\nAbra o mapeador no iframe para começar.');
-                };
-                reader.readAsArrayBuffer(file);
+                
+                // Show loading
+                const loadingNotif = showNotification('Carregando PDF Check-out...', 'info');
+                
+                try {
+                    // Upload to server
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/checkout/upload-template', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.ok) {
+                        showNotification(`PDF Check-out carregado: ${result.filename} (${result.num_pages} páginas)`, 'success');
+                        
+                        // Reload mapper iframe if it's loaded
+                        const mapperIframe = document.getElementById('mapperIframe');
+                        if (mapperIframe && mapperIframe.src) {
+                            mapperIframe.src = mapperIframe.src; // Reload
+                        }
+                    } else {
+                        showNotification(`Erro: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    showNotification(`Erro ao carregar PDF: ${error.message}`, 'error');
+                }
             }
         });
         
         // Download coordinates
-        function downloadCheckoutCoordinates() {
-            if (Object.keys(checkoutCoordinates).length === 0) {
-                alert('Não há coordenadas para exportar. Mapeie os campos primeiro no iframe!');
-                return;
+        async function downloadCheckoutCoordinates() {
+            try {
+                // Fetch coordinates from server
+                const response = await fetch('/api/checkout/get-coordinates');
+                const result = await response.json();
+                
+                if (result.ok && result.coordinates) {
+                    const dataStr = JSON.stringify(result.coordinates, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'checkout_coordinates.json';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    showNotification('Coordenadas Check-out exportadas!', 'success');
+                } else {
+                    showNotification('Não há coordenadas para exportar. Mapeie os campos primeiro!', 'info');
+                }
+            } catch (error) {
+                showNotification(`Erro ao exportar coordenadas: ${error.message}`, 'error');
             }
-            
-            const dataStr = JSON.stringify(checkoutCoordinates, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'checkout_coordinates.json';
-            link.click();
-            URL.revokeObjectURL(url);
         }
         
         // Handle coordinates upload for Check-out
-        document.getElementById('checkout-coords-upload').addEventListener('change', function(e) {
+        document.getElementById('checkout-coords-upload').addEventListener('change', async function(e) {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
                 const reader = new FileReader();
-                reader.onload = function(event) {
+                reader.onload = async function(event) {
                     try {
-                        checkoutCoordinates = JSON.parse(event.target.result);
-                        alert('✓ Coordenadas Check-out importadas!\n\n' + 
-                              Object.keys(checkoutCoordinates).length + ' campos mapeados.');
+                        const coordinates = JSON.parse(event.target.result);
+                        
+                        // Save to server
+                        const response = await fetch('/api/checkout/save-coordinates', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(coordinates)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.ok) {
+                            showNotification(`Coordenadas Check-out importadas: ${result.count} campos`, 'success');
+                            
+                            // Reload mapper iframe if it's loaded
+                            const mapperIframe = document.getElementById('mapperIframe');
+                            if (mapperIframe && mapperIframe.src) {
+                                mapperIframe.src = mapperIframe.src; // Reload
+                            }
+                        } else {
+                            showNotification(`Erro ao importar: ${result.error}`, 'error');
+                        }
                     } catch (error) {
-                        alert('✗ Erro ao ler JSON: ' + error.message);
+                        showNotification(`Erro ao ler JSON: ${error.message}`, 'error');
                     }
                 };
                 reader.readAsText(file);

@@ -292,8 +292,8 @@
             canvas = document.getElementById('pdfCanvas');
             ctx = canvas.getContext('2d');
             
-            // Carregar template ativo da base de dados (não arquivo fixo)
-            const response = await fetch('/api/damage-reports/get-active-template');
+            // Carregar template ativo do Check-out
+            const response = await fetch('/api/checkout/get-active-template');
             
             if (!response.ok) {
                 console.error('[MAPPER] Failed to load template:', response.status);
@@ -857,7 +857,7 @@
                 });
                 
                 console.log(`[MAPPER] Saving ${coordsArray.length} coordinate entries...`);
-                const response = await fetch('/api/damage-reports/save-coordinates', {
+                const response = await fetch('/api/checkout/save-coordinates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(coordsArray)
@@ -896,7 +896,7 @@
                 });
                 
                 console.log(`[MAPPER] Auto-saving ${coordsArray.length} coordinate entries...`);
-                const response = await fetch('/api/damage-reports/save-coordinates', {
+                const response = await fetch('/api/checkout/save-coordinates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(coordsArray)
@@ -935,7 +935,7 @@
         async function loadExistingCoordinates() {
             try {
                 console.log('[MAPPER] Loading existing coordinates...');
-                const response = await fetch('/api/damage-reports/get-coordinates');
+                const response = await fetch('/api/checkout/get-coordinates');
                 const data = await response.json();
                 console.log('[MAPPER] Load response:', data);
                 if (data.ok && data.coordinates) {

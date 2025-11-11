@@ -20857,6 +20857,160 @@ async def load_ai_models():
         logging.warning(f"⚠️ Could not load AI models: {e}")
 
 # ============================================================
+# CHECK-OUT/CHECK-IN PDF MAPPING APIs
+# ============================================================
+
+@app.post("/api/checkout/upload-template")
+async def upload_checkout_template(request: Request, file: UploadFile = File(...)):
+    """Upload do template de Check-out (PDF)"""
+    require_auth(request)
+    
+    try:
+        from PyPDF2 import PdfReader
+        from io import BytesIO
+        from datetime import datetime
+        
+        contents = await file.read()
+        filename = file.filename
+        
+        # Verificar se é PDF válido e contar páginas
+        try:
+            pdf_reader = PdfReader(BytesIO(contents))
+            num_pages = len(pdf_reader.pages)
+        except Exception as e:
+            return {"ok": False, "error": f"PDF inválido: {str(e)}"}
+        
+        # Salvar em settings
+        _set_setting('checkout_template_filename', filename)
+        _set_setting('checkout_template_data', contents.hex())
+        _set_setting('checkout_template_pages', str(num_pages))
+        _set_setting('checkout_template_uploaded_at', datetime.now().isoformat())
+        
+        logging.info(f"✅ Check-out Template uploaded: {filename}, {num_pages} páginas")
+        
+        return {
+            "ok": True,
+            "message": "Template Check-out carregado com sucesso",
+            "num_pages": num_pages,
+            "filename": filename
+        }
+    except Exception as e:
+        logging.error(f"Error uploading checkout template: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {"ok": False, "error": str(e)}
+
+@app.get("/api/checkout/get-active-template")
+async def get_active_checkout_template(request: Request):
+    """Obter o template PDF ativo do Check-out para o mapeador"""
+    require_auth(request)
+    
+    try:
+        from starlette.responses import Response
+        
+        # Buscar template dos settings
+        template_data_hex = _get_setting('checkout_template_data')
+        filename = _get_setting('checkout_template_filename', 'checkout_template.pdf')
+        
+        if not template_data_hex:
+            return Response(
+                content=b"No Check-out template available. Please upload a PDF first.",
+                status_code=404,
+                media_type="text/plain"
+            )
+        
+        # Converter hex para bytes
+        pdf_data = bytes.fromhex(template_data_hex)
+        
+        logging.info(f"📄 Serving active Check-out template: {filename}")
+        
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"'
+            }
+        )
+    except Exception as e:
+        logging.error(f"Error getting active Check-out template: {e}")
+        return Response(
+            content=str(e).encode(),
+            status_code=500,
+            media_type="text/plain"
+        )
+
+@app.get("/api/checkout/get-coordinates")
+async def get_checkout_coordinates(request: Request):
+    """Obter coordenadas dos campos do PDF Check-out"""
+    require_auth(request)
+    
+    try:
+        # Buscar coordenadas dos settings
+        coordinates_json = _get_setting('checkout_coordinates', '{}')
+        
+        import json
+        coordinates = json.loads(coordinates_json)
+        
+        logging.info(f"📍 Loaded {len(coordinates)} Check-out coordinate entries")
+        
+        return {
+            "ok": True,
+            "coordinates": coordinates
+        }
+    except Exception as e:
+        logging.error(f"Error getting Check-out coordinates: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/checkout/save-coordinates")
+async def save_checkout_coordinates(request: Request):
+    """Guardar coordenadas dos campos do PDF Check-out"""
+    require_auth(request)
+    
+    try:
+        import json
+        from datetime import datetime
+        
+        # Receber coordenadas (suporta objeto OU array)
+        data = await request.json()
+        
+        # Detectar se data é array direto ou objeto com 'coordinates'
+        if isinstance(data, list):
+            # Formato: [ {field_id, x, y, ...}, ... ]
+            coordinates_list = data
+        elif isinstance(data, dict):
+            # Formato: { coordinates: [...] } ou { "field_id": {...}, ... }
+            raw_coordinates = data.get('coordinates', data)
+            
+            if isinstance(raw_coordinates, list):
+                # Já é array
+                coordinates_list = raw_coordinates
+            elif isinstance(raw_coordinates, dict):
+                # Formato antigo: { "field_id": {x, y, ...}, ... }
+                # Manter este formato para Check-out
+                coordinates_list = raw_coordinates
+            else:
+                coordinates_list = {}
+        else:
+            coordinates_list = {}
+        
+        # Salvar em settings
+        _set_setting('checkout_coordinates', json.dumps(coordinates_list))
+        _set_setting('checkout_coordinates_updated_at', datetime.now().isoformat())
+        
+        logging.info(f"💾 Check-out coordinates saved: {len(coordinates_list) if isinstance(coordinates_list, (dict, list)) else 0} campos")
+        
+        return {
+            "ok": True,
+            "message": "Coordenadas Check-out salvas com sucesso",
+            "count": len(coordinates_list) if isinstance(coordinates_list, (dict, list)) else 0
+        }
+    except Exception as e:
+        logging.error(f"Error saving Check-out coordinates: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {"ok": False, "error": str(e)}
+
+# ============================================================
 # VEHICLE INSPECTIONS - Check-in/Check-out System
 # ============================================================
 
