@@ -422,13 +422,12 @@ function startCameraCountdown() {
 let scene, camera3D, renderer, carModel, animationId;
 
 function setupCameraOverlay(photoType) {
-    console.log('setupCameraOverlay called for:', photoType);
-    console.log('THREE.js available?', typeof THREE !== 'undefined');
-    
+    // Clean camera view - no 3D overlay
     const overlayContainer = document.getElementById('cameraOverlay');
-    
-    // Clear existing overlay
-    overlayContainer.innerHTML = '';
+    if (overlayContainer) {
+        overlayContainer.innerHTML = '';
+    }
+    return; // Exit early - no overlay needed
     
     const hints = {
         'front': 'Frente do veículo',
