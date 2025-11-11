@@ -349,14 +349,16 @@ function showBigInstruction(text, callback) {
     `;
     
     overlay.innerHTML = `
-        <div style="text-align: center; color: white; padding: 40px;">
-            <svg style="width: 96px; height: 96px; margin: 0 auto 30px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+        <div style="text-align: center; color: white; padding: 40px; max-width: 600px;">
+            <!-- Car Icon -->
+            <svg style="width: 120px; height: 120px; margin: 0 auto 30px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
             </svg>
-            <h2 style="font-size: 32px; font-weight: bold; margin-bottom: 20px;">${text}</h2>
-            <p style="font-size: 18px; opacity: 0.9; margin-bottom: 40px;">Posicione-se e prepare a câmera</p>
-            <div style="font-size: 48px; font-weight: bold;" id="countdown">3</div>
+            <div style="background: rgba(255,255,255,0.1); padding: 24px; border-radius: 16px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+                <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 12px 0; letter-spacing: 0.5px;">${text}</h2>
+                <p style="font-size: 16px; opacity: 0.95; margin: 0;">Prepare-se para capturar a foto</p>
+            </div>
+            <div style="font-size: 72px; font-weight: 800; text-shadow: 0 4px 12px rgba(0,0,0,0.4);" id="countdown">3</div>
         </div>
     `;
     
@@ -372,9 +374,9 @@ function showBigInstruction(text, callback) {
             countdownEl.textContent = count;
         } else {
             countdownEl.innerHTML = `
-                <svg style="width: 64px; height: 64px; display: inline-block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <svg style="width: 80px; height: 80px; display: inline-block; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" fill="rgba(255,255,255,0.2)"/>
+                    <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
                 </svg>
             `;
             clearInterval(countInterval);

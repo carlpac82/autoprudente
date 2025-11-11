@@ -776,16 +776,19 @@
                 </div>
             </div>
             
-            <div class="mt-6 flex gap-4">
-                <button onclick="capturePhoto()" class="bg-white text-gray-900 px-8 py-4 rounded-full hover:bg-gray-100 transition-all font-semibold flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <div class="mt-6 flex gap-4 justify-center">
+                <button onclick="capturePhoto()" class="bg-white text-gray-900 px-10 py-5 rounded-full hover:bg-gray-100 transition-all font-semibold flex items-center gap-3 shadow-lg hover:shadow-xl">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+                        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
                     </svg>
-                    Capture
+                    <span class="text-lg">Capture</span>
                 </button>
-                <button onclick="closeCamera()" class="bg-red-600 text-white px-8 py-4 rounded-full hover:bg-red-700 transition-all font-semibold">
-                    Cancel
+                <button onclick="closeCamera()" class="bg-red-600 text-white px-10 py-5 rounded-full hover:bg-red-700 transition-all font-semibold flex items-center gap-3 shadow-lg hover:shadow-xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    <span class="text-lg">Cancel</span>
                 </button>
             </div>
         </div>
