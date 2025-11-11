@@ -11,6 +11,85 @@ let inspectionData = {
     vehicleInfo: {}
 };
 
+// Make inspectionData globally accessible
+window.inspectionData = inspectionData;
+
+// Function to save photo data
+function savePhotoData(photoType, dataURL, blob = null) {
+    console.log(`📸 Saving photo: ${photoType}`);
+    
+    // Save to local inspectionData
+    inspectionData.photos[photoType] = {
+        dataURL: dataURL,
+        blob: blob,
+        timestamp: new Date().toISOString(),
+        type: photoType
+    };
+    
+    // Update global window reference
+    window.inspectionData = inspectionData;
+    
+    // Also save to localStorage as backup
+    try {
+        const photosForStorage = {};
+        Object.keys(inspectionData.photos).forEach(key => {
+            photosForStorage[key] = {
+                dataURL: inspectionData.photos[key].dataURL,
+                timestamp: inspectionData.photos[key].timestamp,
+                type: inspectionData.photos[key].type
+            };
+        });
+        localStorage.setItem('inspectionPhotos', JSON.stringify(photosForStorage));
+        console.log(`💾 Photo saved to localStorage: ${photoType}`);
+    } catch(e) {
+        console.warn('Failed to save to localStorage:', e);
+    }
+    
+    console.log(`✅ Photo saved successfully: ${photoType}. Total photos: ${Object.keys(inspectionData.photos).length}`);
+}
+
+// Function to load photos from localStorage on page load
+function loadPhotosFromStorage() {
+    try {
+        const storedPhotos = localStorage.getItem('inspectionPhotos');
+        if (storedPhotos) {
+            const photos = JSON.parse(storedPhotos);
+            Object.keys(photos).forEach(key => {
+                inspectionData.photos[key] = photos[key];
+            });
+            window.inspectionData = inspectionData;
+            console.log(`📂 Loaded ${Object.keys(photos).length} photos from localStorage`);
+        }
+    } catch(e) {
+        console.warn('Failed to load photos from localStorage:', e);
+    }
+}
+
+// Load photos when script loads
+loadPhotosFromStorage();
+
+// Debug function to check photo status
+function debugPhotoStatus() {
+    console.log('📊 Photo Status Debug:');
+    console.log('- inspectionData.photos:', inspectionData.photos);
+    console.log('- window.inspectionData.photos:', window.inspectionData?.photos);
+    console.log('- localStorage photos:', localStorage.getItem('inspectionPhotos'));
+    console.log('- Total photos in memory:', Object.keys(inspectionData.photos).length);
+    
+    // Also check if there are any photo elements in the DOM
+    const photoSlots = document.querySelectorAll('.photo-slot, [id*="photo"], [class*="photo"]');
+    console.log('- Photo elements in DOM:', photoSlots.length);
+    
+    return {
+        memoryPhotos: Object.keys(inspectionData.photos).length,
+        windowPhotos: Object.keys(window.inspectionData?.photos || {}).length,
+        domElements: photoSlots.length
+    };
+}
+
+// Make debug function globally available
+window.debugPhotoStatus = debugPhotoStatus;
+
 let cameraStream = null;
 let currentPhotoType = null;
 let autoSequenceMode = false;
