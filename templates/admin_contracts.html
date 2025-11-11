@@ -40,29 +40,6 @@
         {% endif %}
 
         <form method="post" action="/admin/contracts">
-            <!-- Check-out Contract -->
-            <div class="section-card">
-                <div class="section-header">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    <h3>Contrato de Check-out (Devolução)</h3>
-                </div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Título do Contrato</label>
-                        <input type="text" name="checkout_title" class="w-full p-3 border border-gray-300 rounded-md" 
-                               value="{{ contract_settings.checkout_title }}" placeholder="Título do contrato">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Termos e Condições</label>
-                        <textarea name="checkout_terms" rows="6" class="w-full p-3 border border-gray-300 rounded-md" 
-                                  placeholder="Insira os termos e condições para o check-out...">{{ contract_settings.checkout_terms }}</textarea>
-                    </div>
-                </div>
-            </div>
-
             <!-- General Settings -->
             <div class="section-card">
                 <div class="section-header">

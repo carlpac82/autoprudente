@@ -3938,8 +3938,6 @@ async def admin_contracts_page(request: Request):
     
     # Get contract settings from database or defaults
     contract_settings = {
-        'checkout_title': _get_setting('checkout_title', 'Contrato de Devolução de Veículo'),
-        'checkout_terms': _get_setting('checkout_terms', ''),
         'company_name': _get_setting('company_name', 'Auto Prudente'),
         'company_nif': _get_setting('company_nif', ''),
     }
@@ -3964,8 +3962,6 @@ async def admin_contracts_save(request: Request):
         
         # Save contract settings
         settings_to_save = [
-            ('checkout_title', form_data.get('checkout_title', '')),
-            ('checkout_terms', form_data.get('checkout_terms', '')),
             ('company_name', form_data.get('company_name', '')),
             ('company_nif', form_data.get('company_nif', '')),
         ]
@@ -3975,8 +3971,6 @@ async def admin_contracts_save(request: Request):
         
         # Get updated settings
         contract_settings = {
-            'checkout_title': _get_setting('checkout_title', 'Contrato de Devolução de Veículo'),
-            'checkout_terms': _get_setting('checkout_terms', ''),
             'company_name': _get_setting('company_name', 'Auto Prudente'),
             'company_nif': _get_setting('company_nif', ''),
         }
