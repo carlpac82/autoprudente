@@ -381,8 +381,13 @@ function startCameraCountdown() {
         z-index: 10000;
     `;
     
+    // Get photo label
+    const photo = photoTypes.find(p => p.type === currentPhotoType);
+    const photoLabel = photo ? photo.label : 'Foto';
+    
     countdownOverlay.innerHTML = `
         <div style="text-align: center; position: relative;">
+            <h3 style="font-size: 20px; font-weight: 500; margin-bottom: 40px; color: white; opacity: 0.9;">${photoLabel}</h3>
             <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
                 <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"/>
                 <circle id="countdownCircle" cx="80" cy="80" r="70" fill="none" stroke="#009cb6" stroke-width="10" 
@@ -1231,15 +1236,15 @@ function showPhotoPreview(blob, photoType) {
         </div>
         
         <div style="display: flex; gap: 16px; margin-top: 32px;">
-            <button id="btnRetake" onclick="window.retakePhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #ef4444; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            <button id="btnRetake" onclick="window.retakePhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #009cb6; color: white; padding: 14px 28px; border-radius: 999px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 Repetir
             </button>
-            <button id="btnAccept" onclick="window.acceptPhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            <button id="btnAccept" onclick="window.acceptPhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #f59e0b; color: white; padding: 14px 28px; border-radius: 999px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
                 Próxima
             </button>
@@ -1277,6 +1282,49 @@ function retakePhoto() {
     window.tempPhotoBlob = null;
 }
 
+function showSavingAnimation() {
+    // Create saving overlay
+    const savingOverlay = document.createElement('div');
+    savingOverlay.id = 'savingOverlay';
+    savingOverlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 156, 182, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        animation: fadeIn 0.2s ease-in;
+    `;
+    
+    savingOverlay.innerHTML = `
+        <div style="text-align: center; color: white;">
+            <svg style="width: 64px; height: 64px; margin: 0 auto 20px; animation: spin 1s linear infinite;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <h3 style="font-size: 24px; font-weight: 600; margin: 0;">A guardar foto...</h3>
+        </div>
+        <style>
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    
+    document.body.appendChild(savingOverlay);
+    
+    // Remove after 1.5 seconds
+    setTimeout(() => {
+        savingOverlay.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => savingOverlay.remove(), 300);
+    }, 1500);
+}
+
 function acceptPhoto(photoType) {
     console.log('acceptPhoto called for:', photoType);
     const blob = window.tempPhotoBlob;
@@ -1286,6 +1334,9 @@ function acceptPhoto(photoType) {
         console.error('No blob found in window.tempPhotoBlob');
         return;
     }
+    
+    // Show saving animation
+    showSavingAnimation();
     
     // Store photo
     inspectionData.photos[photoType] = blob;
