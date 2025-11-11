@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    {% csrf_token %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if inspection_type == 'checkout' %}Check-out{% else %}Check-in{% endif %} - Inspeção de Veículo</title>
@@ -1935,7 +1934,7 @@
         function saveInspectionWithEmail(email) {
             // Prepare inspection data
             const inspectionData = {
-                type: '{{ inspection_type|default:"checkin" }}', // Add inspection type
+                type: '{{ inspection_type|default("checkin") }}', // Add inspection type
                 photos: window.inspectionData?.photos || {},
                 damages: window.diagramData?.damages || [],
                 observations: window.diagramData?.observations || '',
@@ -1955,8 +1954,7 @@
             fetch('/api/save-inspection', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(inspectionData)
             })
