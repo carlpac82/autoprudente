@@ -386,15 +386,17 @@ function startCameraCountdown() {
     const photoLabel = photo ? photo.label : 'Foto';
     
     countdownOverlay.innerHTML = `
-        <div style="text-align: center; position: relative;">
-            <h3 style="font-size: 20px; font-weight: 500; margin-bottom: 40px; color: white; opacity: 0.9;">${photoLabel}</h3>
-            <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
-                <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"/>
-                <circle id="countdownCircle" cx="80" cy="80" r="70" fill="none" stroke="#009cb6" stroke-width="10" 
-                    stroke-dasharray="440" stroke-dashoffset="0" 
-                    style="transition: stroke-dashoffset 1s linear;"/>
-            </svg>
-            <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 72px; font-weight: 800; color: white;">3</div>
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <h3 style="font-size: 20px; font-weight: 500; color: white; opacity: 0.9; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);">${photoLabel}</h3>
+            <div style="text-align: center; position: relative;">
+                <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
+                    <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"/>
+                    <circle id="countdownCircle" cx="80" cy="80" r="70" fill="none" stroke="#009cb6" stroke-width="10" 
+                        stroke-dasharray="440" stroke-dashoffset="0" 
+                        style="transition: stroke-dashoffset 1s linear;"/>
+                </svg>
+                <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 72px; font-weight: 800; color: white;">3</div>
+            </div>
         </div>
     `;
     
@@ -1398,13 +1400,28 @@ function acceptPhoto(photoType) {
     // Clear temp blob
     window.tempPhotoBlob = null;
     
-    closeCamera();
+    // Check if we need to capture more photos
+    const totalPhotos = Object.keys(inspectionData.photos).length;
+    console.log(`Photos captured: ${totalPhotos}/6`);
     
-    // If in auto sequence mode, move to next photo
-    if (autoSequenceMode) {
-        setTimeout(() => {
-            openCameraAutoSequence(currentPhotoIndex + 1);
-        }, 800);
+    if (totalPhotos < 6) {
+        // Find next photo type to capture
+        const nextPhotoType = photoTypes.find(pt => !inspectionData.photos[pt.type]);
+        
+        if (nextPhotoType) {
+            console.log('Opening next photo:', nextPhotoType.type);
+            
+            // Close current camera
+            closeCamera();
+            
+            // Open camera for next photo after short delay
+            setTimeout(() => {
+                openCamera(nextPhotoType.type);
+            }, 1800); // Wait for saving animation to finish
+        }
+    } else {
+        // All photos captured, close camera
+        closeCamera();
     }
 }
 
