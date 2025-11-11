@@ -20,6 +20,21 @@
 
 ---
 
+## ✅ APIs DE MAPEAMENTO IMPLEMENTADAS
+
+### APIs Check-out (ATIVAS)
+- ✅ `POST /api/checkout/upload-template` - Upload do PDF Check-out
+- ✅ `GET /api/checkout/get-active-template` - Obter PDF para mapeador
+- ✅ `GET /api/checkout/get-coordinates` - Obter coordenadas mapeadas
+- ✅ `POST /api/checkout/save-coordinates` - Guardar coordenadas
+
+### Storage
+- PDF: `settings.checkout_template_data` (formato hex)
+- Coordenadas: `settings.checkout_coordinates` (formato JSON)
+- Totalmente separado do Damage Report
+
+---
+
 ## ⚠️ O QUE PRECISA SER IMPLEMENTADO
 
 ### 1. Preview de PDF Check-out
