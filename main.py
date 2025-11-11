@@ -3641,6 +3641,18 @@ async def damage_report_mapper_page(request: Request):
         "request": request
     })
 
+@app.get("/checkout-mapper", response_class=HTMLResponse)
+async def checkout_mapper_page(request: Request):
+    """Página dedicada para mapeamento de campos PDF do Check-out"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse("checkout_mapper_only.html", {
+        "request": request
+    })
+
 @app.get("/rental-agreement-mapper", response_class=HTMLResponse)
 async def rental_agreement_mapper_page(request: Request):
     """Página dedicada para mapeamento de campos do Rental Agreement"""
