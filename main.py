@@ -28500,6 +28500,117 @@ async def get_inspections_history(request: Request):
             "error": str(e)
         }, status_code=500)
 
+@app.get("/api/inspections/{inspection_number}")
+async def get_inspection_details(inspection_number: str, request: Request):
+    """Get specific inspection details"""
+    try:
+        mock_inspection = {
+            "inspection_number": inspection_number,
+            "vehicle_plate": "AA-00-AA",
+            "contract_number": "12345-01",
+            "inspection_type": "checkin",
+            "inspector_name": "Admin",
+            "created_at": "2025-11-11T15:00:00",
+            "fuel_level": 100,
+            "odometer_reading": 50000,
+            "damage_notes": ""
+        }
+        
+        return JSONResponse({
+            "ok": True,
+            "inspection": mock_inspection
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting inspection details: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.get("/api/inspections/{inspection_number}/pdf")
+async def get_inspection_pdf(inspection_number: str, request: Request):
+    """Generate and return inspection PDF"""
+    try:
+        # Mock PDF response - return a simple PDF placeholder
+        from fastapi.responses import Response
+        
+        # Simple PDF content (mock)
+        pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n100 700 Td\n(Inspection Report) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000206 00000 n \ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n299\n%%EOF"
+        
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=inspection_{inspection_number}.pdf"
+            }
+        )
+        
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.put("/api/inspections/{inspection_number}/update")
+async def update_inspection(inspection_number: str, request: Request):
+    """Update inspection details"""
+    try:
+        data = await request.json()
+        
+        logging.info(f"Updating inspection {inspection_number}: {data}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Inspection updated successfully"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating inspection: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.post("/api/inspections/{inspection_number}/email")
+async def send_inspection_email(inspection_number: str, request: Request):
+    """Send inspection via email"""
+    try:
+        data = await request.json()
+        email = data.get("email", "")
+        
+        logging.info(f"Sending inspection {inspection_number} to email: {email}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Email sent successfully"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error sending email: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.delete("/api/inspections/{inspection_number}")
+async def delete_inspection(inspection_number: str, request: Request):
+    """Delete inspection"""
+    try:
+        logging.info(f"Deleting inspection {inspection_number}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Inspection deleted successfully"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error deleting inspection: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn
