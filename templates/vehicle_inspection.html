@@ -204,6 +204,121 @@
             border-color: rgba(16, 185, 129, 0.3) !important;
         }
         {% endif %}
+        
+        /* CROQUI INTERATIVO */
+        .car-diagram-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .car-svg-container {
+            position: relative;
+            touch-action: none;
+            user-select: none;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .damage-pin {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #dc2626;
+            color: white;
+            border-radius: 50% 50% 50% 0;
+            transform-origin: center bottom;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .damage-pin:hover, .damage-pin.selected {
+            transform: translate(-50%, -100%) scale(1.2);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+            z-index: 20;
+        }
+        
+        .damage-pin.size-small { width: 20px; height: 20px; font-size: 11px; }
+        .damage-pin.size-medium { width: 30px; height: 30px; font-size: 14px; }
+        .damage-pin.size-large { width: 40px; height: 40px; font-size: 17px; }
+        
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .drawing-canvas.active {
+            pointer-events: auto;
+            cursor: crosshair;
+        }
+        
+        .tool-button {
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+            min-height: 50px;
+        }
+        
+        .tool-button:hover {
+            border-color: #009cb6;
+            background: #f0f9ff;
+        }
+        
+        .tool-button.active {
+            background: #009cb6;
+            color: white;
+            border-color: #009cb6;
+        }
+        
+        .size-button {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .size-button:hover {
+            border-color: #009cb6;
+            background: #f0f9ff;
+        }
+        
+        .size-button.active {
+            background: #009cb6;
+            border-color: #009cb6;
+        }
+        
+        .size-button .dot {
+            background: #dc2626;
+            border-radius: 50%;
+        }
+        
+        .size-button.active .dot {
+            background: white;
+        }
     </style>
 </head>
 <body class="bg-[#009cb6] min-h-screen">
@@ -477,6 +592,74 @@
             </div>
         </div>
 
+        <!-- STEP 1.5: Croqui Interativo de Danos -->
+        <div id="stepDiagram" class="step-content hidden">
+            <div class="car-diagram-container max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold text-[#009cb6] mb-4 text-center">Marcar Danos no Croqui</h2>
+                
+                <!-- Ferramentas -->
+                <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                        <button type="button" id="toolPin" class="tool-button active" onclick="selectTool('pin')">
+                            📍 Pins
+                        </button>
+                        <button type="button" id="toolDraw" class="tool-button" onclick="selectTool('draw')">
+                            ✏️ Desenhar
+                        </button>
+                        <button type="button" id="toolEraser" class="tool-button" onclick="selectTool('eraser')">
+                            🧹 Apagar
+                        </button>
+                        <button type="button" class="tool-button" onclick="clearAll()">
+                            🗑️ Limpar Tudo
+                        </button>
+                    </div>
+                    
+                    <!-- Tamanhos (Pin ou Traço) -->
+                    <div id="sizeControls" class="flex items-center justify-center gap-3">
+                        <span class="text-sm font-semibold text-gray-700">Tamanho:</span>
+                        <button type="button" class="size-button active" onclick="selectSize('small')" id="sizeSmall">
+                            <div class="dot" style="width: 8px; height: 8px;"></div>
+                        </button>
+                        <button type="button" class="size-button" onclick="selectSize('medium')" id="sizeMedium">
+                            <div class="dot" style="width: 14px; height: 14px;"></div>
+                        </button>
+                        <button type="button" class="size-button" onclick="selectSize('large')" id="sizeLarge">
+                            <div class="dot" style="width: 20px; height: 20px;"></div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Croqui do Carro -->
+                <div class="car-svg-container" id="carDiagram">
+                    <img src="/static/images/Croqui.png" alt="Croqui do Carro" style="width: 100%; height: auto; display: block;">
+                    <!-- Canvas para desenho -->
+                    <canvas id="drawingCanvas" class="drawing-canvas"></canvas>
+                    <!-- Pins adicionados dinamicamente aqui -->
+                    <!-- Pin preview -->
+                    <div id="pinPreview" class="damage-pin" style="display: none; opacity: 0.5; pointer-events: none;"></div>
+                </div>
+                
+                <!-- Campo de Observações -->
+                <div class="mt-6 bg-white p-4 rounded-lg border-2 border-gray-200">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        📝 Observações sobre os Danos
+                    </label>
+                    <textarea 
+                        id="damageObservations" 
+                        class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6] focus:border-[#009cb6]" 
+                        rows="4" 
+                        placeholder="Descreva os danos marcados no croqui..."></textarea>
+                </div>
+                
+                <!-- Botão Continuar -->
+                <div class="mt-6 text-center">
+                    <button type="button" onclick="proceedToAnalysis()" class="px-8 py-4 bg-[#009cb6] text-white text-lg font-semibold rounded-lg hover:bg-[#007a8f] transition-colors shadow-lg">
+                        Continuar para Análise
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- STEP 2: AI Analysis -->
         <div id="stepAnalysis" class="step-content hidden">
             <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -631,5 +814,278 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/static/vehicle_inspection.js"></script>
+    
+    <!-- Croqui Interativo Script -->
+    <script>
+        // Variables
+        let currentTool = 'pin';  // pin, draw, eraser
+        let currentSize = 'small';
+        let pinCounter = 0;
+        let damages = [];
+        let drawing = false;
+        let canvas, ctx;
+        
+        // Initialize canvas
+        document.addEventListener('DOMContentLoaded', () => {
+            canvas = document.getElementById('drawingCanvas');
+            const diagram = document.getElementById('carDiagram');
+            const img = diagram.querySelector('img');
+            
+            // Set canvas size to match image
+            const resizeCanvas = () => {
+                canvas.width = img.offsetWidth;
+                canvas.height = img.offsetHeight;
+                redrawCanvas();
+            };
+            
+            img.addEventListener('load', resizeCanvas);
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            
+            // Setup canvas context
+            ctx = canvas.getContext('2d');
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            
+            // Setup diagram events
+            setupDiagramEvents();
+        });
+        
+        function selectTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tool' + tool.charAt(0).toUpperCase() + tool.slice(1)).classList.add('active');
+            
+            // Toggle canvas active for drawing
+            if (tool === 'draw' || tool === 'eraser') {
+                canvas.classList.add('active');
+            } else {
+                canvas.classList.remove('active');
+            }
+        }
+        
+        function selectSize(size) {
+            currentSize = size;
+            document.querySelectorAll('.size-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('size' + size.charAt(0).toUpperCase() + size.slice(1)).classList.add('active');
+        }
+        
+        function setupDiagramEvents() {
+            const diagram = document.getElementById('carDiagram');
+            
+            // Mouse events
+            diagram.addEventListener('click', handleClick);
+            diagram.addEventListener('mousemove', handleMove);
+            diagram.addEventListener('mouseleave', hidePreview);
+            
+            // Touch events
+            diagram.addEventListener('touchstart', handleTouchStart, {passive: false});
+            diagram.addEventListener('touchmove', handleTouchMove, {passive: false});
+            diagram.addEventListener('touchend', handleTouchEnd);
+            
+            // Drawing events on canvas
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            canvas.addEventListener('touchstart', startDrawing, {passive: false});
+            canvas.addEventListener('touchmove', draw, {passive: false});
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+        
+        function handleClick(e) {
+            if (currentTool === 'pin') {
+                addPin(e);
+            }
+        }
+        
+        function handleMove(e) {
+            if (currentTool === 'pin') {
+                showPinPreview(e);
+            }
+        }
+        
+        function handleTouchStart(e) {
+            if (currentTool === 'pin') {
+                e.preventDefault();
+                const touch = e.touches[0];
+                addPin(touch);
+            }
+        }
+        
+        function handleTouchMove(e) {
+            if (currentTool === 'pin') {
+                e.preventDefault();
+                const touch = e.touches[0];
+                showPinPreview(touch);
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            hidePreview();
+        }
+        
+        function addPin(event) {
+            const container = document.getElementById('carDiagram');
+            const rect = container.getBoundingClientRect();
+            const x = (event.clientX || event.pageX) - rect.left;
+            const y = (event.clientY || event.pageY) - rect.top;
+            
+            pinCounter++;
+            const pinId = `pin-${pinCounter}`;
+            
+            const pin = document.createElement('div');
+            pin.className = `damage-pin size-${currentSize}`;
+            pin.id = pinId;
+            pin.textContent = pinCounter;
+            pin.style.left = x + 'px';
+            pin.style.top = y + 'px';
+            pin.style.transform = 'translate(-50%, -100%)';
+            
+            // Double click/tap to remove
+            pin.ondblclick = () => removePin(pinId);
+            let tapCount = 0;
+            pin.ontouchend = (e) => {
+                e.preventDefault();
+                tapCount++;
+                if (tapCount === 2) {
+                    removePin(pinId);
+                    tapCount = 0;
+                }
+                setTimeout(() => tapCount = 0, 300);
+            };
+            
+            container.appendChild(pin);
+            
+            // Save coordinates
+            damages.push({
+                id: pinId,
+                type: 'pin',
+                number: pinCounter,
+                x: x,
+                y: y,
+                size: currentSize
+            });
+        }
+        
+        function removePin(pinId) {
+            const pin = document.getElementById(pinId);
+            if (pin) pin.remove();
+            damages = damages.filter(d => d.id !== pinId);
+        }
+        
+        function showPinPreview(event) {
+            const preview = document.getElementById('pinPreview');
+            const container = document.getElementById('carDiagram');
+            const rect = container.getBoundingClientRect();
+            const x = (event.clientX || event.pageX) - rect.left;
+            const y = (event.clientY || event.pageY) - rect.top;
+            
+            preview.className = `damage-pin size-${currentSize}`;
+            preview.style.display = 'block';
+            preview.style.left = x + 'px';
+            preview.style.top = y + 'px';
+            preview.style.transform = 'translate(-50%, -100%)';
+            preview.textContent = pinCounter + 1;
+        }
+        
+        function hidePreview() {
+            const preview = document.getElementById('pinPreview');
+            preview.style.display = 'none';
+        }
+        
+        function startDrawing(e) {
+            if (currentTool !== 'draw' && currentTool !== 'eraser') return;
+            e.preventDefault();
+            drawing = true;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        function draw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            if (currentTool === 'draw') {
+                ctx.strokeStyle = '#dc2626';
+                ctx.lineWidth = currentSize === 'small' ? 2 : currentSize === 'medium' ? 4 : 6;
+                ctx.globalCompositeOperation = 'source-over';
+            } else if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = currentSize === 'small' ? 10 : currentSize === 'medium' ? 20 : 30;
+            }
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        
+        function stopDrawing() {
+            if (drawing) {
+                drawing = false;
+                ctx.closePath();
+                
+                // Save drawing as image data
+                damages.push({
+                    type: 'drawing',
+                    dataURL: canvas.toDataURL()
+                });
+            }
+        }
+        
+        function redrawCanvas() {
+            // Find last drawing in damages
+            const lastDrawing = damages.filter(d => d.type === 'drawing').pop();
+            if (lastDrawing) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = lastDrawing.dataURL;
+            }
+        }
+        
+        function clearAll() {
+            if (!confirm('Apagar tudo (pins e desenhos)?')) return;
+            
+            // Remove all pins
+            document.querySelectorAll('.damage-pin:not(#pinPreview)').forEach(pin => pin.remove());
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Reset
+            damages = [];
+            pinCounter = 0;
+        }
+        
+        function proceedToAnalysis() {
+            // Save observations
+            const observations = document.getElementById('damageObservations').value;
+            
+            // Save diagram data
+            window.diagramData = {
+                pins: damages.filter(d => d.type === 'pin'),
+                drawing: canvas.toDataURL(),
+                observations: observations
+            };
+            
+            // Hide diagram step, show analysis step
+            document.getElementById('stepDiagram').classList.add('hidden');
+            document.getElementById('stepAnalysis').classList.remove('hidden');
+            
+            console.log('Diagram data saved:', window.diagramData);
+        }
+    </script>
 </body>
 </html>
