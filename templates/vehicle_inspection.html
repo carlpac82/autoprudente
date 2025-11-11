@@ -976,6 +976,20 @@
             const x = (e.clientX || e.touches[0].clientX) - rect.left;
             const y = (e.clientY || e.touches[0].clientY) - rect.top;
             
+            // Set stroke properties before beginning path
+            if (currentTool === 'draw') {
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = currentSize === 'tiny' ? 1 : currentSize === 'small' ? 2 : currentSize === 'medium' ? 3 : 5;
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+            } else if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = currentSize === 'tiny' ? 8 : currentSize === 'small' ? 12 : currentSize === 'medium' ? 20 : 30;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+            }
+            
             ctx.beginPath();
             ctx.moveTo(x, y);
         }
@@ -988,17 +1002,10 @@
             const x = (e.clientX || e.touches[0].clientX) - rect.left;
             const y = (e.clientY || e.touches[0].clientY) - rect.top;
             
-            if (currentTool === 'draw') {
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = currentSize === 'tiny' ? 1 : currentSize === 'small' ? 2 : currentSize === 'medium' ? 3 : 5;
-                ctx.globalCompositeOperation = 'source-over';
-            } else if (currentTool === 'eraser') {
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = currentSize === 'tiny' ? 8 : currentSize === 'small' ? 12 : currentSize === 'medium' ? 20 : 30;
-            }
-            
             ctx.lineTo(x, y);
             ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
         }
         
         function stopDrawing() {

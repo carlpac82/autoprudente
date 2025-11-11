@@ -190,20 +190,27 @@ function updateDiagramIndicator(photoType, captured) {
 
 // Step navigation (4 steps: Photos -> Diagram -> Analysis -> Review)
 function nextStep() {
+    console.log('nextStep called, current step:', currentStep);
+    
     if (currentStep === 1) {
         // Go to diagram after photos
         if (!validatePhotos()) return;
+        currentStep = 2;
+        updateStepDisplay();
         showDiagramStep();
     } else if (currentStep === 2) {
         // Go to analysis after diagram
+        currentStep = 3;
+        updateStepDisplay();
         startAIAnalysis();
     } else if (currentStep === 3) {
         // Go to review after analysis
+        currentStep = 4;
+        updateStepDisplay();
         generateReview();
     }
     
-    currentStep++;
-    updateStepDisplay();
+    console.log('nextStep finished, new step:', currentStep);
 }
 
 function showDiagramStep() {
