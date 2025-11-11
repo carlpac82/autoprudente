@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Inspeções</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/notifications.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/vehicle-inspection" class="text-[#009cb6] hover:text-[#f59e0b] transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                    </a>
+                    <img src="/static/Icon_AP.png" alt="Autoprudente" class="h-12 w-auto" />
+                    <div class="border-l-2 border-gray-300 pl-4 ml-4">
+                        <h1 class="text-lg font-bold text-[#009cb6]">Histórico de Inspeções</h1>
+                    </div>
+                </div>
+                
+                <!-- User Avatar -->
+                {% if current_user %}
+                <div class="flex items-center gap-3">
+                    {% if current_user.profile_picture_path %}
+                    <img src="{{ current_user.profile_picture_path }}" alt="Profile" class="w-10 h-10 rounded-full object-cover border-2 border-[#009cb6]" />
+                    {% else %}
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#009cb6] to-[#0077a3] flex items-center justify-center text-white font-bold text-sm border-2 border-white">
+                        {{ (current_user.first_name[:1] or current_user.username[:1] or 'U') | upper }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div class="flex flex-wrap items-center gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ano</label>
+                    <select id="filterYear" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" onchange="filterInspections()">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mês</label>
+                    <select id="filterMonth" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" onchange="filterInspections()">
+                        <option value="">Todos</option>
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                    <select id="filterType" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" onchange="filterInspections()">
+                        <option value="">Todos</option>
+                        <option value="checkin">Check-in</option>
+                        <option value="checkout">Check-out</option>
+                    </select>
+                </div>
+                <div class="flex-1"></div>
+                <div class="flex items-end">
+                    <button onclick="refreshHistory()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8f] transition-colors">
+                        Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History List -->
+        <div id="historyContainer">
+            <div class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#009cb6] mx-auto"></div>
+                <p class="text-gray-500 mt-4">A carregar histórico...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let inspections = [];
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/inspections/history');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    inspections = data.inspections;
+                    populateYearFilter();
+                    renderHistory(inspections);
+                } else {
+                    showNotification('Erro ao carregar histórico', 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao carregar histórico: ' + error.message, 'error');
+            }
+        }
+
+        function populateYearFilter() {
+            const years = [...new Set(inspections.map(i => new Date(i.created_at).getFullYear()))].sort((a, b) => b - a);
+            const select = document.getElementById('filterYear');
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                select.appendChild(option);
+            });
+        }
+
+        function filterInspections() {
+            const year = document.getElementById('filterYear').value;
+            const month = document.getElementById('filterMonth').value;
+            const type = document.getElementById('filterType').value;
+
+            let filtered = inspections;
+
+            if (year) {
+                filtered = filtered.filter(i => new Date(i.created_at).getFullYear().toString() === year);
+            }
+            if (month) {
+                filtered = filtered.filter(i => {
+                    const m = (new Date(i.created_at).getMonth() + 1).toString().padStart(2, '0');
+                    return m === month;
+                });
+            }
+            if (type) {
+                filtered = filtered.filter(i => i.inspection_type === type);
+            }
+
+            renderHistory(filtered);
+        }
+
+        function renderHistory(data) {
+            const container = document.getElementById('historyContainer');
+            
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-lg">
+                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="text-gray-500">Nenhuma inspeção encontrada</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group by date
+            const grouped = {};
+            data.forEach(inspection => {
+                const date = new Date(inspection.created_at);
+                const dateKey = date.toISOString().split('T')[0];
+                if (!grouped[dateKey]) {
+                    grouped[dateKey] = [];
+                }
+                grouped[dateKey].push(inspection);
+            });
+
+            // Sort dates descending
+            const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+            let html = '';
+            sortedDates.forEach(dateKey => {
+                const date = new Date(dateKey);
+                const dayItems = grouped[dateKey].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                html += `
+                    <div class="bg-white rounded-lg shadow-md mb-4 overflow-hidden">
+                        <div class="bg-[#009cb6] text-white px-4 py-3">
+                            <h3 class="font-bold text-lg">${formatDate(date)}</h3>
+                            <p class="text-sm text-white/80">${dayItems.length} inspeção${dayItems.length > 1 ? 'ões' : ''}</p>
+                        </div>
+                        <div class="divide-y divide-gray-200">
+                `;
+
+                dayItems.forEach(item => {
+                    const time = new Date(item.created_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+                    const typeColor = item.inspection_type === 'checkin' ? 'text-[#009cb6] bg-blue-50' : 'text-[#dc2626] bg-red-50';
+                    const typeName = item.inspection_type === 'checkin' ? 'Check-in' : 'Check-out';
+                    
+                    html += `
+                        <div class="p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <span class="text-sm font-semibold text-gray-500">${time}</span>
+                                    <span class="px-2 py-1 rounded text-xs font-semibold ${typeColor}">${typeName}</span>
+                                    <span class="font-bold text-gray-900">${item.vehicle_plate || 'N/A'}</span>
+                                    <span class="text-gray-600">RA: ${item.contract_number || 'N/A'}</span>
+                                    <span class="text-gray-500 text-sm">Inspetor: ${item.inspector_name || 'N/A'}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="sendEmail('${item.inspection_number}')" class="p-2 text-[#009cb6] hover:bg-blue-50 rounded-lg transition-colors" title="Enviar por Email">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                    </button>
+                                    <button onclick="deleteInspection('${item.inspection_number}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('pt-PT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        async function sendEmail(inspectionNumber) {
+            if (!confirm('Enviar esta inspeção por email?')) return;
+            
+            try {
+                const response = await fetch(`/api/inspections/${inspectionNumber}/email`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showNotification('Email enviado com sucesso', 'success');
+                } else {
+                    showNotification('Erro ao enviar email: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao enviar email: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteInspection(inspectionNumber) {
+            if (!confirm('Tem a certeza que deseja eliminar esta inspeção?')) return;
+            
+            try {
+                const response = await fetch(`/api/inspections/${inspectionNumber}`, { method: 'DELETE' });
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showNotification('Inspeção eliminada com sucesso', 'success');
+                    refreshHistory();
+                } else {
+                    showNotification('Erro ao eliminar: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao eliminar: ' + error.message, 'error');
+            }
+        }
+
+        function refreshHistory() {
+            loadHistory();
+        }
+
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadHistory);
+    </script>
+</body>
+</html>

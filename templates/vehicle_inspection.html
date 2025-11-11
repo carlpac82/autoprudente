@@ -210,6 +210,17 @@
                 <div class="flex items-center gap-4">
                     <!-- Autoprudente Logo -->
                     <img src="/static/Icon_AP.png" alt="Autoprudente" class="h-12 w-auto" />
+                    
+                    <!-- Page Title -->
+                    <div class="hidden md:block border-l-2 border-gray-300 pl-4 ml-4">
+                        <h1 class="text-lg font-bold text-[#009cb6]">
+                            {% if inspection_type == 'checkout' %}
+                            Check-out - Devolução do Veículo
+                            {% else %}
+                            Check-in - Recolha do Veículo
+                            {% endif %}
+                        </h1>
+                    </div>
                 </div>
                 
                 <!-- Right Side: Home, Check-in, Check-out, History, User -->
@@ -237,10 +248,11 @@
                         </svg>
                     </a>
                     
-                    <!-- History Icon (Blue) -->
+                    <!-- History Icon (Blue Circle Clock) -->
                     <a href="/inspection-history" class="nav-icon-history p-2 hover:bg-gray-50 rounded-lg transition-all" title="Histórico">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                     </a>
                     
@@ -281,17 +293,6 @@
         <!-- STEP 1: Photo Capture (previously Step 2) -->
         <div id="stepPhotos" class="step-content">
             <div class="max-w-4xl mx-auto">
-                <!-- Title -->
-                <div class="text-center mb-6">
-                    {% if inspection_type == 'checkout' %}
-                    <h2 class="text-3xl font-bold text-white mb-2">Check-out - Devolução do Veículo</h2>
-                    <p class="text-white/80 text-sm">Documente o estado do veículo na devolução</p>
-                    {% else %}
-                    <h2 class="text-3xl font-bold text-white mb-2">Check-in - Recolha do Veículo</h2>
-                    <p class="text-white/80 text-sm">Documente o estado inicial do veículo</p>
-                    {% endif %}
-                </div>
-                
                 <!-- Matrícula and RA - Above Car -->
                 <div class="flex items-center justify-center gap-4 mb-8">
                     <div>

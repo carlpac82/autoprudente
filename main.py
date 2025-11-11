@@ -21092,6 +21092,148 @@ async def create_vehicle_inspection(request: Request):
             "error": str(e)
         }, status_code=500)
 
+@app.get("/inspection-history", response_class=HTMLResponse)
+async def inspection_history_page(request: Request):
+    """Inspection history page"""
+    try:
+        require_inspection_access(request)
+    except HTTPException as e:
+        if e.status_code == 403:
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error_title": "Acesso Negado",
+                "error_message": "Não tem permissão para aceder ao histórico de inspeções."
+            }, status_code=403)
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    # Load current user
+    current_user = None
+    try:
+        username = request.session.get('username')
+        if username:
+            current_user = _get_user_by_username(username)
+    except Exception:
+        current_user = None
+    
+    return templates.TemplateResponse("inspection_history.html", {
+        "request": request,
+        "current_user": current_user
+    })
+
+@app.get("/api/inspections/history")
+async def get_inspections_history(request: Request):
+    """Get all inspections history"""
+    try:
+        require_inspection_access(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        conn = _db_connect()
+        is_postgres = os.getenv('DATABASE_URL') is not None
+        
+        if is_postgres:
+            cursor = conn.execute("""
+                SELECT inspection_number, inspection_type, vehicle_plate, contract_number,
+                       inspector_name, created_at
+                FROM vehicle_inspections
+                ORDER BY created_at DESC
+            """)
+        else:
+            cursor = conn.execute("""
+                SELECT inspection_number, inspection_type, vehicle_plate, contract_number,
+                       inspector_name, created_at
+                FROM vehicle_inspections
+                ORDER BY created_at DESC
+            """)
+        
+        inspections = []
+        for row in cursor.fetchall():
+            inspections.append({
+                "inspection_number": row[0],
+                "inspection_type": row[1],
+                "vehicle_plate": row[2],
+                "contract_number": row[3],
+                "inspector_name": row[4],
+                "created_at": row[5]
+            })
+        
+        conn.close()
+        
+        return JSONResponse({
+            "ok": True,
+            "inspections": inspections
+        })
+    
+    except Exception as e:
+        logging.error(f"Error loading inspections history: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/inspections/{inspection_number}/email")
+async def send_inspection_email(request: Request, inspection_number: str):
+    """Send inspection by email"""
+    try:
+        require_inspection_access(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        # TODO: Implement email sending
+        # For now, just return success
+        return JSONResponse({
+            "ok": True,
+            "message": "Email functionality will be implemented"
+        })
+    
+    except Exception as e:
+        logging.error(f"Error sending inspection email: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.delete("/api/inspections/{inspection_number}")
+async def delete_inspection(request: Request, inspection_number: str):
+    """Delete an inspection"""
+    try:
+        require_inspection_access(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        conn = _db_connect()
+        
+        # Delete photos first (foreign key)
+        conn.execute("""
+            DELETE FROM inspection_photos 
+            WHERE inspection_id IN (
+                SELECT id FROM vehicle_inspections WHERE inspection_number = ?
+            )
+        """ if not os.getenv('DATABASE_URL') else """
+            DELETE FROM inspection_photos 
+            WHERE inspection_id IN (
+                SELECT id FROM vehicle_inspections WHERE inspection_number = %s
+            )
+        """, (inspection_number,))
+        
+        # Delete inspection
+        conn.execute(
+            "DELETE FROM vehicle_inspections WHERE inspection_number = ?" if not os.getenv('DATABASE_URL')
+            else "DELETE FROM vehicle_inspections WHERE inspection_number = %s",
+            (inspection_number,)
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        logging.info(f"✅ Inspection deleted: {inspection_number}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Inspection deleted successfully"
+        })
+    
+    except Exception as e:
+        logging.error(f"Error deleting inspection: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # ============================================================
 # RENTAL AGREEMENT - Templates and Coordinates
 # ============================================================
