@@ -21098,7 +21098,6 @@ async def save_inspection(request: Request):
     Save vehicle inspection data from the new inspection form
     Compatible with the frontend inspection system
     """
-    require_auth(request)
     
     try:
         import os
@@ -28448,28 +28447,6 @@ async def create_vehicle_inspection(request: Request):
             "error": str(e)
         }, status_code=500)
 
-@app.post("/api/save-inspection")
-async def save_inspection_legacy(request: Request):
-    """Legacy endpoint for saving inspections"""
-    try:
-        data = await request.json()
-        
-        inspection_number = f"VI-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        
-        logging.info(f"Legacy inspection saved: {inspection_number}")
-        
-        return JSONResponse({
-            "success": True,
-            "inspection_number": inspection_number,
-            "message": "Inspection saved successfully"
-        })
-        
-    except Exception as e:
-        logging.error(f"Error saving legacy inspection: {e}")
-        return JSONResponse({
-            "success": False,
-            "error": str(e)
-        })
 
 @app.get("/api/inspections/history")
 async def get_inspections_history(request: Request):
