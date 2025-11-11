@@ -1834,16 +1834,48 @@
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Fotos capturadas:</span>
                                     <span class="font-semibold text-[#009cb6]">${(() => {
-                                        const photos = window.inspectionData?.photos || {};
-                                        const capturedCount = Object.values(photos).filter(photo => photo && photo.dataURL).length;
-                                        return capturedCount;
+                                        // Contar fotos de múltiplas fontes
+                                        let count = 0;
+                                        
+                                        // Verificar window.inspectionData.photos
+                                        const inspectionPhotos = window.inspectionData?.photos || {};
+                                        count += Object.values(inspectionPhotos).filter(photo => photo && (photo.dataURL || photo.blob)).length;
+                                        
+                                        // Verificar localStorage como backup
+                                        try {
+                                            const storedPhotos = JSON.parse(localStorage.getItem('inspectionPhotos') || '{}');
+                                            if (count === 0) {
+                                                count = Object.values(storedPhotos).filter(photo => photo && (photo.dataURL || photo.blob)).length;
+                                            }
+                                        } catch(e) {}
+                                        
+                                        return count;
                                     })()}/6</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Danos marcados:</span>
                                     <span class="font-semibold text-[#009cb6]">${(() => {
-                                        const damages = document.querySelectorAll('.damage-pin');
-                                        return damages.length > 0 ? 'Sim' : 'Não';
+                                        // Verificar pins e desenhos
+                                        const pins = document.querySelectorAll('.damage-pin');
+                                        const hasDrawings = window.diagramData?.damages && window.diagramData.damages.length > 0;
+                                        const hasCanvas = canvas && ctx && canvas.width > 0 && canvas.height > 0;
+                                        
+                                        // Verificar se há conteúdo no canvas
+                                        let hasCanvasContent = false;
+                                        if (hasCanvas) {
+                                            try {
+                                                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                                const data = imageData.data;
+                                                for (let i = 0; i < data.length; i += 4) {
+                                                    if (data[i + 3] > 0) { // Alpha > 0 significa pixel desenhado
+                                                        hasCanvasContent = true;
+                                                        break;
+                                                    }
+                                                }
+                                            } catch(e) {}
+                                        }
+                                        
+                                        return (pins.length > 0 || hasDrawings || hasCanvasContent) ? 'Sim' : 'Não';
                                     })()}</span>
                                 </div>
                                 <div class="flex justify-between">
