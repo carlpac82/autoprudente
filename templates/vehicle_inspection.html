@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if inspection_type == 'checkout' %}Check-out{% else %}Check-in{% endif %} - Inspeção de Veículo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/static/notifications.js"></script>
     <!-- Tesseract.js for OCR -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
+        * { 
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
         #cameraPreview {
             transform: scaleX(-1); /* Mirror effect for front camera */
         }
@@ -207,21 +211,23 @@
     <header class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <!-- Autoprudente Logo -->
+                <!-- Left: Logo -->
+                <div class="flex items-center">
                     <img src="/static/Icon_AP.png" alt="Autoprudente" class="h-12 w-auto" />
-                    
-                    <!-- Page Title -->
-                    <div class="hidden md:block border-l-2 border-gray-300 pl-4 ml-4">
-                        <h1 class="text-lg font-bold text-[#009cb6]">
-                            {% if inspection_type == 'checkout' %}
-                            Check-out - Devolução do Veículo
-                            {% else %}
-                            Check-in - Recolha do Veículo
-                            {% endif %}
-                        </h1>
-                    </div>
                 </div>
+                
+                <!-- Center: Page Title -->
+                <div class="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
+                    <h1 class="text-xl font-semibold text-[#009cb6] whitespace-nowrap">
+                        {% if inspection_type == 'checkout' %}
+                        Check-out - Devolução do Veículo
+                        {% else %}
+                        Check-in - Recolha do Veículo
+                        {% endif %}
+                    </h1>
+                </div>
+                
+                <!-- Right: Actions -->
                 
                 <!-- Mobile Menu Button -->
                 <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-[#009cb6] hover:bg-gray-50 rounded-lg">
