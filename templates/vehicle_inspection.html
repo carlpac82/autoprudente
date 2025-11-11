@@ -718,10 +718,9 @@
             </div>
             
             <!-- Camera Preview Container with Overlay -->
-            <div style="position: relative; display: inline-block;">
-                <video id="cameraPreview" autoplay playsinline></video>
+            <div class="relative w-full max-w-4xl mx-auto">
+                <video id="cameraPreview" autoplay playsinline class="w-full h-auto rounded-lg shadow-2xl"></video>
                 
-                <!-- Camera Overlay Guide -->
                 <div id="cameraOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
                     <!-- SVG Overlay -->
                     <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
@@ -741,29 +740,27 @@
                         <rect id="carGuide" x="20%" y="25%" width="60%" height="50%" rx="20" 
                               fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="10,5" opacity="0.8"/>
                         
-                        
                         <!-- Center crosshair -->
                         <g id="centerCross" stroke="#10b981" stroke-width="2" opacity="0.6">
                             <line x1="50%" y1="48%" x2="50%" y2="52%"/>
                             <line x1="48%" y1="50%" x2="52%" y2="50%"/>
                         </g>
                     </svg>
-                    
-                    <!-- Positioning Hints -->
-                    <div id="positionHints" style="position: absolute; bottom: 100px; left: 0; right: 0; text-align: center;">
-                        <div id="hintText" style="display: inline-block; background: rgba(0,156,182,0.95); color: white; padding: 10px 20px; font-size: 14px; font-weight: 600; backdrop-filter: blur(10px);">
-                            Alinhe o veículo no enquadramento
-                        </div>
-                    </div>
                 </div>
             </div>
             
-            <div class="mt-6 flex gap-4 justify-center">
-                <button onclick="closeCamera()" class="bg-red-600 text-white px-10 py-5 rounded-full hover:bg-red-700 transition-all font-semibold flex items-center gap-3 shadow-lg hover:shadow-xl">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            <div class="mt-6 flex gap-4 justify-center" id="cameraButtons">
+                <button onclick="retakePhoto()" class="bg-red-600 text-white px-8 py-4 rounded-full hover:bg-red-700 transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
-                    <span class="text-lg">Cancelar</span>
+                    Repetir
+                </button>
+                <button onclick="acceptPhoto()" class="bg-green-600 text-white px-8 py-4 rounded-full hover:bg-green-700 transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    Próxima
                 </button>
             </div>
         </div>

@@ -368,39 +368,38 @@ async function openCamera(photoType) {
 }
 
 function startCameraCountdown() {
-    // Create countdown overlay in camera modal
-    const modal = document.getElementById('cameraModal');
+    // Create fullscreen countdown overlay
     const countdownOverlay = document.createElement('div');
     countdownOverlay.id = 'cameraCountdown';
     countdownOverlay.style.cssText = `
-        position: absolute;
+        position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.85);
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
+        z-index: 10000;
     `;
     
     countdownOverlay.innerHTML = `
-        <div style="text-align: center;">
-            <svg width="120" height="120" viewBox="0 0 120 120" style="transform: rotate(-90deg);">
-                <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
-                <circle id="countdownCircle" cx="60" cy="60" r="50" fill="none" stroke="#10b981" stroke-width="8" 
-                    stroke-dasharray="314" stroke-dashoffset="0" 
+        <div style="text-align: center; position: relative;">
+            <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"/>
+                <circle id="countdownCircle" cx="80" cy="80" r="70" fill="none" stroke="#009cb6" stroke-width="10" 
+                    stroke-dasharray="440" stroke-dashoffset="0" 
                     style="transition: stroke-dashoffset 1s linear;"/>
             </svg>
-            <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 48px; font-weight: bold; color: white;">3</div>
+            <div id="countdownNumber" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 72px; font-weight: 800; color: white;">3</div>
         </div>
     `;
     
-    modal.appendChild(countdownOverlay);
+    document.body.appendChild(countdownOverlay);
     
     // Countdown animation
     let count = 3;
     const circle = document.getElementById('countdownCircle');
     const numberEl = document.getElementById('countdownNumber');
-    const circumference = 314; // 2 * PI * 50
+    const circumference = 440; // 2 * PI * 70
     
     const countInterval = setInterval(() => {
         count--;
@@ -1117,34 +1116,41 @@ async function detectLicensePlate(blob) {
 }
 
 function closeCamera() {
+    // Stop camera stream
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
     }
     
-    // Stop positioning hints
-    if (hintInterval) {
-        clearInterval(hintInterval);
-        hintInterval = null;
+    // Clear camera preview
+    const video = document.getElementById('cameraPreview');
+    if (video) {
+        video.srcObject = null;
     }
     
-    // Clean up Three.js
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-    }
-    if (renderer) {
-        renderer.dispose();
-        renderer = null;
-    }
-    if (scene) {
-        scene = null;
-    }
-    if (carModel) {
-        carModel = null;
-    }
-    
+    // Hide modal
     document.getElementById('cameraModal').classList.remove('active');
+}
+
+// Functions for new button layout
+function retakePhoto() {
+    // Remove preview if exists
+    const preview = document.getElementById('photoPreviewContainer');
+    if (preview) preview.remove();
+    
+    // Show camera again
+    document.getElementById('cameraPreview').style.display = 'block';
+    document.getElementById('cameraOverlay').style.display = 'block';
+    
+    // Restart countdown
+    startCameraCountdown();
+}
+
+function acceptPhoto() {
+    // Save the photo
+    if (window.tempPhotoBlob && currentPhotoType) {
+        savePhotoToInspection(window.tempPhotoBlob, currentPhotoType);
+    }
 }
 
 function capturePhoto() {
