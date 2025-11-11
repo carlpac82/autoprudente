@@ -843,11 +843,6 @@
                                         
                                         <!-- Fuel level fill -->
                                         <div id="fuelFill" class="h-full bg-[#009cb6] rounded-lg transition-all duration-300" style="width: 100%;"></div>
-                                        
-                                        <!-- X marker -->
-                                        <div id="fuelMarker" class="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 text-xl font-bold text-black" style="left: 100%;">
-                                            ✕
-                                        </div>
                                     </div>
                                     
                                     <!-- Fuel level slider - Made narrower -->
@@ -1131,10 +1126,9 @@
         function initializeFuelSelector() {
             const fuelSlider = document.getElementById('fuelSlider');
             const fuelFill = document.getElementById('fuelFill');
-            const fuelMarker = document.getElementById('fuelMarker');
             const fuelLevelText = document.getElementById('fuelLevelText');
             
-            if (!fuelSlider || !fuelFill || !fuelMarker || !fuelLevelText) {
+            if (!fuelSlider || !fuelFill || !fuelLevelText) {
                 console.error('Fuel selector elements not found');
                 return;
             }
@@ -1144,9 +1138,6 @@
                 
                 // Update fill width
                 fuelFill.style.width = percentage + '%';
-                
-                // Update marker position
-                fuelMarker.style.left = percentage + '%';
                 
                 // Update text based on percentage
                 let levelText = '';
