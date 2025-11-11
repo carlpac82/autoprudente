@@ -2003,7 +2003,7 @@
         function saveInspectionWithEmail(email) {
             // Prepare inspection data
             const inspectionData = {
-                type: '{{ inspection_type|default("checkin") }}', // Add inspection type
+                type: '{{ inspection_type|default("checkout") }}', // Add inspection type
                 photos: window.inspectionData?.photos || {},
                 damages: window.diagramData?.damages || [],
                 observations: window.diagramData?.observations || '',

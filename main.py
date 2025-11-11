@@ -20886,6 +20886,7 @@ async def vehicle_inspection_page(request: Request):
     
     return templates.TemplateResponse("vehicle_inspection.html", {
         "request": request,
+        "inspection_type": "checkout",
         "current_user": current_user
     })
 
