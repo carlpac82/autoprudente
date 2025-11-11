@@ -209,7 +209,7 @@
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span>Validação de Preços</span>
           </a>
-          <a href="/admin/contracts" onclick="closeMobileMenu()">
+          <a href="#" onclick="closeMobileMenu(); loadSection('inspections')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <span>Inspeções</span>
           </a>
@@ -304,7 +304,7 @@
                                 <span data-i18n="settings.priceValidation">Price Validation</span>
                             </div>
                         </div>
-                        <div class="menu-item" onclick="window.location.href='/admin/contracts'">
+                        <div class="menu-item" onclick="loadSection('inspections')">
                             <div class="flex items-center gap-3 px-4 py-3 text-gray-700">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -461,6 +461,7 @@
                 'vehicles': '/admin/vehicles-editor?iframe=1',
                 'price-adjustment': '/admin/settings?iframe=1',
                 'price-validation': '/admin/price-validation?iframe=1',
+                'inspections': '/admin/contracts?iframe=1',
                 'damage-report': '/admin/damage-report?iframe=1',
                 'price-automation-settings': '/admin/price-automation-settings?iframe=1',
                 'branding': '/admin/customization/branding?iframe=1',
