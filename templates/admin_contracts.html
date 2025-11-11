@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin • Configurações de Contratos</title>
+    <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .section-card { background: white; border: 1px solid #e5e7eb; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .section-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid #009cb6; }
+        .section-header svg { width: 24px; height: 24px; stroke: #009cb6; }
+        .section-header h3 { font-size: 1.125rem; font-weight: 600; color: #1f2937; margin: 0; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <header class="bg-[#009cb6] border-b">
+        <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/"><img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" /></a>
+            </div>
+            <nav class="flex items-center gap-3 text-white text-sm">
+                <a href="/" class="hover:underline">Prices</a>
+                <span class="opacity-90">Admin Menu</span>
+                <form method="post" action="/logout"><button class="hover:underline">Logout</button></form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-6">
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-800">Configurações de Contratos</h2>
+                <p class="text-sm text-gray-500 mt-1">Parametrização de contratos de entrega e recolha</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="/admin/settings" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Price Adjustment</a>
+                <a href="/admin/users" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Users</a>
+                <a href="/admin/car-groups" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Vehicles</a>
+                <a href="/admin/contracts" class="px-3 py-2 rounded bg-[#009cb6] text-white text-sm border border-[#009cb6] hover:bg-[#0086a1] transition-colors">Contracts</a>
+                <a href="/admin/price-validation" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Price Validation</a>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        {% if saved %}
+        <div class="mb-4 p-4 rounded-lg border-l-4 border-[#009cb6] bg-blue-50 flex items-start gap-3">
+            <svg class="w-5 h-5 text-[#009cb6] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="font-semibold text-[#009cb6]">Configurações guardadas com sucesso!</p>
+                <p class="text-sm text-gray-600 mt-1">As alterações foram aplicadas.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="mb-4 p-4 rounded-lg border-l-4 border-red-500 bg-red-50 flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="font-semibold text-red-800">Erro ao guardar</p>
+                <p class="text-sm text-red-700 mt-1">{{ error }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" action="/admin/contracts">
+            <!-- Check-in Contract -->
+            <div class="section-card">
+                <div class="section-header">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <h3>Contrato de Check-in (Entrega)</h3>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Título do Contrato</label>
+                        <input type="text" name="checkin_title" class="w-full p-3 border border-gray-300 rounded-md" 
+                               value="{{ contract_settings.checkin_title }}" placeholder="Título do contrato">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Termos e Condições</label>
+                        <textarea name="checkin_terms" rows="6" class="w-full p-3 border border-gray-300 rounded-md" 
+                                  placeholder="Insira os termos e condições para o check-in...">{{ contract_settings.checkin_terms }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Check-out Contract -->
+            <div class="section-card">
+                <div class="section-header">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <h3>Contrato de Check-out (Devolução)</h3>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Título do Contrato</label>
+                        <input type="text" name="checkout_title" class="w-full p-3 border border-gray-300 rounded-md" 
+                               value="{{ contract_settings.checkout_title }}" placeholder="Título do contrato">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Termos e Condições</label>
+                        <textarea name="checkout_terms" rows="6" class="w-full p-3 border border-gray-300 rounded-md" 
+                                  placeholder="Insira os termos e condições para o check-out...">{{ contract_settings.checkout_terms }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Settings -->
+            <div class="section-card">
+                <div class="section-header">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <h3>Configurações Gerais</h3>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa</label>
+                        <input type="text" name="company_name" class="w-full p-3 border border-gray-300 rounded-md" 
+                               value="{{ contract_settings.company_name }}" placeholder="Nome da empresa">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">NIF</label>
+                        <input type="text" name="company_nif" class="w-full p-3 border border-gray-300 rounded-md" 
+                               value="{{ contract_settings.company_nif }}" placeholder="123456789">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button type="button" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancelar</button>
+                <button type="submit" class="px-6 py-2 bg-[#009cb6] text-white rounded-md hover:bg-[#0086a1]">Guardar Configurações</button>
+            </div>
+        </form>
+    </main>
+</body>
+</html>

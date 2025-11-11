@@ -3928,6 +3928,92 @@ async def admin_settings_save(
         "error": err
     })
 
+@app.get("/admin/contracts", response_class=HTMLResponse)
+async def admin_contracts_page(request: Request):
+    """Admin contracts configuration page"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=302)
+    
+    # Get contract settings from database or defaults
+    contract_settings = {
+        'checkin_title': _get_setting('checkin_title', 'Contrato de Entrega de Veículo'),
+        'checkin_terms': _get_setting('checkin_terms', ''),
+        'checkout_title': _get_setting('checkout_title', 'Contrato de Devolução de Veículo'),
+        'checkout_terms': _get_setting('checkout_terms', ''),
+        'company_name': _get_setting('company_name', 'Auto Prudente'),
+        'company_nif': _get_setting('company_nif', ''),
+    }
+    
+    return templates.TemplateResponse("admin_contracts.html", {
+        "request": request,
+        "contract_settings": contract_settings,
+        "saved": False,
+        "error": None
+    })
+
+@app.post("/admin/contracts", response_class=HTMLResponse)
+async def admin_contracts_save(request: Request):
+    """Save admin contracts configuration"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=302)
+    
+    try:
+        form_data = await request.form()
+        
+        # Save contract settings
+        settings_to_save = [
+            ('checkin_title', form_data.get('checkin_title', '')),
+            ('checkin_terms', form_data.get('checkin_terms', '')),
+            ('checkout_title', form_data.get('checkout_title', '')),
+            ('checkout_terms', form_data.get('checkout_terms', '')),
+            ('company_name', form_data.get('company_name', '')),
+            ('company_nif', form_data.get('company_nif', '')),
+        ]
+        
+        for key, value in settings_to_save:
+            _set_setting(key, value)
+        
+        # Get updated settings
+        contract_settings = {
+            'checkin_title': _get_setting('checkin_title', 'Contrato de Entrega de Veículo'),
+            'checkin_terms': _get_setting('checkin_terms', ''),
+            'checkout_title': _get_setting('checkout_title', 'Contrato de Devolução de Veículo'),
+            'checkout_terms': _get_setting('checkout_terms', ''),
+            'company_name': _get_setting('company_name', 'Auto Prudente'),
+            'company_nif': _get_setting('company_nif', ''),
+        }
+        
+        return templates.TemplateResponse("admin_contracts.html", {
+            "request": request,
+            "contract_settings": contract_settings,
+            "saved": True,
+            "error": None
+        })
+        
+    except Exception as e:
+        logging.error(f"Error saving contract settings: {e}")
+        
+        # Get current settings for display
+        contract_settings = {
+            'checkin_title': _get_setting('checkin_title', 'Contrato de Entrega de Veículo'),
+            'checkin_terms': _get_setting('checkin_terms', ''),
+            'checkout_title': _get_setting('checkout_title', 'Contrato de Devolução de Veículo'),
+            'checkout_terms': _get_setting('checkout_terms', ''),
+            'company_name': _get_setting('company_name', 'Auto Prudente'),
+            'company_nif': _get_setting('company_nif', ''),
+        }
+        
+        return templates.TemplateResponse("admin_contracts.html", {
+            "request": request,
+            "contract_settings": contract_settings,
+            "saved": False,
+            "error": str(e)
+        })
+
 @app.post("/admin/users/{user_id}/toggle-enabled")
 async def admin_users_toggle_enabled(request: Request, user_id: int):
     try:
