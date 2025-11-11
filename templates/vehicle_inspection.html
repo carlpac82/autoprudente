@@ -223,32 +223,29 @@
         
         .damage-pin {
             position: absolute;
-            width: 30px;
-            height: 30px;
-            background: #dc2626;
-            color: white;
-            border-radius: 50% 50% 50% 0;
-            transform-origin: center bottom;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
+            width: 16px;
+            height: 16px;
+            background: #000000;
+            color: transparent;
+            border-radius: 50%;
+            transform-origin: center center;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
             z-index: 10;
             transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid #ffffff;
         }
         
         .damage-pin:hover, .damage-pin.selected {
-            transform: translate(-50%, -100%) scale(1.2);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+            transform: translate(-50%, -50%) scale(1.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
             z-index: 20;
         }
         
-        .damage-pin.size-small { width: 20px; height: 20px; font-size: 11px; }
-        .damage-pin.size-medium { width: 30px; height: 30px; font-size: 14px; }
-        .damage-pin.size-large { width: 40px; height: 40px; font-size: 17px; }
+        .damage-pin.size-tiny { width: 8px; height: 8px; border-width: 1px; }
+        .damage-pin.size-small { width: 12px; height: 12px; border-width: 1.5px; }
+        .damage-pin.size-medium { width: 16px; height: 16px; border-width: 2px; }
+        .damage-pin.size-large { width: 24px; height: 24px; border-width: 2px; }
         
         .drawing-canvas {
             position: absolute;
@@ -312,12 +309,13 @@
         }
         
         .size-button .dot {
-            background: #dc2626;
+            background: #000000;
             border-radius: 50%;
         }
         
         .size-button.active .dot {
             background: white;
+            border: 1px solid #009cb6;
         }
     </style>
 </head>
@@ -542,14 +540,6 @@
                     </p>
                 </div>
                 
-                <!-- Next Button - Circular Icon -->
-                <div class="text-center mt-6">
-                    <button onclick="nextToDiagram()" id="btnNextToAnalysis" class="hidden w-16 h-16 rounded-full bg-[#009cb6] hover:bg-[#10b981] text-white transition-all shadow-xl flex items-center justify-center mx-auto" disabled title="Próximo: Marcar Danos">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-                        </svg>
-                    </button>
-                </div>
                 
                 <!-- Auto-filled Info - Inside Page (no labels) -->
                 <div class="mt-16 mb-12">
@@ -617,16 +607,19 @@
                     </div>
                     
                     <!-- Tamanhos (Pin ou Traço) -->
-                    <div id="sizeControls" class="flex items-center justify-center gap-3">
+                    <div id="sizeControls" class="flex items-center justify-center gap-2">
                         <span class="text-sm font-semibold text-gray-700">Tamanho:</span>
+                        <button type="button" class="size-button" onclick="selectSize('tiny')" id="sizeTiny">
+                            <div class="dot" style="width: 4px; height: 4px;"></div>
+                        </button>
                         <button type="button" class="size-button active" onclick="selectSize('small')" id="sizeSmall">
                             <div class="dot" style="width: 8px; height: 8px;"></div>
                         </button>
                         <button type="button" class="size-button" onclick="selectSize('medium')" id="sizeMedium">
-                            <div class="dot" style="width: 14px; height: 14px;"></div>
+                            <div class="dot" style="width: 12px; height: 12px;"></div>
                         </button>
                         <button type="button" class="size-button" onclick="selectSize('large')" id="sizeLarge">
-                            <div class="dot" style="width: 20px; height: 20px;"></div>
+                            <div class="dot" style="width: 18px; height: 18px;"></div>
                         </button>
                     </div>
                 </div>
@@ -943,10 +936,10 @@
             const pin = document.createElement('div');
             pin.className = `damage-pin size-${currentSize}`;
             pin.id = pinId;
-            pin.textContent = pinCounter;
+            // No text content - pins are just black dots
             pin.style.left = x + 'px';
             pin.style.top = y + 'px';
-            pin.style.transform = 'translate(-50%, -100%)';
+            pin.style.transform = 'translate(-50%, -50%)';
             
             // Double click/tap to remove
             pin.ondblclick = () => removePin(pinId);
@@ -991,8 +984,8 @@
             preview.style.display = 'block';
             preview.style.left = x + 'px';
             preview.style.top = y + 'px';
-            preview.style.transform = 'translate(-50%, -100%)';
-            preview.textContent = pinCounter + 1;
+            preview.style.transform = 'translate(-50%, -50%)';
+            // No number shown
         }
         
         function hidePreview() {
@@ -1022,12 +1015,12 @@
             const y = (e.clientY || e.touches[0].clientY) - rect.top;
             
             if (currentTool === 'draw') {
-                ctx.strokeStyle = '#dc2626';
-                ctx.lineWidth = currentSize === 'small' ? 2 : currentSize === 'medium' ? 4 : 6;
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = currentSize === 'tiny' ? 1 : currentSize === 'small' ? 2 : currentSize === 'medium' ? 3 : 5;
                 ctx.globalCompositeOperation = 'source-over';
             } else if (currentTool === 'eraser') {
                 ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = currentSize === 'small' ? 10 : currentSize === 'medium' ? 20 : 30;
+                ctx.lineWidth = currentSize === 'tiny' ? 8 : currentSize === 'small' ? 12 : currentSize === 'medium' ? 20 : 30;
             }
             
             ctx.lineTo(x, y);

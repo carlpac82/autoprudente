@@ -1314,20 +1314,16 @@ function acceptPhoto(photoType) {
         detectLicensePlate(blob);
     }
     
-    // Enable next button if all photos captured
+    // Auto-open diagram if all photos captured
     if (Object.keys(inspectionData.photos).length === 6) {
-        const nextBtn = document.getElementById('btnNextToAnalysis');
-        if (nextBtn) {
-            nextBtn.disabled = false;
-            nextBtn.classList.remove('hidden');
-            nextBtn.classList.add('flex');
-        }
+        showNotification('Todas as fotos capturadas! A abrir marcação de danos...', 'success');
         
-        // Show completion message if in auto mode
-        if (autoSequenceMode) {
-            showCompletionMessage();
-            return;
-        }
+        // Wait a bit then auto-navigate to diagram
+        setTimeout(() => {
+            if (typeof nextToDiagram === 'function') {
+                nextToDiagram();
+            }
+        }, 1500);
     }
     
     // Remove preview
