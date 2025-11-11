@@ -79,13 +79,13 @@
                     <span class="text-sm text-gray-500">(Entrega)</span>
                 </button>
                 
-                <!-- Check-in Icon (Red) -->
-                <button onclick="setTypeFilter('checkin')" id="btnCheckin" class="type-filter-btn flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-transparent hover:border-red-600 transition-all opacity-50">
-                    <svg class="w-20 h-20 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                <!-- Check-in Icon (Red) - DESATIVADO (será criado mais tarde) -->
+                <button onclick="showCheckinComingSoon()" id="btnCheckin" class="type-filter-btn flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-gray-300 transition-all opacity-30 cursor-not-allowed" disabled>
+                    <svg class="w-20 h-20 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
                     </svg>
-                    <span class="text-lg font-semibold text-gray-800">Check-in</span>
-                    <span class="text-sm text-gray-500">(Devolução)</span>
+                    <span class="text-lg font-semibold text-gray-500">Check-in</span>
+                    <span class="text-xs text-gray-400">(Em breve)</span>
                 </button>
             </div>
         </div>
@@ -167,6 +167,10 @@
             });
         }
 
+        function showCheckinComingSoon() {
+            showNotification('Check-in estará disponível em breve. Por agora, apenas Check-out está ativo.', 'info');
+        }
+        
         function setTypeFilter(type) {
             // Update hidden input
             document.getElementById('filterType').value = type;

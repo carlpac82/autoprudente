@@ -20892,32 +20892,9 @@ async def vehicle_inspection_page(request: Request):
 
 @app.get("/vehicle-checkin", response_class=HTMLResponse)
 async def vehicle_checkin_page(request: Request):
-    """Vehicle check-in page"""
-    try:
-        require_inspection_access(request)
-    except HTTPException as e:
-        if e.status_code == 403:
-            return templates.TemplateResponse("error.html", {
-                "request": request,
-                "error_title": "Acesso Negado",
-                "error_message": "Não tem permissão para aceder ao check-in de veículos. Contacte o administrador."
-            }, status_code=403)
-        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
-    
-    # Load current user
-    current_user = None
-    try:
-        username = request.session.get('username')
-        if username:
-            current_user = _get_user_by_username(username)
-    except Exception:
-        current_user = None
-    
-    return templates.TemplateResponse("vehicle_inspection.html", {
-        "request": request,
-        "inspection_type": "checkin",
-        "current_user": current_user
-    })
+    """Vehicle check-in page - REDIRECT to check-out (check-in será criado mais tarde)"""
+    # Por agora redireciona para check-out
+    return RedirectResponse(url="/vehicle-checkout", status_code=303)
 
 @app.get("/vehicle-checkout", response_class=HTMLResponse)
 async def vehicle_checkout_page(request: Request):
