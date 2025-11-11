@@ -313,7 +313,7 @@ function startAutoSequence() {
     
     // Start with first photo
     setTimeout(() => {
-        openCameraAutoSequence(0);
+        capturePhotoSequence(0);
     }, 1000);
 }
 
