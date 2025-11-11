@@ -28782,20 +28782,111 @@ async def update_inspection(inspection_number: str, request: Request):
 
 @app.post("/api/inspections/{inspection_number}/email")
 async def send_inspection_email(inspection_number: str, request: Request):
-    """Send inspection via email"""
+    """
+    Send inspection via email
+    
+    IMPORTANTE:
+    - Para Check-out: Usa coordenadas mapeadas em /admin/contracts (checkout-mapper)
+    - Anexa PDF Check-out mapeado + PDF T&C (checkout_tc_filename)
+    - Para Check-in: Usa coordenadas próprias (quando implementado)
+    - Anexa PDF Check-in mapeado (sem T&C)
+    
+    NÃO usa coordenadas do Damage Report!
+    """
     try:
         data = await request.json()
         email = data.get("email", "")
         
+        # TODO: Implementar geração de PDF Check-out com coordenadas corretas
+        # 1. Buscar inspeção da base de dados
+        # 2. Buscar coordenadas de Check-out (não Damage Report)
+        # 3. Gerar PDF com campos mapeados
+        # 4. Buscar T&C: _get_setting('checkout_tc_path')
+        # 5. Anexar ambos os PDFs ao email
+        # 6. Enviar email
+        
         logging.info(f"Sending inspection {inspection_number} to email: {email}")
+        logging.warning("⚠️  Email implementation needed: use checkout coordinates + attach T&C")
         
         return JSONResponse({
             "ok": True,
-            "message": "Email sent successfully"
+            "message": "Email sent successfully (implementation pending)"
         })
         
     except Exception as e:
         logging.error(f"Error sending email: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.get("/api/inspections/{inspection_number}/preview")
+async def preview_inspection_pdf(inspection_number: str, request: Request):
+    """
+    Preview inspection PDF with mapped fields
+    
+    IMPORTANTE:
+    - Check-out: Usa coordenadas de /admin/contracts (checkout-mapper)
+    - Check-in: Usa coordenadas próprias (quando implementado)
+    - NÃO usa coordenadas do Damage Report!
+    """
+    try:
+        require_inspection_access(request)
+        
+        # TODO: Implementar preview de PDF Check-out
+        # 1. Buscar inspeção da base de dados
+        # 2. Identificar tipo (checkout vs checkin)
+        # 3. Buscar coordenadas corretas:
+        #    - Check-out: coordenadas de checkout-mapper
+        #    - Check-in: coordenadas de checkin-mapper (futuro)
+        # 4. Gerar PDF com campos mapeados
+        # 5. Retornar PDF para preview
+        
+        logging.warning("⚠️  Preview implementation needed: use checkout coordinates (not damage report)")
+        
+        return JSONResponse({
+            "ok": False,
+            "error": "Preview implementation pending"
+        }, status_code=501)
+        
+    except Exception as e:
+        logging.error(f"Error previewing inspection: {e}")
+        return JSONResponse({
+            "ok": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.get("/api/inspections/{inspection_number}/download")
+async def download_inspection_pdf(inspection_number: str, request: Request):
+    """
+    Download inspection PDF with mapped fields
+    
+    IMPORTANTE:
+    - Check-out: Usa coordenadas de /admin/contracts (checkout-mapper)
+    - Check-in: Usa coordenadas próprias (quando implementado)
+    - NÃO usa coordenadas do Damage Report!
+    """
+    try:
+        require_inspection_access(request)
+        
+        # TODO: Implementar download de PDF Check-out
+        # 1. Buscar inspeção da base de dados
+        # 2. Identificar tipo (checkout vs checkin)
+        # 3. Buscar coordenadas corretas:
+        #    - Check-out: coordenadas de checkout-mapper
+        #    - Check-in: coordenadas de checkin-mapper (futuro)
+        # 4. Gerar PDF com campos mapeados
+        # 5. Retornar PDF para download
+        
+        logging.warning("⚠️  Download implementation needed: use checkout coordinates (not damage report)")
+        
+        return JSONResponse({
+            "ok": False,
+            "error": "Download implementation pending"
+        }, status_code=501)
+        
+    except Exception as e:
+        logging.error(f"Error downloading inspection: {e}")
         return JSONResponse({
             "ok": False,
             "error": str(e)
