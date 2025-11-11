@@ -67,15 +67,16 @@
             50% { opacity: 0; }
         }
         
-        /* Header da câmera com fundo preto e transparência */
+        /* Header da câmera com fundo preto e transparência melhorada */
         .camera-modal .absolute.top-0 {
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0) 100%) !important;
-            backdrop-filter: blur(2px);
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.4) 90%, rgba(0,0,0,0) 100%) !important;
+            backdrop-filter: blur(3px);
+            padding-bottom: 40px !important;
         }
         
-        /* Garantir cor verde do título em fullscreen */
+        /* Garantir cor azul do website no título em fullscreen */
         .camera-modal #cameraLocation {
-            color: #10b981 !important; /* Verde Tailwind green-400 */
+            color: #009cb6 !important; /* Azul do website */
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         
@@ -83,7 +84,7 @@
         :fullscreen .camera-modal #cameraLocation,
         :-webkit-full-screen .camera-modal #cameraLocation,
         :-moz-full-screen .camera-modal #cameraLocation {
-            color: #10b981 !important;
+            color: #009cb6 !important;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         
@@ -1828,46 +1829,53 @@
                     <div class="grid md:grid-cols-2 gap-6 mb-8">
                         <!-- Summary Card -->
                         <div class="bg-gray-50 rounded-lg p-6">
-                            <h3 class="text-lg font-semibold mb-4 text-gray-900">Resumo da Inspeção</h3>
+                            <h3 class="text-lg font-semibold mb-4 text-[#009cb6]">Resumo da Inspeção</h3>
                             <div class="space-y-3">
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Fotos capturadas:</span>
-                                    <span class="font-semibold">${Object.keys(window.inspectionData?.photos || {}).length}/6</span>
+                                    <span class="font-semibold text-[#009cb6]">${(() => {
+                                        const photos = window.inspectionData?.photos || {};
+                                        const capturedCount = Object.values(photos).filter(photo => photo && photo.dataURL).length;
+                                        return capturedCount;
+                                    })()}/6</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Danos marcados:</span>
-                                    <span class="font-semibold">${window.diagramData?.damages?.length || 0}</span>
+                                    <span class="font-semibold text-[#009cb6]">${(() => {
+                                        const damages = document.querySelectorAll('.damage-pin');
+                                        return damages.length > 0 ? 'Sim' : 'Não';
+                                    })()}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Combustível:</span>
-                                    <span class="font-semibold">${window.diagramData?.fuelLevel || 100}%</span>
+                                    <span class="font-semibold text-[#009cb6]">${window.diagramData?.fuelLevel || 100}%</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Quilómetros:</span>
-                                    <span class="font-semibold">${window.diagramData?.odometerReading || 0} km</span>
+                                    <span class="font-semibold text-[#009cb6]">${window.diagramData?.odometerReading || 0} km</span>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Actions Card -->
-                        <div class="bg-blue-50 rounded-lg p-6">
-                            <h3 class="text-lg font-semibold mb-4 text-gray-900">Próximos Passos</h3>
+                        <div class="bg-[#009cb6] bg-opacity-10 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-[#009cb6]">Próximos Passos</h3>
                             <div class="space-y-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span class="text-blue-600 font-semibold text-sm">1</span>
+                                    <div class="w-8 h-8 bg-[#009cb6] bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <span class="text-[#009cb6] font-semibold text-sm">1</span>
                                     </div>
                                     <span class="text-gray-700">Enviar relatório por email</span>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span class="text-blue-600 font-semibold text-sm">2</span>
+                                    <div class="w-8 h-8 bg-[#009cb6] bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <span class="text-[#009cb6] font-semibold text-sm">2</span>
                                     </div>
                                     <span class="text-gray-700">Guardar no histórico</span>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span class="text-blue-600 font-semibold text-sm">3</span>
+                                    <div class="w-8 h-8 bg-[#009cb6] bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <span class="text-[#009cb6] font-semibold text-sm">3</span>
                                     </div>
                                     <span class="text-gray-700">Finalizar inspeção</span>
                                 </div>
