@@ -217,7 +217,7 @@
         .suppliers-grid { grid-template-columns: repeat(2, 1fr) !important; max-height: 300px; }
       }
       
-      /* Mobile menu - White background with blue/yellow accents */
+      /* Mobile menu - Layout limpo */
       .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }
       .mobile-menu { 
         display: none; 
@@ -225,87 +225,93 @@
         inset: 0; 
         background: white;
         z-index: 9999;
-        overflow-y: auto;
       }
       .mobile-menu.active { 
-        display: flex; 
-        flex-direction: column; 
-        padding: 20px;
-        gap: 0;
+        display: block;
+        overflow-y: auto;
+      }
+      .mobile-menu-container {
+        padding: 0;
+        max-width: 500px;
+        margin: 0 auto;
+        height: 100%;
+        background: white;
+        display: flex;
+        flex-direction: column;
       }
       .mobile-menu-header {
         display: flex;
-        align-items: flex-end;
         justify-content: flex-end;
-        padding: 10px 0;
-        margin-bottom: 30px;
-        border-bottom: 2px solid #e5e7eb;
-      }
-      .mobile-menu-section {
-        margin-bottom: 24px;
-      }
-      .mobile-menu-section-title {
-        font-size: 11px;
-        font-weight: 700;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        padding: 8px 16px;
-        margin-bottom: 8px;
-      }
-      .mobile-menu a { 
-        color: #009cb6;
-        font-size: 17px;
-        padding: 14px 16px;
-        width: 100%;
-        text-align: left;
-        border-radius: 10px;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        font-weight: 500;
-      }
-      .mobile-menu a:hover { 
-        background: #f0f9ff;
-        color: #0077b6;
-      }
-      .mobile-menu a svg { 
-        color: #009cb6;
-        width: 22px;
-        height: 22px;
-        flex-shrink: 0;
+        padding: 16px;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
       }
       .mobile-menu-close { 
         background: #009cb6;
         border: none;
         color: white;
-        font-size: 26px;
+        font-size: 24px;
+        font-weight: 300;
         cursor: pointer;
-        padding: 0;
-        width: 42px;
-        height: 42px;
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        transition: all 0.3s;
-        box-shadow: 0 2px 8px rgba(0, 156, 182, 0.3);
       }
-      .mobile-menu-close:hover {
-        background: #0077b6;
-        transform: scale(1.05);
+      .mobile-menu-section {
+        margin: 0;
+        padding: 0;
+        flex: 1;
+        overflow-y: auto;
+      }
+      .mobile-menu a { 
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        color: #1f2937;
+        font-size: 16px;
+        font-weight: 400;
+        transition: all 0.2s;
+      }
+      .mobile-menu a:hover { 
+        background: #f0f9fb;
+      }
+      .mobile-menu a svg { 
+        width: 20px;
+        height: 20px;
+        color: #009cb6;
+        flex-shrink: 0;
       }
       .mobile-menu-logout {
-        margin-top: auto;
-        padding-top: 20px;
-        border-top: 2px solid #e5e7eb;
+        margin: 0;
+        padding: 0;
       }
       .mobile-menu-logout a {
-        color: #dc2626;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px;
+        background: white;
+        border-top: 2px solid #e5e7eb;
+        color: #ef4444;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.2s;
+        margin-top: auto;
+      }
+      .mobile-menu-logout a:hover {
+        background: #fef2f2;
       }
       .mobile-menu-logout a svg {
-        color: #dc2626;
+        width: 20px;
+        height: 20px;
+        color: #ef4444;
       }
     </style>
   </head>
@@ -411,15 +417,16 @@
       </div>
     </header>
     
-    <!-- Mobile Menu - Blue Gradient Design -->
+    <!-- Mobile Menu - Layout Limpo -->
     <div class="mobile-menu" id="mobileMenu">
-      <!-- Header -->
-      <div class="mobile-menu-header">
-        <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
-      </div>
-      
-      <!-- Main Navigation -->
-      <div class="mobile-menu-section">
+      <div class="mobile-menu-container">
+        <!-- Header -->
+        <div class="mobile-menu-header">
+          <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
+        </div>
+        
+        <!-- Main Navigation -->
+        <div class="mobile-menu-section">
         <a href="/" onclick="closeMobileMenu()">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
           <span>Início</span>
@@ -458,15 +465,16 @@
         {% endif %}
       </div>
       
-      {% if current_user %}
-      <!-- Logout -->
-      <div class="mobile-menu-logout">
-        <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\"/logout\"]').submit();">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          <span>Terminar Sessão</span>
-        </a>
+        {% if current_user %}
+        <!-- Logout -->
+        <div class="mobile-menu-logout">
+          <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\"/logout\"]').submit();">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <span>Terminar Sessão</span>
+          </a>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
     <script>
       function toggleProfileMenu() {
