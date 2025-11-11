@@ -750,17 +750,12 @@
             </div>
             
             <div class="mt-6 flex gap-4 justify-center" id="cameraButtons" style="position: relative; z-index: 10000;">
-                <button onclick="retakePhoto()" class="bg-[#009cb6] text-white px-8 py-4 rounded-lg hover:bg-[#007a91] transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                <button onclick="capturePhoto()" class="bg-[#009cb6] text-white px-12 py-5 rounded-lg hover:bg-[#007a91] transition-all font-semibold flex items-center gap-3 shadow-lg hover:shadow-xl text-lg">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+                        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
                     </svg>
-                    Repetir
-                </button>
-                <button onclick="acceptPhoto()" class="bg-[#f59e0b] text-white px-8 py-4 rounded-lg hover:bg-[#d97706] transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                    </svg>
-                    Próxima
+                    Capturar
                 </button>
             </div>
         </div>

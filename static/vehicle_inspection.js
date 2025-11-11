@@ -428,10 +428,8 @@ function startCameraCountdown() {
         } else {
             clearInterval(countInterval);
             countdownOverlay.remove();
-            // Auto-capture photo
-            setTimeout(() => {
-                capturePhoto();
-            }, 200);
+            // No auto-capture - user must click capture button
+            console.log('Countdown finished - ready to capture');
         }
     }, 1000);
 }
