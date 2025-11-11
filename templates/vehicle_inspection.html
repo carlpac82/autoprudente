@@ -14,7 +14,10 @@
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         #cameraPreview {
-            transform: scaleX(-1); /* Mirror effect for front camera */
+            width: 100%;
+            height: 100vh;
+            object-fit: cover;
+            transform: scaleX(-1); /* Corrigir espelhamento */
         }
         .photo-slot {
             position: relative;
@@ -42,9 +45,11 @@
         .camera-modal {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.98);
             display: none;
-            z-index: 9999;
+            z-index: 99999; /* Maior z-index para fullscreen */
+            width: 100vw;
+            height: 100vh;
         }
         .camera-modal.active {
             display: flex;
@@ -60,6 +65,18 @@
         @keyframes flash {
             0%, 100% { opacity: 1; }
             50% { opacity: 0; }
+        }
+        
+        /* Garantir cor verde do título em fullscreen */
+        .camera-modal #cameraLocation {
+            color: #10b981 !important; /* Verde Tailwind green-400 */
+        }
+        
+        /* Garantir que funciona em todos os estados de fullscreen */
+        :fullscreen .camera-modal #cameraLocation,
+        :-webkit-full-screen .camera-modal #cameraLocation,
+        :-moz-full-screen .camera-modal #cameraLocation {
+            color: #10b981 !important;
         }
         
         /* Car diagram interactive */
@@ -746,12 +763,6 @@
                         </button>
                     </div>
                     
-                    <!-- Botão de Teste -->
-                    <div class="mt-2 text-center">
-                        <button type="button" class="bg-red-500 text-white px-4 py-2 rounded text-sm" onclick="testCanvasClick()">
-                            🧪 Testar Canvas (Clique Aqui Primeiro)
-                        </button>
-                    </div>
                     
                     <!-- Tamanhos (Pin ou Traço) -->
                     <div id="sizeControls" class="flex items-center justify-center gap-2">
@@ -940,9 +951,10 @@
     <!-- Camera Modal -->
     <div id="cameraModal" class="camera-modal">
         <div class="flex flex-col items-center justify-center w-full h-full p-4">
-            <div class="mb-4 text-white text-center" style="display: none;">
-                <h3 id="cameraTitle" class="text-xl font-bold mb-2"></h3>
-                <p id="cameraInstruction" class="text-sm opacity-80"></p>
+            <!-- Fullscreen Camera Header -->
+            <div class="absolute top-0 left-0 right-0 z-50 bg-black bg-opacity-90 text-white p-6 text-center">
+                <p id="cameraLocation" class="text-xl font-bold text-green-400 mb-2">VISTA FRONTAL</p>
+                <p id="cameraInstruction" class="text-base opacity-95 max-w-2xl mx-auto">Centre a frente do veículo, inclua a matrícula</p>
             </div>
             
             <!-- Camera Preview Container with Overlay -->
@@ -1092,9 +1104,12 @@
             return true;
         }
         
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             // Don't initialize canvas immediately since diagram step is hidden
             // Canvas will be initialized when diagram step becomes visible
+            
+            // Remove test canvas button if it exists
+            removeTestCanvasButton();
             
             // Initialize fuel selector (but it won't work until diagram is visible)
             setTimeout(() => {
@@ -1498,30 +1513,38 @@
             }
         }
         
-        function testCanvasClick() {
-            console.log('🧪 TESTE MANUAL DO CANVAS');
-            console.log('🧪 Canvas existe:', !!canvas);
-            console.log('🧪 Context existe:', !!ctx);
-            console.log('🧪 Ferramenta atual:', currentTool);
+        // Function to remove test canvas button
+        function removeTestCanvasButton() {
+            // Look for any button containing "Testar Canvas" text
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                if (button.textContent && (button.textContent.includes('Testar Canvas') || button.textContent.includes('Clique Aqui Primeiro'))) {
+                    console.log('Removing test canvas button:', button);
+                    button.remove();
+                }
+            });
             
-            if (!canvas || !ctx) {
-                alert('❌ Canvas não está inicializado!');
-                return;
-            }
+            // Also check for dynamically created elements after a delay
+            setTimeout(() => {
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(button => {
+                    if (button.textContent && (button.textContent.includes('Testar Canvas') || button.textContent.includes('Clique Aqui Primeiro'))) {
+                        console.log('Removing test canvas button (delayed):', button);
+                        button.remove();
+                    }
+                });
+            }, 1000);
             
-            // Forçar ferramenta desenhar
-            selectTool('draw');
-            
-            // Desenhar uma linha de teste
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(50, 50);
-            ctx.lineTo(150, 150);
-            ctx.stroke();
-            
-            alert('✅ Linha vermelha desenhada! Se não vê, o canvas não está visível.');
-            console.log('🧪 Linha de teste desenhada manualmente');
+            // Check again after canvas initialization
+            setTimeout(() => {
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(button => {
+                    if (button.textContent && (button.textContent.includes('Testar Canvas') || button.textContent.includes('Clique Aqui Primeiro'))) {
+                        console.log('Removing test canvas button (final check):', button);
+                        button.remove();
+                    }
+                });
+            }, 3000);
         }
         
         function nextToDiagram() {

@@ -218,7 +218,18 @@
                                     <span class="text-gray-500 text-sm">Inspetor: ${item.inspector_name || 'N/A'}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="sendEmail('${item.inspection_number}')" class="p-2 text-[#009cb6] hover:bg-blue-50 rounded-lg transition-colors" title="Enviar por Email">
+                                    <button onclick="previewInspection('${item.inspection_number}')" class="p-2 text-[#009cb6] hover:bg-blue-50 rounded-lg transition-colors" title="Pré-visualizar Documento">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                    </button>
+                                    <button onclick="editInspection('${item.inspection_number}')" class="p-2 text-[#10b981] hover:bg-green-50 rounded-lg transition-colors" title="Editar Gasolina, Croqui e KMs">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                    </button>
+                                    <button onclick="sendEmail('${item.inspection_number}')" class="p-2 text-[#f59e0b] hover:bg-yellow-50 rounded-lg transition-colors" title="Enviar por Email">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                         </svg>
@@ -284,6 +295,150 @@
 
         function refreshHistory() {
             loadHistory();
+        }
+
+        // Preview inspection document
+        async function previewInspection(inspectionNumber) {
+            try {
+                // Open PDF preview in new tab
+                const pdfUrl = `/api/inspections/${inspectionNumber}/pdf`;
+                window.open(pdfUrl, '_blank');
+                
+                showNotification('A abrir pré-visualização do documento...', 'info');
+            } catch (error) {
+                showNotification('Erro ao abrir pré-visualização: ' + error.message, 'error');
+            }
+        }
+
+        // Edit inspection (fuel, sketch, kilometers)
+        async function editInspection(inspectionNumber) {
+            try {
+                // First, get inspection data
+                const response = await fetch(`/api/inspections/${inspectionNumber}`);
+                const data = await response.json();
+                
+                if (!data.ok) {
+                    throw new Error(data.error || 'Erro ao carregar dados da inspeção');
+                }
+                
+                const inspection = data.inspection;
+                
+                // Create edit modal
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold text-[#009cb6]">Editar Inspeção - ${inspection.vehicle_plate}</h3>
+                            <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <form id="editForm" class="space-y-6">
+                            <!-- Fuel Level -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Combustível</label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="fuelLevel" min="0" max="100" value="${inspection.fuel_level || 50}" 
+                                           class="flex-1" oninput="updateFuelDisplay(this.value)">
+                                    <span id="fuelDisplay" class="text-sm font-semibold text-[#009cb6] min-w-[60px]">${inspection.fuel_level || 50}%</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>Vazio (E)</span>
+                                    <span>Meio (1/2)</span>
+                                    <span>Cheio (F)</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Odometer Reading -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Quilometragem (KM)</label>
+                                <input type="number" id="odometerReading" value="${inspection.odometer_reading || ''}" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" 
+                                       placeholder="Ex: 45000">
+                            </div>
+                            
+                            <!-- Damage Notes -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Observações de Danos</label>
+                                <textarea id="damageNotes" rows="4" 
+                                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#009cb6]" 
+                                          placeholder="Descreva os danos observados...">${inspection.damage_notes || ''}</textarea>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="flex gap-3 pt-4">
+                                <button type="button" onclick="closeEditModal()" 
+                                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button type="button" onclick="saveInspectionChanges('${inspectionNumber}')" 
+                                        class="flex-1 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8f] transition-colors font-semibold">
+                                    Guardar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                window.currentEditModal = modal;
+                
+            } catch (error) {
+                showNotification('Erro ao carregar dados para edição: ' + error.message, 'error');
+            }
+        }
+        
+        // Update fuel level display
+        function updateFuelDisplay(value) {
+            document.getElementById('fuelDisplay').textContent = value + '%';
+        }
+        
+        // Close edit modal
+        function closeEditModal() {
+            if (window.currentEditModal) {
+                document.body.removeChild(window.currentEditModal);
+                window.currentEditModal = null;
+            }
+        }
+        
+        // Save inspection changes
+        async function saveInspectionChanges(inspectionNumber) {
+            try {
+                const fuelLevel = document.getElementById('fuelLevel').value;
+                const odometerReading = document.getElementById('odometerReading').value;
+                const damageNotes = document.getElementById('damageNotes').value;
+                
+                const updateData = {
+                    fuel_level: parseInt(fuelLevel),
+                    odometer_reading: odometerReading ? parseInt(odometerReading) : null,
+                    damage_notes: damageNotes.trim()
+                };
+                
+                const response = await fetch(`/api/inspections/${inspectionNumber}/update`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    showNotification('Inspeção atualizada com sucesso!', 'success');
+                    closeEditModal();
+                    refreshHistory(); // Reload the history to show updated data
+                } else {
+                    throw new Error(result.error || 'Erro ao atualizar inspeção');
+                }
+                
+            } catch (error) {
+                showNotification('Erro ao guardar alterações: ' + error.message, 'error');
+            }
         }
 
         // Load on page load

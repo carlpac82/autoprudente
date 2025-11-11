@@ -425,44 +425,61 @@ function capturePhotoSequence(index) {
 
 // Camera functions
 async function openCamera(photoType) {
-    currentPhotoType = photoType;
-    const photo = photoTypes.find(p => p.type === photoType);
+currentPhotoType = photoType;
+const photo = photoTypes.find(p => p.type === photoType);
     
-    document.getElementById('cameraTitle').textContent = photo.label;
-    document.getElementById('cameraInstruction').textContent = photo.instruction;
-    document.getElementById('cameraModal').classList.add('active');
+// Update modal content with simplified info
+document.getElementById('cameraLocation').textContent = photo.label.toUpperCase();
+document.getElementById('cameraInstruction').textContent = photo.instruction;
     
-    // Hide camera buttons initially
-    const cameraButtons = document.getElementById('cameraButtons');
-    if (cameraButtons) {
-        cameraButtons.style.display = 'none';
-    }
+// Show modal
+const modal = document.getElementById('cameraModal');
+modal.classList.add('active');
     
-    // Customize overlay for photo type
-    setupCameraOverlay(photoType);
+// Request fullscreen
+try {
+if (document.documentElement.requestFullscreen) {
+await document.documentElement.requestFullscreen();
+} else if (document.documentElement.webkitRequestFullscreen) {
+await document.documentElement.webkitRequestFullscreen();
+} else if (document.documentElement.msRequestFullscreen) {
+await document.documentElement.msRequestFullscreen();
+}
+console.log('✅ Fullscreen activated for camera');
+} catch (error) {
+console.log('⚠️ Could not activate fullscreen:', error.message);
+}
     
-    try {
-        // Request camera access
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'environment', // Use back camera on mobile
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            }
-        });
-        
-        document.getElementById('cameraPreview').srcObject = cameraStream;
-        
-        // Start countdown animation (3, 2, 1, then capture)
-        startCameraCountdown();
-        
-        // Start positioning hints animation
-        startPositioningHints(photoType);
-    } catch (error) {
-        console.error('Camera error:', error);
-        showNotification('Could not access camera: ' + error.message, 'error');
-        closeCamera();
-    }
+// Setup camera overlay for this photo type
+setupCameraOverlay(photoType);
+    
+// Initialize 3D car model
+init3DCar(photoType);
+    
+try {
+// Request camera access
+cameraStream = await navigator.mediaDevices.getUserMedia({
+video: {
+facingMode: 'environment', // Use back camera on mobile
+width: { ideal: 1920 },
+height: { ideal: 1080 }
+}
+});
+    
+// Set video source
+const video = document.getElementById('cameraPreview');
+video.srcObject = cameraStream;
+    
+// Start countdown after video loads
+video.addEventListener('loadedmetadata', () => {
+startCameraCountdown();
+});
+    
+} catch (error) {
+console.error('Camera error:', error);
+showNotification('Could not access camera: ' + error.message, 'error');
+closeCamera();
+}
 }
 
 function startCameraCountdown() {
@@ -1274,6 +1291,22 @@ function closeCamera() {
     const video = document.getElementById('cameraPreview');
     if (video) {
         video.srcObject = null;
+    }
+    
+    // Exit fullscreen
+    try {
+        if (document.fullscreenElement) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            console.log('✅ Fullscreen exited');
+        }
+    } catch (error) {
+        console.log('⚠️ Could not exit fullscreen:', error.message);
     }
     
     // Hide modal
