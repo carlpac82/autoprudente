@@ -1238,13 +1238,13 @@ function showPhotoPreview(blob, photoType) {
         </div>
         
         <div style="display: flex; gap: 16px; margin-top: 32px;">
-            <button id="btnRetake" onclick="window.retakePhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #009cb6; color: white; padding: 14px 28px; border-radius: 999px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+            <button id="btnRetake" onclick="window.retakePhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #009cb6; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 Repetir
             </button>
-            <button id="btnAccept" onclick="window.acceptPhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #f59e0b; color: white; padding: 14px 28px; border-radius: 999px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+            <button id="btnAccept" onclick="window.acceptPhotoAction()" style="display: flex; align-items: center; gap: 8px; background: #f59e0b; color: white; padding: 14px 28px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                 <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
