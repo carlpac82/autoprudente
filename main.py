@@ -21101,6 +21101,7 @@ async def save_inspection(request: Request):
     require_auth(request)
     
     try:
+        import os
         # Get JSON data from request
         data = await request.json()
         
@@ -21141,7 +21142,22 @@ async def save_inspection(request: Request):
         # Save to database
         conn = _db_connect()
         try:
-            if _is_postgres():
+            # Detect database type - ROBUST METHOD
+            is_postgres = False
+            conn_type = type(conn).__name__
+            
+            if 'psycopg' in conn_type.lower() or conn_type == 'connection':
+                is_postgres = True
+            elif os.getenv('DATABASE_URL'):
+                is_postgres = True
+            else:
+                try:
+                    import psycopg2
+                    is_postgres = isinstance(conn, psycopg2.extensions.connection)
+                except:
+                    pass
+            
+            if is_postgres:
                 # PostgreSQL
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -21149,8 +21165,8 @@ async def save_inspection(request: Request):
                     (inspection_number, inspection_type, vehicle_plate, contract_number,
                      inspector_name, inspector_notes, has_damage, damage_count, damage_severity,
                      ai_analysis_complete, ai_confidence_avg, odometer_reading, fuel_level,
-                     status, photo_count, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+                     status, photo_count, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                     RETURNING id
                 """, (
                     inspection_number,
@@ -21180,8 +21196,8 @@ async def save_inspection(request: Request):
                     (inspection_number, inspection_type, vehicle_plate, contract_number,
                      inspector_name, inspector_notes, has_damage, damage_count, damage_severity,
                      ai_analysis_complete, ai_confidence_avg, odometer_reading, fuel_level,
-                     status, photo_count, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                     status, photo_count, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                 """, (
                     inspection_number,
                     inspection_type,
@@ -21208,7 +21224,7 @@ async def save_inspection(request: Request):
                 if photo_type in photos:
                     # In a real implementation, you'd save the actual photo data
                     # For now, just record that the photo exists
-                    if _is_postgres():
+                    if is_postgres:
                         cursor.execute("""
                             INSERT INTO inspection_photos
                             (inspection_id, photo_type, photo_order, image_filename,
@@ -21325,13 +21341,20 @@ async def get_inspections_history(request: Request):
         
         inspections = []
         for row in cursor.fetchall():
+            # Convert datetime to string for JSON serialization
+            created_at = row[5]
+            if hasattr(created_at, 'strftime'):
+                created_at_str = created_at.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                created_at_str = str(created_at)
+            
             inspections.append({
                 "inspection_number": row[0],
                 "inspection_type": row[1],
                 "vehicle_plate": row[2],
                 "contract_number": row[3],
                 "inspector_name": row[4],
-                "created_at": row[5]
+                "created_at": created_at_str
             })
         
         conn.close()
