@@ -1593,6 +1593,11 @@ async function saveInspection() {
         // Add AI results as JSON
         formData.append('ai_results', JSON.stringify(inspectionData.aiResults));
         
+        // Add diagram data if exists
+        if (window.diagramData) {
+            formData.append('diagram_data', JSON.stringify(window.diagramData));
+        }
+        
         // Save to API
         const response = await fetch('/api/vehicle-inspections/create', {
             method: 'POST',

@@ -1075,6 +1075,8 @@
         }
         
         function nextToDiagram() {
+            console.log('🔵 nextToDiagram called');
+            
             // Validate inputs
             const plate = document.getElementById('inputPlate').value.trim();
             const ra = document.getElementById('inputRA').value.trim();
@@ -1087,27 +1089,62 @@
             // Check if photos are captured (from vehicle_inspection.js)
             if (window.inspectionData && Object.keys(window.inspectionData.photos || {}).length < 6) {
                 alert('Por favor tire todas as 6 fotos primeiro');
+                console.log('❌ Not enough photos:', Object.keys(window.inspectionData.photos || {}).length);
                 return;
             }
             
-            console.log('✅ Navigating to diagram step');
+            console.log('✅ All validations passed');
+            console.log('✅ Photos captured:', Object.keys(window.inspectionData.photos || {}).length);
             
             // Hide photos step, show diagram step
-            document.getElementById('stepPhotos').classList.add('hidden');
-            document.getElementById('stepDiagram').classList.remove('hidden');
+            const stepPhotos = document.getElementById('stepPhotos');
+            const stepDiagram = document.getElementById('stepDiagram');
+            
+            if (stepPhotos) {
+                stepPhotos.classList.add('hidden');
+                console.log('✅ Hidden stepPhotos');
+            } else {
+                console.error('❌ stepPhotos not found');
+            }
+            
+            if (stepDiagram) {
+                stepDiagram.classList.remove('hidden');
+                console.log('✅ Showing stepDiagram');
+            } else {
+                console.error('❌ stepDiagram not found');
+            }
             
             // Ensure canvas is initialized
             setTimeout(() => {
-                if (canvas && !ctx) {
-                    ctx = canvas.getContext('2d');
+                const canvasEl = document.getElementById('drawingCanvas');
+                const diagram = document.getElementById('carDiagram');
+                
+                console.log('Canvas element:', canvasEl);
+                console.log('Diagram element:', diagram);
+                
+                if (canvasEl && !ctx) {
+                    ctx = canvasEl.getContext('2d');
                     ctx.lineJoin = 'round';
                     ctx.lineCap = 'round';
                     console.log('✅ Canvas context initialized');
+                } else if (ctx) {
+                    console.log('✅ Canvas context already exists');
                 }
-            }, 100);
+                
+                // Set canvas to match image size
+                if (canvasEl && diagram) {
+                    const img = diagram.querySelector('img');
+                    if (img) {
+                        canvasEl.width = img.offsetWidth;
+                        canvasEl.height = img.offsetHeight;
+                        console.log(`✅ Canvas resized to ${canvasEl.width}x${canvasEl.height}`);
+                    }
+                }
+            }, 200);
             
             // Scroll to top
-            window.scrollTo(0, 0);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.log('✅ Scrolled to top');
         }
         
         function proceedToAnalysis() {
