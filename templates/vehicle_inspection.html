@@ -1081,9 +1081,27 @@
                 return;
             }
             
+            // Check if photos are captured (from vehicle_inspection.js)
+            if (window.inspectionData && Object.keys(window.inspectionData.photos || {}).length < 6) {
+                alert('Por favor tire todas as 6 fotos primeiro');
+                return;
+            }
+            
+            console.log('✅ Navigating to diagram step');
+            
             // Hide photos step, show diagram step
             document.getElementById('stepPhotos').classList.add('hidden');
             document.getElementById('stepDiagram').classList.remove('hidden');
+            
+            // Ensure canvas is initialized
+            setTimeout(() => {
+                if (canvas && !ctx) {
+                    ctx = canvas.getContext('2d');
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    console.log('✅ Canvas context initialized');
+                }
+            }, 100);
             
             // Scroll to top
             window.scrollTo(0, 0);
