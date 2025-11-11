@@ -1498,16 +1498,15 @@
             // Clear canvas (desenhos)
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Clear pins do SVG
-            const svgElement = document.querySelector('#carDiagram svg');
-            if (svgElement) {
-                // Remove todos os pins (círculos vermelhos) do SVG
-                const pins = svgElement.querySelectorAll('circle[fill="#ef4444"]');
-                pins.forEach(pin => pin.remove());
-                
-                // Remove todos os números dos pins
-                const pinNumbers = svgElement.querySelectorAll('text[fill="white"]');
-                pinNumbers.forEach(number => number.remove());
+            // Clear pins (elementos div com classe damage-pin)
+            const container = document.getElementById('carDiagram');
+            if (container) {
+                const pins = container.querySelectorAll('.damage-pin');
+                pins.forEach(pin => {
+                    console.log('Removendo pin:', pin.id);
+                    pin.remove();
+                });
+                console.log(`Removidos ${pins.length} pins`);
             }
             
             // Reset arrays e contadores
