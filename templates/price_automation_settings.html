@@ -2870,8 +2870,8 @@
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-sm font-medium text-gray-700">Select Day(s)</label>
                         <div class="flex gap-2">
-                            <button type="button" onclick="selectAllDays()" class="text-xs text-[#009cb6] hover:underline">Select All</button>
-                            <button type="button" onclick="deselectAllDays()" class="text-xs text-gray-500 hover:underline">Deselect All</button>
+                            <button type="button" onclick="document.querySelectorAll('.copy-day-checkbox').forEach(cb => cb.checked = true)" class="text-xs text-[#009cb6] hover:underline">Select All</button>
+                            <button type="button" onclick="document.querySelectorAll('.copy-day-checkbox').forEach(cb => cb.checked = false)" class="text-xs text-gray-500 hover:underline">Deselect All</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded p-3 bg-gray-50">
@@ -2924,14 +2924,6 @@
                 chip.classList.add('bg-[#009cb6]', 'text-white', 'border-[#009cb6]');
                 chip.classList.remove('border-gray-300');
             }
-        }
-        
-        function selectAllDays() {
-            document.querySelectorAll('.copy-day-checkbox').forEach(cb => cb.checked = true);
-        }
-        
-        function deselectAllDays() {
-            document.querySelectorAll('.copy-day-checkbox').forEach(cb => cb.checked = false);
         }
         
         async function applyCopyToSelectedDays(location, grupo, sourceMonth, sourceDay) {
@@ -2992,20 +2984,18 @@
                     body: JSON.stringify(rules)
                 }).catch(err => console.error('DB save error:', err));
                 
-                showNotification(`Copied to ${copiedCount} days`, 'success');
+                // Close modal first
+                const modal = document.querySelector('.fixed.inset-0');
+                if (modal) modal.remove();
+                
+                // Then show clean notification
+                showNotification(`✅ Configuration copied to ${copiedCount} day combinations!`, 'success', 3000);
                 
             } catch (error) {
                 console.error('❌ Error during copy:', error);
-                showNotification('Error copying: ' + error.message, 'error');
-            } finally {
-                // ALWAYS close modal
                 const modal = document.querySelector('.fixed.inset-0');
-                if (modal) {
-                    modal.remove();
-                    console.log('🚪 Modal closed');
-                } else {
-                    console.log('⚠️ Modal not found');
-                }
+                if (modal) modal.remove();
+                showNotification('❌ Error copying: ' + error.message, 'error', 4000);
             }
         }
         
@@ -4418,8 +4408,8 @@
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-sm font-medium text-gray-700">Select Day(s)</label>
                         <div class="flex gap-2">
-                            <button type="button" onclick="selectAllDays()" class="text-xs text-[#009cb6] hover:underline">Select All</button>
-                            <button type="button" onclick="deselectAllDays()" class="text-xs text-gray-500 hover:underline">Deselect All</button>
+                            <button type="button" onclick="document.querySelectorAll('.copy-day-checkbox').forEach(cb => cb.checked = true)" class="text-xs text-[#009cb6] hover:underline">Select All</button>
+                            <button type="button" onclick="document.querySelectorAll('.copy-day-checkbox').forEach(cb => cb.checked = false)" class="text-xs text-gray-500 hover:underline">Deselect All</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded p-3 bg-gray-50">
@@ -4510,16 +4500,22 @@
                     body: JSON.stringify(rules)
                 });
                 
+                // Close modal first
+                const modal = document.querySelector('.fixed.inset-0');
+                if (modal) modal.remove();
+                
+                // Then show clean notification
                 if (response.ok) {
-                    showNotification(`✅ Minimum prices copied to ${copiedCount} day configurations!`, 'success');
-                    document.querySelector('.fixed.inset-0').remove();
+                    showNotification(`✅ Minimum prices copied to ${copiedCount} day configurations!`, 'success', 3000);
                 } else {
                     throw new Error('Failed to save to database');
                 }
                 
             } catch (err) {
                 console.error('❌ Error copying minimum prices:', err);
-                alert('Error copying minimum prices. Check console for details.');
+                const modal = document.querySelector('.fixed.inset-0');
+                if (modal) modal.remove();
+                showNotification('❌ Error copying minimum prices. Check console.', 'error', 4000);
             }
         }
     </script>
