@@ -8218,15 +8218,14 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 ]
                 if any(re.search(p, cn) for p in j1_patterns):
                     category = "Crossover"
-                # Peugeot 308 base -> J1; 308 SW: Auto -> L2, else J2
+                # Peugeot 308 SW: Auto -> L2, else J2; Peugeot 308 base -> D (Economy)
                 if re.search(r"\bpeugeot\s*308\b", cn):
                     if re.search(r"\bsw\b", cn):
                         if _is_auto_flag(cn, _page_text, transmission_label):
                             category = "Station Wagon Automatic"
                         else:
                             category = "Estate/Station Wagon"
-                    else:
-                        category = "Crossover"
+                    # else: base 308 is Economy (D/E2), not Crossover - no override needed
                 # VW Golf SW/Variant: Auto -> L2, else J2
                 if re.search(r"\b(vw|volkswagen)\s*golf\b", cn) and re.search(r"\b(sw|variant)\b", cn):
                     if _is_auto_flag(cn, _page_text, transmission_label):
