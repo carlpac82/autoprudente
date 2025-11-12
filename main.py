@@ -28636,7 +28636,7 @@ async def save_ai_adjustment(request: Request):
 
 @app.get("/api/ai/get-price")
 async def get_ai_price(request: Request, grupo: str, days: int, location: str):
-    """Get AI-suggested price based on historical adjustments"""
+    """Get AI-suggested price based on price_snapshots analysis (AutoPrudente vs competitors)"""
     require_auth(request)
     try:
         with _db_lock:
@@ -28645,58 +28645,126 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                 is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
-                # Get recent adjustments for this grupo/days/location (last 50)
+                # STEP 1: Analisar snapshots recentes (últimos 30 dias)
+                from datetime import datetime, timedelta, timezone
+                cutoff_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+                
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute(
-                            f"""SELECT new_price, original_price, timestamp 
-                                FROM ai_learning_data 
-                                WHERE grupo = {placeholder} AND days = {placeholder} AND location = {placeholder}
-                                ORDER BY timestamp DESC 
-                                LIMIT 50""",
-                            (grupo, days, location)
+                            f"""SELECT supplier, car, price_num, ts 
+                                FROM price_snapshots 
+                                WHERE location = {placeholder} AND days = {placeholder} 
+                                AND ts > {placeholder} AND price_num > 0
+                                ORDER BY ts DESC 
+                                LIMIT 500""",
+                            (location, days, cutoff_date)
                         )
-                        rows = cur.fetchall()
+                        snapshots = cur.fetchall()
                 else:
                     cursor = conn.execute(
-                        f"""SELECT new_price, original_price, timestamp 
-                            FROM ai_learning_data 
-                            WHERE grupo = {placeholder} AND days = {placeholder} AND location = {placeholder}
-                            ORDER BY timestamp DESC 
-                            LIMIT 50""",
-                        (grupo, days, location)
+                        f"""SELECT supplier, car, price_num, ts 
+                            FROM price_snapshots 
+                            WHERE location = {placeholder} AND days = {placeholder} 
+                            AND ts > {placeholder} AND price_num > 0
+                            ORDER BY ts DESC 
+                            LIMIT 500""",
+                        (location, days, cutoff_date)
                     )
-                    rows = cursor.fetchall()
+                    snapshots = cursor.fetchall()
                 
-                if not rows:
-                    return JSONResponse({"ok": True, "price": None, "confidence": 0})
+                if not snapshots or len(snapshots) < 5:
+                    # Não há dados suficientes, retornar null
+                    logging.info(f"🤖 AI: Dados insuficientes para {grupo}/{days}d/{location} (snapshots: {len(snapshots)})")
+                    return JSONResponse({"ok": True, "price": None, "confidence": 0, "reason": "insufficient_data"})
                 
-                # Calculate average of recent prices (weighted by recency)
-                total_weight = 0
-                weighted_sum = 0
+                # STEP 2: Separar AutoPrudente vs Competidores
+                autoprudente_prices = []
+                competitor_prices = []
                 
-                for i, row in enumerate(rows):
-                    new_price = float(row[0])
-                    # More recent = higher weight (exponential decay)
-                    weight = pow(0.95, i)  # 95% weight for each step back
-                    weighted_sum += new_price * weight
-                    total_weight += weight
+                for snap in snapshots:
+                    supplier = (snap[0] or "").lower()
+                    car = (snap[1] or "").lower()
+                    price = float(snap[2])
+                    
+                    # Identificar se é AutoPrudente
+                    is_autoprudente = (
+                        "autoprudente" in supplier or 
+                        "auto prudente" in supplier or
+                        "prudente" in supplier
+                    )
+                    
+                    # Filtrar por grupo (A, B, C, etc)
+                    grupo_lower = grupo.lower()
+                    car_matches_grupo = (
+                        grupo_lower in car or 
+                        f"grupo {grupo_lower}" in car or
+                        f"group {grupo_lower}" in car
+                    )
+                    
+                    if car_matches_grupo:
+                        if is_autoprudente:
+                            autoprudente_prices.append(price)
+                        else:
+                            competitor_prices.append(price)
                 
-                suggested_price = round(weighted_sum / total_weight, 2) if total_weight > 0 else None
-                confidence = min(len(rows) / 10.0, 1.0)  # Confidence grows with data (max at 10+ adjustments)
+                # STEP 3: Calcular estatísticas
+                if not competitor_prices or len(competitor_prices) < 3:
+                    logging.info(f"🤖 AI: Poucos competidores para {grupo}/{days}d/{location}")
+                    return JSONResponse({"ok": True, "price": None, "confidence": 0, "reason": "no_competitors"})
                 
-                logging.info(f"🤖 AI price for {grupo}/{days}d/{location}: {suggested_price}€ (confidence: {confidence:.0%}, samples: {len(rows)})")
+                # Preços dos competidores (ordenados)
+                competitor_prices.sort()
+                min_competitor = competitor_prices[0]
+                avg_competitor = sum(competitor_prices) / len(competitor_prices)
+                median_competitor = competitor_prices[len(competitor_prices) // 2]
+                
+                # STEP 4: ESTRATÉGIA DE PRICING INTELIGENTE
+                # Objetivo: Ficar 3-5€ abaixo do preço mais baixo dos competidores
+                # Mas não muito abaixo (mínimo de 70% da média)
+                
+                target_price = min_competitor - 4.0  # 4€ abaixo do mais barato
+                min_acceptable = avg_competitor * 0.70  # Não descer mais de 30% da média
+                max_acceptable = avg_competitor * 1.05  # Não subir mais de 5% da média
+                
+                suggested_price = max(min_acceptable, min(target_price, max_acceptable))
+                suggested_price = round(suggested_price, 2)
+                
+                # STEP 5: Calcular confiança
+                data_quality = min(len(snapshots) / 50.0, 1.0)
+                competitor_count = min(len(competitor_prices) / 10.0, 1.0)
+                confidence = (data_quality + competitor_count) / 2.0
+                
+                # Posição estimada se aplicar este preço
+                position = sum(1 for p in competitor_prices if suggested_price < p) + 1
+                
+                logging.info(
+                    f"🤖 AI price for {grupo}/{days}d/{location}: {suggested_price}€ "
+                    f"(min_comp: {min_competitor}€, avg: {avg_competitor:.2f}€, "
+                    f"position: {position}/{len(competitor_prices)+1}, confidence: {confidence:.0%})"
+                )
                 
                 return JSONResponse({
                     "ok": True,
                     "price": suggested_price,
                     "confidence": confidence,
-                    "sample_count": len(rows)
+                    "analysis": {
+                        "min_competitor": min_competitor,
+                        "avg_competitor": round(avg_competitor, 2),
+                        "median_competitor": median_competitor,
+                        "competitors_count": len(competitor_prices),
+                        "estimated_position": position,
+                        "total_results": len(competitor_prices) + 1,
+                        "autoprudente_count": len(autoprudente_prices),
+                        "snapshots_analyzed": len(snapshots)
+                    }
                 })
             finally:
                 conn.close()
     except Exception as e:
         logging.error(f"❌ Error getting AI price: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/clean-automated-history")
