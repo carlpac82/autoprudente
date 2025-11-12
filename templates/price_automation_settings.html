@@ -1909,13 +1909,17 @@
                                 <label class="block text-sm font-medium text-gray-900">Pricing Strategies</label>
                                 <p class="text-xs text-gray-500">Priority order - first strategy with data wins</p>
                             </div>
-                            <div class="flex gap-1">
-                                <button onclick="showCopyStrategiesToDaysModal('${location}', '${grupo}')" 
-                                        class="p-2 text-[#009cb6] hover:bg-[#009cb6] hover:bg-opacity-10 rounded transition-colors" title="Copy strategies to other days">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="flex gap-2">
+                                ${strategies.length > 0 ? `
+                                <button onclick="showCopyToDaysModal('${location}', '${grupo}', ${month}, ${day})"
+                                        class="flex items-center gap-1 text-[#009cb6] hover:text-[#007a8f] transition-colors text-xs"
+                                        title="Copy configuration to other days">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                     </svg>
+                                    <span class="font-medium">Copy Config</span>
                                 </button>
+                                ` : ''}
                                 <button onclick="addNewStrategy('${location}', '${grupo}', ${month}, ${day}, '${uniqueId}')" 
                                         class="p-2 text-[#009cb6] hover:bg-[#009cb6] hover:bg-opacity-10 rounded transition-colors" title="Add new strategy">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2353,7 +2357,8 @@
             });
             
             // Close modal and rebuild
-            document.querySelector('.fixed.inset-0').remove();
+            const modal1 = document.querySelector('.fixed.inset-0');
+            if (modal1) modal1.remove();
             rebuildFieldsForDay(location, grupo, month, day);
         }
         
@@ -3175,7 +3180,8 @@
             .catch(e => console.error('❌ Network error:', e));
             
             // Close modal
-            document.querySelector('.fixed.inset-0').remove();
+            const modal2 = document.querySelector('.fixed.inset-0');
+            if (modal2) modal2.remove();
             
             // Rebuild fields to show new strategy
             rebuildFieldsForDay(location, grupo, month, day);
@@ -4248,7 +4254,8 @@
             localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
             
             // Close modal IMMEDIATELY
-            document.querySelector('.fixed.inset-0').remove();
+            const modal3 = document.querySelector('.fixed.inset-0');
+            if (modal3) modal3.remove();
             
             // Show success notification IMMEDIATELY
             showNotification(
