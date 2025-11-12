@@ -4,9 +4,12 @@
 
 ### 1. Mapeadores Separados
 - ✅ **Damage Report** → `/damage-report-mapper` (62 campos)
-- ✅ **Check-out** → `/checkout-mapper` (33 campos)
+- ✅ **Check-out** → `/checkout-mapper` (36 campos)
+  - ⚠️ Inclui 2 nomes de inspetores separados (Entrega e Recolha) - **AUTO-PREENCHIDOS**
   - ⚠️ Inclui 2 assinaturas de inspetores separadas (Check-out e Check-in)
   - ⚠️ Inclui 2 campos de observações separados (Check-out e Check-in)
+  - ⚠️ Inclui 2 níveis de combustível (Entrega e Recolha)
+  - ⚠️ Inclui 2 quilometragens (Entrega e Recolha)
   - Inspetores e observações podem ser diferentes em cada processo
 - ✅ **Check-in** → Será criado futuramente
 
@@ -154,7 +157,7 @@ checkin_coordinates
 
 ## 📝 CAMPOS DO CHECK-OUT
 
-**33 campos disponíveis:**
+**36 campos disponíveis:**
 
 ### Informações do Contrato
 - `contract_number` - Nº Contrato
@@ -172,8 +175,10 @@ checkin_coordinates
 - `vehicle_plate` - Matrícula Veículo
 - `vehicle_brand_model` - Marca / Modelo Veículo
 - `vehicle_color` - Cor Veículo
-- `vehicle_km_delivery` - KM na Entrega
-- `fuel_level_delivery` - Nível Combustível (Entrega)
+- `vehicle_km_delivery` - **KM na Entrega** ⚠️
+- `vehicle_km_return` - **KM na Recolha** ⚠️
+- `fuel_level_delivery` - **Nível Combustível (Entrega)** ⚠️
+- `fuel_level_return` - **Nível Combustível (Recolha)** ⚠️
 
 ### Informações de Levantamento/Devolução
 - `pickup_date` - Data Levantamento
@@ -199,8 +204,11 @@ checkin_coordinates
 - `observations_checkout` - **Observações Check-out** ⚠️
 - `observations_checkin` - **Observações Check-in** ⚠️
 
+### Nomes de Inspetores (AUTO-PREENCHIDOS) 🤖
+- `inspector_name_checkout` - **Nome Inspector Entrega (auto)** 🔐
+- `inspector_name_checkin` - **Nome Inspector Recolha (auto)** 🔐
+
 ### Assinaturas
-- `inspector_name` - Nome Inspetor
 - `inspector_signature_checkout` - **Assinatura Inspector Check-out** ⚠️
 - `inspector_signature_checkin` - **Assinatura Inspector Check-in** ⚠️
 - `customer_signature` - Assinatura Cliente
@@ -213,11 +221,24 @@ checkin_coordinates
 - **Check-in:** Observações ao receber o veículo (ex: "Arranhão lateral novo")
 - Permite documentar o estado inicial e final do veículo
 
+**Nomes de Inspetores (AUTO-PREENCHIDOS):** 🤖
+- São **2 campos separados** que são **preenchidos automaticamente**
+- **Check-out:** Nome do utilizador logado ao fazer Check-out (entrega)
+- **Check-in:** Nome do utilizador logado ao fazer Check-in (recolha)
+- Sistema deteta automaticamente quem está logado e preenche o nome
+- **NÃO é necessário preencher manualmente** - apenas mapear a posição no PDF
+
 **Assinaturas de Inspetores:**
 - São **2 campos separados** porque podem ser inspetores diferentes
 - **Check-out:** Inspector que entrega o veículo ao cliente
 - **Check-in:** Inspector que recebe o veículo do cliente (futuro)
 - Ambos os campos devem ser mapeados no PDF, mesmo que na prática sejam a mesma pessoa
+
+**Quilometragem e Combustível:**
+- São **4 campos separados** para documentar entrega E recolha
+- **Entrega:** Estado inicial do veículo (KM e combustível)
+- **Recolha:** Estado final do veículo (KM e combustível)
+- Permite calcular KM percorridos e verificar nível de combustível devolvido
 
 ---
 
