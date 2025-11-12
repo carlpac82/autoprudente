@@ -7897,8 +7897,43 @@ Continue?`);
             });
         }, 100);
         
+        // Initialize AI from historical data first
+        async function initializeAIFromHistory() {
+            try {
+                console.log('📚 Reading ALL automated search history...');
+                const response = await fetch('/api/ai/initialize-from-history');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    console.log(`✅ AI initialized from history:`);
+                    console.log(`   - ${data.searches_found} searches analyzed`);
+                    console.log(`   - ${data.total_combinations} price combinations found`);
+                    console.log(`   - Locations: ${data.locations.join(', ')}`);
+                    console.log(`   - Months: ${data.months.join(', ')}`);
+                    
+                    if (data.groups_analyzed && data.groups_analyzed.length > 0) {
+                        console.log(`   - Sample data:`, data.groups_analyzed.slice(0, 3));
+                    }
+                    
+                    showNotification(
+                        `AI initialized: ${data.total_combinations} combinations from ${data.searches_found} searches (${data.locations.join(', ')})`,
+                        'success',
+                        5000
+                    );
+                } else {
+                    console.warn('⚠️ No historical data found for AI');
+                }
+            } catch (error) {
+                console.error('❌ Failed to initialize AI from history:', error);
+            }
+        }
+        
         // Initialize AI prices cache on page load
-        setTimeout(() => {
+        setTimeout(async () => {
+            // Step 1: Read all history first
+            await initializeAIFromHistory();
+            
+            // Step 2: Load AI prices for current location
             loadAllAIPrices().then(() => {
                 console.log('✅ AI prices cache initialized');
             }).catch(err => {

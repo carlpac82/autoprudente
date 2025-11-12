@@ -28634,6 +28634,139 @@ async def save_ai_adjustment(request: Request):
         logging.error(f"❌ Error saving AI adjustment: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/ai/initialize-from-history")
+async def initialize_ai_from_history(request: Request):
+    """Initialize AI by processing ALL automated_search_history data"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                from datetime import datetime, timezone
+                import json
+                
+                # Buscar TODO o histórico com supplier_data
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT location, month_key, prices_data, supplier_data, search_date
+                            FROM automated_search_history 
+                            WHERE supplier_data IS NOT NULL
+                            ORDER BY search_date DESC
+                            LIMIT 100
+                        """)
+                        all_searches = cur.fetchall()
+                else:
+                    cursor = conn.execute("""
+                        SELECT location, month_key, prices_data, supplier_data, search_date
+                        FROM automated_search_history 
+                        WHERE supplier_data IS NOT NULL
+                        ORDER BY search_date DESC
+                        LIMIT 100
+                    """)
+                    all_searches = cursor.fetchall()
+                
+                if not all_searches:
+                    return JSONResponse({
+                        "ok": True,
+                        "message": "No historical data found",
+                        "searches_found": 0,
+                        "groups_analyzed": [],
+                        "locations": []
+                    })
+                
+                # Processar e agrupar dados
+                data_by_grupo_days = {}  # {grupo: {days: {location: [prices]}}}
+                locations_found = set()
+                months_found = set()
+                
+                for search in all_searches:
+                    location = search[0]
+                    month_key = search[1]
+                    supplier_data = json.loads(search[2]) if isinstance(search[2], str) else search[2]
+                    
+                    locations_found.add(location)
+                    months_found.add(month_key)
+                    
+                    # Extrair dados de cada grupo
+                    for grupo, days_data in supplier_data.items():
+                        if grupo not in data_by_grupo_days:
+                            data_by_grupo_days[grupo] = {}
+                        
+                        for days_str, suppliers in days_data.items():
+                            days = int(days_str)
+                            if days not in data_by_grupo_days[grupo]:
+                                data_by_grupo_days[grupo][days] = {}
+                            if location not in data_by_grupo_days[grupo][days]:
+                                data_by_grupo_days[grupo][days][location] = []
+                            
+                            # Extrair preços dos suppliers
+                            for supp in suppliers:
+                                price = float(supp.get('price', 0))
+                                if price > 0:
+                                    supplier_name = supp.get('supplier', '')
+                                    is_ap = 'autoprudente' in supplier_name.lower() or 'prudente' in supplier_name.lower()
+                                    data_by_grupo_days[grupo][days][location].append({
+                                        'supplier': supplier_name,
+                                        'price': price,
+                                        'is_autoprudente': is_ap
+                                    })
+                
+                # Calcular estatísticas
+                summary = {
+                    "searches_found": len(all_searches),
+                    "locations": sorted(list(locations_found)),
+                    "months": sorted(list(months_found), reverse=True),
+                    "groups_analyzed": [],
+                    "total_combinations": 0
+                }
+                
+                for grupo in sorted(data_by_grupo_days.keys()):
+                    for days in sorted(data_by_grupo_days[grupo].keys()):
+                        for location in data_by_grupo_days[grupo][days].keys():
+                            prices = data_by_grupo_days[grupo][days][location]
+                            if len(prices) >= 3:
+                                # Calcular posição da AutoPrudente
+                                sorted_prices = sorted(prices, key=lambda x: x['price'])
+                                ap_position = None
+                                ap_price = None
+                                
+                                for idx, p in enumerate(sorted_prices, 1):
+                                    if p['is_autoprudente']:
+                                        ap_position = idx
+                                        ap_price = p['price']
+                                        break
+                                
+                                summary["groups_analyzed"].append({
+                                    "grupo": grupo,
+                                    "days": days,
+                                    "location": location,
+                                    "competitors": len(sorted_prices),
+                                    "autoprudente_position": ap_position,
+                                    "autoprudente_price": ap_price,
+                                    "min_competitor": sorted_prices[0]['price'] if sorted_prices else None
+                                })
+                                summary["total_combinations"] += 1
+                
+                logging.info(f"✅ AI initialized from history: {summary['total_combinations']} combinations from {len(all_searches)} searches")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "message": f"AI initialized with {summary['total_combinations']} price combinations",
+                    **summary
+                })
+                
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error initializing AI from history: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/ai/get-price")
 async def get_ai_price(request: Request, grupo: str, days: int, location: str):
     """Get AI-suggested price based on automated_search_history from BOTH locations"""
