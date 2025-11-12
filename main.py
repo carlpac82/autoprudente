@@ -28800,13 +28800,28 @@ async def debug_checkout_coordinates(request: Request):
         # Parse coordenadas
         parsed_coords = json.loads(coordinates_json)
         
+        # Contar por tipo de campo
+        if isinstance(parsed_coords, list):
+            text_fields = [c for c in parsed_coords if c.get('field_type') == 'text']
+            image_fields = [c for c in parsed_coords if c.get('field_type') == 'image']
+            
+            # Listar field_ids de texto
+            text_ids = [c.get('field_id') for c in text_fields]
+            image_ids = [c.get('field_id') for c in image_fields]
+        else:
+            text_ids = []
+            image_ids = []
+        
         return JSONResponse({
             "ok": True,
             "has_coordinates": True,
             "coordinates_type": str(type(parsed_coords).__name__),
             "coordinates_length": len(parsed_coords) if isinstance(parsed_coords, (list, dict)) else 0,
-            "sample": str(parsed_coords)[:500] if parsed_coords else "empty",
-            "first_items": list(parsed_coords)[:3] if isinstance(parsed_coords, list) else list(parsed_coords.keys())[:3] if isinstance(parsed_coords, dict) else []
+            "text_fields_count": len(text_ids),
+            "image_fields_count": len(image_ids),
+            "text_fields": text_ids,
+            "image_fields": image_ids,
+            "sample_coords": parsed_coords[:2] if isinstance(parsed_coords, list) else list(parsed_coords.items())[:2]
         })
         
     except Exception as e:
