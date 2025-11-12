@@ -12383,13 +12383,26 @@ async def save_download_history(request: Request):
 
 @app.get("/api/downloads/history/load")
 async def load_downloads_history(request: Request):
-    """Carregar histórico de downloads de TODOS os utilizadores"""
+    """Carregar histórico de downloads (com filtro opcional por location)"""
     require_auth(request)
     try:
+        location = request.query_params.get("location")  # Filtro opcional
+        
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100")
+                if location:
+                    # Filtrar por location
+                    cursor = conn.execute(
+                        "SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history WHERE location = ? ORDER BY download_date DESC LIMIT 100",
+                        (location,)
+                    )
+                else:
+                    # Todos os downloads
+                    cursor = conn.execute(
+                        "SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100"
+                    )
+                
                 rows = cursor.fetchall()
                 history = [{"filename": r[0], "format": r[1], "location": r[2], "downloaded_by": r[3], "download_date": r[4], "timestamp": r[5]} for r in rows]
                 return JSONResponse({"ok": True, "history": history})

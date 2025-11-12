@@ -813,6 +813,25 @@
                 
                 <!-- Downloads History -->
                 <div id="historyContentDownloads" class="hidden">
+                    <!-- Location Filter -->
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="filterDownloadsByLocation('')" 
+                                id="downloadsFilterAll"
+                                class="px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors">
+                            <span data-i18n="automation.allLocations">Todos</span>
+                        </button>
+                        <button onclick="filterDownloadsByLocation('Aeroporto de Faro')" 
+                                id="downloadsFilterFaro"
+                                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                            <span>Aeroporto de Faro</span>
+                        </button>
+                        <button onclick="filterDownloadsByLocation('Albufeira')" 
+                                id="downloadsFilterAlbufeira"
+                                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                            <span>Albufeira</span>
+                        </button>
+                    </div>
+                    
                     <div class="space-y-3" id="historyDownloadsList">
                         <!-- Downloads serão gerados dinamicamente -->
                     </div>
@@ -7574,12 +7593,13 @@ Continue?`);
         
         // ===== DOWNLOADS HISTORY =====
         
-        async function loadDownloadsHistory() {
+        async function loadDownloadsHistory(location = '') {
             const container = document.getElementById('historyDownloadsList');
             
             try {
-                // Carregar histórico do servidor (todos os users)
-                const response = await fetch('/api/downloads/history/load');
+                // Carregar histórico do servidor (filtrado por location se especificado)
+                const url = location ? `/api/downloads/history/load?location=${encodeURIComponent(location)}` : '/api/downloads/history/load';
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 if (!data.ok || !data.history || data.history.length === 0) {
@@ -7672,6 +7692,28 @@ Continue?`);
                     </div>
                 `;
             }
+        }
+        
+        function filterDownloadsByLocation(location) {
+            // Update button styles
+            const buttons = {
+                '': document.getElementById('downloadsFilterAll'),
+                'Aeroporto de Faro': document.getElementById('downloadsFilterFaro'),
+                'Albufeira': document.getElementById('downloadsFilterAlbufeira')
+            };
+            
+            // Reset all buttons
+            Object.values(buttons).forEach(btn => {
+                btn.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+            });
+            
+            // Highlight selected button
+            if (buttons[location]) {
+                buttons[location].className = 'px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors';
+            }
+            
+            // Reload downloads with filter
+            loadDownloadsHistory(location);
         }
         
         async function saveDownloadToHistory(filename, format, location) {
