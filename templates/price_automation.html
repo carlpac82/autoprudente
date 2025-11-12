@@ -796,14 +796,18 @@
                 
                 <!-- Automated Prices History -->
                 <div id="historyContentAutomated">
-                    <!-- Location Filter -->
-                    <div class="mb-4 flex items-center gap-3">
-                        <label class="text-sm font-medium text-gray-700">Filter by Location:</label>
-                        <select id="historyLocationFilter" onchange="generateHistoryMonths()" class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#009cb6] focus:border-[#009cb6]">
-                            <option value="">All Locations</option>
-                            <option value="Aeroporto de Faro">Aeroporto de Faro</option>
-                            <option value="Albufeira">Albufeira</option>
-                        </select>
+                    <!-- Location Filter Tabs -->
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="filterHistoryByLocation('Aeroporto de Faro')" 
+                                id="historyFilterFaro"
+                                class="px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors">
+                            <span>Aeroporto de Faro</span>
+                        </button>
+                        <button onclick="filterHistoryByLocation('Albufeira')" 
+                                id="historyFilterAlbufeira"
+                                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                            <span>Albufeira</span>
+                        </button>
                     </div>
                     
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsAutomated">
@@ -815,14 +819,9 @@
                 <div id="historyContentDownloads" class="hidden">
                     <!-- Location Filter -->
                     <div class="flex gap-2 mb-4">
-                        <button onclick="filterDownloadsByLocation('')" 
-                                id="downloadsFilterAll"
-                                class="px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors">
-                            <span data-i18n="automation.allLocations">Todos</span>
-                        </button>
                         <button onclick="filterDownloadsByLocation('Aeroporto de Faro')" 
                                 id="downloadsFilterFaro"
-                                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                                class="px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors">
                             <span>Aeroporto de Faro</span>
                         </button>
                         <button onclick="filterDownloadsByLocation('Albufeira')" 
@@ -5280,14 +5279,37 @@
         }
         }
         
+        // Store current history location filter
+        let currentHistoryLocation = 'Aeroporto de Faro';
+        
+        function filterHistoryByLocation(location) {
+            // Update current filter
+            currentHistoryLocation = location;
+            
+            // Update button styles
+            const btnFaro = document.getElementById('historyFilterFaro');
+            const btnAlbufeira = document.getElementById('historyFilterAlbufeira');
+            
+            if (location === 'Aeroporto de Faro') {
+                btnFaro.className = 'px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors';
+                btnAlbufeira.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+            } else {
+                btnFaro.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+                btnAlbufeira.className = 'px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors';
+            }
+            
+            // Reload history with filter
+            generateHistoryMonths();
+        }
+        
         async function generateHistoryMonths() {
             const containerAutomated = document.getElementById('historyMonthsAutomated');
             containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-gray-500">Loading history...</div>';
             
-            // Get selected location filter
-            const locationFilter = document.getElementById('historyLocationFilter')?.value || '';
+            // Get selected location filter from global variable
+            const locationFilter = currentHistoryLocation || 'Aeroporto de Faro';
             
-            console.log('📅 Loading search history from PostgreSQL...', locationFilter ? `filtered by: ${locationFilter}` : 'all locations');
+            console.log('📅 Loading search history from PostgreSQL...', `filtered by: ${locationFilter}`);
             
             try {
                 // Fetch history from server with location filter
@@ -7701,20 +7723,15 @@ Continue?`);
         
         function filterDownloadsByLocation(location) {
             // Update button styles
-            const buttons = {
-                '': document.getElementById('downloadsFilterAll'),
-                'Aeroporto de Faro': document.getElementById('downloadsFilterFaro'),
-                'Albufeira': document.getElementById('downloadsFilterAlbufeira')
-            };
+            const btnFaro = document.getElementById('downloadsFilterFaro');
+            const btnAlbufeira = document.getElementById('downloadsFilterAlbufeira');
             
-            // Reset all buttons
-            Object.values(buttons).forEach(btn => {
-                btn.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
-            });
-            
-            // Highlight selected button
-            if (buttons[location]) {
-                buttons[location].className = 'px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors';
+            if (location === 'Aeroporto de Faro') {
+                btnFaro.className = 'px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors';
+                btnAlbufeira.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+            } else {
+                btnFaro.className = 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors';
+                btnAlbufeira.className = 'px-4 py-2 rounded-lg bg-[#009cb6] text-white font-medium transition-colors';
             }
             
             // Reload downloads with filter
