@@ -12388,27 +12388,52 @@ async def load_downloads_history(request: Request):
     try:
         location = request.query_params.get("location")  # Filtro opcional
         
+        logging.info(f"📥 [DOWNLOADS-FILTER] Requested location filter: '{location}'")
+        
         with _db_lock:
             conn = _db_connect()
             try:
+                # Detect PostgreSQL vs SQLite
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
                 if location:
                     # Filtrar por location
-                    cursor = conn.execute(
-                        "SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history WHERE location = ? ORDER BY download_date DESC LIMIT 100",
-                        (location,)
-                    )
+                    logging.info(f"📥 [DOWNLOADS-FILTER] Applying filter: location = '{location}'")
+                    query = f"SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history WHERE location = {placeholder} ORDER BY download_date DESC LIMIT 100"
+                    
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(query, (location,))
+                            rows = cur.fetchall()
+                    else:
+                        cursor = conn.execute(query, (location,))
+                        rows = cursor.fetchall()
                 else:
                     # Todos os downloads
-                    cursor = conn.execute(
-                        "SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100"
-                    )
+                    logging.info("📥 [DOWNLOADS-FILTER] Loading ALL downloads (no filter)")
+                    query = "SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100"
+                    
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(query)
+                            rows = cur.fetchall()
+                    else:
+                        cursor = conn.execute(query)
+                        rows = cursor.fetchall()
                 
-                rows = cursor.fetchall()
+                logging.info(f"📥 [DOWNLOADS-FILTER] Found {len(rows)} downloads from database")
+                
+                # Log locations found
+                locations_found = set(r[2] for r in rows)
+                logging.info(f"📥 [DOWNLOADS-FILTER] Locations in results: {locations_found}")
+                
                 history = [{"filename": r[0], "format": r[1], "location": r[2], "downloaded_by": r[3], "download_date": r[4], "timestamp": r[5]} for r in rows]
                 return JSONResponse({"ok": True, "history": history})
             finally:
                 conn.close()
     except Exception as e:
+        logging.error(f"📥 [DOWNLOADS-FILTER] Error loading downloads history: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, 500)
 
 @app.post("/api/prices/current/save")
