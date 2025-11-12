@@ -8729,10 +8729,18 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     r"\brenault\s*grand\s*sc[eé]nic\b",
                     r"\bmercedes\s*glb\b.*\b(7\s*seater|7\s*lugares|7p|7\s*seats)\b",
                     r"\b(vw|volkswagen)\s*multivan\b",
+                    r"\b(vw|volkswagen)\s*caddy\b",  # ADDED: VW Caddy é M2 quando auto
+                    r"\b(vw|volkswagen)\s*sharan\b",  # ADDED: VW Sharan é M2 quando auto
+                    r"\bseat\s*alhambra\b",  # ADDED: Seat Alhambra é M2 quando auto
+                    r"\bford\s*galaxy\b",  # ADDED: Ford Galaxy é M2 quando auto
                     r"\bpeugeot\s*rifter\b",
+                    r"\bpeugeot\s*5008\b",  # ADDED: Peugeot 5008 é M2 quando auto
+                    r"\bdacia\s*jogger\b",  # ADDED: Dacia Jogger é M2 quando auto
+                    r"\bopel\s*zafira\b",  # ADDED: Opel Zafira é M2 quando auto
                 ]
                 if any(re.search(p, cn4) for p in m2_patterns) and _is_auto_flag(cn4, _txt, transmission_label):
                     category = "7 Seater Automatic"
+                    logging.info(f"🚗 [M2-OVERRIDE] Detected M2 car: {car_name}")
             except Exception:
                 pass
             # FINAL E1 OVERRIDE: Toyota Aygo Auto -> Mini Automatic (avoid uncategorized)
