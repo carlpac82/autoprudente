@@ -4,9 +4,10 @@
 
 ### 1. Mapeadores Separados
 - ✅ **Damage Report** → `/damage-report-mapper` (62 campos)
-- ✅ **Check-out** → `/checkout-mapper` (31 campos)
+- ✅ **Check-out** → `/checkout-mapper` (33 campos)
   - ⚠️ Inclui 2 assinaturas de inspetores separadas (Check-out e Check-in)
-  - Inspetores podem ser diferentes em cada processo
+  - ⚠️ Inclui 2 campos de observações separados (Check-out e Check-in)
+  - Inspetores e observações podem ser diferentes em cada processo
 - ✅ **Check-in** → Será criado futuramente
 
 ### 2. Páginas de Configuração
@@ -153,7 +154,7 @@ checkin_coordinates
 
 ## 📝 CAMPOS DO CHECK-OUT
 
-**31 campos disponíveis:**
+**33 campos disponíveis:**
 
 ### Informações do Contrato
 - `contract_number` - Nº Contrato
@@ -194,13 +195,25 @@ checkin_coordinates
 - `photo_9` - Foto 9
 - `photo_10` - Foto 10
 
+### Observações
+- `observations_checkout` - **Observações Check-out** ⚠️
+- `observations_checkin` - **Observações Check-in** ⚠️
+
 ### Assinaturas
 - `inspector_name` - Nome Inspetor
 - `inspector_signature_checkout` - **Assinatura Inspector Check-out** ⚠️
 - `inspector_signature_checkin` - **Assinatura Inspector Check-in** ⚠️
 - `customer_signature` - Assinatura Cliente
 
-**⚠️ IMPORTANTE - Assinaturas de Inspetores:**
+**⚠️ IMPORTANTE - Campos Separados por Processo:**
+
+**Observações:**
+- São **2 campos separados** para registar informações diferentes
+- **Check-out:** Observações ao entregar o veículo (ex: "Pneu dianteiro com desgaste")
+- **Check-in:** Observações ao receber o veículo (ex: "Arranhão lateral novo")
+- Permite documentar o estado inicial e final do veículo
+
+**Assinaturas de Inspetores:**
 - São **2 campos separados** porque podem ser inspetores diferentes
 - **Check-out:** Inspector que entrega o veículo ao cliente
 - **Check-in:** Inspector que recebe o veículo do cliente (futuro)
