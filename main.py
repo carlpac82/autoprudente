@@ -3353,6 +3353,60 @@ def require_admin(request: Request):
     if not request.session.get("is_admin", False):
         raise HTTPException(status_code=403, detail="Forbidden")
 
+def require_role_access(request: Request, allowed_pages: list = None):
+    """
+    Restringe acesso baseado no role do utilizador.
+    
+    - Admin: acesso total
+    - Recepcionist: apenas páginas permitidas (veículos, histórico)
+    - Outros: acesso normal
+    
+    Args:
+        request: Request object
+        allowed_pages: Lista de páginas permitidas para recepcionistas (padrão: veículos e histórico)
+    """
+    require_auth(request)
+    
+    # Admin tem acesso a tudo
+    if request.session.get("is_admin", False):
+        return
+    
+    # Verificar role do utilizador
+    user_role = request.session.get("role", "")
+    
+    # Se não for rececionista, deixa passar
+    if user_role != "recepcionist":
+        return
+    
+    # Rececionista: verificar se está numa página permitida
+    current_path = request.url.path
+    
+    # Páginas permitidas para rececionistas (padrão)
+    if allowed_pages is None:
+        allowed_pages = [
+            "/vehicle-inspection",
+            "/inspection-history",
+            "/api/inspections",
+            "/api/inspection",
+            "/api/vehicles",
+            "/healthz",
+            "/static/",
+            "/logout",
+            "/api/profile-picture",
+            "/api/current-user",
+            "/api/user-settings"
+        ]
+    
+    # Verificar se a página atual é permitida
+    is_allowed = any(current_path.startswith(page) for page in allowed_pages)
+    
+    if not is_allowed:
+        # Bloquear acesso
+        raise HTTPException(
+            status_code=403, 
+            detail="Acesso negado. Role 'recepcionist' só pode aceder a Veículos e Histórico."
+        )
+
 def require_inspection_access(request: Request):
     """
     Check if user has permission to access vehicle inspection.
@@ -3459,7 +3513,8 @@ async def login_action(request: Request, username: str = Form(...), password: st
                 request.session["auth"] = True
                 request.session["username"] = u
                 request.session["is_admin"] = bool(is_admin_flag)
-                request.session["user_role"] = user_role
+                request.session["role"] = user_role  # Guardar role na sessão
+                request.session["user_role"] = user_role  # Manter compatibilidade
                 request.session["can_access_inspection"] = can_access_inspection
                 request.session["last_active_ts"] = int(datetime.now(timezone.utc).timestamp())
                 log_activity(request, "login_success", details="", username=u)
@@ -3502,7 +3557,12 @@ async def logout_action(request: Request):
 async def home(request: Request):
     try:
         require_auth(request)
-    except HTTPException:
+        require_role_access(request)  # Bloquear recepcionistas
+    except HTTPException as e:
+        # Se for erro de permissão (403), redirecionar para página de veículos
+        if e.status_code == 403:
+            return RedirectResponse(url="/vehicle-inspection", status_code=HTTP_303_SEE_OTHER)
+        # Se for erro de autenticação (401), redirecionar para login
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     # load current user profile for greeting
     user_ctx = None
@@ -4083,12 +4143,32 @@ async def admin_users_toggle_enabled(request: Request, user_id: int):
     with _db_lock:
         con = _db_connect()
         try:
-            cur = con.execute("SELECT enabled FROM users WHERE id=?", (user_id,))
+            # PostgreSQL compatibility
+            try:
+                import psycopg2
+                is_postgres = isinstance(con, psycopg2.extensions.connection)
+            except:
+                is_postgres = False
+            
+            placeholder = "%s" if is_postgres else "?"
+            
+            cur = con.execute(f"SELECT enabled FROM users WHERE id={placeholder}", (user_id,))
             r = cur.fetchone()
             if not r:
                 raise HTTPException(status_code=404, detail="Not found")
-            new_val = 0 if int(r[0] or 0) else 1
-            con.execute("UPDATE users SET enabled=? WHERE id=?", (new_val, user_id))
+            
+            # PostgreSQL usa boolean (True/False), SQLite usa integer (0/1)
+            current_enabled = bool(r[0])
+            new_val = False if current_enabled else True
+            
+            if is_postgres:
+                # PostgreSQL: usar boolean diretamente
+                con.execute(f"UPDATE users SET enabled={placeholder} WHERE id={placeholder}", (new_val, user_id))
+            else:
+                # SQLite: converter boolean para integer
+                new_val_int = 1 if new_val else 0
+                con.execute(f"UPDATE users SET enabled={placeholder} WHERE id={placeholder}", (new_val_int, user_id))
+            
             con.commit()
         finally:
             con.close()
