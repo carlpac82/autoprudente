@@ -28822,10 +28822,16 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
         if coordinates_json:
             import json
             try:
-                coordinates = json.loads(coordinates_json)
-                logging.info(f"✅ Coordinates loaded: {len(coordinates)} fields")
-            except:
-                logging.warning("⚠️ Failed to parse coordinates, using empty dict")
+                parsed_coords = json.loads(coordinates_json)
+                # Garantir que é um dicionário
+                if isinstance(parsed_coords, dict):
+                    coordinates = parsed_coords
+                    logging.info(f"✅ Coordinates loaded: {len(coordinates)} fields")
+                else:
+                    logging.warning(f"⚠️ Coordinates is not a dict, got {type(parsed_coords)}: {parsed_coords}")
+                    coordinates = {}
+            except Exception as e:
+                logging.warning(f"⚠️ Failed to parse coordinates: {e}")
         
         # 3. Buscar dados da inspeção (PLACEHOLDER - implementar depois)
         inspection_data = {
@@ -28860,24 +28866,30 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
             can.setFont("Helvetica", 10)
             
             # Adicionar texto nas coordenadas mapeadas (se existirem)
-            for field_id, coord_data in coordinates.items():
-                # Verificar se é para esta página
-                if isinstance(coord_data, dict):
-                    coord_list = [coord_data]
-                else:
-                    coord_list = coord_data if isinstance(coord_data, list) else []
-                
-                for coord in coord_list:
-                    if coord.get('page', 1) == (page_num + 1):
-                        # Obter valor do campo
-                        field_value = inspection_data.get(field_id, '')
-                        
-                        if field_value and coord.get('x') and coord.get('y'):
-                            x = coord['x']
-                            y = A4[1] - coord['y']  # Inverter Y (PDF coordinates)
+            if isinstance(coordinates, dict) and coordinates:
+                for field_id, coord_data in coordinates.items():
+                    # Verificar se é para esta página
+                    if isinstance(coord_data, dict):
+                        coord_list = [coord_data]
+                    else:
+                        coord_list = coord_data if isinstance(coord_data, list) else []
+                    
+                    for coord in coord_list:
+                        if isinstance(coord, dict) and coord.get('page', 1) == (page_num + 1):
+                            # Obter valor do campo
+                            field_value = inspection_data.get(field_id, '')
                             
-                            can.drawString(x, y, str(field_value))
-                            logging.debug(f"  ✓ {field_id}: '{field_value}' at ({x}, {y})")
+                            if field_value and coord.get('x') is not None and coord.get('y') is not None:
+                                try:
+                                    x = float(coord['x'])
+                                    y = A4[1] - float(coord['y'])  # Inverter Y (PDF coordinates)
+                                    
+                                    can.drawString(x, y, str(field_value))
+                                    logging.debug(f"  ✓ {field_id}: '{field_value}' at ({x}, {y})")
+                                except (ValueError, TypeError) as e:
+                                    logging.warning(f"  ⚠️ Invalid coordinates for {field_id}: {e}")
+            else:
+                logging.warning(f"⚠️ No valid coordinates to process (type: {type(coordinates)})")
             
             can.save()
             
@@ -28909,13 +28921,26 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
     except Exception as e:
         logging.error(f"❌ Error generating inspection PDF: {e}")
         import traceback
-        logging.error(traceback.format_exc())
+        error_traceback = traceback.format_exc()
+        logging.error(error_traceback)
         
-        # Fallback: retornar mensagem de erro
+        # Fallback: retornar mensagem de erro detalhada
+        error_message = f"""Error generating PDF: {str(e)}
+
+Type: {type(e).__name__}
+
+Details:
+{error_traceback}
+
+Please check:
+1. Template PDF uploaded correctly
+2. Coordinates mapped and saved
+3. Render logs for more details
+"""
         return Response(
-            content=f"Error generating PDF: {str(e)}".encode(),
+            content=error_message.encode('utf-8'),
             status_code=500,
-            media_type="text/plain"
+            media_type="text/plain; charset=utf-8"
         )
 
 
