@@ -28819,6 +28819,80 @@ async def delete_automated_search(request: Request, search_id: int):
         logging.error(f"❌ Error deleting search ID {search_id}: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/automated-search/fix-month-keys")
+async def fix_month_keys(request: Request):
+    """Recalculate month_key for all searches based on search_date (fixes old wrong entries)"""
+    require_auth(request)
+    try:
+        from datetime import datetime
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                # Get all searches with their search_date
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, search_date FROM automated_search_history WHERE search_date IS NOT NULL")
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute("SELECT id, search_date FROM automated_search_history WHERE search_date IS NOT NULL").fetchall()
+                
+                fixed_count = 0
+                errors = []
+                
+                for row in rows:
+                    search_id, search_date_str = row
+                    
+                    try:
+                        # Parse search_date to get correct month_key
+                        search_date = datetime.strptime(search_date_str, '%Y-%m-%d')
+                        correct_month_key = f"{search_date.year}-{str(search_date.month).zfill(2)}"
+                        
+                        # Update month_key
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute(
+                                    f"UPDATE automated_search_history SET month_key = {placeholder} WHERE id = {placeholder}",
+                                    (correct_month_key, search_id)
+                                )
+                        else:
+                            conn.execute(
+                                f"UPDATE automated_search_history SET month_key = {placeholder} WHERE id = {placeholder}",
+                                (correct_month_key, search_id)
+                            )
+                        
+                        fixed_count += 1
+                        logging.info(f"✅ Fixed search ID {search_id}: date={search_date_str}, month_key={correct_month_key}")
+                        
+                    except Exception as e:
+                        error_msg = f"Failed to fix ID {search_id}: {str(e)}"
+                        errors.append(error_msg)
+                        logging.error(f"❌ {error_msg}")
+                
+                conn.commit()
+                
+                message = f"Fixed {fixed_count} searches"
+                if errors:
+                    message += f" ({len(errors)} errors)"
+                
+                logging.info(f"🔧 Month keys recalculation completed: {message}")
+                return JSONResponse({
+                    "ok": True,
+                    "message": message,
+                    "fixed": fixed_count,
+                    "errors": errors
+                })
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error fixing month keys: {str(e)}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # ============================================================
 # AI PRICE LEARNING ENDPOINTS
 # ============================================================
