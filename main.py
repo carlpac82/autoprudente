@@ -12633,20 +12633,32 @@ async def save_user_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
                 for key, value in settings.items():
                     # Serializar valor como JSON
                     value_json = json.dumps(value) if not isinstance(value, str) else value
                     
-                    query = _convert_query_for_db("""
-                        INSERT OR REPLACE INTO user_settings 
-                        (user_key, setting_key, setting_value, updated_at)
-                        VALUES (?, ?, ?, datetime('now'))
-                    """, conn)
-                    
-                    if conn.__class__.__module__ == 'psycopg2.extensions':
+                    if is_postgres:
+                        # PostgreSQL: usar ON CONFLICT ... DO UPDATE
+                        query = f"""
+                            INSERT INTO user_settings 
+                            (user_key, setting_key, setting_value, updated_at)
+                            VALUES ({placeholder}, {placeholder}, {placeholder}, NOW())
+                            ON CONFLICT (user_key, setting_key) DO UPDATE SET
+                                setting_value = EXCLUDED.setting_value,
+                                updated_at = NOW()
+                        """
                         with conn.cursor() as cur:
                             cur.execute(query, (user_key, key, value_json))
                     else:
+                        # SQLite: usar INSERT OR REPLACE
+                        query = f"""
+                            INSERT OR REPLACE INTO user_settings 
+                            (user_key, setting_key, setting_value, updated_at)
+                            VALUES ({placeholder}, {placeholder}, {placeholder}, datetime('now'))
+                        """
                         conn.execute(query, (user_key, key, value_json))
                 
                 conn.commit()
@@ -28703,8 +28715,14 @@ async def initialize_ai_from_history(request: Request):
                             if location not in data_by_grupo_days[grupo][days]:
                                 data_by_grupo_days[grupo][days][location] = []
                             
+                            # Validar se suppliers é lista (pode ser número direto)
+                            if not isinstance(suppliers, list):
+                                continue
+                            
                             # Extrair preços dos suppliers
                             for supp in suppliers:
+                                if not isinstance(supp, dict):
+                                    continue
                                 price = float(supp.get('price', 0))
                                 if price > 0:
                                     supplier_name = supp.get('supplier', '')
