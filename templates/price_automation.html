@@ -1434,6 +1434,80 @@
                     }
                 }
                 
+                // ✅ SECOND PASS: Adjust dependencies that violate target (e.g., if B1 < D but B1 > D, fix B1)
+                console.log('🔧 [HIERARCHY] Second pass: Adjusting dependencies...');
+                
+                for (const [targetGroup, dependencies] of Object.entries(rules)) {
+                    if (!dependencies || dependencies.length === 0) continue;
+                    
+                    for (const day of allDays) {
+                        const targetInput = document.querySelector(`#pricesTableAuto input[data-grupo="${targetGroup}"][data-dias="${day}"][data-type="auto"]`);
+                        if (!targetInput || !targetInput.value) continue;
+                        
+                        const targetPrice = parseFloat(targetInput.value);
+                        if (isNaN(targetPrice) || targetPrice <= 0) continue;
+                        
+                        // For each dependency, check if IT violates the rule from its perspective
+                        for (const dep of dependencies) {
+                            const depGroup = typeof dep === 'string' ? dep : dep.group;
+                            const operator = typeof dep === 'string' ? '>=' : dep.operator;
+                            
+                            const depInput = document.querySelector(`#pricesTableAuto input[data-grupo="${depGroup}"][data-dias="${day}"][data-type="auto"]`);
+                            if (!depInput || !depInput.value) continue;
+                            
+                            let depPrice = parseFloat(depInput.value);
+                            if (isNaN(depPrice) || depPrice <= 0) continue;
+                            
+                            // Check if dependency violates rule
+                            let violated = false;
+                            let newDepPrice = depPrice;
+                            
+                            switch(operator) {
+                                case '>=':
+                                    // Target >= Dep → Dep should be <= Target
+                                    if (depPrice > targetPrice) {
+                                        violated = true;
+                                        newDepPrice = targetPrice;
+                                    }
+                                    break;
+                                case '>':
+                                    // Target > Dep → Dep should be < Target
+                                    if (depPrice >= targetPrice) {
+                                        violated = true;
+                                        newDepPrice = targetPrice - 0.01;
+                                    }
+                                    break;
+                                case '<=':
+                                    // Target <= Dep → Dep should be >= Target
+                                    if (depPrice < targetPrice) {
+                                        violated = true;
+                                        newDepPrice = targetPrice;
+                                    }
+                                    break;
+                                case '<':
+                                    // Target < Dep → Dep should be > Target
+                                    if (depPrice <= targetPrice) {
+                                        violated = true;
+                                        newDepPrice = targetPrice + 0.01;
+                                    }
+                                    break;
+                            }
+                            
+                            if (violated && newDepPrice !== depPrice) {
+                                console.log(`🔧 [HIERARCHY-INVERSE] ${depGroup}/${day}d: ${depPrice.toFixed(2)}€ → ${newDepPrice.toFixed(2)}€ (must respect: ${targetGroup} ${operator} ${depGroup})`);
+                                depInput.value = newDepPrice.toFixed(2);
+                                
+                                // Update stored price
+                                if (automatedPricesByGroup[depGroup]) {
+                                    automatedPricesByGroup[depGroup][day] = newDepPrice;
+                                }
+                                
+                                adjustedCount++;
+                            }
+                        }
+                    }
+                }
+                
                 return adjustedCount;
                 
             } catch (error) {
