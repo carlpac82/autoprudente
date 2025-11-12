@@ -28909,7 +28909,8 @@ async def initialize_ai_from_history(request: Request):
                 for search in all_searches:
                     location = search[0]
                     month_key = search[1]
-                    supplier_data = json.loads(search[2]) if isinstance(search[2], str) else search[2]
+                    # search[2] = prices_data, search[3] = supplier_data
+                    supplier_data = json.loads(search[3]) if isinstance(search[3], str) else search[3]
                     
                     locations_found.add(location)
                     months_found.add(month_key)
