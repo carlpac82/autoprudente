@@ -28778,6 +28778,46 @@ async def get_inspection_details(inspection_number: str, request: Request):
             "error": str(e)
         }, status_code=500)
 
+@app.get("/api/checkout/debug-coordinates")
+async def debug_checkout_coordinates(request: Request):
+    """Endpoint de debug para verificar coordenadas salvas"""
+    require_auth(request)
+    
+    try:
+        import json
+        
+        # Verificar se coordenadas existem
+        coordinates_json = _get_setting('checkout_coordinates')
+        
+        if not coordinates_json:
+            return JSONResponse({
+                "ok": False,
+                "message": "No coordinates saved yet",
+                "has_coordinates": False,
+                "coordinates_length": 0
+            })
+        
+        # Parse coordenadas
+        parsed_coords = json.loads(coordinates_json)
+        
+        return JSONResponse({
+            "ok": True,
+            "has_coordinates": True,
+            "coordinates_type": str(type(parsed_coords).__name__),
+            "coordinates_length": len(parsed_coords) if isinstance(parsed_coords, (list, dict)) else 0,
+            "sample": str(parsed_coords)[:500] if parsed_coords else "empty",
+            "first_items": list(parsed_coords)[:3] if isinstance(parsed_coords, list) else list(parsed_coords.keys())[:3] if isinstance(parsed_coords, dict) else []
+        })
+        
+    except Exception as e:
+        logging.error(f"Error in debug endpoint: {e}")
+        import traceback
+        return JSONResponse({
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status_code=500)
+
 @app.get("/api/inspections/{inspection_number}/pdf")
 async def get_inspection_pdf(inspection_number: str, request: Request):
     """Generate inspection PDF using mapped template"""

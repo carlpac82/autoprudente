@@ -538,9 +538,10 @@
                     page: currentPage,
                     x: snapped.x,
                     y: snapped.y,
-                    width: copiedBox.width,
-                    height: copiedBox.height,
-                    originalFieldId: field.id
+                    width: snapped.width,
+                    height: snapped.height,
+                    field_type: field.type,
+                    originalFieldId: field.id  // Guardar ID original!
                 };
                 
                 console.log('[MAPPER] Box pasted:', field.id, 'on page', currentPage);
@@ -580,9 +581,10 @@
                         page: currentPage,
                         x: snapped.x,
                         y: snapped.y,
-                        width: detectedBox.width / scale,
-                        height: detectedBox.height / scale,
-                        originalFieldId: field.id
+                        width: snapped.width,
+                        height: snapped.height,
+                        field_type: field.type,
+                        originalFieldId: field.id  // Guardar ID original!
                     };
                     
                     console.log('[MAPPER] Box detected and mapped:', field.id, 'on page', currentPage);
@@ -666,7 +668,8 @@
                 y: boxY,
                 width: boxW,
                 height: boxH,
-                originalFieldId: field.id
+                field_type: field.type,
+                originalFieldId: field.id  // Guardar ID original!
             };
             
             console.log('[MAPPER] Field mapped:', field.id, 'on page', currentPage);
