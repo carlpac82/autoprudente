@@ -624,6 +624,21 @@ app.add_middleware(
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
+# Exception handler to ensure CORS headers on all responses (including errors)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Ensure CORS headers are included in error responses"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"ok": False, "error": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
 def _ensure_damage_reports_tables():
     """Criar tabelas de Damage Reports no PostgreSQL"""
     try:
