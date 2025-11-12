@@ -4,7 +4,9 @@
 
 ### 1. Mapeadores Separados
 - ✅ **Damage Report** → `/damage-report-mapper` (62 campos)
-- ✅ **Check-out** → `/checkout-mapper` (30 campos)
+- ✅ **Check-out** → `/checkout-mapper` (31 campos)
+  - ⚠️ Inclui 2 assinaturas de inspetores separadas (Check-out e Check-in)
+  - Inspetores podem ser diferentes em cada processo
 - ✅ **Check-in** → Será criado futuramente
 
 ### 2. Páginas de Configuração
@@ -151,37 +153,58 @@ checkin_coordinates
 
 ## 📝 CAMPOS DO CHECK-OUT
 
-30 campos disponíveis:
-- `plate` - Matrícula
-- `ra` - RA
-- `receptionist` - Rececionista
-- `date` - Data
-- `time` - Hora
-- `photo_front` - Foto Frente
-- `photo_rear` - Foto Traseira
-- `photo_left` - Foto Esquerda
-- `photo_right` - Foto Direita
-- `photo_interior` - Foto Interior
-- `photo_dashboard` - Foto Dashboard
-- `photo_trunk` - Foto Bagageira
-- `photo_roof` - Foto Tejadilho
-- `photo_windshield` - Foto Para-brisas
-- `photo_wheels` - Foto Rodas
-- `photo_seats` - Foto Bancos
-- `photo_steering_wheel` - Foto Volante
-- `photo_gear_shift` - Foto Mudanças
-- `photo_pedals` - Foto Pedais
-- `photo_mirrors` - Foto Espelhos
-- `photo_documents` - Foto Documentos
-- `photo_keys` - Foto Chaves
-- `photo_fuel` - Foto Combustível
-- `photo_odometer` - Foto Conta-km
-- `diagram` - Diagrama de danos
-- `observations` - Observações
-- `fuel_level` - Nível combustível
-- `odometer_reading` - Quilometragem
-- `signature_client` - Assinatura Cliente
-- `signature_receptionist` - Assinatura Rececionista
+**31 campos disponíveis:**
+
+### Informações do Contrato
+- `contract_number` - Nº Contrato
+- `ra_number` - RA (Rental Agreement)
+- `contract_date` - Data Contrato
+- `inspection_date` - Data Inspeção
+
+### Informações do Cliente
+- `client_name` - Nome Cliente
+- `client_email` - Email Cliente
+- `client_phone` - Telefone Cliente
+- `client_address` - Morada Cliente
+
+### Informações do Veículo
+- `vehicle_plate` - Matrícula Veículo
+- `vehicle_brand_model` - Marca / Modelo Veículo
+- `vehicle_color` - Cor Veículo
+- `vehicle_km_delivery` - KM na Entrega
+- `fuel_level_delivery` - Nível Combustível (Entrega)
+
+### Informações de Levantamento/Devolução
+- `pickup_date` - Data Levantamento
+- `pickup_time` - Hora Levantamento
+- `pickup_location` - Local Levantamento
+- `expected_return_date` - Data Devolução Prevista
+- `expected_return_time` - Hora Devolução Prevista
+- `expected_return_location` - Local Devolução Prevista
+
+### Fotos (10 fotos)
+- `photo_1_front` - Foto 1 - Frente
+- `photo_2_back` - Foto 2 - Trás
+- `photo_3_left` - Foto 3 - Lado Esquerdo
+- `photo_4_right` - Foto 4 - Lado Direito
+- `photo_5` - Foto 5
+- `photo_6` - Foto 6
+- `photo_7` - Foto 7
+- `photo_8` - Foto 8
+- `photo_9` - Foto 9
+- `photo_10` - Foto 10
+
+### Assinaturas
+- `inspector_name` - Nome Inspetor
+- `inspector_signature_checkout` - **Assinatura Inspector Check-out** ⚠️
+- `inspector_signature_checkin` - **Assinatura Inspector Check-in** ⚠️
+- `customer_signature` - Assinatura Cliente
+
+**⚠️ IMPORTANTE - Assinaturas de Inspetores:**
+- São **2 campos separados** porque podem ser inspetores diferentes
+- **Check-out:** Inspector que entrega o veículo ao cliente
+- **Check-in:** Inspector que recebe o veículo do cliente (futuro)
+- Ambos os campos devem ser mapeados no PDF, mesmo que na prática sejam a mesma pessoa
 
 ---
 
