@@ -3568,6 +3568,95 @@
             
             const grupos = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
             
+            /**
+             * Check for hierarchy violations between suppliers
+             * Returns list of violations where a "higher" group has lower price than a "lower" group
+             */
+            function checkSupplierHierarchyViolations(day, cars) {
+                if (!cars || cars.length === 0) return [];
+                
+                // Define hierarchy rules: [lowerGroup, higherGroup]
+                // higherGroup should always be >= lowerGroup
+                const hierarchyRules = [
+                    // Mini rules
+                    ['B1', 'B2'],  // B2 (Mini 5 seats) >= B1 (Mini 4 seats)
+                    ['B1', 'D'],   // D (Economy) >= B1
+                    ['B2', 'D'],   // D >= B2
+                    ['B1', 'E1'],  // E1 (Mini Auto) >= B1
+                    ['B2', 'E1'],  // E1 >= B2
+                    ['D', 'E2'],   // E2 (Economy Auto) >= D
+                    ['E1', 'E2'],  // E2 >= E1
+                    
+                    // SUV rules
+                    ['D', 'F'],    // F (SUV) >= D
+                    ['E2', 'F'],   // F >= E2
+                    ['F', 'L1'],   // L1 (SUV Auto) >= F
+                    ['E2', 'L1'],  // L1 >= E2
+                    
+                    // Premium/Cabrio rules
+                    ['F', 'G'],    // G (Premium/Cabrio) >= F
+                    ['L1', 'G'],   // G >= L1
+                    
+                    // Crossover/Station Wagon rules
+                    ['D', 'J1'],   // J1 (Crossover) >= D
+                    ['F', 'J1'],   // J1 >= F
+                    ['D', 'J2'],   // J2 (Station Wagon) >= D
+                    ['J1', 'L2'],  // L2 (SW Auto) >= J1
+                    ['J2', 'L2'],  // L2 >= J2
+                    
+                    // 7 Seater rules
+                    ['F', 'M1'],   // M1 (7 Seater) >= F
+                    ['L1', 'M1'],  // M1 >= L1
+                    ['M1', 'M2'],  // M2 (7 Seater Auto) >= M1
+                    ['L1', 'M2'],  // M2 >= L1
+                    
+                    // 9 Seater rules
+                    ['M1', 'N'],   // N (9 Seater) >= M1
+                    ['M2', 'N'],   // N >= M2
+                ];
+                
+                const violations = [];
+                
+                // Group cars by supplier
+                const carsBySupplier = {};
+                cars.forEach(car => {
+                    const supplier = (car.supplier || 'Unknown').toLowerCase();
+                    const group = car.group || extractGroup(car.car);
+                    const price = parseFloat(car.price_num || 0);
+                    
+                    if (!carsBySupplier[supplier]) {
+                        carsBySupplier[supplier] = {};
+                    }
+                    
+                    // Keep the lowest price per group per supplier
+                    if (!carsBySupplier[supplier][group] || price < carsBySupplier[supplier][group]) {
+                        carsBySupplier[supplier][group] = price;
+                    }
+                });
+                
+                // Check each supplier's prices against hierarchy rules
+                Object.entries(carsBySupplier).forEach(([supplier, groupPrices]) => {
+                    hierarchyRules.forEach(([lowerGroup, higherGroup]) => {
+                        const lowerPrice = groupPrices[lowerGroup];
+                        const higherPrice = groupPrices[higherGroup];
+                        
+                        // If both groups exist and higherGroup is cheaper than lowerGroup = violation
+                        if (lowerPrice && higherPrice && higherPrice < lowerPrice) {
+                            violations.push({
+                                supplier: supplier.charAt(0).toUpperCase() + supplier.slice(1),
+                                lowerGroup,
+                                higherGroup,
+                                lowerPrice,
+                                higherPrice,
+                                difference: (lowerPrice - higherPrice).toFixed(2)
+                            });
+                        }
+                    });
+                });
+                
+                return violations;
+            }
+            
             // Calculate global lowest price across all days and groups (EXCLUDE AUTOMATED)
             let globalLowestPrice = Infinity;
             let globalLowestGroup = null;
@@ -3625,6 +3714,9 @@
                 const daySection = document.createElement('div');
                 daySection.className = 'mb-6';
                 
+                // Check hierarchy violations for this day
+                const violations = checkSupplierHierarchyViolations(day, allCarsByDay[day]);
+                
                 // Collapsible header with price preview
                 const dayHeader = document.createElement('div');
                 dayHeader.className = 'flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded mb-3 border-b-2 border-[#009cb6]';
@@ -3638,6 +3730,38 @@
                        </span>`
                     : '';
                 
+                // Hierarchy violations badge
+                const violationsBadge = violations.length > 0 
+                    ? `<div class="relative group">
+                         <div class="px-2.5 py-1 bg-red-100 border border-red-300 rounded-full flex items-center gap-1.5 text-xs font-medium text-red-700 cursor-help">
+                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                 <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+                             </svg>
+                             <span>${violations.length} ${violations.length === 1 ? 'alerta' : 'alertas'}</span>
+                         </div>
+                         <div class="absolute left-0 top-full mt-2 w-80 bg-white border-2 border-red-300 rounded-lg shadow-xl p-3 z-50 hidden group-hover:block">
+                             <div class="text-xs font-semibold text-red-800 mb-2 flex items-center gap-1">
+                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+                                 </svg>
+                                 Violações de Hierarquia
+                             </div>
+                             ${violations.map(v => `
+                                 <div class="mb-2 pb-2 border-b border-red-200 last:border-0">
+                                     <div class="text-xs text-gray-700">
+                                         <span class="font-semibold text-red-700">${v.supplier}</span>: 
+                                         <span class="font-mono">${v.lowerGroup}</span> 
+                                         <span class="text-red-600 font-bold">(${v.lowerPrice.toFixed(2)}€)</span>
+                                         mais barato que
+                                         <span class="font-mono">${v.higherGroup}</span>
+                                         <span class="text-gray-600">(${v.higherPrice.toFixed(2)}€)</span>
+                                     </div>
+                                 </div>
+                             `).join('')}
+                         </div>
+                       </div>`
+                    : '';
+                
                 dayHeader.innerHTML = `
                     <div id="chevron-${day}">
                         <svg class="w-5 h-5 ${isFirstDay ? 'text-[#009cb6]' : 'text-[#f4ad0f]'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3645,6 +3769,7 @@
                         </svg>
                     </div>
                     <h2 class="text-lg font-semibold text-gray-900">${day} day${day > 1 ? 's' : ''}</h2>
+                    ${violationsBadge}
                     ${pricePreview}
                 `;
                 daySection.appendChild(dayHeader);
