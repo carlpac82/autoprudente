@@ -284,21 +284,36 @@
                 
                 // Load iframe if not loaded
                 if (!iframe.src) {
+                    console.log('🔵 [ADMIN] Loading iframe /checkout-mapper...');
                     loading.style.display = 'flex';
-                    iframe.src = '/checkout-mapper';
                     
-                    // Hide loading when iframe loads
+                    // IMPORTANTE: Configurar onload ANTES de definir src
                     iframe.onload = function() {
+                        console.log('✅ [ADMIN] Iframe loaded successfully');
                         loading.style.display = 'none';
                     };
                     
-                    // Timeout fallback (10 seconds)
+                    // Configurar onerror
+                    iframe.onerror = function() {
+                        console.error('❌ [ADMIN] Iframe failed to load');
+                        loading.style.display = 'none';
+                        showNotification('Erro ao carregar mapeador. Recarrega a página.', 'error');
+                    };
+                    
+                    // Agora definir src (dispara o carregamento)
+                    iframe.src = '/checkout-mapper';
+                    
+                    // Timeout fallback mais longo (20 segundos para PDFs grandes)
                     setTimeout(() => {
                         if (loading.style.display !== 'none') {
+                            console.warn('⚠️ [ADMIN] Iframe loading timeout - hiding spinner anyway');
                             loading.style.display = 'none';
-                            alert('Mapeador demorou muito a carregar. Tenta recarregar a página.');
+                            // Não mostrar alert - o iframe pode estar carregando ainda
                         }
-                    }, 10000);
+                    }, 20000);
+                } else {
+                    // Iframe já carregado - esconder loading
+                    loading.style.display = 'none';
                 }
             } else {
                 // Hide mapper

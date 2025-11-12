@@ -289,17 +289,33 @@
         const SNAP_THRESHOLD = 5; // pixels para snap automático
 
         async function loadPDFMapper() {
+            console.log('🔵 [MAPPER] loadPDFMapper() STARTED');
+            
             canvas = document.getElementById('pdfCanvas');
+            console.log('🔵 [MAPPER] Canvas:', canvas);
+            
+            if (!canvas) {
+                console.error('❌ [MAPPER] Canvas element not found!');
+                return;
+            }
+            
             ctx = canvas.getContext('2d');
+            console.log('🔵 [MAPPER] Canvas context:', ctx);
             
             try {
                 // Carregar template ativo do Check-out
-                console.log('[MAPPER] Fetching Check-out template...');
+                console.log('🔵 [MAPPER] Fetching Check-out template from /api/checkout/get-active-template...');
                 const response = await fetch('/api/checkout/get-active-template');
+                
+                console.log('🔵 [MAPPER] Response received:', response.status, response.statusText);
+                console.log('🔵 [MAPPER] Response headers:', {
+                    contentType: response.headers.get('content-type'),
+                    contentLength: response.headers.get('content-length')
+                });
                 
                 if (!response.ok) {
                     const text = await response.text();
-                    console.error('[MAPPER] Failed to load template:', response.status, text);
+                    console.error('❌ [MAPPER] Failed to load template:', response.status, text);
                     
                     // Mostrar mensagem clara
                     const container = document.querySelector('.mapper-container');
@@ -1498,6 +1514,9 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 [CHECKOUT-MAPPER] DOMContentLoaded - Starting initialization...');
+            console.log('🚀 [CHECKOUT-MAPPER] Canvas element:', document.getElementById('pdfCanvas'));
+            console.log('🚀 [CHECKOUT-MAPPER] Calling loadPDFMapper()...');
             loadPDFMapper();
             updateCurrentField();
         });
