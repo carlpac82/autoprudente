@@ -3741,26 +3741,41 @@
                              </svg>
                              <span>${violations.length} ${violations.length === 1 ? 'violação' : 'violações'}</span>
                          </div>
-                         <div class="absolute left-0 top-full mt-2 w-72 bg-white border-2 border-[#f4ad0f] rounded-lg shadow-2xl p-2.5 z-50 hidden group-hover:block">
-                             <div class="text-xs font-bold text-[#009cb6] mb-2 pb-2 border-b-2 border-[#009cb6]">
-                                 ⚠️ Preços Reais Inconsistentes
+                         <div class="absolute left-0 top-full mt-2 w-80 bg-white border-2 border-[#f4ad0f] rounded-lg shadow-2xl p-3 z-50 hidden group-hover:block max-h-96 overflow-y-auto">
+                             <div class="flex items-center gap-2 text-xs font-bold text-[#009cb6] mb-3 pb-2 border-b-2 border-[#009cb6]">
+                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                 </svg>
+                                 <span>Violações de Hierarquia</span>
                              </div>
                              ${violations.map(v => `
-                                 <div class="mb-1.5 p-1.5 bg-gray-50 rounded">
-                                     <div class="text-xs leading-relaxed">
-                                         <div class="flex items-center gap-1 mb-0.5">
-                                             <span class="font-bold text-[#009cb6] text-[10px] uppercase">${v.higherSupplier}</span>
-                                             <span class="font-mono font-semibold">${v.higherGroup}</span>
-                                             <span class="text-[#f4ad0f] font-bold">${v.higherPrice.toFixed(2)}€</span>
-                                         </div>
-                                         <div class="flex items-center gap-1 text-gray-400 text-[9px] ml-1">
-                                             <span>↓ mais barato que</span>
-                                         </div>
-                                         <div class="flex items-center gap-1 mt-0.5">
-                                             <span class="font-bold text-[#009cb6] text-[10px] uppercase">${v.lowerSupplier}</span>
-                                             <span class="font-mono font-semibold">${v.lowerGroup}</span>
-                                             <span class="text-gray-600 font-bold">${v.lowerPrice.toFixed(2)}€</span>
-                                         </div>
+                                 <div class="mb-2.5 p-2 bg-gradient-to-r from-orange-50 to-white border border-[#f4ad0f]/30 rounded-lg">
+                                     <!-- Supplier mais barato (violação) -->
+                                     <div class="flex items-center gap-2 mb-1.5">
+                                         <svg class="w-3.5 h-3.5 text-[#f4ad0f] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                                         </svg>
+                                         <span class="px-2 py-0.5 bg-[#f4ad0f]/20 border border-[#f4ad0f] rounded text-[9px] font-bold text-[#f4ad0f] uppercase">${v.higherSupplier}</span>
+                                         <span class="px-1.5 py-0.5 bg-white border border-gray-300 rounded text-[10px] font-mono font-bold">${v.higherGroup}</span>
+                                         <span class="text-[#f4ad0f] font-bold text-sm ml-auto">${v.higherPrice.toFixed(2)}€</span>
+                                     </div>
+                                     
+                                     <!-- Separador visual -->
+                                     <div class="flex items-center gap-2 my-1 ml-1">
+                                         <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                         </svg>
+                                         <span class="text-[9px] text-gray-500 italic">mais barato que deveria</span>
+                                     </div>
+                                     
+                                     <!-- Supplier mais caro (esperado) -->
+                                     <div class="flex items-center gap-2">
+                                         <svg class="w-3.5 h-3.5 text-[#009cb6] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                         </svg>
+                                         <span class="px-2 py-0.5 bg-[#009cb6]/10 border border-[#009cb6] rounded text-[9px] font-bold text-[#009cb6] uppercase">${v.lowerSupplier}</span>
+                                         <span class="px-1.5 py-0.5 bg-white border border-gray-300 rounded text-[10px] font-mono font-bold">${v.lowerGroup}</span>
+                                         <span class="text-gray-700 font-bold text-sm ml-auto">${v.lowerPrice.toFixed(2)}€</span>
                                      </div>
                                  </div>
                              `).join('')}
