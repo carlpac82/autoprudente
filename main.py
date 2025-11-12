@@ -28871,17 +28871,29 @@ async def save_ai_adjustment(request: Request):
 @app.get("/api/ai/initialize-from-history")
 async def initialize_ai_from_history(request: Request):
     """Initialize AI by processing ALL automated_search_history data"""
-    require_auth(request)
+    logging.info("🤖 [AI-INIT] Starting AI initialization from history...")
+    
     try:
+        require_auth(request)
+        logging.info("🤖 [AI-INIT] Auth OK")
+    except Exception as e:
+        logging.error(f"❌ [AI-INIT] Auth failed: {e}")
+        return JSONResponse({"ok": False, "error": f"Auth failed: {str(e)}"}, status_code=401)
+    
+    try:
+        logging.info("🤖 [AI-INIT] Acquiring DB lock...")
         with _db_lock:
+            logging.info("🤖 [AI-INIT] Connecting to DB...")
             conn = _db_connect()
             try:
                 is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                logging.info(f"🤖 [AI-INIT] DB type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 placeholder = "%s" if is_postgres else "?"
                 
                 from datetime import datetime, timezone
                 import json
                 
+                logging.info("🤖 [AI-INIT] Querying automated_search_history...")
                 # Buscar TODO o histórico com supplier_data
                 if is_postgres:
                     with conn.cursor() as cur:
@@ -28903,7 +28915,10 @@ async def initialize_ai_from_history(request: Request):
                     """)
                     all_searches = cursor.fetchall()
                 
+                logging.info(f"🤖 [AI-INIT] Found {len(all_searches) if all_searches else 0} searches")
+                
                 if not all_searches:
+                    logging.warning("⚠️ [AI-INIT] No historical data found")
                     return JSONResponse({
                         "ok": True,
                         "message": "No historical data found",
@@ -28913,15 +28928,20 @@ async def initialize_ai_from_history(request: Request):
                     })
                 
                 # Processar e agrupar dados
+                logging.info(f"🤖 [AI-INIT] Processing {len(all_searches)} searches...")
                 data_by_grupo_days = {}  # {grupo: {days: {location: [prices]}}}
                 locations_found = set()
                 months_found = set()
                 
-                for search in all_searches:
-                    location = search[0]
-                    month_key = search[1]
-                    # search[2] = prices_data, search[3] = supplier_data
-                    supplier_data = json.loads(search[3]) if isinstance(search[3], str) else search[3]
+                for idx, search in enumerate(all_searches):
+                    try:
+                        location = search[0]
+                        month_key = search[1]
+                        # search[2] = prices_data, search[3] = supplier_data
+                        supplier_data = json.loads(search[3]) if isinstance(search[3], str) else search[3]
+                    except Exception as e:
+                        logging.error(f"❌ [AI-INIT] Error parsing search {idx}: {e}")
+                        continue
                     
                     locations_found.add(location)
                     months_found.add(month_key)
@@ -28992,7 +29012,9 @@ async def initialize_ai_from_history(request: Request):
                                 })
                                 summary["total_combinations"] += 1
                 
-                logging.info(f"✅ AI initialized from history: {summary['total_combinations']} combinations from {len(all_searches)} searches")
+                logging.info(f"✅ [AI-INIT] Success: {summary['total_combinations']} combinations from {len(all_searches)} searches")
+                logging.info(f"✅ [AI-INIT] Locations: {summary['locations']}")
+                logging.info(f"✅ [AI-INIT] Groups: {len(data_by_grupo_days)}")
                 
                 return JSONResponse({
                     "ok": True,
@@ -29002,11 +29024,14 @@ async def initialize_ai_from_history(request: Request):
                 
             finally:
                 conn.close()
+                logging.info("🤖 [AI-INIT] DB connection closed")
     except Exception as e:
-        logging.error(f"❌ Error initializing AI from history: {str(e)}")
+        error_msg = str(e)
+        logging.error(f"❌ [AI-INIT] FATAL ERROR: {error_msg}")
         import traceback
-        traceback.print_exc()
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+        error_trace = traceback.format_exc()
+        logging.error(f"❌ [AI-INIT] Traceback:\n{error_trace}")
+        return JSONResponse({"ok": False, "error": error_msg, "trace": error_trace}, status_code=500)
 
 @app.get("/api/ai/get-price")
 async def get_ai_price(request: Request, grupo: str, days: int, location: str):
