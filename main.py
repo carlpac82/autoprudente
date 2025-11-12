@@ -469,6 +469,7 @@ import base64
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
 # ============================================================
@@ -610,6 +611,16 @@ app = FastAPI(
     # Aumentar limite de upload para 10MB (dados completos de pesquisas)
     # Default é 1MB - insuficiente para 284 carros completos
 )
+
+# CORS Middleware - Allow API calls from same origin
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for now (same domain still subject to CORS)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
