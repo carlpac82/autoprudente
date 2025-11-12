@@ -28593,6 +28593,8 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 # Group by month_key and search_type
                 import json
                 locations_found = set()
+                logging.info(f"📊 [HISTORY-FILTER] Processing {len(rows)} rows...")
+                
                 for row in rows:
                     if has_supplier_data:
                         search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
@@ -28601,6 +28603,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         supplier_data = None
                     
                     locations_found.add(row_location)
+                    logging.info(f"📊 [HISTORY-FILTER] Row {search_id}: location='{row_location}', month={month_key}, type={search_type}")
                     
                     if month_key not in history:
                         history[month_key] = {
@@ -28626,6 +28629,12 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 
                 logging.info(f"📊 [HISTORY-FILTER] Locations found in results: {locations_found}")
                 logging.info(f"📊 [HISTORY-FILTER] Returning {len(history)} months with data")
+                
+                # Log summary by month
+                for month_key, month_data in history.items():
+                    auto_count = len(month_data['automated'])
+                    curr_count = len(month_data['current'])
+                    logging.info(f"📊 [HISTORY-FILTER] {month_key}: {auto_count} auto + {curr_count} current = {auto_count + curr_count} total")
                 
                 return JSONResponse({
                     "ok": True,
