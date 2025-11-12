@@ -344,7 +344,7 @@ VEHICLES = {
     'ford kuga': 'SUV',
     'ford tourneo': '7 Lugares',
     'hyundai tucson': 'SUV',
-    'hyundai i10': 'MINI 4 Lugares',
+    'hyundai i10': 'MINI 5 Lugares',  # CORRIGIDO: i10 é 5 lugares, não 4!
     'kia picanto': 'MINI 4 Lugares',
     'kia sportage': 'Crossover',
     'mazda cx3': 'Crossover',

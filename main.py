@@ -1894,7 +1894,16 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return "E2"
     
     # SUV → F ou L1 (se automático)
+    # EXCEÇÃO: Peugeot 5008 Auto é M2 (7 Seater Auto), não L1!
     if cat in ['suv', 'jeep']:
+        # Verificar se é Peugeot 5008 Auto → M2
+        import re
+        if re.search(r'\bpeugeot\s*5008\b', car_lower, re.IGNORECASE):
+            is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+            if is_auto:
+                return "M2"  # 7 Seater Auto
+            return "M1"  # 7 Seater Manual
+        # Normal SUV logic
         is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
         return "L1" if is_auto else "F"
     
@@ -2039,13 +2048,31 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         'toyota aygo', 'toyotaaygo',
     ]
     
+    # PRIORIDADE 5.5: Modelos de 5 LUGARES → B2 (EXPLÍCITO)
+    # Hyundai i10, Fiat Panda
+    b2_5_lugares_models = [
+        'hyundai i10', 'hyundaii10',
+        'fiat panda', 'fiatpanda',
+    ]
+    
     # Se categoria é "mini" OU contém "mini", verificar modelo específico
     # MAS excluir categorias explícitas (já tratadas acima)
     if 'mini' in cat and not 'countryman' in car_lower:
         # Excluir categorias explícitas que já foram tratadas
         if cat not in ['mini 4 seats', 'mini 4 doors', 'mini 4 portas', 'mini 4 lugares',
                        'mini 5 seats', 'mini 5 doors', 'mini 5 portas', 'mini 5 lugares']:
-            # Verificar se é um modelo de 4 lugares (B1)
+            # PRIMEIRO: Verificar se é modelo de 5 lugares (B2) - PRIORIDADE
+            for model in b2_5_lugares_models:
+                if model in car_lower:
+                    # Se é automático de 5 lugares → E1 (Mini Automatic)
+                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
+                              any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+                    if is_auto:
+                        return "E1"
+                    # Se é manual de 5 lugares → B2
+                    return "B2"
+            
+            # SEGUNDO: Verificar se é um modelo de 4 lugares (B1)
             for model in b1_4_lugares_models:
                 if model in car_lower:
                     # Se é automático de 4 lugares → E1 (Mini Automatic)
@@ -2055,8 +2082,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                         return "E1"
                     # Se é manual de 4 lugares → B1
                     return "B1"
-            # Se não é B1 específico, é B2 (5 lugares)
-            # Modelos B2: Fiat Panda, Hyundai i10, etc
+            # Se não é B1 nem B2 específico, default é B2 (5 lugares)
+            # Modelos B2 genéricos: qualquer mini não identificado acima
             return "B2"
     
     # Mapeamento direto (TUDO EM LOWERCASE)
@@ -8783,6 +8810,13 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     logging.info(f"🚗 [E1-OVERRIDE] Detected E1 Mini Auto: {car_name}")
             except Exception:
                 pass
+            # FINAL B2 OVERRIDE: Hyundai i10 Manual -> B2 (5 lugares, não 4!)
+            try:
+                if re.search(r"\bhyundai\s*i10\b", (car_name or "").lower()) and not _is_auto_flag((car_name or "").lower(), _txt, transmission_label):
+                    category = "Mini 5 Doors"
+                    logging.info(f"🚗 [B2-OVERRIDE] Hyundai i10 Manual → B2 (5 lugares)")
+            except Exception:
+                pass
             # FINAL B1 OVERRIDE: base mini models -> 'Mini 4 Doors' (when not auto/cabrio/special variants)
             try:
                 b1_list = [
@@ -8805,8 +8839,12 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                         r"\bford\s*fiesta\b", r"\bnissan\s*micra\b", r"\bhyundai\s*i20\b", r"\baudi\s*a1\b",
                         r"\bdacia\s*sandero\b"
                     ]
+                    # ADDED: Hyundai i10 é B2, não B1 (5 lugares)
+                    b2_guard = [r"\bhyundai\s*i10\b"]
                     if any(re.search(p, _name) for p in d_guard):
                         raise Exception("skip B1 for D/E2 models")
+                    if any(re.search(p, _name) for p in b2_guard):
+                        raise Exception("skip B1 for i10 - it's B2")
                     # exclude autos and cabrio and special variants
                     if (not _is_auto_flag(_name, _txt, transmission_label)) \
                         and not re.search(r"\b(cabrio|convertible|cabriolet)\b", _name) \
