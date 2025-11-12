@@ -574,11 +574,38 @@
             'Sicily', 'Target', 'Wheego', 'Ynot'
         ].sort();
         
+        // Helper function to safely save to localStorage with quota handling
+        function safeLocalStorageSet(key, value) {
+            try {
+                localStorage.setItem(key, value);
+                return true;
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    console.warn('⚠️ localStorage quota exceeded. Clearing old data...');
+                    // Clear less important data first
+                    try {
+                        localStorage.removeItem('priceAIData');
+                        localStorage.removeItem('recent_searches');
+                        localStorage.setItem(key, value);
+                        showNotification('Storage cleared. Settings saved.', 'warning');
+                        return true;
+                    } catch (e2) {
+                        console.error('❌ Cannot save to localStorage even after clearing:', e2);
+                        showNotification('Cannot save settings locally. Database saved only.', 'error');
+                        return false;
+                    }
+                } else {
+                    console.error('❌ localStorage error:', e);
+                    showNotification('Local storage error. Database saved only.', 'error');
+                    return false;
+                }
+            }
+        }
+        
         // Carregar configurações ao iniciar
         window.addEventListener('DOMContentLoaded', async function() {
             // 🔥 CRITICAL: Load from database FIRST to populate localStorage after cache clear!
             console.log('🚀 Initializing: Loading data from database...');
-            await loadDataFromDatabase();
             
             // Clean old localStorage format if needed
             cleanOldLocalStorageFormat();
@@ -620,7 +647,7 @@
                             cleanRules[location][grupo] = { months: {} };
                         }
                     }
-                    localStorage.setItem('automatedPriceRules', JSON.stringify(cleanRules));
+                    safeLocalStorageSet('automatedPriceRules', JSON.stringify(cleanRules));
                     console.log('✅ Old data cleaned. Please reconfigure your rules.');
                 }
             } catch (e) {
@@ -673,7 +700,7 @@
                     }
                     
                     // Also save to localStorage as backup
-                    localStorage.setItem('priceAutomationSettings', JSON.stringify(settings));
+                    safeLocalStorageSet('priceAutomationSettings', JSON.stringify(settings));
                     console.log('✅ Settings loaded from database');
                     return;
                 }
@@ -752,7 +779,7 @@
                 
                 if (result.ok) {
                     // Also save locally as backup
-                    localStorage.setItem('priceAutomationSettings', JSON.stringify(settings));
+                    safeLocalStorageSet('priceAutomationSettings', JSON.stringify(settings));
                     
                     // Save automated rules
                     await saveAutomatedRules();
@@ -770,7 +797,7 @@
             } catch (err) {
                 console.error('❌ Error saving settings:', err);
                 // Fallback to localStorage
-                localStorage.setItem('priceAutomationSettings', JSON.stringify(settings));
+                safeLocalStorageSet('priceAutomationSettings', JSON.stringify(settings));
                 showNotification(`Saved locally only. Database error: ${err.message}`, 'warning');
             }
         }
@@ -2321,7 +2348,7 @@
             console.log(`📦 Strategy data:`, strategy);
             
             // Save to localStorage
-            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             console.log(`💾 Saved to localStorage - Total locations: ${Object.keys(rules).length}`);
             
             // Count total strategies
@@ -2374,7 +2401,7 @@
             const strategies = rules[location][grupo].months[month].days[day].strategies;
             
             [strategies[index - 1], strategies[index]] = [strategies[index], strategies[index - 1]];
-            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             
             // Save to database
             try {
@@ -2396,7 +2423,7 @@
             const strategies = rules[location][grupo].months[month].days[day].strategies;
             
             [strategies[index], strategies[index + 1]] = [strategies[index + 1], strategies[index]];
-            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             
             // Save to database
             try {
@@ -2418,7 +2445,7 @@
             const saved = localStorage.getItem('automatedPriceRules');
             const rules = JSON.parse(saved);
             rules[location][grupo].months[month].days[day].strategies.splice(index, 1);
-            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             
             // Save to database
             try {
@@ -2506,12 +2533,12 @@
                 });
                 
                 if (response.ok) {
-                    localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                    safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
                     console.log(`✅ Saved successfully`);
                 }
             } catch (err) {
                 console.error('Error saving:', err);
-                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             }
         }
         
@@ -2985,7 +3012,7 @@
                 });
                 
                 // Save
-                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
                 console.log(`✅ Copied to ${copiedCount} days`);
                 
                 // Save to database (async, don't wait)
@@ -3166,7 +3193,7 @@
             rules[location][grupo].months[month].days[day].strategies.push(strategy);
             
             // Save to localStorage
-            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             console.log(`✅ Strategy added to automatedPriceRules. Total: ${rules[location][grupo].months[month].days[day].strategies.length}`);
             
             // Save to database (sistema correto!)
@@ -3313,7 +3340,7 @@
                 if (!rules[location][grupo].months[month].days[day]) rules[location][grupo].months[month].days[day] = {};
                 
                 rules[location][grupo].months[month].days[day].strategies = strategiesData[key];
-                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             }
             
             // Save to database
@@ -3353,7 +3380,7 @@
                 if (!rules[location][grupo].months[month]) rules[location][grupo].months[month] = {days: {}};
                 
                 rules[location][grupo].months[month].days[day] = {strategies: []};
-                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             }
             
             // Save to database
@@ -3559,7 +3586,7 @@
                 
                 if (result.ok) {
                     // Also save to localStorage as backup
-                    localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                    safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
                     console.log(`✅ Config saved for ${location}/${grupo}/${month}/${day}`);
                     showNotification('Configuration saved!', 'success');
                 } else {
@@ -3568,7 +3595,7 @@
             } catch (err) {
                 console.error('Error saving config:', err);
                 // Fallback to localStorage only
-                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
                 console.log('⚠️ Config saved to localStorage only (fallback)');
             }
         }
@@ -3660,7 +3687,7 @@
                     
                     // ✅ SÓ sobrescrever se tiver dados OU se localStorage está vazio
                     if (newCount > 10 || existingCount === 0) {
-                        localStorage.setItem('automatedPriceRules', JSON.stringify(rulesResult.rules));
+                        safeLocalStorageSet('automatedPriceRules', JSON.stringify(rulesResult.rules));
                         console.log('✅ Automated price rules loaded from database');
                         console.log('📦 Rules loaded:', rulesResult.rules);
                     } else {
@@ -3792,7 +3819,7 @@
                     
                     // Apply automated price rules
                     if (importedSettings.automatedPriceRules) {
-                        localStorage.setItem('automatedPriceRules', JSON.stringify(importedSettings.automatedPriceRules));
+                        safeLocalStorageSet('automatedPriceRules', JSON.stringify(importedSettings.automatedPriceRules));
                     }
                     
                     // Apply strategies data
@@ -3802,7 +3829,7 @@
                     
                     // NEW: Apply all localStorage data
                     if (importedSettings.priceAutomationSettings) {
-                        localStorage.setItem('priceAutomationSettings', JSON.stringify(importedSettings.priceAutomationSettings));
+                        safeLocalStorageSet('priceAutomationSettings', JSON.stringify(importedSettings.priceAutomationSettings));
                     }
                     
                     if (importedSettings.priceAIData) {
@@ -4257,7 +4284,7 @@
             }
             
             // Save to localStorage immediately
-            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
             
             // Close modal IMMEDIATELY
             const modal3 = document.querySelector('.fixed.inset-0');
@@ -4505,7 +4532,7 @@
                     }
                 }
                 
-                localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+                safeLocalStorageSet('automatedPriceRules', JSON.stringify(rules));
                 
                 const response = await fetch('/api/price-automation/rules/save', {
                     method: 'POST',

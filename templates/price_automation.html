@@ -1161,7 +1161,9 @@
             for (const grupo of grupos) {
                 for (const days of availableDays) {
                     try {
-                        const response = await fetch(`/api/ai/get-price?grupo=${encodeURIComponent(grupo)}&days=${days}&location=${encodeURIComponent(currentLocation)}`);
+                        const response = await fetch(`/api/ai/get-price?grupo=${encodeURIComponent(grupo)}&days=${days}&location=${encodeURIComponent(currentLocation)}`, {
+                            credentials: 'include'  // Include session cookie for auth
+                        });
                         const result = await response.json();
                         
                         if (result.ok && result.price) {
