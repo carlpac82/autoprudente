@@ -4,7 +4,8 @@
 
 ### 1. Mapeadores Separados
 - ✅ **Damage Report** → `/damage-report-mapper` (62 campos)
-- ✅ **Check-out** → `/checkout-mapper` (36 campos)
+- ✅ **Check-out** → `/checkout-mapper` (38 campos)
+  - ⚠️ Inclui 2 croquis/diagramas separados (Check-out e Check-in)
   - ⚠️ Inclui 2 nomes de inspetores separados (Entrega e Recolha) - **AUTO-PREENCHIDOS**
   - ⚠️ Inclui 2 assinaturas de inspetores separadas (Check-out e Check-in)
   - ⚠️ Inclui 2 campos de observações separados (Check-out e Check-in)
@@ -157,7 +158,7 @@ checkin_coordinates
 
 ## 📝 CAMPOS DO CHECK-OUT
 
-**36 campos disponíveis:**
+**38 campos disponíveis:**
 
 ### Informações do Contrato
 - `contract_number` - Nº Contrato
@@ -200,6 +201,10 @@ checkin_coordinates
 - `photo_9` - Foto 9
 - `photo_10` - Foto 10
 
+### Croquis/Diagramas (2 diagramas)
+- `diagram_checkout` - **Croqui Check-out** ⚠️
+- `diagram_checkin` - **Croqui Check-in** ⚠️
+
 ### Observações
 - `observations_checkout` - **Observações Check-out** ⚠️
 - `observations_checkin` - **Observações Check-in** ⚠️
@@ -214,6 +219,13 @@ checkin_coordinates
 - `customer_signature` - Assinatura Cliente
 
 **⚠️ IMPORTANTE - Campos Separados por Processo:**
+
+**Croquis/Diagramas:**
+- São **2 campos separados** para marcar danos visuais diferentes
+- **Check-out:** Diagrama do estado inicial do veículo (danos pré-existentes)
+- **Check-in:** Diagrama do estado final do veículo (danos novos identificados)
+- Permite comparar visualmente o antes e depois
+- Tipicamente: desenho de um carro visto de cima com marcações de danos
 
 **Observações:**
 - São **2 campos separados** para registar informações diferentes
