@@ -28865,17 +28865,18 @@ async def delete_automated_search(request: Request, search_id: int):
 
 @app.post("/api/automated-search/add-pickup-date-column")
 async def add_pickup_date_column(request: Request):
-    """Add pickup_date column to automated_search_history table (migration)"""
+    """Add pickup_date column to automated_search_history table (migration) - PostgreSQL only"""
     # No auth for migration - temporary
     try:
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                # Force PostgreSQL commands only (Render production)
+                logging.info("🔧 [MIGRATION] Starting pickup_date column migration...")
                 
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        # Check if column already exists
+                with conn.cursor() as cur:
+                    # Check if column already exists
+                    try:
                         cur.execute("""
                             SELECT column_name 
                             FROM information_schema.columns 
@@ -28883,30 +28884,30 @@ async def add_pickup_date_column(request: Request):
                             AND column_name='pickup_date'
                         """)
                         if cur.fetchone():
+                            logging.info("✅ [MIGRATION] Column pickup_date already exists")
                             return JSONResponse({"ok": True, "message": "Column pickup_date already exists"})
-                        
-                        # Add column
+                    except Exception as check_error:
+                        logging.warning(f"⚠️ [MIGRATION] Could not check column existence: {check_error}")
+                    
+                    # Add column (will fail gracefully if already exists)
+                    try:
                         cur.execute("ALTER TABLE automated_search_history ADD COLUMN pickup_date TEXT")
                         conn.commit()
-                        logging.info("✅ Added pickup_date column to automated_search_history (PostgreSQL)")
-                else:
-                    # SQLite
-                    cursor = conn.execute("PRAGMA table_info(automated_search_history)")
-                    columns = [row[1] for row in cursor.fetchall()]
-                    if 'pickup_date' in columns:
-                        return JSONResponse({"ok": True, "message": "Column pickup_date already exists"})
-                    
-                    conn.execute("ALTER TABLE automated_search_history ADD COLUMN pickup_date TEXT")
-                    conn.commit()
-                    logging.info("✅ Added pickup_date column to automated_search_history (SQLite)")
-                
-                return JSONResponse({"ok": True, "message": "Column pickup_date added successfully"})
+                        logging.info("✅ [MIGRATION] Added pickup_date column to automated_search_history")
+                        return JSONResponse({"ok": True, "message": "Column pickup_date added successfully"})
+                    except Exception as add_error:
+                        if "already exists" in str(add_error).lower():
+                            logging.info("✅ [MIGRATION] Column pickup_date already exists (caught on ADD)")
+                            conn.rollback()
+                            return JSONResponse({"ok": True, "message": "Column pickup_date already exists"})
+                        else:
+                            raise
                 
             finally:
                 conn.close()
                 
     except Exception as e:
-        logging.error(f"❌ Error adding pickup_date column: {str(e)}", exc_info=True)
+        logging.error(f"❌ [MIGRATION] Error adding pickup_date column: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/automated-search/delete-without-pickup-date")
