@@ -4485,7 +4485,12 @@ async def admin_users_new_post(
         return templates.TemplateResponse("admin_new_user.html", {"request": request, "error": f"Error: {str(e)}"})
     # send email if provided
     if email:
-        _send_creds_email(email, u, gen_pw)
+        try:
+            _send_creds_email(email, u, gen_pw)
+            logging.info(f"[NEW_USER] Email sent to {email}")
+        except Exception as e:
+            # Don't fail user creation if email fails
+            logging.warning(f"[NEW_USER] Failed to send email to {email}: {e}")
     try:
         log_activity(request, "admin_create_user", details=f"username={u}")
     except Exception:
