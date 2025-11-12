@@ -28567,42 +28567,64 @@ async def save_automated_search_history(request: Request):
                 if is_postgres:
                     with conn.cursor() as cur:
                         try:
-                            # Try new schema with supplier_data
+                            # Try new schema with supplier_data and pickup_date
                             cur.execute("""
                                 INSERT INTO automated_search_history 
-                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
+                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
+                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, %s)
                                 RETURNING id
-                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
                             search_id = cur.fetchone()[0]
                         except Exception as e:
                             # Column doesn't exist - rollback and use old schema
                             conn.rollback()
-                            logging.warning(f"supplier_data column not found on save, using old schema: {e}")
-                            cur.execute("""
-                                INSERT INTO automated_search_history 
-                                (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
-                                RETURNING id
-                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
-                            search_id = cur.fetchone()[0]
+                            logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
+                            try:
+                                # Try with just supplier_data
+                                cur.execute("""
+                                    INSERT INTO automated_search_history 
+                                    (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
+                                    RETURNING id
+                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                                search_id = cur.fetchone()[0]
+                            except:
+                                # Fallback to original schema
+                                conn.rollback()
+                                cur.execute("""
+                                    INSERT INTO automated_search_history 
+                                    (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                                    RETURNING id
+                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                search_id = cur.fetchone()[0]
                     conn.commit()
                 else:
                     try:
                         cursor = conn.execute("""
                             INSERT INTO automated_search_history 
-                            (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                            (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
                         search_id = cursor.lastrowid
                     except Exception as e:
-                        logging.warning(f"supplier_data column not found on save, using old schema: {e}")
-                        cursor = conn.execute("""
-                            INSERT INTO automated_search_history 
-                            (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
-                        search_id = cursor.lastrowid
+                        logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
+                        try:
+                            # Try with just supplier_data
+                            cursor = conn.execute("""
+                                INSERT INTO automated_search_history 
+                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                            search_id = cursor.lastrowid
+                        except:
+                            # Fallback to original schema
+                            cursor = conn.execute("""
+                                INSERT INTO automated_search_history 
+                                (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                            search_id = cursor.lastrowid
                     conn.commit()
                 
                 logging.info(f"✅ Automated search saved: ID={search_id}, Type={search_type}, Prices={price_count}, Month={month_key}")
@@ -28819,9 +28841,97 @@ async def delete_automated_search(request: Request, search_id: int):
         logging.error(f"❌ Error deleting search ID {search_id}: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/automated-search/add-pickup-date-column")
+async def add_pickup_date_column(request: Request):
+    """Add pickup_date column to automated_search_history table (migration)"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Check if column already exists
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name='automated_search_history' 
+                            AND column_name='pickup_date'
+                        """)
+                        if cur.fetchone():
+                            return JSONResponse({"ok": True, "message": "Column pickup_date already exists"})
+                        
+                        # Add column
+                        cur.execute("ALTER TABLE automated_search_history ADD COLUMN pickup_date TEXT")
+                        conn.commit()
+                        logging.info("✅ Added pickup_date column to automated_search_history (PostgreSQL)")
+                else:
+                    # SQLite
+                    cursor = conn.execute("PRAGMA table_info(automated_search_history)")
+                    columns = [row[1] for row in cursor.fetchall()]
+                    if 'pickup_date' in columns:
+                        return JSONResponse({"ok": True, "message": "Column pickup_date already exists"})
+                    
+                    conn.execute("ALTER TABLE automated_search_history ADD COLUMN pickup_date TEXT")
+                    conn.commit()
+                    logging.info("✅ Added pickup_date column to automated_search_history (SQLite)")
+                
+                return JSONResponse({"ok": True, "message": "Column pickup_date added successfully"})
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error adding pickup_date column: {str(e)}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/automated-search/delete-without-pickup-date")
+async def delete_without_pickup_date(request: Request):
+    """Delete old searches that don't have pickup_date (can't be fixed retroactively)"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                # Count and delete
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM automated_search_history WHERE pickup_date IS NULL")
+                        count = cur.fetchone()[0]
+                        
+                        if count == 0:
+                            return JSONResponse({"ok": True, "message": "No entries without pickup_date", "deleted": 0})
+                        
+                        cur.execute("DELETE FROM automated_search_history WHERE pickup_date IS NULL")
+                        conn.commit()
+                        logging.info(f"🗑️ Deleted {count} old searches without pickup_date")
+                else:
+                    cursor = conn.execute("SELECT COUNT(*) FROM automated_search_history WHERE pickup_date IS NULL")
+                    count = cursor.fetchone()[0]
+                    
+                    if count == 0:
+                        return JSONResponse({"ok": True, "message": "No entries without pickup_date", "deleted": 0})
+                    
+                    conn.execute("DELETE FROM automated_search_history WHERE pickup_date IS NULL")
+                    conn.commit()
+                    logging.info(f"🗑️ Deleted {count} old searches without pickup_date")
+                
+                return JSONResponse({"ok": True, "message": f"Deleted {count} old entries", "deleted": count})
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ Error deleting entries without pickup_date: {str(e)}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/automated-search/fix-month-keys")
 async def fix_month_keys(request: Request):
-    """Recalculate month_key for all searches based on search_date (fixes old wrong entries)"""
+    """Recalculate month_key for all searches based on pickup_date (fixes old wrong entries)"""
     require_auth(request)
     try:
         from datetime import datetime
@@ -28832,24 +28942,24 @@ async def fix_month_keys(request: Request):
                 is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
-                # Get all searches with their search_date
+                # Get all searches with their pickup_date
                 if is_postgres:
                     with conn.cursor() as cur:
-                        cur.execute("SELECT id, search_date FROM automated_search_history WHERE search_date IS NOT NULL")
+                        cur.execute("SELECT id, pickup_date FROM automated_search_history WHERE pickup_date IS NOT NULL")
                         rows = cur.fetchall()
                 else:
-                    rows = conn.execute("SELECT id, search_date FROM automated_search_history WHERE search_date IS NOT NULL").fetchall()
+                    rows = conn.execute("SELECT id, pickup_date FROM automated_search_history WHERE pickup_date IS NOT NULL").fetchall()
                 
                 fixed_count = 0
                 errors = []
                 
                 for row in rows:
-                    search_id, search_date_str = row
+                    search_id, pickup_date_str = row
                     
                     try:
-                        # Parse search_date to get correct month_key
-                        search_date = datetime.strptime(search_date_str, '%Y-%m-%d')
-                        correct_month_key = f"{search_date.year}-{str(search_date.month).zfill(2)}"
+                        # Parse pickup_date to get correct month_key
+                        pickup_date = datetime.strptime(pickup_date_str, '%Y-%m-%d')
+                        correct_month_key = f"{pickup_date.year}-{str(pickup_date.month).zfill(2)}"
                         
                         # Update month_key
                         if is_postgres:
@@ -28865,7 +28975,7 @@ async def fix_month_keys(request: Request):
                             )
                         
                         fixed_count += 1
-                        logging.info(f"✅ Fixed search ID {search_id}: date={search_date_str}, month_key={correct_month_key}")
+                        logging.info(f"✅ Fixed search ID {search_id}: pickup_date={pickup_date_str}, month_key={correct_month_key}")
                         
                     except Exception as e:
                         error_msg = f"Failed to fix ID {search_id}: {str(e)}"
