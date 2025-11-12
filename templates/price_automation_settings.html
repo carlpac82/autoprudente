@@ -2004,11 +2004,19 @@
                 });
             }
             
-            // Add change listeners for auto-save
+            // Add change AND blur listeners for auto-save
+            // blur = saves immediately when field loses focus (e.g., clicking another chip)
+            // change = saves when value changes and field loses focus normally
             const allInputs = ruleContent.querySelectorAll('input, select');
             allInputs.forEach(input => {
                 input.addEventListener('change', () => {
                     console.log(`📝 Field changed - saving ${location}/${grupo}/${month}/${day}`);
+                    saveConfigFromFields(location, grupo, month, day, uniqueId);
+                });
+                
+                // CRITICAL FIX: Save on blur to catch values before switching chips
+                input.addEventListener('blur', () => {
+                    console.log(`👁️ Field blur - saving ${location}/${grupo}/${month}/${day}`);
                     saveConfigFromFields(location, grupo, month, day, uniqueId);
                 });
             });
