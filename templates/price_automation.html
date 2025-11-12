@@ -3717,7 +3717,7 @@
                 const daySection = document.createElement('div');
                 daySection.className = 'mb-6';
                 
-                // Check hierarchy violations for this day
+                // Check hierarchy violations for this day (ONLY REAL SUPPLIER PRICES)
                 const violations = checkSupplierHierarchyViolations(day, allCarsByDay[day]);
                 
                 // Collapsible header with price preview
