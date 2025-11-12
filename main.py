@@ -12367,18 +12367,48 @@ async def save_download_history(request: Request):
     try:
         data = await request.json()
         username = request.session.get('username', 'admin')
+        
+        logging.info(f"📥 [DOWNLOAD-SAVE] Saving download: {data.get('filename')} - {data.get('location')}")
+        
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = _is_postgres(conn)
-                p = "%s" if is_postgres else "?"
-                conn.execute(f"INSERT INTO downloads_history (filename, format, location, downloaded_by, timestamp) VALUES ({p},{p},{p},{p},{p})",
-                    (data.get('filename'), data.get('format'), data.get('location'), username, data.get('timestamp')))
-                conn.commit()
+                # Detect PostgreSQL vs SQLite
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                # Prepare data
+                filename = data.get('filename')
+                format_type = data.get('format')
+                location = data.get('location')
+                timestamp = data.get('timestamp')
+                download_date = timestamp  # Use same timestamp for download_date
+                
+                logging.info(f"📥 [DOWNLOAD-SAVE] Data: filename={filename}, format={format_type}, location={location}, user={username}")
+                
+                # Insert with download_date column
+                query = f"""INSERT INTO downloads_history 
+                    (filename, format, location, downloaded_by, download_date, timestamp) 
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"""
+                
+                params = (filename, format_type, location, username, download_date, timestamp)
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query, params)
+                        conn.commit()
+                else:
+                    conn.execute(query, params)
+                    conn.commit()
+                
+                logging.info(f"📥 [DOWNLOAD-SAVE] ✅ Saved successfully to database")
                 return JSONResponse({"ok": True})
             finally:
                 conn.close()
     except Exception as e:
+        logging.error(f"📥 [DOWNLOAD-SAVE] ❌ Error saving download: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, 500)
 
 @app.get("/api/downloads/history/load")
