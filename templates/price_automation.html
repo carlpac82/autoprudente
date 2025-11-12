@@ -1314,6 +1314,126 @@
             
             return null;
         }
+        
+        async function applyGroupHierarchyRules() {
+            /**
+             * CRITICAL: Apply group dependency rules to enforce pricing hierarchy
+             * Example: If D >= B1 AND D >= B2, ensure D price is at least max(B1, B2)
+             */
+            try {
+                // Load settings
+                const settings = JSON.parse(localStorage.getItem('priceAutomationSettings') || '{}');
+                
+                if (!settings.enableGroupHierarchy || !settings.groupHierarchyRules) {
+                    console.log('🔧 [HIERARCHY] Rules disabled or not configured');
+                    return 0;
+                }
+                
+                const rules = settings.groupHierarchyRules;
+                if (Object.keys(rules).length === 0) {
+                    console.log('🔧 [HIERARCHY] No rules defined');
+                    return 0;
+                }
+                
+                console.log('🔧 [HIERARCHY] Applying dependency rules:', rules);
+                
+                let adjustedCount = 0;
+                const allDays = [...selectedDaysAuto]; // Use selected days
+                
+                // Process each group that has dependencies
+                for (const [targetGroup, dependencies] of Object.entries(rules)) {
+                    if (!dependencies || dependencies.length === 0) continue;
+                    
+                    console.log(`🔧 [HIERARCHY] Processing group ${targetGroup} with ${dependencies.length} dependencies`);
+                    
+                    // Process each day
+                    for (const day of allDays) {
+                        const targetInput = document.querySelector(`#pricesTableAuto input[data-grupo="${targetGroup}"][data-dias="${day}"][data-type="auto"]`);
+                        if (!targetInput || !targetInput.value) continue;
+                        
+                        let targetPrice = parseFloat(targetInput.value);
+                        if (isNaN(targetPrice) || targetPrice <= 0) continue;
+                        
+                        let minRequiredPrice = targetPrice;
+                        let adjustmentNeeded = false;
+                        let adjustmentReason = [];
+                        
+                        // Check all dependencies
+                        for (const dep of dependencies) {
+                            const depGroup = typeof dep === 'string' ? dep : dep.group;
+                            const operator = typeof dep === 'string' ? '>=' : dep.operator;
+                            
+                            const depInput = document.querySelector(`#pricesTableAuto input[data-grupo="${depGroup}"][data-dias="${day}"][data-type="auto"]`);
+                            if (!depInput || !depInput.value) continue;
+                            
+                            const depPrice = parseFloat(depInput.value);
+                            if (isNaN(depPrice) || depPrice <= 0) continue;
+                            
+                            // Check if rule is violated
+                            let violated = false;
+                            let requiredPrice = targetPrice;
+                            
+                            switch(operator) {
+                                case '>=':
+                                    if (targetPrice < depPrice) {
+                                        violated = true;
+                                        requiredPrice = depPrice;
+                                    }
+                                    break;
+                                case '>':
+                                    if (targetPrice <= depPrice) {
+                                        violated = true;
+                                        requiredPrice = depPrice + 0.01;
+                                    }
+                                    break;
+                                case '<=':
+                                    if (targetPrice > depPrice) {
+                                        violated = true;
+                                        requiredPrice = depPrice;
+                                    }
+                                    break;
+                                case '<':
+                                    if (targetPrice >= depPrice) {
+                                        violated = true;
+                                        requiredPrice = depPrice - 0.01;
+                                    }
+                                    break;
+                            }
+                            
+                            if (violated) {
+                                adjustmentNeeded = true;
+                                adjustmentReason.push(`${depGroup} (${depPrice.toFixed(2)}€)`);
+                                // For >= and >, take the maximum required price
+                                if (operator === '>=' || operator === '>') {
+                                    minRequiredPrice = Math.max(minRequiredPrice, requiredPrice);
+                                } else {
+                                    minRequiredPrice = Math.min(minRequiredPrice, requiredPrice);
+                                }
+                            }
+                        }
+                        
+                        // Apply adjustment if needed
+                        if (adjustmentNeeded && minRequiredPrice !== targetPrice) {
+                            console.log(`🔧 [HIERARCHY] ${targetGroup}/${day}d: ${targetPrice.toFixed(2)}€ → ${minRequiredPrice.toFixed(2)}€ (must respect: ${adjustmentReason.join(', ')})`);
+                            targetInput.value = minRequiredPrice.toFixed(2);
+                            
+                            // Update stored price
+                            if (automatedPricesByGroup[targetGroup]) {
+                                automatedPricesByGroup[targetGroup][day] = minRequiredPrice;
+                            }
+                            
+                            adjustedCount++;
+                        }
+                    }
+                }
+                
+                return adjustedCount;
+                
+            } catch (error) {
+                console.error('🔧 [HIERARCHY] Error applying rules:', error);
+                return 0;
+            }
+        }
 
         function stopSearch() {
             stopSearchFlag = true;
@@ -4151,6 +4271,12 @@
                 
                 console.log(` Auto: ${autoPricesGenerated}, Real: ${realPricesGenerated}`);
                 
+                // ✅ APPLY GROUP HIERARCHY RULES (enforce D >= B1, B2, etc)
+                const adjustedPrices = await applyGroupHierarchyRules();
+                if (adjustedPrices > 0) {
+                    console.log(`🔧 [HIERARCHY] Adjusted ${adjustedPrices} prices to respect dependency rules`);
+                }
+                
                 // Custom message based on results
                 let message = '';
                 const totalPossibleAuto = grupos.length * dias.length;
@@ -4158,6 +4284,9 @@
                 
                 if (autoPricesGenerated > 0 && realPricesGenerated > 0) {
                     message = `✅ Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)`;
+                    if (adjustedPrices > 0) {
+                        message += `\n• ${adjustedPrices} prices adjusted by dependency rules`;
+                    }
                     if (missingStrategies > 0) {
                         message += `\n\n⚠️ ${missingStrategies} groups/days without strategies configured`;
                     }
