@@ -28483,6 +28483,8 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
     try:
         from datetime import datetime, timedelta
         
+        logging.info(f"📊 [HISTORY-FILTER] Requested location filter: '{location}'")
+        
         # Generate month keys for last N months
         month_keys = []
         now = datetime.now()
@@ -28502,6 +28504,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 location_filter = ""
                 if location:
                     location_filter = " AND location = %s" if is_postgres else " AND location = ?"
+                    logging.info(f"📊 [HISTORY-FILTER] Applying SQL filter: location = '{location}'")
                 
                 if is_postgres:
                     with conn.cursor() as cur:
@@ -28515,8 +28518,10 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 ORDER BY search_date DESC
                             """
                             params = (month_keys, location) if location else (month_keys,)
+                            logging.info(f"📊 [HISTORY-FILTER] PostgreSQL query params: month_keys={len(month_keys)} months, location='{location if location else 'ALL'}'")
                             cur.execute(query, params)
                             rows = cur.fetchall()
+                            logging.info(f"📊 [HISTORY-FILTER] Found {len(rows)} total rows from database")
                             has_supplier_data = True
                         except Exception as e:
                             # Column doesn't exist - rollback transaction and use old schema
@@ -28562,12 +28567,15 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 
                 # Group by month_key and search_type
                 import json
+                locations_found = set()
                 for row in rows:
                     if has_supplier_data:
-                        search_id, location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
+                        search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
                     else:
-                        search_id, location, search_type, search_date, month_key, prices_data, dias, price_count = row
+                        search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count = row
                         supplier_data = None
+                    
+                    locations_found.add(row_location)
                     
                     if month_key not in history:
                         history[month_key] = {
@@ -28577,7 +28585,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                     
                     entry = {
                         'id': search_id,
-                        'location': location,
+                        'location': row_location,
                         'date': search_date,
                         'timestamp': search_date,  # Same as date for compatibility
                         'search_type': search_type,  # 'automated' from scheduler or 'current' from manual
@@ -28590,6 +28598,9 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                     history[month_key][search_type].append(entry)
                     
                     # NO LIMIT - Keep ALL versions (user requested to save all history)
+                
+                logging.info(f"📊 [HISTORY-FILTER] Locations found in results: {locations_found}")
+                logging.info(f"📊 [HISTORY-FILTER] Returning {len(history)} months with data")
                 
                 return JSONResponse({
                     "ok": True,
