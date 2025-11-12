@@ -3733,25 +3733,25 @@
                 // Hierarchy violations badge
                 const violationsBadge = violations.length > 0 
                     ? `<div class="relative group">
-                         <div class="px-2.5 py-1 bg-red-100 border border-red-300 rounded-full flex items-center gap-1.5 text-xs font-medium text-red-700 cursor-help">
-                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                 <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+                         <div class="px-2.5 py-1 bg-orange-50 border border-[#f4ad0f] rounded-full flex items-center gap-1.5 text-xs font-medium text-[#f4ad0f] cursor-help">
+                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                              </svg>
                              <span>${violations.length} ${violations.length === 1 ? 'alerta' : 'alertas'}</span>
                          </div>
-                         <div class="absolute left-0 top-full mt-2 w-80 bg-white border-2 border-red-300 rounded-lg shadow-xl p-3 z-50 hidden group-hover:block">
-                             <div class="text-xs font-semibold text-red-800 mb-2 flex items-center gap-1">
-                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+                         <div class="absolute left-0 top-full mt-2 w-80 bg-white border-2 border-[#009cb6] rounded-lg shadow-xl p-3 z-50 hidden group-hover:block">
+                             <div class="text-xs font-semibold text-[#009cb6] mb-2 flex items-center gap-1">
+                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                  </svg>
                                  Violações de Hierarquia
                              </div>
                              ${violations.map(v => `
-                                 <div class="mb-2 pb-2 border-b border-red-200 last:border-0">
+                                 <div class="mb-2 pb-2 border-b border-gray-200 last:border-0">
                                      <div class="text-xs text-gray-700">
-                                         <span class="font-semibold text-red-700">${v.supplier}</span>: 
+                                         <span class="font-semibold text-[#009cb6]">${v.supplier}</span>: 
                                          <span class="font-mono">${v.lowerGroup}</span> 
-                                         <span class="text-red-600 font-bold">(${v.lowerPrice.toFixed(2)}€)</span>
+                                         <span class="text-[#f4ad0f] font-bold">(${v.lowerPrice.toFixed(2)}€)</span>
                                          mais barato que
                                          <span class="font-mono">${v.higherGroup}</span>
                                          <span class="text-gray-600">(${v.higherPrice.toFixed(2)}€)</span>
