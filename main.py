@@ -28580,9 +28580,9 @@ async def save_automated_search_history(request: Request):
                 user_email = request.session.get('user_email', 'unknown')
                 
                 if is_postgres:
-                    with conn.cursor() as cur:
-                        try:
-                            # Try new schema with supplier_data and pickup_date
+                    # Try new schema with supplier_data and pickup_date
+                    try:
+                        with conn.cursor() as cur:
                             cur.execute("""
                                 INSERT INTO automated_search_history 
                                 (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
@@ -28590,12 +28590,14 @@ async def save_automated_search_history(request: Request):
                                 RETURNING id
                             """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
                             search_id = cur.fetchone()[0]
-                        except Exception as e:
-                            # Column doesn't exist - rollback and use old schema
-                            conn.rollback()
-                            logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
-                            try:
-                                # Try with just supplier_data
+                        conn.commit()
+                    except Exception as e:
+                        # Column doesn't exist - rollback and use old schema
+                        conn.rollback()
+                        logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
+                        try:
+                            # NEW cursor after rollback
+                            with conn.cursor() as cur:
                                 cur.execute("""
                                     INSERT INTO automated_search_history 
                                     (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
@@ -28603,10 +28605,13 @@ async def save_automated_search_history(request: Request):
                                     RETURNING id
                                 """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
                                 search_id = cur.fetchone()[0]
-                            except Exception as e2:
-                                # Fallback to original schema
-                                conn.rollback()
-                                logging.warning(f"supplier_data column also not found, using minimal schema: {e2}")
+                            conn.commit()
+                        except Exception as e2:
+                            # Fallback to original schema
+                            conn.rollback()
+                            logging.warning(f"supplier_data column also not found, using minimal schema: {e2}")
+                            # NEW cursor after second rollback
+                            with conn.cursor() as cur:
                                 cur.execute("""
                                     INSERT INTO automated_search_history 
                                     (location, search_type, month_key, prices_data, dias, price_count, user_email)
@@ -28614,7 +28619,7 @@ async def save_automated_search_history(request: Request):
                                     RETURNING id
                                 """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
                                 search_id = cur.fetchone()[0]
-                    conn.commit()
+                            conn.commit()
                 else:
                     try:
                         cursor = conn.execute("""
