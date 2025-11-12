@@ -2651,7 +2651,7 @@
             showNotification('Generating Excel file...', 'info');
             
             const location = document.getElementById('locationAuto')?.value || 'Faro';
-            const date = document.getElementById('dateAuto')?.value || new Date().toISOString().split('T')[0];
+            const date = document.getElementById('pickupDateAuto')?.value || new Date().toISOString().split('T')[0];
             
             const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
             const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
@@ -5455,8 +5455,18 @@
                 
                 // Get location and date from Price Automation form
                 const location = document.getElementById('locationAuto')?.value || 'Faro';
-                const timestamp = new Date().toISOString().slice(0, 10);
-                const filename = `Website_${location.replace(/\s+/g, '_')}_${timestamp}_1-31.csv`;
+                const date = document.getElementById('pickupDateAuto')?.value || new Date().toISOString().split('T')[0];
+                
+                // Extract month name from date
+                let monthName = 'NOV';
+                if (date) {
+                    const [year, month, day] = date.split('-');
+                    const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN',
+                                        'JUL','AGO','SET','OUT','NOV','DEZ'];
+                    monthName = monthNames[parseInt(month) - 1];
+                }
+                
+                const filename = `Website_${location.replace(/\s+/g, '_')}_1-31-${monthName}.csv`;
                 
                 // Get prices from Price Automation table (pricesTableAuto)
                 const pricesData = {};
