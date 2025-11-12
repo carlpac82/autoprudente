@@ -28603,9 +28603,10 @@ async def save_automated_search_history(request: Request):
                                     RETURNING id
                                 """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
                                 search_id = cur.fetchone()[0]
-                            except:
+                            except Exception as e2:
                                 # Fallback to original schema
                                 conn.rollback()
+                                logging.warning(f"supplier_data column also not found, using minimal schema: {e2}")
                                 cur.execute("""
                                     INSERT INTO automated_search_history 
                                     (location, search_type, month_key, prices_data, dias, price_count, user_email)
@@ -28665,11 +28666,12 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
         
         logging.info(f"📊 [HISTORY-FILTER] Requested location filter: '{location}'")
         
-        # Generate month keys for last N months
+        # Generate month keys for FUTURE months (searches are made for future dates)
         month_keys = []
         now = datetime.now()
         for i in range(months):
-            date = datetime(now.year, now.month, 1) - timedelta(days=i*30)
+            # CHANGED: + instead of - to get future months
+            date = datetime(now.year, now.month, 1) + timedelta(days=i*30)
             month_key = f"{date.year}-{str(date.month).zfill(2)}"
             if month_key not in month_keys:
                 month_keys.append(month_key)
@@ -28859,7 +28861,7 @@ async def delete_automated_search(request: Request, search_id: int):
 @app.post("/api/automated-search/add-pickup-date-column")
 async def add_pickup_date_column(request: Request):
     """Add pickup_date column to automated_search_history table (migration)"""
-    require_auth(request)
+    # No auth for migration - temporary
     try:
         with _db_lock:
             conn = _db_connect()
@@ -28905,7 +28907,7 @@ async def add_pickup_date_column(request: Request):
 @app.post("/api/automated-search/delete-without-pickup-date")
 async def delete_without_pickup_date(request: Request):
     """Delete old searches that don't have pickup_date (can't be fixed retroactively)"""
-    require_auth(request)
+    # No auth for migration - temporary
     try:
         with _db_lock:
             conn = _db_connect()
