@@ -5333,10 +5333,21 @@
                 const history = data.history || {};
                 const monthKeys = data.monthKeys || [];
                 
-                console.log('History loaded:', Object.keys(history).length, 'months with data');
+                console.log('📅 [GENERATE-HISTORY] History loaded:', Object.keys(history).length, 'months with data');
+                console.log('📅 [GENERATE-HISTORY] Response data:', {historyKeys: Object.keys(history), monthKeys});
                 
-                // Clear containers
+                // Clear month buttons container
                 containerAutomated.innerHTML = '';
+                
+                // CRITICAL: Also clear the history table/cards container
+                const historyTableContainer = document.getElementById('historyTableContainer');
+                if (historyTableContainer) {
+                    historyTableContainer.classList.add('hidden');
+                    // Remove all version cards
+                    const versionCards = historyTableContainer.querySelectorAll('.history-version-table');
+                    versionCards.forEach(card => card.remove());
+                    console.log('📅 [GENERATE-HISTORY] Cleared', versionCards.length, 'version cards from previous view');
+                }
                 
                 // Generate buttons for each month
                 monthKeys.forEach(monthKey => {
