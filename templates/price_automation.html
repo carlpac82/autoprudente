@@ -3617,44 +3617,43 @@
                 
                 const violations = [];
                 
-                // Group cars by supplier (INCLUDING Auto Prudente)
-                const carsBySupplier = {};
+                // Find GLOBAL lowest price per group (across ALL suppliers)
+                const globalMinPrices = {}; // { group: { price, supplier, car } }
+                
                 cars.forEach(car => {
                     const supplier = (car.supplier || 'Unknown').trim();
                     const group = car.group || extractGroup(car.car);
                     const price = parseFloat(car.price_num || car.price || 0);
+                    const carName = car.car || 'Unknown';
                     
                     // Validate price and group
                     if (!price || price <= 0 || !group) return;
                     
-                    if (!carsBySupplier[supplier]) {
-                        carsBySupplier[supplier] = {};
-                    }
-                    
-                    // Keep the lowest price per group per supplier
-                    if (!carsBySupplier[supplier][group] || price < carsBySupplier[supplier][group]) {
-                        carsBySupplier[supplier][group] = price;
+                    // Track global minimum for each group
+                    if (!globalMinPrices[group] || price < globalMinPrices[group].price) {
+                        globalMinPrices[group] = { price, supplier, car: carName };
                     }
                 });
                 
-                // Check each supplier's prices against hierarchy rules
-                Object.entries(carsBySupplier).forEach(([supplier, groupPrices]) => {
-                    hierarchyRules.forEach(([lowerGroup, higherGroup]) => {
-                        const lowerPrice = groupPrices[lowerGroup];
-                        const higherPrice = groupPrices[higherGroup];
-                        
-                        // If both groups exist and higherGroup is cheaper than lowerGroup = violation
-                        if (lowerPrice && higherPrice && higherPrice < lowerPrice) {
-                            violations.push({
-                                supplier: supplier, // Keep original supplier name
-                                lowerGroup,
-                                higherGroup,
-                                lowerPrice,
-                                higherPrice,
-                                difference: (lowerPrice - higherPrice).toFixed(2)
-                            });
-                        }
-                    });
+                // Check hierarchy rules across ALL suppliers
+                hierarchyRules.forEach(([lowerGroup, higherGroup]) => {
+                    const lowerMin = globalMinPrices[lowerGroup];
+                    const higherMin = globalMinPrices[higherGroup];
+                    
+                    // If both groups exist and higherGroup is globally cheaper than lowerGroup = violation
+                    if (lowerMin && higherMin && higherMin.price < lowerMin.price) {
+                        violations.push({
+                            lowerGroup,
+                            lowerPrice: lowerMin.price,
+                            lowerSupplier: lowerMin.supplier,
+                            lowerCar: lowerMin.car,
+                            higherGroup,
+                            higherPrice: higherMin.price,
+                            higherSupplier: higherMin.supplier,
+                            higherCar: higherMin.car,
+                            difference: (lowerMin.price - higherMin.price).toFixed(2)
+                        });
+                    }
                 });
                 
                 return violations;
@@ -3748,14 +3747,20 @@
                              </div>
                              ${violations.map(v => `
                                  <div class="mb-1.5 p-1.5 bg-gray-50 rounded">
-                                     <div class="flex items-center gap-1.5 text-xs">
-                                         <span class="font-bold text-[#009cb6] uppercase text-[10px]">${v.supplier}</span>
-                                         <span class="text-gray-400">•</span>
-                                         <span class="font-mono font-semibold">${v.higherGroup}</span>
-                                         <span class="text-[#f4ad0f] font-bold">${v.higherPrice.toFixed(2)}€</span>
-                                         <span class="text-gray-400 text-[10px]">&lt;</span>
-                                         <span class="font-mono font-semibold">${v.lowerGroup}</span>
-                                         <span class="text-gray-600">${v.lowerPrice.toFixed(2)}€</span>
+                                     <div class="text-xs leading-relaxed">
+                                         <div class="flex items-center gap-1 mb-0.5">
+                                             <span class="font-bold text-[#009cb6] text-[10px] uppercase">${v.higherSupplier}</span>
+                                             <span class="font-mono font-semibold">${v.higherGroup}</span>
+                                             <span class="text-[#f4ad0f] font-bold">${v.higherPrice.toFixed(2)}€</span>
+                                         </div>
+                                         <div class="flex items-center gap-1 text-gray-400 text-[9px] ml-1">
+                                             <span>↓ mais barato que</span>
+                                         </div>
+                                         <div class="flex items-center gap-1 mt-0.5">
+                                             <span class="font-bold text-[#009cb6] text-[10px] uppercase">${v.lowerSupplier}</span>
+                                             <span class="font-mono font-semibold">${v.lowerGroup}</span>
+                                             <span class="text-gray-600 font-bold">${v.lowerPrice.toFixed(2)}€</span>
+                                         </div>
                                      </div>
                                  </div>
                              `).join('')}
