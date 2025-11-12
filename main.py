@@ -3018,14 +3018,44 @@ def save_file_to_db(filename: str, filepath: str, file_data: bytes, content_type
         with _db_lock:
             conn = _db_connect()
             try:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO file_storage 
-                    (filename, filepath, file_data, content_type, file_size, uploaded_by)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (filename, filepath, file_data, content_type, file_size, uploaded_by)
-                )
+                # Detectar PostgreSQL
+                is_postgres = False
+                conn_type = type(conn).__name__
+                conn_module = conn.__class__.__module__
+                
+                if 'Postgres' in conn_type or 'psycopg' in conn_module.lower():
+                    is_postgres = True
+                elif os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                
+                if is_postgres:
+                    # PostgreSQL: usar ON CONFLICT ... DO UPDATE
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            INSERT INTO file_storage 
+                            (filename, filepath, file_data, content_type, file_size, uploaded_by)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (filepath) DO UPDATE SET
+                                filename = EXCLUDED.filename,
+                                file_data = EXCLUDED.file_data,
+                                content_type = EXCLUDED.content_type,
+                                file_size = EXCLUDED.file_size,
+                                uploaded_by = EXCLUDED.uploaded_by,
+                                created_at = NOW()
+                            """,
+                            (filename, filepath, file_data, content_type, file_size, uploaded_by)
+                        )
+                else:
+                    # SQLite: usar INSERT OR REPLACE
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO file_storage 
+                        (filename, filepath, file_data, content_type, file_size, uploaded_by)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (filename, filepath, file_data, content_type, file_size, uploaded_by)
+                    )
                 conn.commit()
                 log_to_db("INFO", f"File saved to DB: {filepath} ({file_size} bytes)", "main", "save_file_to_db")
             finally:
