@@ -28823,15 +28823,35 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
             import json
             try:
                 parsed_coords = json.loads(coordinates_json)
-                # Garantir que é um dicionário
-                if isinstance(parsed_coords, dict):
+                
+                # Converter array para dict se necessário
+                if isinstance(parsed_coords, list):
+                    # Formato: [{field_id: "x", x: 100, y: 200, ...}, ...]
+                    # Converter para: {"x": {x: 100, y: 200, ...}, ...}
+                    logging.info(f"📦 Converting array to dict: {len(parsed_coords)} items")
+                    coordinates = {}
+                    for item in parsed_coords:
+                        if isinstance(item, dict) and 'field_id' in item:
+                            field_id = item['field_id']
+                            coordinates[field_id] = {
+                                'x': item.get('x'),
+                                'y': item.get('y'),
+                                'width': item.get('width'),
+                                'height': item.get('height'),
+                                'page': item.get('page', 1),
+                                'field_type': item.get('field_type', 'text')
+                            }
+                    logging.info(f"✅ Coordinates converted to dict: {len(coordinates)} fields")
+                elif isinstance(parsed_coords, dict):
+                    # Já é dicionário
                     coordinates = parsed_coords
-                    logging.info(f"✅ Coordinates loaded: {len(coordinates)} fields")
+                    logging.info(f"✅ Coordinates loaded as dict: {len(coordinates)} fields")
                 else:
-                    logging.warning(f"⚠️ Coordinates is not a dict, got {type(parsed_coords)}: {parsed_coords}")
+                    logging.warning(f"⚠️ Unexpected format: {type(parsed_coords)}")
                     coordinates = {}
             except Exception as e:
-                logging.warning(f"⚠️ Failed to parse coordinates: {e}")
+                logging.error(f"❌ Failed to parse coordinates: {e}")
+                coordinates = {}
         
         # 3. Buscar dados da inspeção (PLACEHOLDER - implementar depois)
         inspection_data = {
@@ -28867,6 +28887,7 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
             
             # Adicionar texto nas coordenadas mapeadas (se existirem)
             if isinstance(coordinates, dict) and coordinates:
+                fields_on_page = 0
                 for field_id, coord_data in coordinates.items():
                     # Verificar se é para esta página
                     if isinstance(coord_data, dict):
@@ -28885,9 +28906,16 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
                                     y = A4[1] - float(coord['y'])  # Inverter Y (PDF coordinates)
                                     
                                     can.drawString(x, y, str(field_value))
-                                    logging.debug(f"  ✓ {field_id}: '{field_value}' at ({x}, {y})")
+                                    fields_on_page += 1
+                                    logging.info(f"  ✓ {field_id}: '{field_value}' at ({x:.1f}, {y:.1f}) on page {page_num + 1}")
                                 except (ValueError, TypeError) as e:
                                     logging.warning(f"  ⚠️ Invalid coordinates for {field_id}: {e}")
+                            elif not field_value:
+                                logging.debug(f"  ⊘ {field_id}: no value in inspection_data")
+                            else:
+                                logging.debug(f"  ⊘ {field_id}: missing x or y coordinate")
+                
+                logging.info(f"  📄 Page {page_num + 1}: {fields_on_page} fields rendered")
             else:
                 logging.warning(f"⚠️ No valid coordinates to process (type: {type(coordinates)})")
             
