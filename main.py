@@ -12636,10 +12636,19 @@ async def save_user_settings(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                # ROBUST PostgreSQL detection
+                is_postgres = False
+                conn_type = type(conn).__name__
+                conn_module = conn.__class__.__module__
+                
+                if 'Postgres' in conn_type or 'psycopg' in conn_module.lower():
+                    is_postgres = True
+                elif os.getenv('DATABASE_URL'):
+                    is_postgres = True
+                
                 placeholder = "%s" if is_postgres else "?"
                 
-                logging.info(f"🔍 DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}, saving {len(settings)} keys")
+                logging.info(f"🔍 DB Type: {'PostgreSQL' if is_postgres else 'SQLite'} (conn_type={conn_type}, module={conn_module}), saving {len(settings)} keys")
                 
                 for key, value in settings.items():
                     # Serializar valor como JSON
@@ -12647,6 +12656,7 @@ async def save_user_settings(request: Request):
                     
                     if is_postgres:
                         # PostgreSQL: usar ON CONFLICT ... DO UPDATE
+                        # PostgreSQL: usar NOW() e ON CONFLICT correto
                         query = f"""
                             INSERT INTO user_settings 
                             (user_key, setting_key, setting_value, updated_at)
@@ -12655,9 +12665,13 @@ async def save_user_settings(request: Request):
                                 setting_value = EXCLUDED.setting_value,
                                 updated_at = NOW()
                         """
-                        logging.debug(f"🔍 PostgreSQL Query for key '{key}': {query.strip()[:150]}")
-                        with conn.cursor() as cur:
-                            cur.execute(query, (user_key, key, value_json))
+                        logging.info(f"🔍 PostgreSQL Query for key '{key}': {query.strip()[:80]}...")
+                        try:
+                            with conn.cursor() as cur:
+                                cur.execute(query, (user_key, key, value_json))
+                        except Exception as pg_err:
+                            logging.error(f"❌ PostgreSQL execute failed for key '{key}': {pg_err}")
+                            raise
                     else:
                         # SQLite: usar INSERT OR REPLACE
                         query = f"""

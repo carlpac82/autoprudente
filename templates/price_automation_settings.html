@@ -576,12 +576,18 @@
         
         // Carregar configurações ao iniciar
         window.addEventListener('DOMContentLoaded', async function() {
+            // 🔥 CRITICAL: Load from database FIRST to populate localStorage after cache clear!
+            console.log('🚀 Initializing: Loading data from database...');
+            await loadDataFromDatabase();
+            
             // Clean old localStorage format if needed
             cleanOldLocalStorageFormat();
             
             await loadSettings();
             await loadStrategies();
             initializeAutomatedRules();
+            
+            console.log('✅ Initialization complete!');
         });
         
         // Clean old format localStorage data
