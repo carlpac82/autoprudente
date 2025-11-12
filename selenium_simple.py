@@ -39,6 +39,10 @@ def scrape_carjet_simple(location, start_dt, end_dt):
     chrome_options = Options()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-setuid-sandbox')
+    chrome_options.add_argument('--single-process')  # Usar apenas 1 processo (menos memória)
+    chrome_options.add_argument('--disable-software-rasterizer')
+    chrome_options.add_argument('--disable-extensions')
     
     # Headless mode (invisível) - pode ser desativado com SHOW_BROWSER=1
     # No Render (produção), SEMPRE usa headless
@@ -87,7 +91,7 @@ def scrape_carjet_simple(location, start_dt, end_dt):
         'source': 'Object.defineProperty(navigator, "webdriver", { get: () => undefined });'
     })
     
-    driver.set_page_load_timeout(20)
+    driver.set_page_load_timeout(60)  # 60 segundos para Render (servidor lento)
     
     def reject_cookies():
         try:
@@ -208,7 +212,16 @@ def scrape_carjet_simple(location, start_dt, end_dt):
         time.sleep(0.5)
         driver.execute_script("window.scrollTo(0, 0);")
         time.sleep(0.5)
-        driver.execute_script("document.querySelector('form').submit();")
+        
+        # Tentar clicar no botão submit (mais natural que .submit())
+        try:
+            submit_btn = driver.find_element(By.CSS_SELECTOR, 'button[type="submit"], input[type="submit"]')
+            driver.execute_script("arguments[0].click();", submit_btn)
+            print(f"[SELENIUM_SIMPLE] ✓ Clicou no botão submit", file=sys.stderr, flush=True)
+        except:
+            # Fallback: usar .submit() se não encontrar botão
+            driver.execute_script("document.querySelector('form').submit();")
+            print(f"[SELENIUM_SIMPLE] ✓ Submeteu formulário diretamente", file=sys.stderr, flush=True)
         
         print(f"[SELENIUM_SIMPLE] Aguardando navegação...", file=sys.stderr, flush=True)
         time.sleep(5)

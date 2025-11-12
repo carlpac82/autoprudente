@@ -23603,6 +23603,7 @@ async def save_recent_searches(request: Request):
         
         return _no_store_json({"ok": False, "error": str(e), "traceback": error_detail}, 500)
 
+@app.get("/api/recent-searches")
 @app.get("/api/recent-searches/load")
 async def load_recent_searches(request: Request):
     """Load recent searches from PostgreSQL - includes automated searches"""
