@@ -3617,12 +3617,15 @@
                 
                 const violations = [];
                 
-                // Group cars by supplier
+                // Group cars by supplier (INCLUDING Auto Prudente)
                 const carsBySupplier = {};
                 cars.forEach(car => {
-                    const supplier = (car.supplier || 'Unknown').toLowerCase();
+                    const supplier = (car.supplier || 'Unknown').trim();
                     const group = car.group || extractGroup(car.car);
-                    const price = parseFloat(car.price_num || 0);
+                    const price = parseFloat(car.price_num || car.price || 0);
+                    
+                    // Validate price and group
+                    if (!price || price <= 0 || !group) return;
                     
                     if (!carsBySupplier[supplier]) {
                         carsBySupplier[supplier] = {};
@@ -3643,7 +3646,7 @@
                         // If both groups exist and higherGroup is cheaper than lowerGroup = violation
                         if (lowerPrice && higherPrice && higherPrice < lowerPrice) {
                             violations.push({
-                                supplier: supplier.charAt(0).toUpperCase() + supplier.slice(1),
+                                supplier: supplier, // Keep original supplier name
                                 lowerGroup,
                                 higherGroup,
                                 lowerPrice,
@@ -3730,31 +3733,29 @@
                        </span>`
                     : '';
                 
-                // Hierarchy violations badge
+                // Hierarchy violations badge - RESUMIDO E VISUAL
                 const violationsBadge = violations.length > 0 
                     ? `<div class="relative group">
-                         <div class="px-2.5 py-1 bg-orange-50 border border-[#f4ad0f] rounded-full flex items-center gap-1.5 text-xs font-medium text-[#f4ad0f] cursor-help">
-                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                         <div class="px-3 py-1.5 bg-orange-50 border-2 border-[#f4ad0f] rounded-lg flex items-center gap-2 text-xs font-semibold text-[#f4ad0f] cursor-help shadow-sm hover:shadow-md transition-shadow">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                              </svg>
-                             <span>${violations.length} ${violations.length === 1 ? 'alerta' : 'alertas'}</span>
+                             <span>${violations.length} ${violations.length === 1 ? 'violação' : 'violações'}</span>
                          </div>
-                         <div class="absolute left-0 top-full mt-2 w-80 bg-white border-2 border-[#009cb6] rounded-lg shadow-xl p-3 z-50 hidden group-hover:block">
-                             <div class="text-xs font-semibold text-[#009cb6] mb-2 flex items-center gap-1">
-                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                 </svg>
-                                 Violações de Hierarquia
+                         <div class="absolute left-0 top-full mt-2 w-72 bg-white border-2 border-[#f4ad0f] rounded-lg shadow-2xl p-2.5 z-50 hidden group-hover:block">
+                             <div class="text-xs font-bold text-[#009cb6] mb-2 pb-2 border-b-2 border-[#009cb6]">
+                                 ⚠️ Preços Reais Inconsistentes
                              </div>
                              ${violations.map(v => `
-                                 <div class="mb-2 pb-2 border-b border-gray-200 last:border-0">
-                                     <div class="text-xs text-gray-700">
-                                         <span class="font-semibold text-[#009cb6]">${v.supplier}</span>: 
-                                         <span class="font-mono">${v.lowerGroup}</span> 
-                                         <span class="text-[#f4ad0f] font-bold">(${v.lowerPrice.toFixed(2)}€)</span>
-                                         mais barato que
-                                         <span class="font-mono">${v.higherGroup}</span>
-                                         <span class="text-gray-600">(${v.higherPrice.toFixed(2)}€)</span>
+                                 <div class="mb-1.5 p-1.5 bg-gray-50 rounded">
+                                     <div class="flex items-center gap-1.5 text-xs">
+                                         <span class="font-bold text-[#009cb6] uppercase text-[10px]">${v.supplier}</span>
+                                         <span class="text-gray-400">•</span>
+                                         <span class="font-mono font-semibold">${v.higherGroup}</span>
+                                         <span class="text-[#f4ad0f] font-bold">${v.higherPrice.toFixed(2)}€</span>
+                                         <span class="text-gray-400 text-[10px]">&lt;</span>
+                                         <span class="font-mono font-semibold">${v.lowerGroup}</span>
+                                         <span class="text-gray-600">${v.lowerPrice.toFixed(2)}€</span>
                                      </div>
                                  </div>
                              `).join('')}
