@@ -28897,10 +28897,32 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
         inspection_data = {
             'contract_number': 'CTR-2024-001',
             'ra_number': 'RA-12345',
-            'client_name': 'Cliente Exemplo',
+            'contract_date': '01/11/2024',
+            'client_name': 'João Silva Santos',
+            'client_email': 'joao.silva@example.com',
+            'client_phone': '+351 912 345 678',
+            'client_address': 'Rua das Flores, 123, Lisboa',
             'vehicle_plate': 'AB-12-CD',
+            'vehicle_brand_model': 'Toyota Corolla 1.6',
+            'vehicle_color': 'Preto',
+            'vehicle_km_delivery': '50.000 km',
+            'vehicle_km_return': '50.450 km',
+            'pickup_date': '05/11/2024',
+            'pickup_time': '09:00',
+            'pickup_location': 'Lisboa - Aeroporto',
+            'expected_return_date': '12/11/2024',
+            'expected_return_time': '18:00',
+            'expected_return_location': 'Lisboa - Aeroporto',
+            'fuel_level_delivery': '3/4 (75%)',
+            'fuel_level_return': '1/2 (50%)',
+            'observations_checkout': 'Veículo em bom estado. Sem danos visíveis.',
+            'observations_checkin': 'Pequeno risco na porta traseira esquerda.',
+            'inspector_name_checkout': 'Manuel Costa',
+            'inspector_name_checkin': 'Ana Ferreira',
+            'customer_signature': '[Assinatura Cliente]',
+            'inspector_signature_checkout': '[Assinatura Inspector]',
+            'inspector_signature_checkin': '[Assinatura Inspector]',
             'inspection_date': '12/11/2024',
-            'pickup_location': 'Lisboa',
         }
         
         logging.info(f"📋 Inspection data: {len(inspection_data)} fields")
@@ -28942,8 +28964,14 @@ async def get_inspection_pdf(inspection_number: str, request: Request):
                             
                             if field_value and coord.get('x') is not None and coord.get('y') is not None:
                                 try:
+                                    # Skip image fields
+                                    if coord.get('field_type') == 'image':
+                                        continue
+                                    
+                                    # Coords estão em canvas points (já divididos por scale=2)
+                                    # Converter para PDF points: canvas usa ≈595x842, igual a A4
                                     x = float(coord['x'])
-                                    y = A4[1] - float(coord['y'])  # Inverter Y (PDF coordinates)
+                                    y = A4[1] - float(coord['y'])  # Inverter Y
                                     
                                     can.drawString(x, y, str(field_value))
                                     fields_on_page += 1
