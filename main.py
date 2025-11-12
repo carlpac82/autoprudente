@@ -29298,7 +29298,7 @@ async def initialize_ai_from_history(request: Request):
 @app.get("/api/ai/get-price")
 async def get_ai_price(request: Request, grupo: str, days: int, location: str):
     """Get AI-suggested price based on automated_search_history from BOTH locations"""
-    require_auth(request)
+    # No auth required - this is a read-only AI suggestion endpoint
     try:
         with _db_lock:
             conn = _db_connect()
