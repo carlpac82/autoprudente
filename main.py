@@ -28391,7 +28391,7 @@ async def load_ai_learning_data(request: Request):
             try:
                 # Load adjustments from ai_learning_data table
                 cursor = conn.execute("""
-                    SELECT grupo, days, location, original_price, new_price, timestamp, "user"
+                    SELECT grupo, days, location, original_price, new_price, timestamp, created_by
                     FROM ai_learning_data
                     ORDER BY timestamp DESC
                     LIMIT 1000
@@ -28408,7 +28408,7 @@ async def load_ai_learning_data(request: Request):
                         'originalPrice': row[3],
                         'newPrice': row[4],
                         'timestamp': row[5],
-                        'user': row[6]
+                        'user': row[6]  # created_by field
                     })
                 
                 # Generate AI suggestions based on adjustments
@@ -28951,19 +28951,49 @@ async def initialize_ai_from_history(request: Request):
                         if grupo not in data_by_grupo_days:
                             data_by_grupo_days[grupo] = {}
                         
-                        for days_str, suppliers in days_data.items():
-                            days = int(days_str)
+                        # IMPORTANTE: Suportar DUAS estruturas possíveis:
+                        # 1. Nova: {"B1": {"1": [...suppliers...], "2": [...suppliers...]}}
+                        # 2. Antiga: {"B1": [...suppliers...]} (sem days como chave intermediária)
+                        
+                        if isinstance(days_data, dict):
+                            # Estrutura nova: days_data = {"1": [...], "2": [...]}
+                            for days_str, suppliers in days_data.items():
+                                days = int(days_str)
+                                if days not in data_by_grupo_days[grupo]:
+                                    data_by_grupo_days[grupo][days] = {}
+                                if location not in data_by_grupo_days[grupo][days]:
+                                    data_by_grupo_days[grupo][days][location] = []
+                                
+                                # Validar se suppliers é lista (pode ser número direto)
+                                if not isinstance(suppliers, list):
+                                    continue
+                                
+                                # Extrair preços dos suppliers
+                                for supp in suppliers:
+                                    if not isinstance(supp, dict):
+                                        continue
+                                    price = float(supp.get('price', 0))
+                                    if price > 0:
+                                        supplier_name = supp.get('supplier', '')
+                                        is_ap = 'autoprudente' in supplier_name.lower() or 'prudente' in supplier_name.lower()
+                                        data_by_grupo_days[grupo][days][location].append({
+                                            'supplier': supplier_name,
+                                            'price': price,
+                                            'is_autoprudente': is_ap
+                                        })
+                        
+                        elif isinstance(days_data, list):
+                            # Estrutura antiga: days_data = [...suppliers...]
+                            # Assumir days=1 por default (não temos informação de dias)
+                            logging.warning(f"⚠️ [AI-INIT] Old structure detected for {grupo}/{location}, assuming 1 day")
+                            days = 1
                             if days not in data_by_grupo_days[grupo]:
                                 data_by_grupo_days[grupo][days] = {}
                             if location not in data_by_grupo_days[grupo][days]:
                                 data_by_grupo_days[grupo][days][location] = []
                             
-                            # Validar se suppliers é lista (pode ser número direto)
-                            if not isinstance(suppliers, list):
-                                continue
-                            
-                            # Extrair preços dos suppliers
-                            for supp in suppliers:
+                            # Processar lista de suppliers
+                            for supp in days_data:
                                 if not isinstance(supp, dict):
                                     continue
                                 price = float(supp.get('price', 0))
