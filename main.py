@@ -1883,47 +1883,43 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     if cat in ['mini automatic', 'mini auto', 'mini automático']:
         return "E1"
     
-    # Economy / Económico → D
+    # Economy / Económico → D ou E2 (se automático)
     if cat in ['economy', 'económico', 'compact', 'compacto']:
-        return "D"
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        return "E2" if is_auto else "D"
     
     # Economy Automatic / Economy Auto → E2
     if cat in ['economy automatic', 'economy auto', 'económico automatic', 'económico auto',
                'compact automatic', 'compact auto']:
         return "E2"
     
-    # SUV → F
+    # SUV → F ou L1 (se automático)
     if cat in ['suv', 'jeep']:
-        return "F"
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        return "L1" if is_auto else "F"
     
     # SUV Automatic / SUV Auto → L1
     if cat in ['suv automatic', 'suv auto', 'jeep automatic', 'jeep auto']:
         return "L1"
     
-    # Station Wagon / Estate / Carrinha → J2
+    # Station Wagon / Estate / Carrinha → J2 ou L2 (se automático)
     if cat in ['station wagon', 'estate', 'carrinha', 'estate/station wagon', 'sw', 'touring']:
-        return "J2"
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        return "L2" if is_auto else "J2"
     
     # Station Wagon Automatic → L2
     if cat in ['station wagon automatic', 'station wagon auto', 'estate automatic', 'estate auto',
                'carrinha automatic', 'carrinha auto', 'sw automatic', 'sw auto']:
         return "L2"
     
-    # Crossover → J1
-    if cat in ['crossover']:
-        return "J1"
-    
-    # Cabrio / Cabriolet / Convertible → G
-    if cat in ['cabrio', 'cabriolet', 'convertible', 'conversível']:
-        return "G"
-    
     # Luxury / Premium → Others (não oferecemos estas categorias)
     if cat in ['luxury', 'premium', 'luxo']:
         return "Others"
     
-    # 7 Seater / 7 Seats → M1
+    # 7 Seater / 7 Seats → M1 ou M2 (se automático)
     if cat in ['7 seater', '7 seats', '7 lugares', 'people carrier', 'mpv']:
-        return "M1"
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        return "M2" if is_auto else "M1"
     
     # 7 Seater Automatic / 7 Seats Auto → M2
     if cat in ['7 seater automatic', '7 seater auto', '7 seats automatic', '7 seats auto',
@@ -8718,6 +8714,32 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
+                # ADDED: Skoda Octavia SW -> L2/J2
+                if re.search(r"\b(skoda|škoda)\s*octavia\b", cnf):
+                    if _is_auto_flag(cnf, _txt, transmission_label):
+                        category = "Station Wagon Automatic"
+                    else:
+                        category = "Estate/Station Wagon"
+            except Exception:
+                pass
+            # FINAL N OVERRIDE: 9-seater vans -> N (wins over everything)
+            try:
+                cn_n = (car_name or "").lower()
+                n_patterns = [
+                    r"\bmercedes\s*vito\b",  # ADDED: Mercedes Vito é N
+                    r"\bmercedes\s*v[-\s]?class\b",  # ADDED: Mercedes V-Class é N
+                    r"\bford\s*transit\b",  # ADDED: Ford Transit é N
+                    r"\bford\s*tourneo\b",  # Ford Tourneo é N
+                    r"\brenault\s*trafic\b",  # ADDED: Renault Trafic é N
+                    r"\bpeugeot\s*traveller\b",  # Peugeot Traveller é N
+                    r"\bcitro[eë]n\s*spacetourer\b",  # Citroen SpaceTourer é N (9 lugares)
+                    r"\btoyota\s*proace\b",  # ADDED: Toyota Proace é N
+                    r"\bopel\s*vivaro\b",  # ADDED: Opel Vivaro é N
+                    r"\bfiat\s*talento\b",  # ADDED: Fiat Talento é N
+                ]
+                if any(re.search(p, cn_n) for p in n_patterns):
+                    category = "9 Seater"
+                    logging.info(f"🚗 [N-OVERRIDE] Detected N 9-seater van: {car_name}")
             except Exception:
                 pass
             # FINAL M2 OVERRIDE: common 7-seater autos -> 7 Seater Automatic (wins over J1/D)
@@ -8743,13 +8765,22 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     logging.info(f"🚗 [M2-OVERRIDE] Detected M2 car: {car_name}")
             except Exception:
                 pass
-            # FINAL E1 OVERRIDE: Toyota Aygo Auto -> Mini Automatic (avoid uncategorized)
+            # FINAL E1 OVERRIDE: Mini Auto models -> Mini Automatic (avoid uncategorized)
             try:
                 cn5 = (car_name or "").lower()
-                if re.search(r"\btoyota\s*aygo\b", cn5) and _is_auto_flag(cn5, _txt, transmission_label):
+                e1_patterns = [
+                    r"\btoyota\s*aygo\b",
+                    r"\bkia\s*picanto\b",
+                    r"\bfiat\s*panda\b",  # ADDED: Fiat Panda Auto é E1
+                    r"\bhyundai\s*i10\b",  # ADDED: Hyundai i10 Auto é E1
+                    r"\bfiat\s*500\b",  # Fiat 500 Auto é E1 (4 lugares)
+                    r"\bpeugeot\s*108\b",
+                    r"\bcitro[eë]n\s*c1\b",
+                    r"\b(vw|volkswagen)\s*up\b",
+                ]
+                if any(re.search(p, cn5) for p in e1_patterns) and _is_auto_flag(cn5, _txt, transmission_label):
                     category = "Mini Automatic"
-                if re.search(r"\bkia\s*picanto\b", cn5) and _is_auto_flag(cn5, _txt, transmission_label):
-                    category = "Mini Automatic"
+                    logging.info(f"🚗 [E1-OVERRIDE] Detected E1 Mini Auto: {car_name}")
             except Exception:
                 pass
             # FINAL B1 OVERRIDE: base mini models -> 'Mini 4 Doors' (when not auto/cabrio/special variants)
