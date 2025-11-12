@@ -28780,194 +28780,144 @@ async def get_inspection_details(inspection_number: str, request: Request):
 
 @app.get("/api/inspections/{inspection_number}/pdf")
 async def get_inspection_pdf(inspection_number: str, request: Request):
-    """Generate and return inspection PDF"""
+    """Generate inspection PDF using mapped template"""
+    require_auth(request)
+    
     try:
         from fastapi.responses import Response
-        import io
+        import base64
+        from PyPDF2 import PdfReader, PdfWriter
         from reportlab.pdfgen import canvas
-        from reportlab.lib.pagesizes import letter, A4
-        from reportlab.lib.units import inch
-        from reportlab.lib.colors import HexColor
-        from datetime import datetime
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.colors import black
+        import io
         
-        # Create PDF in memory
-        buffer = io.BytesIO()
+        logging.info(f"🔍 Generating PDF for inspection: {inspection_number}")
         
-        # Create PDF with ReportLab
-        p = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
+        # 1. Buscar template PDF do Check-out
+        logging.info("📄 Fetching Check-out template...")
+        template_data_b64 = _get_setting('checkout_template_data_b64')
         
-        # Colors
-        blue_color = HexColor('#009cb6')
+        if not template_data_b64:
+            # Fallback para hex
+            template_data_hex = _get_setting('checkout_template_data')
+            if template_data_hex:
+                template_pdf_bytes = bytes.fromhex(template_data_hex)
+            else:
+                logging.error("❌ No Check-out template found")
+                return Response(
+                    content=b"No template available. Please upload a Check-out template first.",
+                    status_code=404,
+                    media_type="text/plain"
+                )
+        else:
+            template_pdf_bytes = base64.b64decode(template_data_b64)
         
-        # Header
-        p.setFillColor(blue_color)
-        p.setFont("Helvetica-Bold", 24)
-        p.drawString(50, height - 80, "Relatório de Inspeção")
+        logging.info(f"✅ Template loaded: {len(template_pdf_bytes)} bytes")
         
-        # Inspection details
-        p.setFillColor('black')
-        p.setFont("Helvetica", 12)
-        y_position = height - 120
+        # 2. Buscar coordenadas mapeadas
+        logging.info("📍 Fetching mapped coordinates...")
+        coordinates_json = _get_setting('checkout_coordinates')
+        coordinates = {}
+        if coordinates_json:
+            import json
+            try:
+                coordinates = json.loads(coordinates_json)
+                logging.info(f"✅ Coordinates loaded: {len(coordinates)} fields")
+            except:
+                logging.warning("⚠️ Failed to parse coordinates, using empty dict")
         
-        p.drawString(50, y_position, f"Número da Inspeção: {inspection_number}")
-        y_position -= 20
-        p.drawString(50, y_position, f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        y_position -= 20
-        p.drawString(50, y_position, "Tipo: Check-in")
-        y_position -= 40
+        # 3. Buscar dados da inspeção (PLACEHOLDER - implementar depois)
+        inspection_data = {
+            'contract_number': 'CTR-2024-001',
+            'ra_number': 'RA-12345',
+            'client_name': 'Cliente Exemplo',
+            'vehicle_plate': 'AB-12-CD',
+            'inspection_date': '12/11/2024',
+            'pickup_location': 'Lisboa',
+        }
         
-        # Section: Vehicle Info
-        p.setFillColor(blue_color)
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(50, y_position, "Informações do Veículo")
-        y_position -= 25
+        logging.info(f"📋 Inspection data: {len(inspection_data)} fields")
         
-        p.setFillColor('black')
-        p.setFont("Helvetica", 11)
-        p.drawString(50, y_position, "Matrícula: AA-00-AA")
-        y_position -= 15
-        p.drawString(50, y_position, "Contrato: 12345-01")
-        y_position -= 15
-        p.drawString(50, y_position, "Combustível: 100%")
-        y_position -= 15
-        p.drawString(50, y_position, "Quilómetros: 0 km")
-        y_position -= 40
+        # 4. Criar PDF com template + overlay de texto
+        logging.info("🎨 Creating PDF overlay...")
         
-        # Section: Photos
-        p.setFillColor(blue_color)
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(50, y_position, "Fotos Capturadas")
-        y_position -= 25
+        # Ler template
+        template_pdf = PdfReader(io.BytesIO(template_pdf_bytes))
+        output = PdfWriter()
         
-        p.setFillColor('black')
-        p.setFont("Helvetica", 11)
-        p.drawString(50, y_position, "• Vista Frontal")
-        y_position -= 15
-        p.drawString(50, y_position, "• Vista Traseira")
-        y_position -= 15
-        p.drawString(50, y_position, "• Vista Lateral Esquerda")
-        y_position -= 15
-        p.drawString(50, y_position, "• Vista Lateral Direita")
-        y_position -= 15
-        p.drawString(50, y_position, "• Interior")
-        y_position -= 15
-        p.drawString(50, y_position, "• Conta-quilómetros")
-        y_position -= 40
+        # Para cada página do template (Check-out usa páginas 1 e 2)
+        num_pages = min(len(template_pdf.pages), 2)  # Apenas páginas 1 e 2
+        logging.info(f"📄 Processing {num_pages} pages...")
         
-        # Section: Damages
-        p.setFillColor(blue_color)
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(50, y_position, "Danos Identificados")
-        y_position -= 25
+        for page_num in range(num_pages):
+            page = template_pdf.pages[page_num]
+            
+            # Criar overlay com texto
+            packet = io.BytesIO()
+            can = canvas.Canvas(packet, pagesize=A4)
+            can.setFillColor(black)
+            can.setFont("Helvetica", 10)
+            
+            # Adicionar texto nas coordenadas mapeadas (se existirem)
+            for field_id, coord_data in coordinates.items():
+                # Verificar se é para esta página
+                if isinstance(coord_data, dict):
+                    coord_list = [coord_data]
+                else:
+                    coord_list = coord_data if isinstance(coord_data, list) else []
+                
+                for coord in coord_list:
+                    if coord.get('page', 1) == (page_num + 1):
+                        # Obter valor do campo
+                        field_value = inspection_data.get(field_id, '')
+                        
+                        if field_value and coord.get('x') and coord.get('y'):
+                            x = coord['x']
+                            y = A4[1] - coord['y']  # Inverter Y (PDF coordinates)
+                            
+                            can.drawString(x, y, str(field_value))
+                            logging.debug(f"  ✓ {field_id}: '{field_value}' at ({x}, {y})")
+            
+            can.save()
+            
+            # Merge overlay com página do template
+            packet.seek(0)
+            overlay_pdf = PdfReader(packet)
+            page.merge_page(overlay_pdf.pages[0])
+            
+            output.add_page(page)
         
-        p.setFillColor('black')
-        p.setFont("Helvetica", 11)
-        p.drawString(50, y_position, "Nenhum dano identificado")
-        y_position -= 40
+        # 5. Gerar PDF final
+        logging.info("💾 Finalizing PDF...")
+        final_buffer = io.BytesIO()
+        output.write(final_buffer)
+        final_buffer.seek(0)
+        pdf_content = final_buffer.getvalue()
         
-        # Footer
-        p.setFont("Helvetica", 8)
-        p.drawString(50, 50, f"Relatório gerado automaticamente em {datetime.now().strftime('%d/%m/%Y às %H:%M')}")
-        p.drawString(width - 200, 50, "Sistema de Inspeção de Veículos")
-        
-        # Finalize PDF
-        p.showPage()
-        p.save()
-        
-        # Get PDF content
-        buffer.seek(0)
-        pdf_content = buffer.getvalue()
-        buffer.close()
-        
-        return Response(
-            content=pdf_content,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"inline; filename=inspection_{inspection_number}.pdf"
-            }
-        )
-        
-    except ImportError:
-        # Fallback to simple PDF if ReportLab is not available
-        logging.warning("ReportLab not available, using simple PDF")
-        
-        # Simple PDF content (fallback)
-        pdf_content = f"""%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-4 0 obj
-<<
-/Length 200
->>
-stream
-BT
-/F1 16 Tf
-50 750 Td
-(Relatorio de Inspecao) Tj
-0 -30 Td
-/F1 12 Tf
-(Numero: {inspection_number}) Tj
-0 -20 Td
-(Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}) Tj
-0 -20 Td
-(Tipo: Check-in) Tj
-0 -40 Td
-(Fotos: 6 capturadas) Tj
-0 -20 Td
-(Danos: Nenhum identificado) Tj
-ET
-endstream
-endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000206 00000 n 
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-450
-%%EOF""".encode('utf-8')
+        logging.info(f"✅ PDF generated: {len(pdf_content)} bytes")
         
         return Response(
             content=pdf_content,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"inline; filename=inspection_{inspection_number}.pdf"
+                "Content-Disposition": f"inline; filename=inspection_{inspection_number}.pdf",
+                "Content-Length": str(len(pdf_content))
             }
         )
         
     except Exception as e:
-        logging.error(f"Error generating PDF: {e}")
-        return JSONResponse({
-            "ok": False,
-            "error": str(e)
-        }, status_code=500)
+        logging.error(f"❌ Error generating inspection PDF: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        
+        # Fallback: retornar mensagem de erro
+        return Response(
+            content=f"Error generating PDF: {str(e)}".encode(),
+            status_code=500,
+            media_type="text/plain"
+        )
+
 
 @app.put("/api/inspections/{inspection_number}/update")
 async def update_inspection(inspection_number: str, request: Request):
