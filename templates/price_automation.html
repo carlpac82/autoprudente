@@ -5283,8 +5283,11 @@
         let currentHistoryLocation = 'Aeroporto de Faro';
         
         function filterHistoryByLocation(location) {
+            console.log('🔍 [FILTER] User clicked location filter:', location);
+            
             // Update current filter
             currentHistoryLocation = location;
+            console.log('🔍 [FILTER] currentHistoryLocation set to:', currentHistoryLocation);
             
             // Update button styles
             const btnFaro = document.getElementById('historyFilterFaro');
@@ -5309,13 +5312,17 @@
             // Get selected location filter from global variable
             const locationFilter = currentHistoryLocation || 'Aeroporto de Faro';
             
-            console.log('📅 Loading search history from PostgreSQL...', `filtered by: ${locationFilter}`);
+            console.log('📅 [GENERATE-HISTORY] Loading search history from PostgreSQL...');
+            console.log('📅 [GENERATE-HISTORY] currentHistoryLocation =', currentHistoryLocation);
+            console.log('📅 [GENERATE-HISTORY] locationFilter =', locationFilter);
             
             try {
                 // Fetch history from server with location filter
                 const url = locationFilter 
                     ? `/api/automated-search/history?months=24&location=${encodeURIComponent(locationFilter)}`
                     : '/api/automated-search/history?months=24';
+                
+                console.log('📅 [GENERATE-HISTORY] Fetching URL:', url);
                 const response = await fetch(url);
                 const data = await response.json();
                 
