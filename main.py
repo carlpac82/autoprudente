@@ -28636,7 +28636,7 @@ async def save_ai_adjustment(request: Request):
 
 @app.get("/api/ai/get-price")
 async def get_ai_price(request: Request, grupo: str, days: int, location: str):
-    """Get AI-suggested price based on price_snapshots analysis (AutoPrudente vs competitors)"""
+    """Get AI-suggested price based on historical positioning + current competitors"""
     require_auth(request)
     try:
         with _db_lock:
@@ -28645,9 +28645,83 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                 is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
                 
-                # STEP 1: Analisar snapshots recentes (últimos 30 dias)
                 from datetime import datetime, timedelta, timezone
-                cutoff_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+                now = datetime.now(timezone.utc)
+                current_month = now.month
+                current_year = now.year
+                
+                # STEP 1: Analisar HISTÓRICO de posicionamento (últimos 6 meses)
+                historical_positions = []
+                for months_ago in range(6):
+                    target_date = now - timedelta(days=30 * months_ago)
+                    month_start = target_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                    
+                    if months_ago == 5:
+                        month_end = target_date
+                    else:
+                        next_month = month_start + timedelta(days=32)
+                        month_end = next_month.replace(day=1) - timedelta(seconds=1)
+                    
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                f"""SELECT supplier, car, price_num 
+                                    FROM price_snapshots 
+                                    WHERE location = {placeholder} AND days = {placeholder} 
+                                    AND ts >= {placeholder} AND ts <= {placeholder} AND price_num > 0
+                                    ORDER BY price_num ASC""",
+                                (location, days, month_start.isoformat(), month_end.isoformat())
+                            )
+                            month_snapshots = cur.fetchall()
+                    else:
+                        cursor = conn.execute(
+                            f"""SELECT supplier, car, price_num 
+                                FROM price_snapshots 
+                                WHERE location = {placeholder} AND days = {placeholder} 
+                                AND ts >= {placeholder} AND ts <= {placeholder} AND price_num > 0
+                                ORDER BY price_num ASC""",
+                            (location, days, month_start.isoformat(), month_end.isoformat())
+                        )
+                        month_snapshots = cursor.fetchall()
+                    
+                    if month_snapshots:
+                        # Calcular posição da AutoPrudente neste mês
+                        all_prices_with_supplier = []
+                        for snap in month_snapshots:
+                            supplier = (snap[0] or "").lower()
+                            car = (snap[1] or "").lower()
+                            price = float(snap[2])
+                            
+                            grupo_lower = grupo.lower()
+                            if (grupo_lower in car or f"grupo {grupo_lower}" in car or f"group {grupo_lower}" in car):
+                                is_ap = "autoprudente" in supplier or "auto prudente" in supplier or "prudente" in supplier
+                                all_prices_with_supplier.append((price, is_ap))
+                        
+                        if all_prices_with_supplier:
+                            # Ordenar por preço
+                            all_prices_with_supplier.sort(key=lambda x: x[0])
+                            
+                            # Encontrar posição da AutoPrudente
+                            ap_position = None
+                            ap_price = None
+                            for idx, (price, is_ap) in enumerate(all_prices_with_supplier, 1):
+                                if is_ap:
+                                    ap_position = idx
+                                    ap_price = price
+                                    break
+                            
+                            if ap_position:
+                                historical_positions.append({
+                                    'month': target_date.month,
+                                    'year': target_date.year,
+                                    'position': ap_position,
+                                    'total': len(all_prices_with_supplier),
+                                    'price': ap_price,
+                                    'percentage': round((ap_position / len(all_prices_with_supplier)) * 100, 1)
+                                })
+                
+                # STEP 2: Analisar snapshots ATUAIS (últimos 30 dias)
+                cutoff_date = (now - timedelta(days=30)).isoformat()
                 
                 if is_postgres:
                     with conn.cursor() as cur:
@@ -28674,11 +28748,10 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                     snapshots = cursor.fetchall()
                 
                 if not snapshots or len(snapshots) < 5:
-                    # Não há dados suficientes, retornar null
-                    logging.info(f"🤖 AI: Dados insuficientes para {grupo}/{days}d/{location} (snapshots: {len(snapshots)})")
+                    logging.info(f"🤖 AI: Dados insuficientes para {grupo}/{days}d/{location}")
                     return JSONResponse({"ok": True, "price": None, "confidence": 0, "reason": "insufficient_data"})
                 
-                # STEP 2: Separar AutoPrudente vs Competidores
+                # STEP 3: Separar AutoPrudente vs Competidores
                 autoprudente_prices = []
                 competitor_prices = []
                 
@@ -28687,61 +28760,67 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                     car = (snap[1] or "").lower()
                     price = float(snap[2])
                     
-                    # Identificar se é AutoPrudente
-                    is_autoprudente = (
-                        "autoprudente" in supplier or 
-                        "auto prudente" in supplier or
-                        "prudente" in supplier
-                    )
-                    
-                    # Filtrar por grupo (A, B, C, etc)
+                    is_autoprudente = "autoprudente" in supplier or "auto prudente" in supplier or "prudente" in supplier
                     grupo_lower = grupo.lower()
-                    car_matches_grupo = (
-                        grupo_lower in car or 
-                        f"grupo {grupo_lower}" in car or
-                        f"group {grupo_lower}" in car
-                    )
+                    car_matches = grupo_lower in car or f"grupo {grupo_lower}" in car or f"group {grupo_lower}" in car
                     
-                    if car_matches_grupo:
+                    if car_matches:
                         if is_autoprudente:
                             autoprudente_prices.append(price)
                         else:
                             competitor_prices.append(price)
                 
-                # STEP 3: Calcular estatísticas
                 if not competitor_prices or len(competitor_prices) < 3:
                     logging.info(f"🤖 AI: Poucos competidores para {grupo}/{days}d/{location}")
                     return JSONResponse({"ok": True, "price": None, "confidence": 0, "reason": "no_competitors"})
                 
-                # Preços dos competidores (ordenados)
+                # STEP 4: Calcular estatísticas atuais
                 competitor_prices.sort()
                 min_competitor = competitor_prices[0]
                 avg_competitor = sum(competitor_prices) / len(competitor_prices)
                 median_competitor = competitor_prices[len(competitor_prices) // 2]
                 
-                # STEP 4: ESTRATÉGIA DE PRICING INTELIGENTE
-                # Objetivo: Ficar 3-5€ abaixo do preço mais baixo dos competidores
-                # Mas não muito abaixo (mínimo de 70% da média)
+                # STEP 5: ESTRATÉGIA INTELIGENTE baseada em histórico
+                # Calcular posição média histórica
+                if historical_positions:
+                    avg_historical_position = sum(h['position'] for h in historical_positions) / len(historical_positions)
+                    avg_historical_percentage = sum(h['percentage'] for h in historical_positions) / len(historical_positions)
+                    
+                    # Objetivo: Melhorar posição histórica em 10%
+                    target_percentage = max(5, avg_historical_percentage - 10)  # Mínimo 5% (top 5%)
+                    target_position_float = (target_percentage / 100) * (len(competitor_prices) + 1)
+                    target_position = max(1, int(target_position_float))
+                    
+                    # Calcular preço para alcançar posição alvo
+                    if target_position <= len(competitor_prices):
+                        target_price = competitor_prices[target_position - 1] - 2.0
+                    else:
+                        target_price = min_competitor - 4.0
+                else:
+                    # Sem histórico: usar estratégia padrão
+                    target_price = min_competitor - 4.0
                 
-                target_price = min_competitor - 4.0  # 4€ abaixo do mais barato
-                min_acceptable = avg_competitor * 0.70  # Não descer mais de 30% da média
-                max_acceptable = avg_competitor * 1.05  # Não subir mais de 5% da média
+                # Limites de segurança
+                min_acceptable = avg_competitor * 0.70
+                max_acceptable = avg_competitor * 1.05
                 
                 suggested_price = max(min_acceptable, min(target_price, max_acceptable))
                 suggested_price = round(suggested_price, 2)
                 
-                # STEP 5: Calcular confiança
+                # STEP 6: Calcular confiança e métricas
                 data_quality = min(len(snapshots) / 50.0, 1.0)
                 competitor_count = min(len(competitor_prices) / 10.0, 1.0)
-                confidence = (data_quality + competitor_count) / 2.0
+                historical_weight = min(len(historical_positions) / 6.0, 1.0)
+                confidence = (data_quality + competitor_count + historical_weight) / 3.0
                 
-                # Posição estimada se aplicar este preço
                 position = sum(1 for p in competitor_prices if suggested_price < p) + 1
+                position_percentage = round((position / (len(competitor_prices) + 1)) * 100, 1)
                 
                 logging.info(
                     f"🤖 AI price for {grupo}/{days}d/{location}: {suggested_price}€ "
-                    f"(min_comp: {min_competitor}€, avg: {avg_competitor:.2f}€, "
-                    f"position: {position}/{len(competitor_prices)+1}, confidence: {confidence:.0%})"
+                    f"(hist_pos: {avg_historical_percentage if historical_positions else 'N/A'}%, "
+                    f"target: {position_percentage}%, position: {position}/{len(competitor_prices)+1}, "
+                    f"confidence: {confidence:.0%})"
                 )
                 
                 return JSONResponse({
@@ -28754,9 +28833,11 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                         "median_competitor": median_competitor,
                         "competitors_count": len(competitor_prices),
                         "estimated_position": position,
+                        "position_percentage": position_percentage,
                         "total_results": len(competitor_prices) + 1,
                         "autoprudente_count": len(autoprudente_prices),
-                        "snapshots_analyzed": len(snapshots)
+                        "snapshots_analyzed": len(snapshots),
+                        "historical_data": historical_positions[-3:] if historical_positions else []
                     }
                 })
             finally:
