@@ -2938,8 +2938,10 @@
             try {
                 // Get selected months
                 const selectedMonths = [];
-                document.querySelectorAll('.copy-month-chip.bg-\\[\\#009cb6\\]').forEach(chip => {
-                    selectedMonths.push(parseInt(chip.dataset.month));
+                document.querySelectorAll('.copy-month-chip').forEach(chip => {
+                    if (chip.classList.contains('bg-[#009cb6]')) {
+                        selectedMonths.push(parseInt(chip.dataset.month));
+                    }
                 });
                 
                 // Get selected days
@@ -4456,8 +4458,10 @@
         async function applyMinPricesToSelectedDays(location, grupo, sourceMonth, sourceDay, minPriceDay, minPriceMonth) {
             try {
                 const selectedMonths = [];
-                document.querySelectorAll('.copy-month-chip.bg-\\[\\#009cb6\\]').forEach(chip => {
-                    selectedMonths.push(parseInt(chip.dataset.month));
+                document.querySelectorAll('.copy-month-chip').forEach(chip => {
+                    if (chip.classList.contains('bg-[#009cb6]')) {
+                        selectedMonths.push(parseInt(chip.dataset.month));
+                    }
                 });
                 
                 const selectedDays = [];
