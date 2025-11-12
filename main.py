@@ -12625,6 +12625,9 @@ async def save_user_settings(request: Request):
     """Salvar configurações do usuário (substituir localStorage)"""
     require_auth(request)
     
+    # 🔍 VERSION TAG para confirmar deploy correto
+    logging.info("🔍 VERSION: save_user_settings v2.1 - PostgreSQL NOW() fix")
+    
     try:
         data = await request.json()
         user_key = data.get("user_key", "default")
@@ -12635,6 +12638,8 @@ async def save_user_settings(request: Request):
             try:
                 is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
                 placeholder = "%s" if is_postgres else "?"
+                
+                logging.info(f"🔍 DB Type: {'PostgreSQL' if is_postgres else 'SQLite'}, saving {len(settings)} keys")
                 
                 for key, value in settings.items():
                     # Serializar valor como JSON
@@ -12650,6 +12655,7 @@ async def save_user_settings(request: Request):
                                 setting_value = EXCLUDED.setting_value,
                                 updated_at = NOW()
                         """
+                        logging.debug(f"🔍 PostgreSQL Query for key '{key}': {query.strip()[:150]}")
                         with conn.cursor() as cur:
                             cur.execute(query, (user_key, key, value_json))
                     else:
