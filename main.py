@@ -12577,47 +12577,7 @@ async def save_ai_learning(request: Request):
         logging.error(f"❌ Error saving AI learning: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
-@app.get("/api/ai/learning/load")
-async def load_ai_learning(request: Request):
-    """Carregar dados de AI learning da base de dados"""
-    require_auth(request)
-    
-    try:
-        location = request.query_params.get("location")
-        limit = int(request.query_params.get("limit", 100))
-        
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                query = "SELECT grupo, days, location, original_price, new_price, timestamp FROM ai_learning_data WHERE 1=1"
-                params = []
-                
-                if location:
-                    query += " AND location = ?"
-                    params.append(location)
-                
-                query += " ORDER BY timestamp DESC LIMIT ?"
-                params.append(limit)
-                
-                cursor = conn.execute(query, params)
-                rows = cursor.fetchall()
-                
-                adjustments = []
-                for row in rows:
-                    adjustments.append({
-                        "group": row[0],
-                        "days": row[1],
-                        "location": row[2],
-                        "originalPrice": row[3],
-                        "newPrice": row[4],
-                        "timestamp": row[5]
-                    })
-                
-                return JSONResponse({"ok": True, "adjustments": adjustments})
-            finally:
-                conn.close()
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+# REMOVED: Duplicate /api/ai/learning/load endpoint - now defined at line 28238 with full suggestions generation
 
 @app.post("/api/user-settings/save")
 async def save_user_settings(request: Request):
@@ -28237,16 +28197,15 @@ async def save_ai_learning_data(request: Request):
 
 @app.get("/api/ai/learning/load")
 async def load_ai_learning_data(request: Request):
-    """Carregar dados de aprendizagem AI do PostgreSQL"""
+    """Carregar dados de aprendizagem AI do PostgreSQL com sugestões geradas"""
     require_auth(request)
     try:
         with _db_lock:
             conn = _db_connect()
             try:
+                # Load adjustments from ai_learning_data table
                 cursor = conn.execute("""
-                    SELECT grupo, days, supplier, original_price, adjusted_price,
-                           adjustment_type, adjustment_value, reason, context,
-                           timestamp, success_score
+                    SELECT grupo, days, location, original_price, new_price, timestamp, "user"
                     FROM ai_learning_data
                     ORDER BY timestamp DESC
                     LIMIT 1000
@@ -28257,32 +28216,70 @@ async def load_ai_learning_data(request: Request):
                 
                 for row in rows:
                     adjustments.append({
-                        'grupo': row[0],
+                        'group': row[0],
                         'days': row[1],
-                        'supplier': row[2],
+                        'location': row[2],
                         'originalPrice': row[3],
-                        'adjustedPrice': row[4],
-                        'adjustmentType': row[5],
-                        'adjustmentValue': row[6],
-                        'reason': row[7],
-                        'context': json.loads(row[8]) if row[8] else {},
-                        'timestamp': row[9],
-                        'successScore': row[10]
+                        'newPrice': row[4],
+                        'timestamp': row[5],
+                        'user': row[6]
                     })
                 
-                logging.info(f"✅ AI learning data loaded: {len(adjustments)} adjustments")
+                # Generate AI suggestions based on adjustments
+                suggestions = []
+                if len(adjustments) >= 5:
+                    from collections import defaultdict
+                    
+                    # Group by location-grupo
+                    grouped = defaultdict(list)
+                    for adj in adjustments:
+                        key = f"{adj['location']}-{adj['group']}"
+                        grouped[key].append(adj)
+                    
+                    # Analyze each group
+                    for key, adjs in grouped.items():
+                        if len(adjs) < 3:
+                            continue
+                        
+                        location, group = key.split('-', 1)
+                        
+                        # Calculate average price adjustment
+                        total_diff = 0
+                        count = 0
+                        for adj in adjs:
+                            if adj.get('originalPrice') and adj.get('newPrice'):
+                                diff = float(adj['newPrice']) - float(adj['originalPrice'])
+                                total_diff += diff
+                                count += 1
+                        
+                        if count >= 3:
+                            avg_diff = total_diff / count
+                            confidence = min(95, 50 + (count * 5))
+                            
+                            suggestions.append({
+                                'group': group,
+                                'location': location,
+                                'description': f"Based on {count} manual adjustments, you typically adjust prices by {avg_diff:+.2f}€.",
+                                'ruleText': f"Follow Lowest Price {avg_diff:+.2f}€",
+                                'confidence': int(confidence),
+                                'data': {'avgDiff': avg_diff, 'validComparisons': count}
+                            })
+                
+                logging.info(f"✅ AI learning data loaded: {len(adjustments)} adjustments, {len(suggestions)} suggestions")
                 return JSONResponse({
                     "ok": True,
                     "data": {
                         "adjustments": adjustments,
                         "patterns": {},
-                        "suggestions": []
+                        "suggestions": suggestions
                     }
                 })
             finally:
                 conn.close()
     except Exception as e:
         logging.error(f"❌ Error loading AI learning data: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 # ============================================================
