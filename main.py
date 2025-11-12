@@ -28869,7 +28869,13 @@ async def save_ai_adjustment(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 def _parse_price(price_value):
-    """Parse price from various formats: '21,35 €', '21.35', 21.35, etc."""
+    """Parse price from various formats: '1.041,50 €', '21,35 €', '21.35', 21.35, etc.
+    
+    Handles European format with thousands separator:
+    - '1.041,50 €' → 1041.50 (dot = thousands, comma = decimal)
+    - '21,35 €' → 21.35 (only comma = decimal)
+    - '25.50' → 25.50 (dot = decimal, US format)
+    """
     if isinstance(price_value, (int, float)):
         return float(price_value)
     if not price_value:
@@ -28879,10 +28885,15 @@ def _parse_price(price_value):
     price_str = str(price_value)
     # Remove currency symbols and whitespace
     price_str = price_str.replace('€', '').replace('$', '').replace('£', '').strip()
-    # Replace comma with dot for European format
-    price_str = price_str.replace(',', '.')
-    # Remove any remaining spaces
     price_str = price_str.replace(' ', '')
+    
+    # Handle European format with thousands separator
+    # Example: "1.041,50" (dot = thousands, comma = decimal)
+    if ',' in price_str:
+        # European format: remove dots (thousands separator), replace comma with dot (decimal)
+        price_str = price_str.replace('.', '')  # Remove thousands separator
+        price_str = price_str.replace(',', '.')  # Convert decimal separator
+    # Otherwise assume dot is decimal separator (US format already correct)
     
     try:
         return float(price_str)
