@@ -2657,6 +2657,22 @@ def init_db():
             )
             safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_export_history ON export_history(broker, location, year, month, export_date)", "idx_export_history")
             
+            # Tabela para histórico de downloads (Price Automation)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS downloads_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  filename TEXT NOT NULL,
+                  format TEXT NOT NULL,
+                  location TEXT NOT NULL,
+                  downloaded_by TEXT NOT NULL,
+                  download_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  timestamp TEXT NOT NULL
+                )
+                """
+            )
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_downloads_history ON downloads_history(location, download_date DESC)", "idx_downloads_history")
+            
             # Tabela para AI Learning Data (substituir localStorage)
             conn.execute(
                 """
@@ -12314,6 +12330,44 @@ async def load_automated_prices_history(request: Request):
                 conn.close()
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/downloads/history/save")
+async def save_download_history(request: Request):
+    """Salvar download na BD (substituir localStorage)"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        username = request.session.get('username', 'admin')
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = _is_postgres(conn)
+                p = "%s" if is_postgres else "?"
+                conn.execute(f"INSERT INTO downloads_history (filename, format, location, downloaded_by, timestamp) VALUES ({p},{p},{p},{p},{p})",
+                    (data.get('filename'), data.get('format'), data.get('location'), username, data.get('timestamp')))
+                conn.commit()
+                return JSONResponse({"ok": True})
+            finally:
+                conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, 500)
+
+@app.get("/api/downloads/history/load")
+async def load_downloads_history(request: Request):
+    """Carregar histórico de downloads de TODOS os utilizadores"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                cursor = conn.execute("SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100")
+                rows = cursor.fetchall()
+                history = [{"filename": r[0], "format": r[1], "location": r[2], "downloaded_by": r[3], "download_date": r[4], "timestamp": r[5]} for r in rows]
+                return JSONResponse({"ok": True, "history": history})
+            finally:
+                conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, 500)
 
 @app.post("/api/prices/current/save")
 async def save_current_prices(request: Request):

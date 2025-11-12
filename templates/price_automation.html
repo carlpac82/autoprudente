@@ -7574,25 +7574,28 @@ Continue?`);
         
         // ===== DOWNLOADS HISTORY =====
         
-        function loadDownloadsHistory() {
+        async function loadDownloadsHistory() {
             const container = document.getElementById('historyDownloadsList');
-            const history = JSON.parse(localStorage.getItem('downloadsHistory') || '[]');
             
-            if (history.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-gray-500">
-                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <p class="text-lg font-medium">${t('automation.noDownloadsYet', 'No downloads yet')}</p>
-                        <p class="text-sm mt-2">${t('automation.downloadExcelToSee', 'Download Excel files to see history here')}</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Sort by date (most recent first)
-            const sortedHistory = history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            try {
+                // Carregar histórico do servidor (todos os users)
+                const response = await fetch('/api/downloads/history/load');
+                const data = await response.json();
+                
+                if (!data.ok || !data.history || data.history.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="text-lg font-medium">${t('automation.noDownloadsYet', 'No downloads yet')}</p>
+                            <p class="text-sm mt-2">${t('automation.downloadExcelToSee', 'Download Excel files to see history here')}</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const sortedHistory = data.history;
             
             container.innerHTML = sortedHistory.map(download => {
                 const date = new Date(download.timestamp);
@@ -7653,37 +7656,49 @@ Continue?`);
                                     <span class="text-xs text-gray-500">
                                         • ${formatName}
                                     </span>
+                                    ${download.downloaded_by ? `<span class="text-xs text-gray-500">• ${download.downloaded_by}</span>` : ''}
                                 </div>
                             </div>
-                            <button onclick="deleteDownload('${download.id}')" class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors">
-                                Delete
-                            </button>
                         </div>
                     </div>
                 `;
             }).join('');
+            } catch (error) {
+                console.error('Failed to load downloads history:', error);
+                container.innerHTML = `
+                    <div class="text-center py-12 text-red-500">
+                        <p class="text-lg font-medium">Erro ao carregar histórico</p>
+                        <p class="text-sm mt-2">${error.message || 'Unknown error'}</p>
+                    </div>
+                `;
+            }
         }
         
-        function saveDownloadToHistory(filename, format, location) {
-            const history = JSON.parse(localStorage.getItem('downloadsHistory') || '[]');
-            
+        async function saveDownloadToHistory(filename, format, location) {
             const download = {
-                id: Date.now().toString(),
                 filename: filename,
                 format: format,
                 location: location,
                 timestamp: new Date().toISOString()
             };
             
-            history.unshift(download);
-            
-            // Keep only last 50 downloads
-            if (history.length > 50) {
-                history.splice(50);
+            try {
+                // Salvar no servidor (visível para todos os users)
+                const response = await fetch('/api/downloads/history/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(download)
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    console.log(`📥 Download saved to history (server): ${filename}`);
+                } else {
+                    console.error('Failed to save download to server:', data.error);
+                }
+            } catch (error) {
+                console.error('Failed to save download history:', error);
             }
-            
-            localStorage.setItem('downloadsHistory', JSON.stringify(history));
-            console.log(`📥 Download saved to history: ${filename}`);
         }
         
         function deleteDownload(downloadId) {
