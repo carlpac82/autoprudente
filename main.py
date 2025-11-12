@@ -28391,7 +28391,7 @@ async def load_ai_learning_data(request: Request):
             try:
                 # Load adjustments from ai_learning_data table
                 cursor = conn.execute("""
-                    SELECT grupo, days, location, original_price, new_price, timestamp, created_by
+                    SELECT grupo, days, location, original_price, new_price, timestamp, created_at
                     FROM ai_learning_data
                     ORDER BY timestamp DESC
                     LIMIT 1000
@@ -28868,6 +28868,28 @@ async def save_ai_adjustment(request: Request):
         logging.error(f"❌ Error saving AI adjustment: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+def _parse_price(price_value):
+    """Parse price from various formats: '21,35 €', '21.35', 21.35, etc."""
+    if isinstance(price_value, (int, float)):
+        return float(price_value)
+    if not price_value:
+        return 0.0
+    
+    # Convert to string and clean
+    price_str = str(price_value)
+    # Remove currency symbols and whitespace
+    price_str = price_str.replace('€', '').replace('$', '').replace('£', '').strip()
+    # Replace comma with dot for European format
+    price_str = price_str.replace(',', '.')
+    # Remove any remaining spaces
+    price_str = price_str.replace(' ', '')
+    
+    try:
+        return float(price_str)
+    except (ValueError, AttributeError):
+        logging.warning(f"⚠️ Could not parse price: {price_value}")
+        return 0.0
+
 @app.get("/api/ai/initialize-from-history")
 async def initialize_ai_from_history(request: Request):
     """Initialize AI by processing ALL automated_search_history data"""
@@ -28972,7 +28994,7 @@ async def initialize_ai_from_history(request: Request):
                                 for supp in suppliers:
                                     if not isinstance(supp, dict):
                                         continue
-                                    price = float(supp.get('price', 0))
+                                    price = _parse_price(supp.get('price', 0))
                                     if price > 0:
                                         supplier_name = supp.get('supplier', '')
                                         is_ap = 'autoprudente' in supplier_name.lower() or 'prudente' in supplier_name.lower()
@@ -28996,7 +29018,7 @@ async def initialize_ai_from_history(request: Request):
                             for supp in days_data:
                                 if not isinstance(supp, dict):
                                     continue
-                                price = float(supp.get('price', 0))
+                                price = _parse_price(supp.get('price', 0))
                                 if price > 0:
                                     supplier_name = supp.get('supplier', '')
                                     is_ap = 'autoprudente' in supplier_name.lower() or 'prudente' in supplier_name.lower()
