@@ -2020,11 +2020,37 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         logging.info(f"✅ [MAP] SUCESSO (cabrio no nome): car='{car_name}' → grupo 'G' (Cabrio)")
         return "G"
     
-    # PRIORIDADE -0.5: VEÍCULOS 7 LUGARES → SEMPRE M1/M2
+    # PRIORIDADE -0.5: VEÍCULOS 9 LUGARES → SEMPRE N (9 Seater)
+    # ANTES de verificar 7 lugares!
+    import re
+    
+    nine_seater_patterns = [
+        r'\bford\s*tourneo\b',
+        r'\bford\s*transit\b',
+        r'\bmercedes\s*(benz\s*)?vito\b',
+        r'\bmercedes\s*v\s*class\b',
+        r'\bopel\s*vivaro\b',
+        r'\brenault\s*trafic\b',
+        r'\bpeugeot\s*traveller\b',
+        r'\bcitroen\s*spacetourer\b',
+        r'\btoyota\s*proace\b',
+        r'\bfiat\s*talento\b',
+        r'\b(vw|volkswagen)\s*caravelle\b',
+        r'\b(vw|volkswagen)\s*multivan\b',
+        r'\b(vw|volkswagen)\s*transporter\b',
+    ]
+    
+    for pattern in nine_seater_patterns:
+        if re.search(pattern, car_lower, re.IGNORECASE):
+            logging.info(f"✅ [MAP] SUCESSO (9 lugares pattern): car='{car_name}' → grupo 'N' (9 Seater)")
+            return "N"  # 9 Seater - PRIORIDADE MÁXIMA!
+    
+    # PRIORIDADE -0.4: VEÍCULOS 7 LUGARES → SEMPRE M1/M2
     # Independente da categoria que CarJet envie!
     # Estes carros são 7 lugares mas CarJet pode categorizá-los como SUV, Intermediate, etc
-    import re
-    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+    # Verificar auto no transmission OU no nome do carro (caso transmission venha vazio)
+    is_auto = (any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or
+               any(word in car_lower for word in [' auto', 'automatic', 'automático', 'automatico']))
     
     seven_seater_patterns = [
         r'\bpeugeot\s*5008\b',
