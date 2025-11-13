@@ -8333,6 +8333,8 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 ".veh-name, .vehicle-name, .model, .titleCar, .title, h3, h2, [class*='veh-name'], [class*='vehicle-name'], [class*='model']"
             )
             car_name = name_el.get_text(strip=True) if name_el else ""
+            if car_name:
+                logging.info(f"✅ [SCRAPING-H2] Nome extraído do h2/título: '{car_name}'")
             if not car_name:
                 # try common data attributes
                 for attr in ("data-model", "data-vehicle", "data-name", "aria-label", "title"):
@@ -8418,6 +8420,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                             alt_car_name = alt_text.split('ou similar')[0].split('|')[0].strip()
                             if alt_car_name:
                                 car_name = alt_car_name
+                                logging.info(f"✅ [SCRAPING-ALT] Nome extraído do alt: '{car_name}' (original: '{alt_text}')")
                                 print(f"[SCRAPING] Nome extraído do alt da imagem: {car_name} (foto: {src})")
                 
                 # PRIORIDADE 2: prefer <picture> sources
@@ -9201,8 +9204,16 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             # if car_name and _is_blocked_model(car_name):
             #     cards_blocked += 1
             #     continue
-            # Mapear categoria para código de grupo
+            # Mapear categoria para código de grupo usando a PRIORIDADE CORRETA:
+            # 1º: VEHICLES (carjet_direct.py)
+            # 2º: 7 lugares, SW patterns
+            # 3º: Categoria do CarJet
+            # 4º: Fallback
+            logging.info(f"📦 [PRE-MAP] car_name='{car_name}' | category='{category}' | transmission='{transmission_label}'")
             group_code = map_category_to_group(category, car_name, transmission_label)
+            if not car_name or not group_code:
+                continue
+            logging.info(f"✅ [FINAL-RESULT] car='{car_name}' → grupo '{group_code}' | price={price_text} | supplier={supplier}")
             # Capitalizar nome para display (Peugeot 2008 Auto, Renault Megane SW Auto)
             car_name_display = capitalize_car_name(car_name)
             items.append({
