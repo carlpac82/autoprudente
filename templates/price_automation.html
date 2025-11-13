@@ -3939,10 +3939,31 @@
         
         // Helper function to check if car is automatic
         function isCarAutomatic(carName, grupo) {
+            // Grupos que são sempre automáticos
             const autoGroups = ['E2', 'L1', 'L2', 'M2', 'B2'];
             if (autoGroups.includes(grupo)) return true;
-            const cn = (carName || '').toLowerCase();
-            return cn.includes('auto') || cn.includes('electric') || cn.includes('hybrid');
+            
+            // Normalizar nome do carro (lowercase, remover acentos)
+            const cn = (carName || '').toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+            
+            // Padrões de detecção (incluindo pontos, espaços, fim de string)
+            const autoPatterns = [
+                /\bau\b/,              // Au (palavra completa)
+                /\baut\.?\b/,          // aut. ou aut (palavra completa)
+                /\bauto\.?\b/,         // auto. ou auto (palavra completa)
+                /\bautom\.?\b/,        // autom. ou autom
+                /\bautoma\.?\b/,       // automa. ou automa
+                /\bautomatic/,         // automatic
+                /\bautomatico/,        // automatico (sem acento)
+                /\belectric/,          // electric
+                /\bhybrid/,            // hybrid
+                /\be-/,                // e- (carros elétricos)
+                /\bphev\b/             // plug-in hybrid
+            ];
+            
+            // Verificar se algum padrão corresponde
+            return autoPatterns.some(pattern => pattern.test(cn));
         }
         
         function createComparisonCard(grupo, day, allCarsByDay, automatedPricesByGroup, isGlobalLowest = false) {
