@@ -4004,9 +4004,9 @@
             // Build sorted list of ALL prices for positioning
             const allPrices = [];
             
-            if (automatedPrice) {
-                allPrices.push({ type: 'automated', price: automatedPrice, label: 'Automated Price' });
-            }
+            // ✅ SEMPRE adicionar Automated Price (mesmo sem valor para permitir edição)
+            const defaultPrice = automatedPrice || 0;
+            allPrices.push({ type: 'automated', price: defaultPrice, label: 'Automated Price' });
             
             // Add AI suggestion if available
             const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
