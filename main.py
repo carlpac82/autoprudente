@@ -1903,6 +1903,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     car_lower = car_name.lower() if car_name else ""
     trans_lower = transmission.lower() if transmission else ""
     
+    logging.debug(f"[MAP] Input: category='{category}' -> cat='{cat}', car='{car_name}', trans='{transmission}'")
+    
     # PRIORIDADE -1: CABRIO/CABRIOLET no NOME → SEMPRE Grupo G
     # Independente da categoria (Luxury, Mini, SUV, etc), se tem "cabrio" no nome = G
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
@@ -1964,10 +1966,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 category_from_vehicles = VEHICLES[car_normalized]
                 # VEHICLES retorna categoria descritiva (ex: "CROSSOVER", "SUV Auto")
                 # Precisamos mapear para código de grupo (B1, D, F, etc)
-                # IMPORTANTE: Só chamar recursivamente se a categoria for diferente (evitar loop)
+                # IMPORTANTE: Só chamar _map_category_fallback para evitar loop infinito
                 if category_from_vehicles.lower() != cat:
                     logging.info(f"🎯 VEHICLES MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
-                    return map_category_to_group(category_from_vehicles, car_name)
+                    return _map_category_fallback(category_from_vehicles, car_name, transmission)
             
             # Tentar match parcial (buscar chave que está contida no nome ou vice-versa)
             # Ordenar por tamanho decrescente para pegar matches mais específicos primeiro
@@ -1976,10 +1978,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 # Ex: "toyota chr auto" contém "toyota chr"
                 if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
                     category_from_vehicles = VEHICLES[vehicle_key]
-                    # Só chamar recursivamente se a categoria for diferente
+                    # Só chamar _map_category_fallback para evitar loop infinito
                     if category_from_vehicles.lower() != cat:
                         logging.info(f"🎯 VEHICLES PARTIAL MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
-                        return map_category_to_group(category_from_vehicles, car_name)
+                        return _map_category_fallback(category_from_vehicles, car_name, transmission)
         except ImportError:
             pass  # carjet_direct.py não disponível
         except Exception as e:
@@ -2012,6 +2014,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     # Economy / Económico → D ou E2 (se automático)
     # EXCEÇÃO: Station Wagons categorizados como Economy devem ir para J2/L2
     if cat in ['economy', 'económico', 'compact', 'compacto']:
+        logging.debug(f"[MAP] Matched 'Economy' category: cat='{cat}', trans='{trans_lower}'")
         import re
         # Verificar se é Station Wagon (SW) antes de categorizar como Economy
         sw_patterns = [
@@ -2041,6 +2044,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     # EXCEÇÃO: Station Wagons categorizados como Economy Auto devem ir para L2
     if cat in ['economy automatic', 'economy auto', 'económico automatic', 'económico auto',
                'compact automatic', 'compact auto']:
+        logging.debug(f"[MAP] Matched 'Economy Automatic' category: cat='{cat}'")
         import re
         # Verificar se é Station Wagon antes de retornar E2
         sw_patterns = [
@@ -2309,7 +2313,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         "sw": "J2",
         "touring": "J2",
         
-        # L1 - SUV Automatic (do VEHICLES: "SUV Auto")
+        # L1 - SUV Automatic
         "suv automatic": "L1",
         "suv auto": "L1",
         "jeep automatic": "L1",
@@ -7562,8 +7566,8 @@ async def img_lookup(car: str):
         return await placeholder_image(car)
 
 @app.get("/api/debug/check-vehicle")
-async def debug_check_vehicle(car_name: str):
-    """Verifica se um carro está no dicionário VEHICLES"""
+async def debug_check_vehicle(car_name: str, category: str = "", transmission: str = ""):
+    """Verifica se um carro está no dicionário VEHICLES e testa mapeamento de categoria"""
     car_clean = clean_car_name(car_name)
     car_clean_lower = car_clean.lower()
     in_vehicles = car_clean_lower in VEHICLES
@@ -7580,6 +7584,15 @@ async def debug_check_vehicle(car_name: str):
         result["vehicle_info"] = vehicle_info
         if isinstance(vehicle_info, dict) and 'group' in vehicle_info:
             result["group"] = vehicle_info['group']
+    
+    # Test map_category_to_group if category provided
+    if category:
+        mapped_group = map_category_to_group(category, car_name, transmission)
+        result["category_test"] = {
+            "input_category": category,
+            "input_transmission": transmission,
+            "mapped_group": mapped_group
+        }
     
     return JSONResponse(result)
 
