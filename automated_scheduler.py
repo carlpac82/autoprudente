@@ -601,7 +601,17 @@ def _save_search_results(all_results, days, locations, pickup_date):
                             prices_by_group[grupo][day] = price
                             total_price_count += 1
                     
-                    supplier_data[str(day)] = items
+                    # ✅ FIX: Organizar supplier_data por GRUPO primeiro, depois por DIA
+                    for item in items:
+                        grupo = item.get('group', 'Unknown')
+                        
+                        if grupo not in supplier_data:
+                            supplier_data[grupo] = {}
+                        
+                        if str(day) not in supplier_data[grupo]:
+                            supplier_data[grupo][str(day)] = []
+                        
+                        supplier_data[grupo][str(day)].append(item)
             
             if prices_by_group:
                 # Insert into database
