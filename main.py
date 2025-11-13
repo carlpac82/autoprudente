@@ -8458,7 +8458,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         cards_with_name = 0
         cards_blocked = 0
         for card in cards:
-            logging.info(f"🔍 [CARD-START] Processando novo card...")
+            print(f"🔍 [CARD-START] Processando card {idx+1}/{len(cards)}...", file=sys.stderr, flush=True)
             # price - PRIORIZAR .price.pr-euros (preço total em euros, NÃO libras nem por dia)
             price_text = ""
             
@@ -8493,9 +8493,9 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 price_text = (let_price.get_text(strip=True) if let_price else "") or (card.get("data-price") or "")
             
             if not price_text:
-                logging.info(f"   ❌ [CARD-SKIP] Sem preço - pulando card")
+                print(f"   ❌ [CARD-SKIP] Sem preço - pulando card", file=sys.stderr, flush=True)
                 continue
-            logging.info(f"   ✅ [CARD-PRICE] Preço encontrado: {price_text}")
+            print(f"   ✅ [CARD-PRICE] Preço encontrado: {price_text}", file=sys.stderr, flush=True)
             cards_with_price += 1
             # car/model
             name_el = card.select_one(
@@ -8512,10 +8512,10 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                         car_name = v
                         break
             if car_name:
-                logging.info(f"   ✅ [CARD-NAME] Nome encontrado: '{car_name}'")
+                print(f"   ✅ [CARD-NAME] Nome: '{car_name}'", file=sys.stderr, flush=True)
                 cards_with_name += 1
             else:
-                logging.info(f"   ⚠️  [CARD-NAME] Nome NÃO encontrado - continuando mesmo assim")
+                print(f"   ⚠️  [CARD-NAME] Nome NÃO encontrado", file=sys.stderr, flush=True)
             # supplier: try to extract provider code from logo_XXX.* in img src, then map via alias
             supplier = ""
             try:
@@ -9466,9 +9466,9 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             logging.info(f"      card_icon={card_transmission} | global={transmission_label} | VEHICLES={vehicles_transmission or 'N/A'}")
             
             group_code = map_category_to_group(category, car_name, final_transmission)
-            logging.info(f"   📍 [PRE-CHECK] car_name='{car_name}' | group_code='{group_code}'")
+            print(f"   📍 [PRE-CHECK] car='{car_name[:30]}' | group='{group_code}'", file=sys.stderr, flush=True)
             if not car_name or not group_code:
-                logging.warning(f"   ❌ [CARD-REJECTED] car_name={bool(car_name)} | group_code={bool(group_code)} - PULANDO CARD")
+                print(f"   ❌ [REJECT] no_name={not car_name} | no_group={not group_code}", file=sys.stderr, flush=True)
                 continue
             
             logging.info(f"✅ [FINAL-RESULT] {car_name} → GRUPO '{group_code}' | {final_transmission} | {supplier} | {price_text}")
