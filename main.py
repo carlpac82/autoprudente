@@ -5988,6 +5988,17 @@ async def price_calendar_analysis(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+def ensure_all_fields(items: List[Dict[str, Any]], defaults: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Garante que todos os items têm os campos obrigatórios.
+    Adiciona campos de 'defaults' se não existirem.
+    """
+    for item in items:
+        for key, value in defaults.items():
+            if key not in item or item[key] is None:
+                item[key] = value
+    return items
+
 @app.post("/api/track-by-params")
 async def track_by_params(request: Request):
     try:
