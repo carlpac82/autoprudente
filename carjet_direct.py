@@ -623,6 +623,31 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     return 'ECONOMY'
 
 
+def map_category_to_code(category: str) -> str:
+    """Mapeia categoria descritiva para código de grupo (B1, E1, E2, etc)"""
+    cat = (category or '').strip().lower()
+    
+    mapping = {
+        'mini 4 lugares': 'B1',
+        'mini 5 lugares': 'B2',
+        'mini auto': 'E1',
+        'economy': 'D',
+        'economy auto': 'E2',
+        'suv': 'F',
+        'cabrio': 'G',
+        'crossover': 'J1',
+        'station wagon': 'J2',
+        'suv auto': 'L1',
+        'station wagon auto': 'L2',
+        '7 lugares': 'M1',
+        '7 lugares auto': 'M2',
+        '9 lugares': 'N',
+        'luxury': 'X',
+    }
+    
+    return mapping.get(cat, '')
+
+
 def scrape_carjet_direct(location: str, start_dt: datetime, end_dt: datetime, quick: int = 0) -> List[Dict[str, Any]]:
     try:
         print(f"[DIRECT] Location: {location}, Start: {start_dt}, End: {end_dt}")
@@ -933,12 +958,16 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 # Detectar categoria
                 category = detect_category_from_car(car_name, transmission)
                 
+                # Mapear categoria para código de grupo
+                group = map_category_to_code(category)
+                
                 items.append({
                     'id': idx,
                     'car': car_name,
                     'supplier': supplier,
                     'price': price,
                     'category': category,
+                    'group': group,
                     'transmission': transmission,
                     'photo': photo,
                     'currency': 'EUR',
