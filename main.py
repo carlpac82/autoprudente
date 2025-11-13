@@ -1910,14 +1910,58 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return "E1"
     
     # Economy / Económico → D ou E2 (se automático)
+    # EXCEÇÃO: Station Wagons categorizados como Economy devem ir para J2/L2
     if cat in ['economy', 'económico', 'compact', 'compacto']:
+        import re
+        # Verificar se é Station Wagon (SW) antes de categorizar como Economy
+        sw_patterns = [
+            r'\bfocus\s*sw\b',
+            r'\b308\s*sw\b',
+            r'\bastra\s*sw\b',
+            r'\bcorolla\s*sw\b',
+            r'\boctavia\s*sw\b',
+            r'\bgolf\s*sw\b',
+            r'\bleon\s*sw\b',
+            r'\b\w+\s+sw\b',  # Qualquer "X SW"
+            r'\bstation\s*wagon\b',
+            r'\bestate\b',
+            r'\btouring\b',
+        ]
+        
+        for pattern in sw_patterns:
+            if re.search(pattern, car_lower, re.IGNORECASE):
+                is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+                return "L2" if is_auto else "J2"  # Station Wagon
+        
+        # Normal Economy logic (só se não for SW)
         is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
         return "E2" if is_auto else "D"
     
     # Economy Automatic / Economy Auto → E2
+    # EXCEÇÃO: Station Wagons categorizados como Economy Auto devem ir para L2
     if cat in ['economy automatic', 'economy auto', 'económico automatic', 'económico auto',
                'compact automatic', 'compact auto']:
-        return "E2"
+        import re
+        # Verificar se é Station Wagon antes de retornar E2
+        sw_patterns = [
+            r'\bfocus\s*sw\b',
+            r'\b308\s*sw\b',
+            r'\bastra\s*sw\b',
+            r'\bcorolla\s*sw\b',
+            r'\boctavia\s*sw\b',
+            r'\bgolf\s*sw\b',
+            r'\bleon\s*sw\b',
+            r'\b\w+\s+sw\b',
+            r'\bstation\s*wagon\b',
+            r'\bestate\b',
+            r'\btouring\b',
+        ]
+        
+        for pattern in sw_patterns:
+            if re.search(pattern, car_lower, re.IGNORECASE):
+                return "L2"  # Station Wagon Auto
+        
+        return "E2"  # Economy Auto normal
     
     # SUV → F ou L1 (se automático)
     # EXCEÇÕES: Veículos 7 lugares que CarJet categoriza como SUV
