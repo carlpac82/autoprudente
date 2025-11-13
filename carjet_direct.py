@@ -956,6 +956,7 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 items.append({
                     'id': idx,
                     'car': car_name,
+                    'car_name': car_name,  # Alias para compatibilidade com main.py
                     'supplier': supplier,
                     'price': price,
                     'category': category,
