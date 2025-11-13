@@ -8687,10 +8687,30 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 pass
             
             # 🔧 DETECTAR TRANSMISSÃO (MÚLTIPLOS MÉTODOS)
+            # Método 0: NOME do carro termina com " Auto" (ex: "VW Polo Auto")
             # Método 1: ALT da imagem "... | Automático" (já extraído acima)
             # Método 2: Ícone <i class="icon icon-transm-auto">
             # Método 3: Texto "Automático" no card
             logging.info(f"🔍 [TRANS-DETECT-START] Analisando carro: '{car_name}' | ALT já definiu: '{card_transmission}'")
+            
+            # MÉTODO 0: Detectar pelo NOME do carro (mais confiável!)
+            # CarJet adiciona " Auto" no final do nome quando é automático
+            # Exemplos: "VW Polo Auto", "Kia Niro Auto, Hybrid"
+            if not card_transmission and car_name:
+                name_lower = car_name.lower()
+                # Verificar se termina com " auto" (pode ter vírgula depois: "Auto,")
+                if ' auto' in name_lower:
+                    # Verificar se é realmente "Auto" e não parte de outra palavra
+                    words = name_lower.split()
+                    if 'auto' in words or any(w.startswith('auto,') for w in words):
+                        card_transmission = "Automatic"
+                        logging.info(f"✅ [NAME-TRANS] {car_name} → AUTOMATIC (nome contém ' Auto')")
+                        print(f"[SCRAPING] Transmissão detectada pelo nome: Automatic")
+                # Verificar se tem "Manual" no nome (menos comum mas possível)
+                elif 'manual' in name_lower:
+                    card_transmission = "Manual"
+                    logging.info(f"✅ [NAME-TRANS] {car_name} → MANUAL (nome contém 'Manual')")
+                    print(f"[SCRAPING] Transmissão detectada pelo nome: Manual")
             
             # DEBUG: Listar TODOS os ícones do card
             all_icons = card.find_all('i')
