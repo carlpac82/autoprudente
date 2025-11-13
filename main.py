@@ -6587,32 +6587,28 @@ async def track_by_params(request: Request):
         # ✅ Cache clearing - Desativado completamente
         # ✅ Seletor universal testado - #recogida_lista li:first-child a
         # ═══════════════════════════════════════════════════════════════════════════
-        print(f"[SELENIUM] Iniciando scraping SIMPLES (igual ao teste) para {location}", file=sys.stderr, flush=True)
+        print(f"[DIRECT] Iniciando scraping DIRETO (urllib, sem Selenium) para {location}", file=sys.stderr, flush=True)
         try:
-            # Usar função simples que funciona 100% - NÃO BLOQUEANTE
-            from selenium_simple import scrape_carjet_simple
+            # Usar método direto (urllib) - MUITO MAIS RÁPIDO que Selenium
+            from carjet_direct import scrape_carjet_direct
             import asyncio
             
-            result = await asyncio.to_thread(
-                scrape_carjet_simple, location, start_dt, end_dt
+            items = await asyncio.to_thread(
+                scrape_carjet_direct, location, start_dt, end_dt, quick=1
             )
             
-            if result.get('ok'):
-                html_content = result.get('html')
-                final_url = result.get('url')
+            if items:
+                print(f"[DIRECT] ✅ Scraping direto bem-sucedido!", file=sys.stderr, flush=True)
+                print(f"[DIRECT] {len(items)} carros extraídos", file=sys.stderr, flush=True)
                 
-                print(f"[SELENIUM] ✅ Scraping simples bem-sucedido!", file=sys.stderr, flush=True)
-                print(f"[SELENIUM] Fazendo parse de {len(html_content)} bytes...", file=sys.stderr, flush=True)
-                
-                items = parse_prices(html_content, final_url)
-                print(f"[SELENIUM] Parsed {len(items)} items", file=sys.stderr, flush=True)
+                # Aplicar conversões e ajustes
                 items = convert_items_gbp_to_eur(items)
-                print(f"[SELENIUM] {len(items)} após GBP→EUR", file=sys.stderr, flush=True)
-                items = apply_price_adjustments(items, final_url)
-                print(f"[SELENIUM] {len(items)} após ajustes", file=sys.stderr, flush=True)
+                print(f"[DIRECT] {len(items)} após GBP→EUR", file=sys.stderr, flush=True)
+                items = apply_price_adjustments(items, 'https://www.carjet.com/do/list/pt')
+                print(f"[DIRECT] {len(items)} após ajustes", file=sys.stderr, flush=True)
                 
                 if items:
-                    print(f"[SELENIUM] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
+                    print(f"[DIRECT] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
                     items = normalize_and_sort(items, supplier_priority=None)
                     # FILTRAR APENAS AUTOMÁTICOS
                     items_before_filter = len(items)
@@ -6626,9 +6622,7 @@ async def track_by_params(request: Request):
                         if photos_count > 0:
                             print(f"[DEBUG] 📸 Exemplo de foto: {items[0].get('photo', 'N/A')[:100]}", file=sys.stderr, flush=True)
                     
-                    return _no_store_json({
-                        "ok": True,
-                        "items": items,
+                    items = ensure_all_fields(items, {
                         "location": location,
                         "start_date": start_dt.date().isoformat(),
                         "start_time": start_dt.strftime("%H:%M"),
@@ -6636,8 +6630,16 @@ async def track_by_params(request: Request):
                         "end_time": end_dt.strftime("%H:%M"),
                         "days": days,
                     })
+                    
+                    # Retornar sucesso
+                    return {
+                        "items": items,
+                        "location": location,
+                        "start_date": start_dt.date().isoformat(),
+                        "end_date": end_dt.date().isoformat(),
+                    }
             else:
-                print(f"[SELENIUM] ⚠️ Scraping simples falhou: {result.get('error')}", file=sys.stderr, flush=True)
+                print(f"[DIRECT] ⚠️ Scraping direto não retornou resultados", file=sys.stderr, flush=True)
                 
         except Exception as e:
             print(f"[SELENIUM] ❌ Erro no scraping simples: {e}", file=sys.stderr, flush=True)
