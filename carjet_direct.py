@@ -136,7 +136,9 @@ VEHICLES = {
     'skoda fabia': 'ECONOMY',
     'toyota corolla': 'ECONOMY',
     'volkswagen golf': 'ECONOMY',
+    'vw golf': 'ECONOMY',
     'volkswagen polo': 'ECONOMY',
+    'mazda 3': 'ECONOMY',
 
     # ========== E2: ECONOMY Auto ==========
     'citroen c3 auto': 'ECONOMY Auto',
@@ -155,7 +157,10 @@ VEHICLES = {
     'seat leon auto': 'ECONOMY Auto',
     'toyota corolla auto': 'ECONOMY Auto',
     'volkswagen golf auto': 'ECONOMY Auto',
+    'vw golf auto': 'ECONOMY Auto',
     'volkswagen polo auto': 'ECONOMY Auto',
+    'mazda 3 auto': 'ECONOMY Auto',
+    'mazda 3 automatic': 'ECONOMY Auto',
 
     # ========== F: SUV ==========
     'dacia duster': 'SUV',
@@ -235,7 +240,13 @@ VEHICLES = {
     'skoda octavia sw': 'Station Wagon',
     'skoda scala': 'Station Wagon',
     'volkswagen golf sw': 'Station Wagon',
+    'vw golf sw': 'Station Wagon',
     'volkswagen passat': 'Station Wagon',
+    'volkswagen passat sw': 'Station Wagon',
+    'vw passat': 'Station Wagon',
+    'vw passat sw': 'Station Wagon',
+    'ford mondeo': 'Station Wagon',
+    'ford mondeo sw': 'Station Wagon',
 
     # ========== L1: SUV Auto + Crossover Auto ==========
     'audi q2 auto': 'SUV Auto',
@@ -320,9 +331,17 @@ VEHICLES = {
     'renault megane sw auto, hybrid': 'Station Wagon Auto',
     'seat leon sw auto': 'Station Wagon Auto',
     'skoda fabia sw auto': 'Station Wagon Auto',
+    'skoda octavia sw auto': 'Station Wagon Auto',
     'skoda scala auto': 'Station Wagon Auto',
     'toyota corolla sw auto': 'Station Wagon Auto',
     'volkswagen golf sw auto': 'Station Wagon Auto',
+    'vw golf sw auto': 'Station Wagon Auto',
+    'volkswagen passat sw auto': 'Station Wagon Auto',
+    'vw passat sw auto': 'Station Wagon Auto',
+    'volkswagen passat auto': 'Station Wagon Auto',
+    'vw passat auto': 'Station Wagon Auto',
+    'ford mondeo auto': 'Station Wagon Auto',
+    'ford mondeo sw auto': 'Station Wagon Auto',
 
     # ========== M1: 7 Lugares ==========
     'citroen c4 grand spacetourer': '7 Lugares',
