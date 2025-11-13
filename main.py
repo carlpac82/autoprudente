@@ -1861,21 +1861,26 @@ def map_category_to_group(category: str, car_name: str = "", transmission: str =
     
     CASE-INSENSITIVE: Converte para lowercase para comparação
     
-    B1 vs B2 LOGIC (baseado em LUGARES, não PORTAS):
-    - B1 = Mini 4 LUGARES (Fiat 500, Peugeot 108, C1, VW Up, Kia Picanto, Toyota Aygo)
-    - B2 = Mini 5 LUGARES (Fiat Panda, Hyundai i10, etc)
-    
-    REGRAS ESPECIAIS:
-    - Cabrio/Cabriolet → G (Cabrio)
-    - Toyota Aygo X → F (SUV)
-    - Mini 4 lugares Automático → E1
-    - Premium/Luxury → X
+    Prioridades (ORDEM RÍGIDA):
+    1. 7-lugares patterns → M1/M2 (MÁXIMA PRIORIDADE)
+    2. VEHICLES dictionary (carjet_direct.py) → grupos definidos manualmente
+    3. Fallback (_map_category_fallback) → categoria/keywords
     
     Args:
-        category: Categoria do carro (ex: "Mini", "Economy", "SUV")
-        car_name: Nome do carro (ex: "Fiat 500", "VW Golf")
-        transmission: Transmissão (ex: "Manual", "Automatic")
+        category: Categoria descritiva ex. "Economy", "SUV Auto"
+        car_name: Nome do carro ex. "VW Golf"
+        transmission: Transmissão ex. "Automatic", "Manual"
+        
+    Returns:
+        Código do grupo ex. "B1", "D", "L1", "Others"
     """
+    # CRITICAL LOGGING: Track ALL cars entering mapping
+    logging.info(f" [MAP-IN] car='{car_name}' | category='{category}' | transmission='{transmission}'")
+    
+    cat = category.strip().lower() if category else ""
+    car_lower = car_name.lower() if car_name else ""
+    trans_lower = transmission.lower() if transmission else ""
+
     # PRIORIDADE 0: Matching inteligente baseado em Admin Vehicles
     if match_vehicle_group_by_characteristics and car_name:
         vehicle_groups = load_admin_vehicles()
@@ -1894,7 +1899,9 @@ def map_category_to_group(category: str, car_name: str = "", transmission: str =
                 return matched_group
     
     # Fallback para lógica original
-    return _map_category_fallback(category, car_name, transmission)
+    final_group = _map_category_fallback(category, car_name, transmission)
+    logging.info(f"📤 [MAP-OUT] car='{car_name}' → grupo '{final_group}' | original category='{category}'")
+    return final_group
 
 def _map_category_fallback(category: str, car_name: str = "", transmission: str = "") -> str:
     """Lógica de fallback original para mapeamento de categorias"""
@@ -1944,7 +1951,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # PRIORIDADE 0: Consultar dicionário VEHICLES de carjet_direct.py
     # NOSSA PARAMETRIZAÇÃO TEM PRIORIDADE SOBRE CATEGORIAS CARJET!
-    # Ex: Se VEHICLES diz que Qashqai é Crossover, ignoramos categoria CarJet
+    # PRIORIDADE 0: Consultar VEHICLES (carjet_direct.py) com fallback inteligente
+    # Se o carro está em VEHICLES, usar categoria de lá SEMPRE!
     if car_name:
         try:
             from carjet_direct import VEHICLES
