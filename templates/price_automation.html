@@ -1151,19 +1151,97 @@
         // AI prices cache (populated on page load)
         window.aiPricesCache = window.aiPricesCache || {};
         
-        // Load ALL AI prices for current location into cache
-        async function loadAllAIPrices() {
+        // Get today's date string (YYYY-MM-DD)
+        function getTodayString() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+        
+        // Load cache from localStorage if from today
+        function loadCacheFromStorage(location) {
+            const cacheKey = `aiPricesCache_${location}`;
+            const dateKey = `aiPricesCacheDate_${location}`;
+            
+            const cachedDate = localStorage.getItem(dateKey);
+            const today = getTodayString();
+            
+            if (cachedDate === today) {
+                const cachedData = localStorage.getItem(cacheKey);
+                if (cachedData) {
+                    try {
+                        const parsed = JSON.parse(cachedData);
+                        console.log(`✅ Loaded ${Object.keys(parsed).length} AI prices from cache (${cachedDate})`);
+                        return parsed;
+                    } catch (e) {
+                        console.warn('⚠️ Failed to parse cached AI prices:', e);
+                    }
+                }
+            } else {
+                console.log(`🔄 Cache expired (${cachedDate} vs ${today}), will reload`);
+            }
+            return null;
+        }
+        
+        // Save cache to localStorage
+        function saveCacheToStorage(location, cache) {
+            const cacheKey = `aiPricesCache_${location}`;
+            const dateKey = `aiPricesCacheDate_${location}`;
+            const today = getTodayString();
+            
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify(cache));
+                localStorage.setItem(dateKey, today);
+                console.log(`💾 Saved ${Object.keys(cache).length} AI prices to localStorage`);
+            } catch (e) {
+                console.warn('⚠️ Failed to save cache to localStorage:', e);
+            }
+        }
+        
+        // Load ALL AI prices for current location into cache (OPTIMIZED: once per day)
+        async function loadAllAIPrices(forceReload = false) {
             const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
+            
+            // Check if we have valid cache from today
+            if (!forceReload) {
+                const cachedData = loadCacheFromStorage(currentLocation);
+                if (cachedData) {
+                    window.aiPricesCache = cachedData;
+                    showToast(`✅ Preços AI carregados do cache (hoje)`, 'success');
+                    return;
+                }
+            }
+            
             console.log(`🤖 Loading AI prices for ${currentLocation}...`);
+            showLoadingToast('Carregando preços AI do servidor...', 'info');
             
             window.aiPricesCache = {};
             
+            // Build all requests
+            const requests = [];
             for (const grupo of grupos) {
                 for (const days of availableDays) {
+                    requests.push({ grupo, days, currentLocation });
+                }
+            }
+            
+            console.log(`📊 Total requests to make: ${requests.length}`);
+            
+            // Process in parallel batches of 10 (to avoid overwhelming server)
+            const BATCH_SIZE = 10;
+            const totalBatches = Math.ceil(requests.length / BATCH_SIZE);
+            
+            for (let i = 0; i < requests.length; i += BATCH_SIZE) {
+                const batch = requests.slice(i, i + BATCH_SIZE);
+                const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+                
+                // Update progress
+                showLoadingToast(`Carregando preços AI... ${batchNum}/${totalBatches}`, 'info');
+                
+                const batchPromises = batch.map(async ({ grupo, days, currentLocation }) => {
                     try {
                         const response = await fetch(`/api/ai/get-price?grupo=${encodeURIComponent(grupo)}&days=${days}&location=${encodeURIComponent(currentLocation)}&_=${Date.now()}`, {
                             method: 'GET',
-                            cache: 'no-store',  // FORCE: Don't use browser cache
+                            cache: 'no-store',
                             headers: {
                                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                                 'Pragma': 'no-cache'
@@ -1178,10 +1256,19 @@
                     } catch (error) {
                         console.warn(`⚠️ Failed to load AI price for ${grupo}/${days}d:`, error);
                     }
-                }
+                });
+                
+                // Wait for current batch to complete
+                await Promise.all(batchPromises);
+                console.log(`✅ Batch ${batchNum}/${totalBatches} completed`);
             }
             
-            console.log(`✅ Loaded ${Object.keys(window.aiPricesCache).length} AI prices into cache`);
+            console.log(`✅ Loaded ${Object.keys(window.aiPricesCache).length} AI prices from server`);
+            
+            // Save to localStorage for next time
+            saveCacheToStorage(currentLocation, window.aiPricesCache);
+            
+            showToast(`✅ ${Object.keys(window.aiPricesCache).length} preços AI carregados!`, 'success');
         }
         
         // Get AI suggested price from cache (synchronous)
@@ -3157,8 +3244,8 @@
                 if (result.ok) {
                     console.log('✅ AI adjustment saved to database');
                     
-                    // Reload AI cache to include this new adjustment
-                    loadAllAIPrices();
+                    // Reload AI cache to include this new adjustment (force reload from server)
+                    loadAllAIPrices(true);
                 } else {
                     console.error('❌ Failed to save AI adjustment:', result.error);
                 }
@@ -8537,15 +8624,18 @@ Continue?`);
         
         // Initialize AI prices cache on page load
         setTimeout(async () => {
-            // Step 1: Read all history first
-            await initializeAIFromHistory();
-            
-            // Step 2: Load AI prices for current location
-            loadAllAIPrices().then(() => {
+            try {
+                // Step 1: Read all history first
+                showLoadingToast('Inicializando histórico AI...', 'info');
+                await initializeAIFromHistory();
+                
+                // Step 2: Load AI prices for current location
+                await loadAllAIPrices();
                 console.log('✅ AI prices cache initialized');
-            }).catch(err => {
+            } catch (err) {
                 console.error('❌ Failed to initialize AI cache:', err);
-            });
+                showToast('Erro ao inicializar cache AI', 'error');
+            }
         }, 500);
     </script>
 </body>

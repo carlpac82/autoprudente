@@ -2060,9 +2060,12 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     # PRIORIDADE -0.4: VEÍCULOS 7 LUGARES → SEMPRE M1/M2
     # Independente da categoria que CarJet envie!
     # Estes carros são 7 lugares mas CarJet pode categorizá-los como SUV, Intermediate, etc
-    # Verificar auto no transmission OU no nome do carro (caso transmission venha vazio)
-    is_auto = (any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or
-               any(word in car_lower for word in [' auto', 'automatic', 'automático', 'automatico']))
+    # 🔍 IMPORTANTE: Verificar APENAS transmission, NÃO o nome!
+    # Se o nome tem "Auto", já está no VEHICLES como "volkswagen sharan auto"
+    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+    
+    # DEBUG: Log da decisão M1/M2
+    logging.info(f"🔍 [7-SEATER-CHECK] car='{car_name}' | transmission='{transmission}' | is_auto={is_auto}")
     
     seven_seater_patterns = [
         r'\bpeugeot\s*5008\b',
@@ -2214,16 +2217,16 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # Mini 4 Seats / Mini 4 Lugares → B1 ou E1 (se automático)
     if cat in ['mini 4 seats', 'mini 4 doors', 'mini 4 portas', 'mini 4 lugares']:
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-                  any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # 🔍 APENAS verificar transmission, NÃO o nome!
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
         if is_auto:
             return "E1"
         return "B1"
     
     # Mini 5 Seats / Mini 5 Lugares → B2 ou E1 (se automático)
     if cat in ['mini 5 seats', 'mini 5 doors', 'mini 5 portas', 'mini 5 lugares']:
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-                  any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # 🔍 APENAS verificar transmission, NÃO o nome!
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
         if is_auto:
             return "E1"
         return "B2"
@@ -2459,8 +2462,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             for model in b2_5_lugares_models:
                 if model in car_lower:
                     # Se é automático de 5 lugares → E1 (Mini Automatic)
-                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-                              any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+                    # 🔍 APENAS verificar transmission, NÃO o nome!
+                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
                     if is_auto:
                         return "E1"
                     # Se é manual de 5 lugares → B2
@@ -2470,8 +2473,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             for model in b1_4_lugares_models:
                 if model in car_lower:
                     # Se é automático de 4 lugares → E1 (Mini Automatic)
-                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-                              any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+                    # 🔍 APENAS verificar transmission, NÃO o nome!
+                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
                     if is_auto:
                         return "E1"
                     # Se é manual de 4 lugares → B1
@@ -2495,6 +2498,24 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         "mini 5 seats": "B2",  # Inglês do CarJet
         "mini 5 portas": "B2",
         "mini 5 lugares": "B2",
+        
+        # CATEGORIAS DE FILTRO DO CARJET (frmAgrp)
+        # Quando o usuário aplica filtros na página de resultados do CarJet
+        # 
+        # IMPORTANTE: Estas categorias AMPLAS retornam múltiplos grupos:
+        # - 'MINI' (Small) → pode conter: B1, B2, D, E1, E2
+        # - 'COMP' (Medium) → grupos intermediários
+        # - 'FAMI' (Large) → grupos grandes
+        # - 'SUVS' (SUV) → pode conter: F, J1, L1
+        # - 'VANS' (People Carrier) → pode conter: M1, M2, N
+        # - 'LUXU' (Premium) → pode conter: G (cabrio)
+        # - 'ESTA' (Estate Cars) → pode conter: J2, L2
+        # - 'AUTO' (Automatic) → categoria específica de automáticos (cruzada)
+        # 
+        # O mapeamento individual por carro é feito via:
+        # 1. VEHICLES dictionary (prioritário)
+        # 2. Análise do nome do carro + transmission
+        # 3. Fallback baseado em keywords
         
         # D - Economy
         "economy": "D",
@@ -2598,10 +2619,9 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return grupo
     
     # FALLBACK: Análise inteligente por palavras-chave
-    # Verificar se é automático (priorizar transmission, depois category, depois car_name)
+    # 🔍 Verificar se é automático: transmission OU category (NÃO car_name!)
     is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-              any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-              any(word in car_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+              any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico'])
     
     # Verificar tipo de veículo por palavras-chave
     if '9' in cat or 'minivan' in cat or 'van' in cat:
@@ -3816,6 +3836,8 @@ async def debug_test_group():
         {"car": "Test Car 3", "category": "9 Seater", "price": "30 €", "supplier": "Test", "transmission": "Manual", "photo": "", "link": ""},
     ]
     result = normalize_and_sort(test_items, None)
+    # FILTRAR APENAS AUTOMÁTICOS
+    result = filter_automatic_only(result)
     return JSONResponse({"ok": True, "items": result})
 
 def require_auth(request: Request):
@@ -6243,6 +6265,8 @@ async def track_by_params(request: Request):
                             print(f"[SCRAPERAPI] Primeiro: {items[0].get('car', 'N/A')} - {items[0].get('price', 'N/A')}", file=sys.stderr, flush=True)
                         # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                         items = normalize_and_sort(items, supplier_priority=None)
+                        # FILTRAR APENAS AUTOMÁTICOS
+                        items = filter_automatic_only(items)
                         return _no_store_json({
                             "ok": True,
                             "items": items,
@@ -6372,6 +6396,8 @@ async def track_by_params(request: Request):
                                         print(f"[PLAYWRIGHT] ✅ Fallback POST retornou {len(its_dp)} carros", file=sys.stderr, flush=True)
                                         # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                                         its_dp = normalize_and_sort(its_dp, supplier_priority=None)
+                                        # FILTRAR APENAS AUTOMÁTICOS
+                                        its_dp = filter_automatic_only(its_dp)
                                         return _no_store_json({
                                             "ok": True,
                                             "items": its_dp,
@@ -6426,6 +6452,8 @@ async def track_by_params(request: Request):
                                 print(f"[PLAYWRIGHT] Primeiro: {items[0].get('car', 'N/A')} - {items[0].get('price', 'N/A')}", file=sys.stderr, flush=True)
                             # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                             items = normalize_and_sort(items, supplier_priority=None)
+                            # FILTRAR APENAS AUTOMÁTICOS
+                            items = filter_automatic_only(items)
                             return _no_store_json({
                                 "ok": True,
                                 "items": items,
@@ -6510,6 +6538,8 @@ async def track_by_params(request: Request):
                     print(f"[TEST MODE] {len(items)} carros encontrados!", file=sys.stderr, flush=True)
                     # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                     items = normalize_and_sort(items, supplier_priority=None)
+                    # FILTRAR APENAS AUTOMÁTICOS
+                    items = filter_automatic_only(items)
                     try:
                         prices = [float(item.get('price_num', 0)) for item in items if item.get('price_num')]
                         min_price = min(prices) if prices else None
@@ -6584,12 +6614,17 @@ async def track_by_params(request: Request):
                 if items:
                     print(f"[SELENIUM] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
                     items = normalize_and_sort(items, supplier_priority=None)
+                    # FILTRAR APENAS AUTOMÁTICOS
+                    items_before_filter = len(items)
+                    items = filter_automatic_only(items)
+                    print(f"[FILTER] 🔧 Filtered: {items_before_filter} → {len(items)} (removed {items_before_filter - len(items)} manual cars)", file=sys.stderr, flush=True)
                     
                     # DEBUG: Verificar se campo photo está presente
-                    photos_count = sum(1 for item in items if item.get('photo'))
-                    print(f"[DEBUG] 📸 Fotos encontradas: {photos_count}/{len(items)} carros ({(photos_count/len(items)*100):.1f}%)", file=sys.stderr, flush=True)
-                    if photos_count > 0:
-                        print(f"[DEBUG] 📸 Exemplo de foto: {items[0].get('photo', 'N/A')[:100]}", file=sys.stderr, flush=True)
+                    if items:
+                        photos_count = sum(1 for item in items if item.get('photo'))
+                        print(f"[DEBUG] 📸 Fotos encontradas: {photos_count}/{len(items)} carros ({(photos_count/len(items)*100):.1f}%)", file=sys.stderr, flush=True)
+                        if photos_count > 0:
+                            print(f"[DEBUG] 📸 Exemplo de foto: {items[0].get('photo', 'N/A')[:100]}", file=sys.stderr, flush=True)
                     
                     return _no_store_json({
                         "ok": True,
@@ -6998,6 +7033,8 @@ async def track_by_params(request: Request):
                         print(f"[SELENIUM] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
                         # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                         items = normalize_and_sort(items, supplier_priority=None)
+                        # FILTRAR APENAS AUTOMÁTICOS
+                        items = filter_automatic_only(items)
                         # SUCESSO! Retornar resultados
                         return _no_store_json({
                             "ok": True,
@@ -7033,6 +7070,8 @@ async def track_by_params(request: Request):
                                 print(f"[SELENIUM] ✅ Fallback POST retornou {len(its_dp)} carros", file=sys.stderr, flush=True)
                                 # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
                                 its_dp = normalize_and_sort(its_dp, supplier_priority=None)
+                                # FILTRAR APENAS AUTOMÁTICOS
+                                its_dp = filter_automatic_only(its_dp)
                                 return _no_store_json({
                                     "ok": True,
                                     "items": its_dp,
@@ -7680,6 +7719,13 @@ async def track_by_params(request: Request):
             print(f"[API] First car: {items[0].get('car', 'N/A')} - {items[0].get('price', 'N/A')}", file=sys.stderr, flush=True)
         # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
         items = normalize_and_sort(items, supplier_priority=None)
+        
+        # FILTRAR APENAS AUTOMÁTICOS (aplicado DEPOIS do parsing/mapeamento)
+        items_before_filter = len(items)
+        items = filter_automatic_only(items)
+        if items_before_filter > len(items):
+            print(f"[API] 🔧 Filtered: {items_before_filter} → {len(items)} (removed {items_before_filter - len(items)} manual cars)")
+        
         return _no_store_json({
             "ok": True,
             "items": items,
@@ -9659,6 +9705,64 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
     return ""
 
 
+def filter_automatic_only(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Filtra apenas carros com transmissão automática.
+    
+    Aplica DEPOIS do scraping para permitir análise correta de todos os carros
+    e garantir mapeamento correto de grupos (Crossover vs SUV, etc).
+    
+    Args:
+        items: Lista de carros parseados do CarJet
+    
+    Returns:
+        Lista filtrada contendo apenas automáticos
+    """
+    if not items:
+        return items
+    
+    automatic_cars = []
+    manual_count = 0
+    unknown_count = 0
+    
+    for item in items:
+        transmission = (item.get('transmission') or '').lower()
+        car_name = (item.get('car') or item.get('name') or '').lower()
+        
+        # Verificar se é EXPLICITAMENTE manual
+        is_manual = 'manual' in transmission and 'automatic' not in transmission
+        
+        if is_manual:
+            manual_count += 1
+            continue
+        
+        # Verificar se é automático (por campo ou nome)
+        is_automatic = (
+            'auto' in transmission or
+            'automatic' in transmission or
+            'automático' in transmission or
+            'automatico' in transmission or
+            ' auto' in car_name  # Ex: "VW Polo Auto"
+        )
+        
+        if is_automatic:
+            automatic_cars.append(item)
+        else:
+            # Sem informação clara - INCLUIR por segurança (já que usamos frmTrans=au)
+            unknown_count += 1
+            automatic_cars.append(item)
+    
+    # Log detalhado do filtro
+    import sys
+    print(f"[FILTER] 🔧 Input: {len(items)} | Output: {len(automatic_cars)} | Removed: {manual_count} manual | Unknown: {unknown_count}", 
+          file=sys.stderr, flush=True)
+    if manual_count > 0:
+        print(f"[FILTER] ⚠️ WARNING: Found {manual_count} manual cars despite frmTrans=au filter!", 
+              file=sys.stderr, flush=True)
+    
+    return automatic_cars
+
+
 def build_carjet_form(location_name: str, start_dt, end_dt, lang: str = "pt", currency: str = "EUR") -> Dict[str, Any]:
     # Build server-expected fields; include hidden destination IDs when possible
     pickup_dmY = start_dt.strftime("%d/%m/%Y")
@@ -9690,6 +9794,9 @@ def build_carjet_form(location_name: str, start_dt, end_dt, lang: str = "pt", cu
         "frmFechaDevolucion": f"{dropoff_dmY} {dropoff_HM}",
         "frmMoneda": currency,
         "frmTipoVeh": "CAR",
+        # FILTRO DE TRANSMISSÃO AUTOMÁTICA - Aplicado no CarJet
+        # tr=20 no GET e frmTrans=au no POST garantem apenas automáticos
+        "frmTrans": "au",  # au=Automatic, ma=Manual
     }
     return form
 
@@ -9885,6 +9992,8 @@ async def bulk_prices(request: Request):
                 items = convert_items_gbp_to_eur(items)
                 items = apply_price_adjustments(items, url)
                 items = normalize_and_sort(items, supplier_priority)
+                # FILTRAR APENAS AUTOMÁTICOS
+                items = filter_automatic_only(items)
                 t_parse = int((time.time() - t1) * 1000)
                 # best-effort timing log
                 try:
@@ -10015,6 +10124,8 @@ async def track_by_url(request: Request):
                     except Exception:
                         pass
                 items_fast = normalize_and_sort(items_fast, supplier_priority=None)
+                # FILTRAR APENAS AUTOMÁTICOS
+                items_fast = filter_automatic_only(items_fast)
                 payload = {
                     "ok": True,
                     "items": items_fast,
@@ -10286,6 +10397,8 @@ async def track_by_url(request: Request):
             except Exception:
                 items = parse_prices(html, url)
         items = normalize_and_sort(items, supplier_priority=None)
+        # FILTRAR APENAS AUTOMÁTICOS
+        items = filter_automatic_only(items)
         try:
             total_dt = int((time.time() - total_t0) * 1000)
             print(f"[track_by_url] total={total_dt}ms items={(len(items) if items else 0)}")
@@ -10879,6 +10992,8 @@ async def track_carjet(request: Request):
                                     
                             items = parse_prices(html, final_url)
                             items = normalize_and_sort(items, supplier_priority)
+                            # FILTRAR APENAS AUTOMÁTICOS
+                            items = filter_automatic_only(items)
                             save_snapshots(name, start_dt, d, items, currency)
                             
                             # Save to search history
