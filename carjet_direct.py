@@ -108,6 +108,9 @@ VEHICLES = {
     # ========== E1: MINI Auto ==========
     'citroen c1 auto': 'MINI Auto',
     'fiat 500 auto': 'MINI Auto',
+    'fiat 500 electric': 'MINI Auto',
+    'fiat 500e': 'MINI Auto',
+    'fiat 500 e': 'MINI Auto',
     'kia picanto auto': 'MINI Auto',
     'mitsubishi spacestar auto': 'MINI Auto',
     'peugeot 108 auto': 'MINI Auto',
@@ -758,11 +761,12 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                         # 3. Remover categorias de tamanho em qualquer lugar
                         car_name = re.sub(r'\s+(pequeno|médio|medio|grande|compacto|economico|econômico|familiar|luxo|premium|standard)\s*$', '', car_name, flags=re.IGNORECASE)
                         
-                        # 4. Manter apenas Auto/Automatic e SW/Station Wagon
-                        # Preservar "Auto" ou "Automatic" no final
-                        has_auto = re.search(r'\b(auto|automatic)\b', car_name, re.IGNORECASE)
-                        # Preservar "SW" ou "Station Wagon"
-                        has_sw = re.search(r'\b(sw|station\s*wagon)\b', car_name, re.IGNORECASE)
+                        # 4. PRESERVAR informações importantes:
+                        # ✅ Auto / Automatic / Automático
+                        # ✅ Electric / Elétrico / E-
+                        # ✅ Hybrid / Híbrido
+                        # ✅ SW / Station Wagon
+                        # ⚠️ NÃO remover estas palavras do nome!
                         
                         # Normalizar espaços
                         car_name = re.sub(r'\s+', ' ', car_name).strip()
@@ -930,6 +934,16 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                     if 'automatic' in text or 'manual' in text:
                         transmission = 'Automatic' if 'automatic' in text else 'Manual'
                         break
+                
+                # Se não encontrou transmissão no HTML, inferir do nome do carro
+                if not transmission:
+                    car_lower = car_name.lower()
+                    # Elétricos e híbridos são sempre automáticos
+                    if any(word in car_lower for word in ['electric', 'e-', 'hybrid', 'híbrido']):
+                        transmission = 'Automatic'
+                    # Se tem "auto" ou "automatic" explícito no nome
+                    elif re.search(r'\b(auto|automatic|automático|automatico)\b', car_lower):
+                        transmission = 'Automatic'
                 
                 # Detectar categoria
                 category = detect_category_from_car(car_name, transmission)
