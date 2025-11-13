@@ -3967,11 +3967,12 @@
         function createComparisonCard(grupo, day, allCarsByDay, automatedPricesByGroup, isGlobalLowest = false) {
             console.log(`[CARD] Creating card for ${grupo}/${day}d`);
             
-            const cars = allCarsByDay[day];
-            if (!cars || cars.length === 0) {
-                console.log(`[CARD] ❌ No cars for day ${day}`);
-                return null;
-            }
+            const cars = allCarsByDay[day] || [];
+            // REMOVED: Allow cards even with no scraped cars (AI/Automated prices still show)
+            // if (!cars || cars.length === 0) {
+            //     console.log(`[CARD] ❌ No cars for day ${day}`);
+            //     return null;
+            // }
             
             console.log(`[CARD] Day ${day} has ${cars.length} total cars`);
             
