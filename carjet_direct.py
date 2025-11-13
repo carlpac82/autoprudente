@@ -319,6 +319,8 @@ VEHICLES = {
     'volkswagen tcross auto': 'SUV Auto',
     'volkswagen t-cross auto': 'SUV Auto',
     'volkswagen tiguan auto': 'SUV Auto',
+    'volkswagen troc auto': 'SUV Auto',
+    'volkswagen t-roc auto': 'SUV Auto',
     'vw tcross auto': 'SUV Auto',
     'vw t-cross auto': 'SUV Auto',
 
