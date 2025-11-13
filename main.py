@@ -7829,6 +7829,56 @@ async def debug_direct(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+def _fetch_transmission_from_detail_page(detail_url: str) -> str:
+    """
+    Busca a página de detalhes do carro na CarJet e extrai a transmissão:
+    <li value="A"> = Automático
+    <li value="M"> = Manual
+    Retorna: "automatic", "manual", ou "" se não conseguir determinar
+    """
+    if not detail_url:
+        return ""
+    
+    try:
+        import httpx
+        from bs4 import BeautifulSoup
+        
+        # Rate limiting - aguardar um pouco para não sobrecarregar
+        import time
+        time.sleep(0.3)  # 300ms entre requisições
+        
+        # Timeout de 5 segundos
+        response = httpx.get(detail_url, timeout=5.0, follow_redirects=True)
+        if response.status_code != 200:
+            return ""
+        
+        soup = BeautifulSoup(response.text, "lxml")
+        
+        # Procurar <li value="A"> (Automático) ou <li value="M"> (Manual)
+        transmission_li = soup.find("li", {"value": ["A", "M"]})
+        if transmission_li:
+            value = transmission_li.get("value", "").upper()
+            if value == "A":
+                logging.info(f"🔍 [DETAIL-PAGE] Transmissão AUTO detectada: {detail_url}")
+                return "automatic"
+            elif value == "M":
+                logging.info(f"🔍 [DETAIL-PAGE] Transmissão MANUAL detectada: {detail_url}")
+                return "manual"
+        
+        # Fallback: procurar texto "Automático" ou "Manual"
+        page_text = soup.get_text(" ", strip=True).lower()
+        if "automático" in page_text or "automatic" in page_text:
+            return "automatic"
+        elif "manual" in page_text:
+            return "manual"
+        
+        return ""
+    
+    except Exception as e:
+        logging.debug(f"❌ [DETAIL-PAGE] Erro ao buscar transmissão: {e}")
+        return ""
+
+
 def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "lxml")
     items: List[Dict[str, Any]] = []
@@ -8901,6 +8951,23 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 pass
             # link
             link = url_from_row(card, base_url) or base_url
+            
+            # 🔍 BUSCAR TRANSMISSÃO NA PÁGINA DE DETALHES (se necessário)
+            # Estratégia: Buscar transmissão SEMPRE que não conseguimos determinar pelo nome
+            # Isso garante precisão máxima nos mapeamentos
+            if not transmission_label and link and link != base_url:
+                car_lower = (car_name or "").lower()
+                has_auto_in_name = bool(re.search(r"\b(auto|automatic|automático|automatico)\b", car_lower))
+                
+                # Se não tem "auto" no nome, buscar na página de detalhes
+                if not has_auto_in_name:
+                    transmission_from_detail = _fetch_transmission_from_detail_page(link)
+                    if transmission_from_detail:
+                        transmission_label = transmission_from_detail
+                        logging.info(f"🎯 [TRANSMISSION-DETAIL] {car_name} → {transmission_label} (via detail page)")
+                    else:
+                        logging.debug(f"⚠️ [TRANSMISSION-DETAIL] Não conseguiu determinar transmissão para: {car_name}")
+            
             # Photo cache: upsert or read from cache based on model key
             try:
                 if car_name:

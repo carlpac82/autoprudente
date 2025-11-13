@@ -218,7 +218,7 @@ VEHICLES = {
     'seat ateca': 'Crossover',
     'skoda kamiq': 'Crossover',
     'skoda karoq': 'Crossover',
-    'toyota yaris cross': 'Crossover',
+    'toyota yaris cross': 'SUV Auto',
     'volkswagen tcross': 'Crossover',
     'volkswagen t-cross': 'Crossover',
     'vw tcross': 'Crossover',
