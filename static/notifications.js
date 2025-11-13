@@ -12,19 +12,26 @@ const notificationStyles = document.createElement('style');
 notificationStyles.textContent = `
     .app-notification {
         position: fixed;
-        top: 20px;
-        right: 20px;
-        min-width: 320px;
-        max-width: 500px;
+        top: 24px;
+        right: 24px;
+        min-width: 340px;
+        max-width: 480px;
         background: white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+        padding: 18px 20px;
         display: flex;
-        align-items: center;
-        gap: 12px;
+        align-items: flex-start;
+        gap: 14px;
         z-index: 10000;
-        animation: slideIn 0.3s ease-out;
+        animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        border-left: 4px solid transparent;
     }
+    
+    .app-notification.success { border-left-color: #009cb6; }
+    .app-notification.warning { border-left-color: #f4ad0f; }
+    .app-notification.error { border-left-color: #ef4444; }
+    .app-notification.info { border-left-color: #009cb6; }
     
     @keyframes slideIn {
         from { transform: translateX(400px); opacity: 0; }
@@ -42,33 +49,39 @@ notificationStyles.textContent = `
     
     .app-notification-icon {
         flex-shrink: 0;
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
+        margin-top: 2px;
     }
     
     .app-notification-icon.success { color: #009cb6; }
-    .app-notification-icon.warning { color: #f6b511; }
+    .app-notification-icon.warning { color: #f4ad0f; }
     .app-notification-icon.error { color: #ef4444; }
     .app-notification-icon.info { color: #009cb6; }
     
     .app-notification-close {
         flex-shrink: 0;
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         color: #9ca3af;
         cursor: pointer;
-        transition: color 0.2s;
+        transition: all 0.2s;
+        border-radius: 4px;
+        padding: 2px;
     }
     
     .app-notification-close:hover {
         color: #4b5563;
+        background: rgba(0, 0, 0, 0.05);
     }
     
     .app-notification-message {
         flex: 1;
         font-size: 14px;
+        line-height: 1.5;
         color: #1f2937;
         white-space: pre-line;
+        font-weight: 500;
     }
 `;
 document.head.appendChild(notificationStyles);
@@ -92,7 +105,7 @@ function showNotification(message, type = 'info', duration = 5000) {
     
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = 'app-notification';
+    notification.className = `app-notification ${type}`;
     
     // Icon based on type (monocromatic)
     let iconSVG = '';
