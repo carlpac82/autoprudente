@@ -1451,6 +1451,7 @@
                         for (const dep of dependencies) {
                             const depGroup = typeof dep === 'string' ? dep : dep.group;
                             const operator = typeof dep === 'string' ? '>=' : dep.operator;
+                            const percentage = (typeof dep === 'object' && dep.percentage !== undefined) ? dep.percentage : 0;
                             
                             const depInput = document.querySelector(`#pricesTableAuto input[data-grupo="${depGroup}"][data-dias="${day}"][data-type="auto"]`);
                             if (!depInput || !depInput.value) continue;
@@ -1458,43 +1459,49 @@
                             let depPrice = parseFloat(depInput.value);
                             if (isNaN(depPrice) || depPrice <= 0) continue;
                             
+                            // Calculate expected price with percentage
+                            // percentage < 0 means dep should be LESS than target (discount)
+                            // percentage > 0 means dep should be MORE than target (markup)
+                            const expectedDepPrice = targetPrice * (1 + percentage / 100);
+                            
                             // Check if dependency violates rule
                             let violated = false;
                             let newDepPrice = depPrice;
                             
                             switch(operator) {
                                 case '>=':
-                                    // Target >= Dep → Dep should be <= Target
-                                    if (depPrice > targetPrice) {
+                                    // Target >= Dep → Dep should be <= Target (with percentage)
+                                    if (depPrice > expectedDepPrice) {
                                         violated = true;
-                                        newDepPrice = targetPrice;
+                                        newDepPrice = expectedDepPrice;
                                     }
                                     break;
                                 case '>':
-                                    // Target > Dep → Dep should be < Target
-                                    if (depPrice >= targetPrice) {
+                                    // Target > Dep → Dep should be < Target (with percentage)
+                                    if (depPrice >= expectedDepPrice) {
                                         violated = true;
-                                        newDepPrice = targetPrice - 0.01;
+                                        newDepPrice = expectedDepPrice - 0.01;
                                     }
                                     break;
                                 case '<=':
-                                    // Target <= Dep → Dep should be >= Target
-                                    if (depPrice < targetPrice) {
+                                    // Target <= Dep → Dep should be >= Target (with percentage)
+                                    if (depPrice < expectedDepPrice) {
                                         violated = true;
-                                        newDepPrice = targetPrice;
+                                        newDepPrice = expectedDepPrice;
                                     }
                                     break;
                                 case '<':
-                                    // Target < Dep → Dep should be > Target
-                                    if (depPrice <= targetPrice) {
+                                    // Target < Dep → Dep should be > Target (with percentage)
+                                    if (depPrice <= expectedDepPrice) {
                                         violated = true;
-                                        newDepPrice = targetPrice + 0.01;
+                                        newDepPrice = expectedDepPrice + 0.01;
                                     }
                                     break;
                             }
                             
                             if (violated && newDepPrice !== depPrice) {
-                                console.log(`🔧 [HIERARCHY-INVERSE] ${depGroup}/${day}d: ${depPrice.toFixed(2)}€ → ${newDepPrice.toFixed(2)}€ (must respect: ${targetGroup} ${operator} ${depGroup})`);
+                                const pctDisplay = percentage !== 0 ? ` (${percentage > 0 ? '+' : ''}${percentage}%)` : '';
+                                console.log(`🔧 [HIERARCHY-INVERSE] ${depGroup}/${day}d: ${depPrice.toFixed(2)}€ → ${newDepPrice.toFixed(2)}€ (must respect: ${targetGroup}${pctDisplay} ${operator} ${depGroup})`);
                                 depInput.value = newDepPrice.toFixed(2);
                                 
                                 // Update stored price
