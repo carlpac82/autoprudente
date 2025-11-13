@@ -2914,10 +2914,10 @@
             if (!listContainer) return;
             
             const grupoNames = {
-                'B1': 'Mini 4 Doors', 'B2': 'Mini Automatic', 'D': 'Economy',
-                'E1': 'Compact 4 Doors', 'E2': 'Compact Automatic', 'F': 'Intermediate',
-                'G': 'Intermediate Automatic', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-                'L1': 'Standard', 'L2': 'Standard Automatic', 'M1': 'Premium', 'M2': 'Premium Automatic', 'N': 'Minivan'
+                'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
+                'E1': 'Mini Auto', 'E2': 'Economy Auto', 'F': 'SUV',
+                'G': 'Cabrio', 'J1': 'Crossover', 'J2': 'Station Wagon',
+                'L1': 'SUV Auto', 'L2': 'Station Wagon Auto', 'M1': '7 Seater', 'M2': '7 Seater Auto', 'N': '9 Seater'
             };
             
             // Calculate min and max for slider
@@ -3793,8 +3793,11 @@
             
             console.log(`🏆 Global Lowest Price: ${globalLowestPrice.toFixed(2)}€ in ${globalLowestGroup} (${globalLowestDay}d)`);
             
+            // Sort selectedDays numerically FIRST
+            const sortedDays = [...selectedDays].sort((a, b) => parseInt(a) - parseInt(b));
+            
             // Group by day
-            selectedDays.forEach((day, index) => {
+            sortedDays.forEach((day, index) => {
                 const isFirstDay = index === 0;
                 
                 // Calculate lowest price for this day (EXCLUDE AUTOMATED)
@@ -4008,10 +4011,10 @@
             card.id = `card-${grupo}-${day}`;
             
             const grupoNames = {
-                'B1': 'Mini 4 Doors', 'B2': 'Mini Automatic', 'D': 'Economy',
-                'E1': 'Compact 4 Doors', 'E2': 'Compact Automatic', 'F': 'Intermediate',
-                'G': 'Intermediate Automatic', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-                'L1': 'Standard', 'L2': 'Standard Automatic', 'M1': 'Premium', 'M2': 'Premium Automatic', 'N': 'Minivan'
+                'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
+                'E1': 'Mini Auto', 'E2': 'Economy Auto', 'F': 'SUV',
+                'G': 'Cabrio', 'J1': 'Crossover', 'J2': 'Station Wagon',
+                'L1': 'SUV Auto', 'L2': 'Station Wagon Auto', 'M1': '7 Seater', 'M2': '7 Seater Auto', 'N': '9 Seater'
             };
             
             // Only show card if there's something to display
@@ -7447,10 +7450,10 @@ Continue?`);
         
         function getGroupName(grupo) {
             const names = {
-                'B1': 'Mini 4 Doors', 'B2': 'Mini Automatic', 'D': 'Economy',
-                'E1': 'Compact 4 Doors', 'E2': 'Compact Automatic', 'F': 'Intermediate',
-                'G': 'Intermediate Automatic', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-                'L1': 'Standard SUV', 'L2': 'Premium SUV', 'M1': '7 Seater',
+                'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
+                'E1': 'Mini Auto', 'E2': 'Economy Auto', 'F': 'SUV',
+                'G': 'Cabrio', 'J1': 'Crossover', 'J2': 'Station Wagon',
+                'L1': 'SUV Auto', 'L2': 'Station Wagon Auto', 'M1': '7 Seater',
                 'M2': '7 Seater Automatic', 'N': '9 Seater'
             };
             return names[grupo] || grupo;
