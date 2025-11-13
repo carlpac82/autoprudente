@@ -3625,8 +3625,18 @@
         }
         
         function renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, selectedDays) {
+            console.log('🎨 [RENDER-CARDS] Starting render with:', {
+                allCarsByDay: allCarsByDay,
+                daysCount: Object.keys(allCarsByDay || {}).length,
+                selectedDays: selectedDays,
+                automatedGroups: Object.keys(automatedPricesByGroup || {}).length
+            });
+            
             const container = document.getElementById('priceComparisonCards');
-            if (!container) return;
+            if (!container) {
+                console.error('❌ [RENDER-CARDS] Container not found!');
+                return;
+            }
             
             container.innerHTML = '';
             
@@ -3925,14 +3935,23 @@
         }
         
         function createComparisonCard(grupo, day, allCarsByDay, automatedPricesByGroup, isGlobalLowest = false) {
+            console.log(`[CARD] Creating card for ${grupo}/${day}d`);
+            
             const cars = allCarsByDay[day];
-            if (!cars || cars.length === 0) return null;
+            if (!cars || cars.length === 0) {
+                console.log(`[CARD] ❌ No cars for day ${day}`);
+                return null;
+            }
+            
+            console.log(`[CARD] Day ${day} has ${cars.length} total cars`);
             
             // Filter cars for this group
             const groupCars = cars.filter(item => {
                 const carGroup = item.group || extractGroup(item.car);
                 return carGroup === grupo;
             });
+            
+            console.log(`[CARD] Group ${grupo} has ${groupCars.length} cars on day ${day}`);
             
             // Always show card even if no cars, as long as we have data for ANY group in this day
             // if (groupCars.length === 0) return null;
@@ -6032,6 +6051,9 @@
         
         function editHistoryVersion(historyData) {
             console.log('[HISTORY] Editing version:', historyData);
+            console.log('[HISTORY] 🔍 historyData keys:', Object.keys(historyData));
+            console.log('[HISTORY] 🔍 historyData.supplierData exists?', !!historyData.supplierData);
+            console.log('[HISTORY] 🔍 historyData.supplierData type:', typeof historyData.supplierData);
             
             // Store original data for reference (incluindo timestamp)
             window.editingHistoryData = historyData;
@@ -6050,6 +6072,9 @@
                 grupos: Object.keys(prices).length,
                 supplierDays: Object.keys(supplierData).length
             });
+            
+            // DEBUG: Ver estrutura COMPLETA do supplierData
+            console.log('[HISTORY] 🔍 FULL supplierData structure:', JSON.stringify(supplierData, null, 2).substring(0, 2000));
             
             // Update global dias and supplier data for visual cards
             window.dias = dias;
@@ -6137,13 +6162,40 @@
                     });
                 });
                 
+                // ⚠️ FIX: Convert supplierData from GROUP→DAY to DAY→CARS structure
+                console.log('[HISTORY] 🔧 Converting supplierData structure...');
+                console.log('[HISTORY] Original structure (grupo→day):', Object.keys(supplierData));
+                
+                const allCarsByDay = {};
+                
+                // supplierData current format: { B1: {7: [...], 14: [...]}, B2: {...} }
+                // Need to convert to: { 7: [...all cars...], 14: [...all cars...] }
+                Object.keys(supplierData).forEach(grupo => {
+                    const daysData = supplierData[grupo];
+                    Object.keys(daysData).forEach(day => {
+                        const dayInt = parseInt(day);
+                        if (!allCarsByDay[dayInt]) {
+                            allCarsByDay[dayInt] = [];
+                        }
+                        // Add all cars from this group/day
+                        const cars = daysData[day];
+                        if (Array.isArray(cars)) {
+                            allCarsByDay[dayInt].push(...cars);
+                        }
+                    });
+                });
+                
+                console.log('[HISTORY] ✅ Converted structure (day→cars):', Object.keys(allCarsByDay));
+                console.log('[HISTORY] Days with data:', Object.keys(allCarsByDay).map(d => `${d} (${allCarsByDay[d].length} cars)`).join(', '));
+                
                 // Render visual cards (hidden by default) with all UI improvements
                 console.log('[HISTORY] Rendering price comparison cards with UI improvements...');
                 console.log('[HISTORY] - Price previews in day headers');
                 console.log('[HISTORY] - Global "LOWEST PRICE" badge');
                 console.log('[HISTORY] - Default state: first day open, others closed');
                 console.log('[HISTORY] - Scroll-to-top button');
-                renderPriceComparisonCards(supplierData, automatedPricesByGroup, dias);
+                
+                renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
             } else {
                 console.warn('[HISTORY] No supplier data available - visual cards will be empty');
             }
