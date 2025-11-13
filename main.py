@@ -1886,6 +1886,35 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
         return "G"
     
+    # PRIORIDADE -0.5: VEÍCULOS 7 LUGARES → SEMPRE M1/M2
+    # Independente da categoria que CarJet envie!
+    # Estes carros são 7 lugares mas CarJet pode categorizá-los como SUV, Intermediate, etc
+    import re
+    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+    
+    seven_seater_patterns = [
+        r'\bpeugeot\s*5008\b',
+        r'\bcitro[eë]n\s*c4\s*picasso\b',
+        r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer|grand\s*space\s*tourer)\b',
+        r'\brenault\s*(grand\s*)?scenic\b',
+        r'\b(vw|volkswagen)\s*caddy\b',
+        r'\bdacia\s*lodgy\b',
+        r'\bdacia\s*jogger\b',
+        r'\bpeugeot\s*rifter\b',
+        r'\bford\s*s[-\s]?max\b',
+        r'\bford\s*galaxy\b',
+        r'\bopel\s*zafira\b',
+        r'\b(vw|volkswagen)\s*touran\b',
+        r'\b(vw|volkswagen)\s*sharan\b',
+        r'\bseat\s*alhambra\b',
+        r'\bpeugeot\s*traveller\b',
+        r'\bopel\s*combo\b',
+    ]
+    
+    for pattern in seven_seater_patterns:
+        if re.search(pattern, car_lower, re.IGNORECASE):
+            return "M2" if is_auto else "M1"  # 7 Seater - PRIORIDADE MÁXIMA!
+    
     # PRIORIDADE 0: Categorias explícitas do CarJet (mais confiáveis que tabela manual)
     # Suporta INGLÊS e PORTUGUÊS
     
