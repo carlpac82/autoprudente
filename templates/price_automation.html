@@ -6165,31 +6165,39 @@
                     });
                 });
                 
-                // ⚠️ FIX: Convert supplierData from GROUP→DAY to DAY→CARS structure
-                console.log('[HISTORY] 🔧 Converting supplierData structure...');
-                console.log('[HISTORY] Original structure (grupo→day):', Object.keys(supplierData));
+                // ⚠️ DETECT FORMAT: supplierData can be in two formats:
+                // Format 1: { "7": [...], "14": [...] } (day → cars) ✅ CORRECT
+                // Format 2: { B1: {7: [...], 14: [...]}, B2: {...} } (grupo → day → cars) ❌ NEED CONVERSION
                 
-                const allCarsByDay = {};
+                console.log('[HISTORY] 🔧 Checking supplierData format...');
+                const firstKey = Object.keys(supplierData)[0];
+                const isAlreadyDayFormat = firstKey && !isNaN(parseInt(firstKey));
                 
-                // supplierData current format: { B1: {7: [...], 14: [...]}, B2: {...} }
-                // Need to convert to: { 7: [...all cars...], 14: [...all cars...] }
-                Object.keys(supplierData).forEach(grupo => {
-                    const daysData = supplierData[grupo];
-                    Object.keys(daysData).forEach(day => {
-                        const dayInt = parseInt(day);
-                        if (!allCarsByDay[dayInt]) {
-                            allCarsByDay[dayInt] = [];
-                        }
-                        // Add all cars from this group/day
-                        const cars = daysData[day];
-                        if (Array.isArray(cars)) {
-                            allCarsByDay[dayInt].push(...cars);
-                        }
+                let allCarsByDay = {};
+                
+                if (isAlreadyDayFormat) {
+                    // ✅ Already in correct format (day → cars)
+                    console.log('[HISTORY] ✅ supplierData already in DAY→CARS format');
+                    allCarsByDay = supplierData;
+                } else {
+                    // ❌ Need to convert from GROUP→DAY→CARS to DAY→CARS
+                    console.log('[HISTORY] 🔄 Converting GROUP→DAY→CARS to DAY→CARS');
+                    Object.keys(supplierData).forEach(grupo => {
+                        const daysData = supplierData[grupo];
+                        Object.keys(daysData).forEach(day => {
+                            const dayInt = parseInt(day);
+                            if (!allCarsByDay[dayInt]) {
+                                allCarsByDay[dayInt] = [];
+                            }
+                            const cars = daysData[day];
+                            if (Array.isArray(cars)) {
+                                allCarsByDay[dayInt].push(...cars);
+                            }
+                        });
                     });
-                });
+                }
                 
-                console.log('[HISTORY] ✅ Converted structure (day→cars):', Object.keys(allCarsByDay));
-                console.log('[HISTORY] Days with data:', Object.keys(allCarsByDay).map(d => `${d} (${allCarsByDay[d].length} cars)`).join(', '));
+                console.log('[HISTORY] ✅ Final structure - Days with data:', Object.keys(allCarsByDay).map(d => `${d} (${(allCarsByDay[d] || []).length} cars)`).join(', '));
                 
                 // Render visual cards (hidden by default) with all UI improvements
                 console.log('[HISTORY] Rendering price comparison cards with UI improvements...');
