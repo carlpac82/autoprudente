@@ -1682,13 +1682,19 @@ def clean_car_name(car_name: str) -> str:
     - Remove duplicações como "Autoautomático" → "Automático"
     - Remove "ou similar"
     - Remove "4p" (4 portas) exceto para 7 e 9 lugares
+    - Normaliza VW → Volkswagen (para matching consistente)
+    - Remove hífens desnecessários (c-hr → chr)
     - Normaliza espaços
-    - Converte para LOWERCASE (igual ao VEHICLES dictionary)
     """
     if not car_name:
         return ""
     
     name = str(car_name).strip()
+    
+    # ✅ NORMALIZAR VW → Volkswagen (ANTES de tudo)
+    # "VW Polo" → "Volkswagen Polo"
+    # "vw golf auto" → "volkswagen golf auto"
+    name = re.sub(r'\bVW\b', 'Volkswagen', name, flags=re.IGNORECASE)
     
     # Remover duplicações comuns
     name = re.sub(r'[Aa]uto[Aa]utom[aá]tico', 'Automático', name)
@@ -1700,6 +1706,22 @@ def clean_car_name(car_name: str) -> str:
     
     # Remover vírgulas e espaços extras (ex: "2008 , Electric" → "2008 Electric")
     name = re.sub(r'\s*,\s*', ' ', name)
+    
+    # ✅ REMOVER HÍFENS em modelos específicos (antes de normalizar espaços)
+    # "Toyota C-HR" → "Toyota CHR"
+    # "T-Cross" → "TCross" (mas deixar "4x4" e "e-208")
+    # NÃO remover hífen de: 4x4, e-208, id.5
+    name_parts = []
+    for part in name.split():
+        # Manter hífen em: 4x4, e-xxx (elétricos), id.x
+        if re.match(r'^\d+x\d+$', part.lower()) or \
+           re.match(r'^e-[a-z0-9]+$', part.lower()) or \
+           re.match(r'^id\.[a-z0-9]+$', part.lower()):
+            name_parts.append(part)
+        else:
+            # Remover hífens de outros casos (c-hr → chr, t-cross → tcross)
+            name_parts.append(part.replace('-', ''))
+    name = ' '.join(name_parts)
     
     # Remover "Special Edition" e variantes
     name = re.sub(r'\s+special\s+edition\b', '', name, flags=re.IGNORECASE)
