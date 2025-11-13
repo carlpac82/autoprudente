@@ -2334,10 +2334,17 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         "9 lugares automático": "N",
         "minivan": "N",
         "van": "N",
+        
+        # Luxury → Others (não temos grupo específico para premium/luxury)
+        "luxury": None,  # Vai para análise fallback → Others
+        "premium": None,  # Vai para análise fallback → Others
     }
     
     # Tentar match direto primeiro
     if cat in category_map:
+        if category_map[cat] is None:
+            # Luxury/Premium sem grupo → retorna None para ir para Others
+            return None
         return category_map[cat]
     
     # FALLBACK: Análise inteligente por palavras-chave

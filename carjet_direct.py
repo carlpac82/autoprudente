@@ -177,7 +177,6 @@ VEHICLES = {
     'volkswagen t-roc': 'SUV',
     'volkswagen t-roc cabrio': 'SUV',
     'volkswagen taigo': 'SUV',
-    'nissan qashqai': 'SUV',
     'seat arona': 'SUV',
     
     # ========== G: Premium/Cabrio ==========
@@ -207,6 +206,7 @@ VEHICLES = {
     'jeep renegade': 'Crossover',
     'million jeep renegade': 'Crossover',
     'kia sportage': 'Crossover',
+    'nissan qashqai': 'Crossover',
     'peugeot 2008': 'Crossover',
     'peugeot 2008 electric': 'Crossover',
     'peugeot 3008': 'Crossover',
