@@ -927,23 +927,28 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 if not photo:
                     print(f"[PARSE] ⚠️  Sem foto para: {car_name} (imgs: {len(img_tags)})")
                 
-                # Transmissão
+                # Transmissão - Detectar pelo ícone icon-transm-auto
                 transmission = ''
-                for tag in block.find_all(['span', 'div']):
-                    text = tag.get_text(strip=True).lower()
-                    if 'automatic' in text or 'manual' in text:
-                        transmission = 'Automatic' if 'automatic' in text else 'Manual'
+                
+                # Procurar pelo ícone <i class="icon icon-transm-auto">
+                icon_tags = block.find_all('i', class_='icon')
+                for icon in icon_tags:
+                    icon_classes = icon.get('class', [])
+                    if 'icon-transm-auto' in icon_classes:
+                        transmission = 'Automatic'
+                        print(f"[PARSE] ✓ Automático detectado (icon-transm-auto): {car_name}")
                         break
                 
-                # Se não encontrou transmissão no HTML, inferir do nome do carro
+                # Se não tem ícone de automático, verificar se é elétrico/híbrido (sempre automáticos)
                 if not transmission:
                     car_lower = car_name.lower()
-                    # Elétricos e híbridos são sempre automáticos
                     if any(word in car_lower for word in ['electric', 'e-', 'hybrid', 'híbrido']):
                         transmission = 'Automatic'
-                    # Se tem "auto" ou "automatic" explícito no nome
-                    elif re.search(r'\b(auto|automatic|automático|automatico)\b', car_lower):
-                        transmission = 'Automatic'
+                        print(f"[PARSE] ✓ Automático detectado (elétrico/híbrido): {car_name}")
+                    else:
+                        # Se não tem icon-transm-auto nem é elétrico, é Manual
+                        transmission = 'Manual'
+                        print(f"[PARSE] ✓ Manual detectado (sem icon-transm-auto): {car_name}")
                 
                 # Detectar categoria
                 category = detect_category_from_car(car_name, transmission)
