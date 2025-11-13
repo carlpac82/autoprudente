@@ -81,48 +81,64 @@ SUPPLIER_MAP = {
 
 
 # Mapeamento manual de veículos para categorias
+# Mapeamento manual de veículos para categorias
+# IMPORTANTE: As categorias DEVEM corresponder ao category_map em main.py
 VEHICLES = {
-    # MINI 4 Lugares
+    # ========== B1: MINI 4 Lugares ==========
     'fiat 500 4p': 'MINI 4 Lugares',
     'toyota aygo': 'MINI 4 Lugares',
     'peugeot 108': 'MINI 4 Lugares',
+    'citroen c1': 'MINI 4 Lugares',
+    'renault twingo': 'MINI 4 Lugares',
+    'opel adam': 'MINI 4 Lugares',
+    'volkswagen up': 'MINI 4 Lugares',
+    'kia picanto': 'MINI 4 Lugares',
+    'toyota yaris': 'MINI 4 Lugares',
+    'ford ka': 'MINI 4 Lugares',
+    'seat mii': 'MINI 4 Lugares',
     
-    # MINI 5 Lugares
+    # ========== B2: MINI 5 Lugares ==========
     'fiat 500': 'MINI 5 Lugares',
-    'citroen c1': 'MINI 5 Lugares',
-    'volkswagen up': 'MINI 5 Lugares',
-    'hyundai i10': 'MINI 5 Lugares',
-    'kia picanto': 'MINI 5 Lugares',
     'fiat panda': 'MINI 5 Lugares',
+    'hyundai i10': 'MINI 5 Lugares',
+    'mitsubishi spacestar': 'MINI 5 Lugares',
     
-    # MINI Auto
+    # ========== E1: MINI Auto ==========
     'fiat 500 auto': 'MINI Auto',
     'citroen c1 auto': 'MINI Auto',
     'toyota aygo auto': 'MINI Auto',
     'peugeot 108 auto': 'MINI Auto',
     'kia picanto auto': 'MINI Auto',
     'mitsubishi spacestar auto': 'MINI Auto',
+    'volkswagen up auto': 'MINI Auto',
+    'toyota yaris auto': 'MINI Auto',
     
-    # ECONOMY
+    # ========== D: ECONOMY ==========
     'renault clio': 'ECONOMY',
     'peugeot 208': 'ECONOMY',
-    'peugeot e-208': 'ECONOMY',  # Variação elétrica
-    'peugeot e-208, electric': 'ECONOMY',  # Variação com vírgula
+    'peugeot e-208': 'ECONOMY',
+    'peugeot e-208 electric': 'ECONOMY',
+    'peugeot e-208, electric': 'ECONOMY',
     'ford fiesta': 'ECONOMY',
     'seat ibiza': 'ECONOMY',
     'hyundai i20': 'ECONOMY',
     'opel corsa': 'ECONOMY',
     'volkswagen polo': 'ECONOMY',
+    'vw polo': 'ECONOMY',
     'nissan micra': 'ECONOMY',
-    'kia ceed': 'ECONOMY',
     'dacia sandero': 'ECONOMY',
     'skoda fabia': 'ECONOMY',
-    'renault twingo': 'MINI 4 Lugares',
     'citroen c3': 'ECONOMY',
-    'opel adam': 'MINI 4 Lugares',
-    'toyota corolla': 'ECONOMY',  # Manual = D
+    'toyota corolla': 'ECONOMY',
+    'peugeot 308': 'ECONOMY',
+    'ford focus': 'ECONOMY',
+    'renault megane': 'ECONOMY',
+    'seat leon': 'ECONOMY',
+    'mazda 2': 'ECONOMY',
+    'opel astra': 'ECONOMY',
+    'vw golf': 'ECONOMY',
     
-    # ECONOMY Auto
+    # ========== E2: ECONOMY Auto ==========
     'renault clio auto': 'ECONOMY Auto',
     'peugeot 208 auto': 'ECONOMY Auto',
     'ford fiesta auto': 'ECONOMY Auto',
@@ -134,79 +150,72 @@ VEHICLES = {
     'nissan micra auto': 'ECONOMY Auto',
     'ford focus auto': 'ECONOMY Auto',
     'citroen c3 auto': 'ECONOMY Auto',
+    'renault megane auto': 'ECONOMY Auto',
+    'seat leon auto': 'ECONOMY Auto',
+    'mazda 2 auto': 'ECONOMY Auto',
+    'opel astra auto': 'ECONOMY Auto',
+    'vw golf auto': 'ECONOMY Auto',
+    'vw polo auto': 'ECONOMY Auto',
     
-    # SUV
+    # ========== F: SUV (Manual) ==========
     'nissan juke': 'SUV',
-    'peugeot 2008': 'SUV',
     'renault captur': 'SUV',
     'kia stonic': 'SUV',
     'hyundai kauai': 'SUV',
     'hyundai kona': 'SUV',
-    'ford kuga': 'SUV',
-    'peugeot 3008': 'SUV',
-    'nissan qashqai': 'SUV',
-    'kia sportage': 'SUV',
-    'seat ateca': 'SUV',
-    'renault austral': 'SUV',
-    'skoda kamiq': 'SUV',
     'hyundai tucson': 'SUV',
-    'volkswagen tiguan': 'SUV',  # Manual = F
-    'vw tiguan': 'SUV',  # Manual = F
+    'volkswagen tiguan': 'SUV',
+    'vw tiguan': 'SUV',
+    'toyota chr': 'SUV',
+    'ford ecosport': 'SUV',
+    'opel mokka': 'SUV',
+    'mazda cx3': 'SUV',
+    'toyota aygo x': 'SUV',
+    'mg zs': 'SUV',
+    'dacia duster': 'SUV',
+    'mitsubishi asx': 'SUV',
+    'volkswagen t-roc': 'SUV',
+    'volkswagen t-roc cabrio': 'SUV',
+    'volkswagen taigo': 'SUV',
+    'nissan qashqai': 'SUV',
+    'seat arona': 'SUV',
     
-    # SUV Auto
-    'peugeot 3008 auto': 'SUV Auto',
-    'toyota chr auto': 'SUV Auto',
-    'toyota c-hr auto': 'SUV Auto',
-    'ford ecosport auto': 'SUV Auto',
-    'opel crossland x auto': 'SUV Auto',
-    'volkswagen tiguan auto': 'SUV Auto',
-    'skoda karoq auto': 'SUV Auto',
-    'citroen c3 aircross auto': 'SUV Auto',
-    'volkswagen t-cross auto': 'SUV Auto',
-    'vw t-cross auto': 'SUV Auto',
-    'fiat 500x auto': 'SUV Auto',
-    'opel grandland x auto': 'SUV Auto',
-    'citroen c4 auto electric': 'SUV Auto',
-    'opel mokka auto electric': 'SUV Auto',
-    'citroen c4 auto': 'SUV Auto',
-    'renault arkana auto': 'SUV Auto',
-    'citroen c4 x auto electric': 'SUV Auto',
+    # ========== G: Premium/Cabrio ==========
+    'fiat 500 cabrio': 'Cabrio',
+    'peugeot 108 cabrio': 'Cabrio',
+    'mazda mx5 cabrio auto': 'Cabrio',
+    'mercedes e class cabrio': 'Cabrio',
+    'mini cooper cabrio': 'Cabrio',
+    'mini one cabrio': 'Cabrio',
+    'vw beetle cabrio': 'Cabrio',
+    'bmw 4 series cabrio auto': 'Cabrio',
     
-    # Crossover
+    # ========== J1: Crossover ==========
     'fiat 500x': 'Crossover',
     'volkswagen t-cross': 'Crossover',
     'vw t-cross': 'Crossover',
-    'volkswagen taigo': 'Crossover',
-    'vw taigo': 'Crossover',
     'jeep avenger': 'Crossover',
     'citroen c3 aircross': 'Crossover',
-    'seat arona': 'SUV',
     'ford puma': 'Crossover',
     'fiat 500l': 'Crossover',
     'citroen c4 cactus': 'Crossover',
-    'mazda cx-3': 'Crossover',
-    'mitsubishi asx': 'Crossover',
-    'skoda karoq': 'Crossover',  # Manual = J1
-    'mg ehs 5 door': 'Crossover',  # Manual = J1
-    'mg ehs': 'Crossover',  # Manual = J1
+    'skoda karoq': 'Crossover',
+    'mg ehs 5 door': 'Crossover',
+    'mg ehs': 'Crossover',
+    'citroen c4': 'Crossover',
+    'audi q2': 'Crossover',
+    'jeep renegade': 'Crossover',
+    'million jeep renegade': 'Crossover',
+    'kia sportage': 'Crossover',
+    'peugeot 2008': 'Crossover',
+    'peugeot 2008 electric': 'Crossover',
+    'peugeot 3008': 'Crossover',
+    'renault austral': 'Crossover',
+    'skoda kamiq': 'Crossover',
+    'ford kuga': 'Crossover',
+    'seat ateca': 'Crossover',
     
-    # Luxury (X)
-    'mini cooper': 'Luxury',
-    'mini countryman': 'Luxury',
-    'mini countryman auto': 'Luxury',
-    'audi a1': 'Luxury',
-    'cupra formentor': 'Luxury',
-    'ds 4': 'Luxury',
-    'bmw 1 series auto': 'Luxury',
-    'mercedes a class auto': 'Luxury',
-    'audi a3 auto': 'Luxury',
-    'bmw 2 series gran coupe auto': 'Luxury',
-    'mercedes c class auto': 'Luxury',
-    'mercedes a class automático': 'Luxury',
-    'mercedes gla auto': 'Luxury',
-    'bmw x1 auto': 'Luxury',
-    
-    # Station Wagon
+    # ========== J2: Station Wagon (Manual) ==========
     'renault clio sw': 'Station Wagon',
     'opel astra sw': 'Station Wagon',
     'skoda fabia sw': 'Station Wagon',
@@ -220,14 +229,95 @@ VEHICLES = {
     'volkswagen passat': 'Station Wagon',
     'vw passat': 'Station Wagon',
     'fiat tipo sw': 'Station Wagon',
+    'fiat tipo': 'Station Wagon',
+    'kia ceed sw': 'Station Wagon',
+    'renault megane sw': 'Station Wagon',
+    'renault megane sw hybrid': 'Station Wagon',
+    'citroen elysee': 'Station Wagon',
+    'peugeot 508': 'Station Wagon',
+    'skoda scala': 'Station Wagon',
+    'hyundai i30': 'Station Wagon',
     
-    # Station Wagon Auto
+    # ========== L1: SUV Auto ==========
+    'peugeot 3008 auto': 'SUV Auto',
+    'toyota chr auto': 'SUV Auto',
+    'toyota c-hr auto': 'SUV Auto',
+    'ford ecosport auto': 'SUV Auto',
+    'opel crossland x auto': 'SUV Auto',
+    'volkswagen tiguan auto': 'SUV Auto',
+    'skoda karoq auto': 'SUV Auto',
+    'citroen c3 aircross auto': 'SUV Auto',
+    'volkswagen t-cross auto': 'SUV Auto',
+    'vw t-cross auto': 'SUV Auto',
+    'vw taigo auto': 'SUV Auto',
+    'fiat 500x auto': 'SUV Auto',
+    'opel grandland x auto': 'SUV Auto',
+    'opel grandland x': 'SUV Auto',
+    'citroen c4 auto electric': 'SUV Auto',
+    'citroen c4 x auto electric': 'SUV Auto',
+    'opel mokka auto electric': 'SUV Auto',
+    'citroen c4 auto': 'SUV Auto',
+    'renault arkana auto': 'SUV Auto',
+    'renault arkana': 'SUV Auto',
+    'ford puma auto': 'SUV Auto',
+    'seat arona auto': 'SUV Auto',
+    'peugeot 2008 auto': 'SUV Auto',
+    'peugeot 2008 auto electric': 'SUV Auto',
+    'peugeot 2008 auto, electric': 'SUV Auto',
+    'nissan juke auto': 'SUV Auto',
+    'citroen c5 aircross auto': 'SUV Auto',
+    'citroen c5 aircross': 'SUV Auto',
+    'volkswagen id.5 5 door': 'SUV Auto',
+    'volkswagen id.5': 'SUV Auto',
+    'volvo ex30': 'SUV Auto',
+    'mg ehs 5 door auto': 'SUV Auto',
+    'mg ehs auto': 'SUV Auto',
+    'byd seal u': 'SUV Auto',
+    'kia niro': 'SUV Auto',
+    'bmw x1': 'SUV Auto',
+    'bmw x1 auto': 'SUV Auto',
+    'mercedes gla': 'SUV Auto',
+    'mercedes gla auto': 'SUV Auto',
+    'mercedes glb': 'SUV Auto',
+    'mercedes glc': 'SUV Auto',
+    'mercedes glc auto': 'SUV Auto',
+    'mercedes glc coupe': 'SUV Auto',
+    'mercedes glc coupe auto': 'SUV Auto',
+    'mercedes glc coupe hybrid': 'SUV Auto',
+    'volvo xc40': 'SUV Auto',
+    'volvo xc40 auto': 'SUV Auto',
+    'volvo xc60': 'SUV Auto',
+    'volvo xc60 auto': 'SUV Auto',
+    'skoda kodiaq auto': 'SUV Auto',
+    'skoda kamiq auto': 'SUV Auto',
+    'toyota yaris cross auto': 'SUV Auto',
+    'cupra formentor auto': 'SUV Auto',
+    'ford kuga auto': 'SUV Auto',
+    'jeep avenger auto': 'SUV Auto',
+    'jeep renegade auto': 'SUV Auto',
+    'kia stonic auto': 'SUV Auto',
+    'opel mokka auto': 'SUV Auto',
+    'ds4 auto': 'SUV Auto',
+    'fiat 600 auto': 'SUV Auto',
+    'toyota rav4 4x4 auto': 'SUV Auto',
+    
+    # ========== L2: Station Wagon Auto ==========
     'peugeot 308 sw auto': 'Station Wagon Auto',
     'toyota corolla sw auto': 'Station Wagon Auto',
     'cupra leon sw auto': 'Station Wagon Auto',
+    'cupra leon sw': 'Station Wagon Auto',
     'renault megane sedan auto': 'Station Wagon Auto',
+    'renault megane sw auto': 'Station Wagon Auto',
+    'renault megane sw auto hybrid': 'Station Wagon Auto',
+    'renault megane sw auto, hybrid': 'Station Wagon Auto',
+    'ford focus sw auto': 'Station Wagon Auto',
+    'seat leon sw auto': 'Station Wagon Auto',
+    'skoda fabia sw auto': 'Station Wagon Auto',
+    'vw golf sw auto': 'Station Wagon Auto',
+    'peugeot 508 auto': 'Station Wagon Auto',
+    'skoda scala auto': 'Station Wagon Auto',
     
-    # 7 Lugares
+    # ========== M1: 7 Lugares (Manual) ==========
     'peugeot 5008': '7 Lugares',
     'peugeot rifter': '7 Lugares',
     'dacia lodgy': '7 Lugares',
@@ -236,259 +326,113 @@ VEHICLES = {
     'citroen grand picasso': '7 Lugares',
     'citroen c4 grand picasso': '7 Lugares',
     'citroen c4 picasso': '7 Lugares',
+    'citroen c4 grand spacetourer': '7 Lugares',
     'dacia jogger': '7 Lugares',
+    'ford tourneo': '7 Lugares',
+    'volkswagen multivan': '7 Lugares',
+    'vw multivan': '7 Lugares',
+    'mercedes v class': '7 Lugares',
+    'volkswagen sharan': '7 Lugares',
+    'vw sharan': '7 Lugares',
+    'ford galaxy': '7 Lugares',
+    'seat alhambra': '7 Lugares',
     
-    # 7 Lugares Auto
+    # ========== M2: 7 Lugares Auto ==========
     'volkswagen caddy auto': '7 Lugares Auto',
     'vw caddy auto': '7 Lugares Auto',
     'volkswagen multivan auto': '7 Lugares Auto',
     'vw multivan auto': '7 Lugares Auto',
-    'vw multivan': '7 Lugares',  # Variação sem "auto"
-    'volkswagen multivan': '7 Lugares',  # Variação sem "auto"
+    'vw tiguan auto': '7 Lugares Auto',
     'citroen c4 grand spacetourer auto': '7 Lugares Auto',
-    'citroen c4 grand spacetourer': '7 Lugares',  # Variação sem "auto"
     'citroen c4 picasso auto': '7 Lugares Auto',
+    'citroen grand picasso auto': '7 Lugares Auto',
     'renault grand scenic auto': '7 Lugares Auto',
     'mercedes glb auto': '7 Lugares Auto',
+    'mercedes glb 7 seater auto': '7 Lugares Auto',
+    'mercedes v class auto': '7 Lugares Auto',
+    'peugeot 5008 auto': '7 Lugares Auto',
+    'peugeot rifter auto': '7 Lugares Auto',
+    'dacia jogger auto': '7 Lugares Auto',
+    'ds7 auto': '7 Lugares Auto',
+    'ds7': '7 Lugares Auto',
     
-    # 9 Lugares
-    'ford tourneo': '9 Lugares',
-    'volkswagen sharan': '9 Lugares',
-    'vw sharan': '9 Lugares',
-    'ford galaxy': '9 Lugares',
+    # ========== N: 9 Lugares ==========
     'ford transit': '9 Lugares',
+    'ford transit custom': '9 Lugares',
     'opel vivaro': '9 Lugares',
     'toyota proace': '9 Lugares',
     'fiat talento': '9 Lugares',
     'citroen spacetourer': '9 Lugares',
+    'citroen spacetourer auto': '9 Lugares',
     'renault trafic': '9 Lugares',
+    'renault trafic auto': '9 Lugares',
     'peugeot traveller': '9 Lugares',
+    'peugeot traveller auto': '9 Lugares',
     'volkswagen transporter': '9 Lugares',
     'vw transporter': '9 Lugares',
     'mercedes vito': '9 Lugares',
+    'mercedes vito auto': '9 Lugares',
+    'mercedes benz vito': '9 Lugares',
     'volkswagen caravelle': '9 Lugares',
     'vw caravelle': '9 Lugares',
-    'mercedes v class': '9 Lugares',
-    'fiat 500 cabrio': 'Cabrio',
-    'ford focus': 'ECONOMY',
-    'ford focus sw auto': 'Station Wagon Auto',
-    'ford puma auto': 'SUV Auto',
-    'kia ceed sw': 'Station Wagon',
-    'mazda mx5 cabrio auto': 'Cabrio',
-    'mercedes v class auto': '9 Lugares',
-    'mercedes vito auto': '9 Lugares',
-    'vw polo auto': 'ECONOMY Auto',
-    'vw taigo auto': 'SUV Auto',
-    'volvo xc40 auto': 'SUV Auto',
-    'volvo xc60 auto': 'SUV Auto',
-    'volvo v60 4x4 auto, hybrid': 'Luxury',  # Station Wagon premium → Others
-    'volkswagen t-roc': 'SUV',
-    'volkswagen t-roc cabrio': 'SUV',
-    'seat leon': 'ECONOMY',
-    'seat arona auto': 'SUV Auto',
-    'renault megane': 'ECONOMY',
-    'renault megane auto': 'ECONOMY Auto',
-    'renault megane sw': 'Station Wagon',
-    'renault megane sw auto': 'Station Wagon Auto',
-    'renault megane sw auto hybrid': 'Station Wagon Auto',  # Sem vírgula
-    'renault megane sw hybrid': 'Station Wagon',  # Sem auto
-    'renault megane sw auto, hybrid': 'Station Wagon Auto',
-    'peugeot 108 cabrio': 'Cabrio',
-    'peugeot 2008 auto': 'SUV Auto',
-    'peugeot 2008 auto electric': 'SUV Auto',  # Sem vírgula
-    'peugeot 2008 electric': 'SUV',  # Sem auto
-    'peugeot 2008 auto, electric': 'SUV Auto',
-    'peugeot 308': 'ECONOMY',
-    'nissan qashqai auto': 'SUV',
-    'cupra formentor auto': 'SUV Auto',
-    'mercedes c class sw auto': 'Luxury',  # Station Wagon premium → Others
-    'mercedes cle coupe auto': 'Luxury',
-    'mercedes e class auto': 'Luxury',
-    'mercedes e class sw auto': 'Luxury',  # Station Wagon premium → Others
-    'mercedes s class auto': 'Luxury',
-    'citroen c4': 'Crossover',
-    'fiat 500': 'MINI 4 Portas',
-    'fiat 500 auto': 'MINI Auto',
-    'renault megane sw auto': 'Station Wagon Auto',
-    'alfa romeo giulietta auto': 'Luxury',
-    'audi a3': 'Luxury',
-    'audi a5 sportback auto': 'Luxury',
-    'audi q2': 'Crossover',
-    'bmw 4 series cabrio auto': 'Luxury',
-    'bmw 4 series gran coupe auto': 'Luxury',
-    'bmw x5 auto': 'Luxury',
-    'citroen c5 aircross auto': 'SUV Auto',
-    'citroen elysee': 'Station Wagon',
-    'citroen grand picasso auto': '7 Lugares Auto',
-    'citroen spacetourer auto': '9 Lugares',
-    'dacia duster': 'Crossover',
-    'dacia jogger auto': '7 Lugares Auto',
-    'ds4 auto': 'SUV Auto',
-    'ds7 auto': '7 Lugares Auto',
-    'fiat 600 auto': 'SUV Auto',
-    'fiat tipo': 'Station Wagon',
-    'ford ka': 'MINI 4 Lugares',
-    'ford kuga auto': 'SUV Auto',
-    'ford transit custom': '9 Lugares',
-    'hyundai i30': 'Station Wagon',
-    'jeep avenger auto': 'SUV Auto',
-    'jeep renegade': 'Crossover',
-    'jeep renegade auto': 'SUV Auto',
-    'kia stonic auto': 'SUV Auto',
-    'mazda 2': 'ECONOMY',  # Variação sem "auto"
-    'mazda 2 auto': 'ECONOMY Auto',
-    'mazda cx3': 'SUV',
-    'citroen c1': 'MINI 4 Lugares',
-    'fiat 500': 'MINI 4 Lugares',
-    'ford galaxy': '7 Lugares',
-    'ford kuga': 'SUV',
-    'ford tourneo': '7 Lugares',
-    'hyundai tucson': 'SUV',
-    'hyundai i10': 'MINI 5 Lugares',  # CORRIGIDO: i10 é 5 lugares, não 4!
-    'kia picanto': 'MINI 4 Lugares',
-    'kia sportage': 'Crossover',
-    'mazda cx3': 'Crossover',
-    'mercedes v class auto': '7 Lugares Auto',
-    'mercedes v class': '7 Lugares',
-    'mitsubishi asx': 'SUV',
-    'nissan qashqai': 'SUV',
-    'nissan qashqai auto': 'SUV Auto',
-    'nissan qashqai': 'Crossover',
-    'peugeot 2008': 'Crossover',
-    'peugeot 3008': 'Crossover',
-    'renault austral': 'Crossover',
-    'renault captur': 'SUV',
-    'skoda kamiq': 'Crossover',
-    'volkswagen up': 'MINI 4 Lugares',
-    'volkswagen taigo': 'SUV',
-    'volkswagen sharan': '7 Lugares',
-    'volvo xc40 auto': 'SUV Auto',
-    'volvo xc60 auto': 'SUV Auto',
-    'mercedes b class auto': 'Luxury',
-    'mercedes benz vito': '9 Lugares',
-    'mercedes glb 7 seater auto': '7 Lugares Auto',
-    'mercedes glc auto': 'Luxury',
-    'mercedes glc coupe auto': 'Luxury',
-    'mercedes gle auto': 'Luxury',
-    'mini cooper cabrio': 'Cabrio',
-    'mini one cabrio': 'Cabrio',
-    'mitsubishi spacestar': 'MINI 5 Lugares',
-    'nissan juke auto': 'SUV',
-    'opel astra': 'ECONOMY',
-    'opel astra auto': 'ECONOMY Auto',
-    'opel mokka auto': 'SUV Auto',
-    'peugeot 5008 auto': '7 Lugares Auto',
-    'peugeot 508': 'Station Wagon',
-    'peugeot 508 auto': 'Station Wagon Auto',
-    'peugeot rifter auto': '7 Lugares Auto',
-    'peugeot traveller auto': '9 Lugares',
-    'porsche cayenne auto': 'Luxury',
-    'range rover evoque': 'Luxury',
-    'renault trafic auto': '9 Lugares',
-    'seat alhambra': '7 Lugares',
-    'seat leon auto': 'ECONOMY',
-    'seat leon sw auto': 'Station Wagon Auto',
-    'seat mii': 'MINI 4 Lugares',
-    'skoda fabia sw auto': 'Station Wagon Auto',
-    'skoda kamiq auto': 'SUV Auto',
-    'skoda kodiaq auto': 'SUV Auto',
-    'skoda scala': 'Station Wagon',
-    'skoda scala auto': '7 Lugares',
-    'skoda scala auto': 'Station Wagon Auto',
-    'toyota aygo x': 'SUV',
-    'toyota hilux 4x4': 'Luxury',
-    'toyota rav4 4x4 auto': 'SUV',
-    'toyota yaris': 'MINI 4 Lugares',
-    'toyota yaris auto': 'MINI Auto',
-    'toyota yaris cross auto': 'SUV Auto',
-    'volkswagen up auto': 'MINI Auto',
-    'volvo xc90 auto': 'Luxury',
-    'vw arteon sw auto': 'Luxury',
-    'vw beetle cabrio': 'Cabrio',
-    'vw golf': 'ECONOMY',
-    'vw golf auto': 'ECONOMY Auto',
-    'vw golf sw auto': 'Station Wagon Auto',
-    'vw polo': 'ECONOMY',
-    'vw tiguan auto': '7 Lugares',
     
-    # Carros adicionais que aparecem no scraping (Nov 2025)
-    'toyota chr': 'SUV',  # Sem "auto"
-    'ford ecosport': 'SUV',  # Sem "auto"
-    'opel mokka': 'SUV',  # Sem "auto"
-    'volkswagen id.5 5 door': 'SUV Auto',  # Elétrico
-    'tesla model 3': 'Luxury',  # Elétrico
-    'volvo ex30': 'SUV Auto',  # Elétrico
-    'mg zs': 'SUV',
-    'mg ehs 5 door auto': 'SUV Auto',  # Híbrido Automático = L1
-    'mg ehs auto': 'SUV Auto',  # Híbrido Automático = L1
-    'byd seal u': 'SUV Auto',  # Híbrido
-    'kia niro': 'SUV Auto',  # Híbrido
-    'renault arkana': 'SUV Auto',
-    'bmw 1 series': 'Luxury',  # Sem "auto"
-    'bmw 2 series gran coupe': 'Luxury',  # Sem "auto"
-    'bmw 3 series': 'Luxury',  # Sem "auto"
-    'bmw 3 series sw': 'Luxury',  # Station Wagon premium → Others
-    'bmw 4 series gran coupe': 'Luxury',  # Sem "auto"
-    'bmw 5 series': 'Luxury',  # Sem "auto"
-    'bmw 5 series sw': 'Luxury',  # Station Wagon premium → Others
-    'bmw x1': 'SUV Auto',  # Sem "auto" mas é sempre automático
-    'bmw x5': 'Luxury',  # Sem "auto"
-    'mercedes a class': 'Luxury',  # Sem "auto"
+    # ========== Others: Luxury (não parametrizados) ==========
+    'mini cooper': 'Luxury',
+    'mini countryman': 'Luxury',
+    'mini countryman auto': 'Luxury',
+    'audi a1': 'Luxury',
+    'audi a3': 'Luxury',
+    'audi a3 auto': 'Luxury',
+    'audi a5 sportback': 'Luxury',
+    'audi a5 sportback auto': 'Luxury',
+    'cupra formentor': 'Luxury',
+    'ds 4': 'Luxury',
+    'ds4': 'Luxury',
+    'bmw 1 series': 'Luxury',
+    'bmw 1 series auto': 'Luxury',
+    'bmw 2 series gran coupe': 'Luxury',
+    'bmw 2 series gran coupe auto': 'Luxury',
+    'bmw 3 series': 'Luxury',
+    'bmw 3 series sw': 'Luxury',
+    'bmw 4 series gran coupe': 'Luxury',
+    'bmw 4 series gran coupe auto': 'Luxury',
+    'bmw 5 series': 'Luxury',
+    'bmw 5 series sw': 'Luxury',
+    'bmw x5': 'Luxury',
+    'bmw x5 auto': 'Luxury',
+    'mercedes a class': 'Luxury',
+    'mercedes a class auto': 'Luxury',
+    'mercedes a class automático': 'Luxury',
     'mercedes a class hybrid': 'Luxury',
-    'mercedes b class': 'Luxury',  # Sem "auto"
-    'mercedes c class': 'Luxury',  # Sem "auto"
-    'mercedes c class sw': 'Luxury',  # Station Wagon premium → Others
+    'mercedes b class': 'Luxury',
+    'mercedes b class auto': 'Luxury',
+    'mercedes c class': 'Luxury',
+    'mercedes c class auto': 'Luxury',
+    'mercedes c class sw': 'Luxury',
+    'mercedes c class sw auto': 'Luxury',
     'mercedes cla': 'Luxury',
     'mercedes cla coupe': 'Luxury',
-    'mercedes e class': 'Luxury',  # Sem "auto"
-    'mercedes e class sw': 'Luxury',  # Station Wagon premium → Others
-    'mercedes e class cabrio': 'Cabrio',
-    'mercedes gla': 'SUV Auto',  # Sem "auto"
-    'mercedes glb': 'SUV Auto',  # Sem "auto"
-    'mercedes glc': 'SUV Auto',  # Sem "auto"
-    'mercedes glc coupe': 'SUV Auto',  # Sem "auto"
-    'mercedes glc coupe hybrid': 'SUV Auto',
-    'mercedes gle': 'Luxury',  # Sem "auto"
-    'mercedes s class': 'Luxury',  # Sem "auto"
-    'mercedes v class': '7 Lugares',  # Sem "auto" (já existe mas duplicado)
-    'mercedes vito': '9 Lugares',  # Sem "auto" (já existe)
-    'audi a5 sportback': 'Luxury',  # Sem "auto"
-    'cupra leon sw': 'Station Wagon Auto',  # Sem "auto"
-    'ds 4': 'Luxury',  # Sem "auto"
-    'ds4': 'Luxury',  # Variação sem espaço
-    'ds7': '7 Lugares Auto',  # Sem "auto"
-    'volvo v60': 'Luxury',  # Station Wagon premium → Others
-    'volvo v60 4x4': 'Luxury',  # Station Wagon premium → Others
-    'volvo xc40': 'SUV Auto',  # Sem "auto"
-    'volvo xc60': 'SUV Auto',  # Sem "auto"
-    'volvo xc90': 'Luxury',  # Sem "auto"
-    'porsche cayenne': 'Luxury',  # Sem "auto"
-    'ford puma': 'Crossover',  # Sem "auto"
-    'ford transit': '9 Lugares',  # Sem "auto"
-    'opel grandland x': 'SUV Auto',  # Sem "auto"
-    'citroen c5 aircross': 'SUV Auto',  # Sem "auto"
-    'volkswagen id.5': 'SUV Auto',  # Variação
-    'million jeep renegade': 'Crossover',  # Com supplier no nome
-    'peugeot e-208, electric': 'ECONOMY',
-    'peugeot e-208': 'ECONOMY',
-    'ford ka': 'MINI 4 Lugares',
-    'ford ka': 'MINI 4 Lugares',
-    'ford transit custom': '9 Lugares',
-    'dacia jogger auto': '7 Lugares Auto',
-    'ds4 auto': 'SUV Auto',
-    
-    # CROSSOVERS (corrigido - última definição sobrescreve duplicatas)
-    'nissan qashqai': 'Crossover',
-    'nissan qashqai auto': 'Crossover',  # Auto vai para J1 também
-    'ford kuga': 'Crossover',  # Corrigido: era SUV
-    'ford kuga auto': 'Crossover',  # Corrigido: era SUV Auto
-    'renault austral': 'Crossover',
-    'renault austral auto': 'Crossover',
-    'seat ateca': 'Crossover',  # Corrigido: era SUV
-    'seat ateca auto': 'Crossover',  # Novo
-    'peugeot 2008': 'Crossover',
-    'peugeot 3008': 'Crossover',
-    'skoda kamiq': 'Crossover',
+    'mercedes cle coupe auto': 'Luxury',
+    'mercedes e class': 'Luxury',
+    'mercedes e class auto': 'Luxury',
+    'mercedes e class sw': 'Luxury',
+    'mercedes e class sw auto': 'Luxury',
+    'mercedes gle': 'Luxury',
+    'mercedes gle auto': 'Luxury',
+    'mercedes s class': 'Luxury',
+    'mercedes s class auto': 'Luxury',
+    'volvo v60': 'Luxury',
+    'volvo v60 4x4': 'Luxury',
+    'volvo v60 4x4 auto, hybrid': 'Luxury',
+    'volvo xc90': 'Luxury',
+    'volvo xc90 auto': 'Luxury',
+    'porsche cayenne': 'Luxury',
+    'porsche cayenne auto': 'Luxury',
+    'range rover evoque': 'Luxury',
+    'tesla model 3': 'Luxury',
+    'toyota hilux 4x4': 'Luxury',
+    'alfa romeo giulietta auto': 'Luxury',
+    'vw arteon sw auto': 'Luxury',
 }
 
 
