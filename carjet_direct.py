@@ -85,6 +85,7 @@ SUPPLIER_MAP = {
 # IMPORTANTE: As categorias DEVEM corresponder ao category_map em main.py
 VEHICLES = {
     # ========== B1: MINI 4 Lugares ==========
+    'fiat 500': 'MINI 4 Lugares',
     'fiat 500 4p': 'MINI 4 Lugares',
     'toyota aygo': 'MINI 4 Lugares',
     'peugeot 108': 'MINI 4 Lugares',
@@ -98,7 +99,6 @@ VEHICLES = {
     'seat mii': 'MINI 4 Lugares',
     
     # ========== B2: MINI 5 Lugares ==========
-    'fiat 500': 'MINI 5 Lugares',
     'fiat panda': 'MINI 5 Lugares',
     'hyundai i10': 'MINI 5 Lugares',
     'mitsubishi spacestar': 'MINI 5 Lugares',
