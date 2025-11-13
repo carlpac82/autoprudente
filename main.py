@@ -1903,11 +1903,12 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     car_lower = car_name.lower() if car_name else ""
     trans_lower = transmission.lower() if transmission else ""
     
-    logging.debug(f"[MAP] Input: category='{category}' -> cat='{cat}', car='{car_name}', trans='{transmission}'")
+    logging.info(f"📋 [MAP] ENTRADA: car='{car_name}', category='{category}', transmission='{transmission}'")
     
     # PRIORIDADE -1: CABRIO/CABRIOLET no NOME → SEMPRE Grupo G
     # Independente da categoria (Luxury, Mini, SUV, etc), se tem "cabrio" no nome = G
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
+        logging.info(f"✅ [MAP] SUCESSO (cabrio no nome): car='{car_name}' → grupo 'G' (Cabrio)")
         return "G"
     
     # PRIORIDADE -0.5: VEÍCULOS 7 LUGARES → SEMPRE M1/M2
@@ -1937,7 +1938,9 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     for pattern in seven_seater_patterns:
         if re.search(pattern, car_lower, re.IGNORECASE):
-            return "M2" if is_auto else "M1"  # 7 Seater - PRIORIDADE MÁXIMA!
+            grupo = "M2" if is_auto else "M1"
+            logging.info(f"✅ [MAP] SUCESSO (7 lugares pattern): car='{car_name}' → grupo '{grupo}' (7 Seater)")
+            return grupo  # 7 Seater - PRIORIDADE MÁXIMA!
     
     # PRIORIDADE 0: Consultar dicionário VEHICLES de carjet_direct.py
     # NOSSA PARAMETRIZAÇÃO TEM PRIORIDADE SOBRE CATEGORIAS CARJET!
@@ -2142,6 +2145,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # Luxury / Premium → Others (não oferecemos estas categorias)
     if cat in ['luxury', 'premium', 'luxo']:
+        logging.info(f"🚫 [MAP] Luxury excluído (categoria explícita): car='{car_name}', category='{category}'")
         return "Others"
     
     # 7 Seater / 7 Seats → M1 ou M2 (se automático)
@@ -2370,8 +2374,11 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     if cat in category_map:
         if category_map[cat] is None:
             # Luxury/Premium sem grupo → retorna None para ir para Others
+            logging.info(f"🚫 [MAP] Luxury/Premium excluído: car='{car_name}', category='{category}'")
             return None
-        return category_map[cat]
+        grupo = category_map[cat]
+        logging.info(f"✅ [MAP] SUCESSO (direto): car='{car_name}' → grupo '{grupo}'")
+        return grupo
     
     # FALLBACK: Análise inteligente por palavras-chave
     # Verificar se é automático (priorizar transmission, depois category, depois car_name)
@@ -2381,36 +2388,53 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # Verificar tipo de veículo por palavras-chave
     if '9' in cat or 'minivan' in cat or 'van' in cat:
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo 'N' (9 Seater)")
         return "N"  # 9 Seater
     
     if '7' in cat or 'mpv' in cat or 'people carrier' in cat:
-        return "M2" if is_auto else "M1"  # 7 Seater
+        grupo = "M2" if is_auto else "M1"
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (7 Seater)")
+        return grupo  # 7 Seater
     
     if any(word in cat for word in ['sw', 'station', 'wagon', 'estate', 'carrinha', 'touring']):
-        return "L2" if is_auto else "J2"  # Station Wagon
+        grupo = "L2" if is_auto else "J2"
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (Station Wagon)")
+        return grupo  # Station Wagon
     
     if 'crossover' in cat:
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo 'J1' (Crossover)")
         return "J1"  # Crossover
     
     if any(word in cat for word in ['suv', 'jeep', '4x4', '4wd']):
-        return "L1" if is_auto else "F"  # SUV
+        grupo = "L1" if is_auto else "F"
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (SUV)")
+        return grupo  # SUV
     
     if any(word in cat for word in ['cabrio', 'cabriolet', 'convertible']):
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo 'G' (Cabrio)")
         return "G"  # Cabrio apenas
     
     if any(word in cat for word in ['premium', 'luxury', 'luxo']):
+        logging.info(f"🚫 [MAP] Luxury excluído (fallback): car='{car_name}', category='{category}'")
         return "Others"  # Luxury não oferecido
     
     if any(word in cat for word in ['mini', 'small', 'pequeno']):
         # Verificar se é 4 ou 5 lugares pelo nome do carro
         if any(model in car_lower for model in ['fiat 500', 'fiat500', 'peugeot 108', 'c1', 'vw up', 'picanto', 'aygo']):
-            return "E1" if is_auto else "B1"  # Mini 4 lugares
-        return "E1" if is_auto else "B2"  # Mini 5 lugares (default)
+            grupo = "E1" if is_auto else "B1"
+            logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (Mini 4 lugares)")
+            return grupo  # Mini 4 lugares
+        grupo = "E1" if is_auto else "B2"
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (Mini 5 lugares)")
+        return grupo  # Mini 5 lugares (default)
     
     if any(word in cat for word in ['economy', 'econom', 'compact', 'compacto']):
-        return "E2" if is_auto else "D"  # Economy
+        grupo = "E2" if is_auto else "D"
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (Economy)")
+        return grupo  # Economy
     
-    # Se chegou aqui, não conseguiu mapear
+    # Se chegou aqui, não conseguiu mapear - LOG CRÍTICO
+    logging.warning(f"⚠️ [MAP-FALLBACK] Categoria não mapeada! car='{car_name}', category='{category}', transmission='{transmission}' → 'Others'")
     return "Others"
 
 def _send_creds_email(to_email: str, username: str, password: str):
