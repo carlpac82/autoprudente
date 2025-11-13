@@ -226,6 +226,7 @@ VEHICLES = {
 
     # ========== J2: Station Wagon ==========
     'citroen elysee': 'Station Wagon',
+    'cupra leon sw': 'Station Wagon',
     'fiat tipo': 'Station Wagon',
     'fiat tipo sw': 'Station Wagon',
     'ford focus sw': 'Station Wagon',
@@ -321,7 +322,6 @@ VEHICLES = {
     'vw t-cross auto': 'SUV Auto',
 
     # ========== L2: Station Wagon Auto ==========
-    'cupra leon sw': 'Station Wagon Auto',
     'cupra leon sw auto': 'Station Wagon Auto',
     'ford focus sw auto': 'Station Wagon Auto',
     'kia ceed sw auto': 'Station Wagon Auto',
