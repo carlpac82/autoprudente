@@ -1920,21 +1920,46 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return "E2"
     
     # SUV → F ou L1 (se automático)
-    # EXCEÇÃO: Peugeot 5008 Auto é M2 (7 Seater Auto), não L1!
+    # EXCEÇÕES: Veículos 7 lugares que CarJet categoriza como SUV
+    # - Peugeot 5008 Auto → M2 (7 Seater Auto), não L1!
+    # - Citroen C4 Picasso Auto → M2 (7 Seater Auto), não L1!
+    # - Citroen Grand C4 Picasso/Spacetourer Auto → M2 (7 Seater Auto), não L1!
     if cat in ['suv', 'jeep']:
-        # Verificar se é Peugeot 5008 Auto → M2
         import re
+        # Verificar se é Peugeot 5008 → M1/M2
         if re.search(r'\bpeugeot\s*5008\b', car_lower, re.IGNORECASE):
             is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
             if is_auto:
                 return "M2"  # 7 Seater Auto
             return "M1"  # 7 Seater Manual
+        
+        # Verificar se é Citroen C4 Picasso (non-Grand) → M1/M2
+        if re.search(r'\bcitro[eë]n\s*c4\s*picasso\b', car_lower, re.IGNORECASE) and not re.search(r'\bgrand\b', car_lower, re.IGNORECASE):
+            is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+            if is_auto:
+                return "M2"  # 7 Seater Auto
+            return "M1"  # 7 Seater Manual
+        
+        # Verificar se é Citroen Grand C4 Picasso/Spacetourer → M1/M2
+        if re.search(r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer|grand\s*space\s*tourer)\b', car_lower, re.IGNORECASE):
+            is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+            if is_auto:
+                return "M2"  # 7 Seater Auto
+            return "M1"  # 7 Seater Manual
+        
         # Normal SUV logic
         is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
         return "L1" if is_auto else "F"
     
-    # SUV Automatic / SUV Auto → L1
+    # SUV Automatic / SUV Auto → L1 (mas só se não for exceção acima)
     if cat in ['suv automatic', 'suv auto', 'jeep automatic', 'jeep auto']:
+        import re
+        # Verificar exceções antes de retornar L1
+        if re.search(r'\bpeugeot\s*5008\b', car_lower, re.IGNORECASE):
+            return "M2"  # 7 Seater Auto
+        if re.search(r'\bcitro[eë]n\s*c4\s*picasso\b', car_lower, re.IGNORECASE) or \
+           re.search(r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer)\b', car_lower, re.IGNORECASE):
+            return "M2"  # 7 Seater Auto
         return "L1"
     
     # Station Wagon / Estate / Carrinha → J2 ou L2 (se automático)
