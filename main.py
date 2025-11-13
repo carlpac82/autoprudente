@@ -5184,9 +5184,9 @@ async def ai_pricing_analysis(request: Request):
         grupos = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
         group_names = {
             'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
-            'E1': 'Compact 4 Seats', 'E2': 'Compact Aut.', 'F': 'Intermediate',
-            'G': 'Intermediate Aut.', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-            'L1': 'Standard', 'L2': 'Standard Aut.', 'M1': 'Premium', 'M2': 'Premium Aut.', 'N': 'Minivan'
+            'E1': 'Mini Automatic', 'E2': 'Economy Automatic', 'F': 'SUV',
+            'G': 'Premium', 'J1': 'Crossover', 'J2': 'Station Wagon',
+            'L1': 'SUV Automatic', 'L2': 'Station Wagon Automatic', 'M1': '7 Seater', 'M2': '7 Seater Automatic', 'N': '9 Seater'
         }
         
         total_data_points = 0
@@ -5316,9 +5316,9 @@ async def ai_deep_analysis(request: Request):
         grupos = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
         group_names = {
             'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
-            'E1': 'Compact 4 Seats', 'E2': 'Compact Aut.', 'F': 'Intermediate',
-            'G': 'Intermediate Aut.', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-            'L1': 'Standard', 'L2': 'Standard Aut.', 'M1': 'Premium', 'M2': 'Premium Aut.', 'N': 'Minivan'
+            'E1': 'Mini Automatic', 'E2': 'Economy Automatic', 'F': 'SUV',
+            'G': 'Premium', 'J1': 'Crossover', 'J2': 'Station Wagon',
+            'L1': 'SUV Automatic', 'L2': 'Station Wagon Automatic', 'M1': '7 Seater', 'M2': '7 Seater Automatic', 'N': '9 Seater'
         }
         
         # Aggregate data by group
