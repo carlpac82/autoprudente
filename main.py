@@ -2063,7 +2063,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             car_clean = clean_car_name(car_name)
             car_clean_lower = car_clean.lower().strip()
             
-            # ✅ PRIORIDADE MÁXIMA: Station Wagons (SW) ANTES de qualquer normalização
+            # ✅ PRIORIDADE MÁXIMA 1: Station Wagons (SW) ANTES de qualquer normalização
             # Garantir que "Ford Focus SW" nunca é mapeado como "Ford Focus" (Economy)
             if re.search(r'\bsw\b', car_clean_lower):
                 # Verificar se existe match exato com SW no VEHICLES
@@ -2073,6 +2073,19 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                         grupo_code = _map_category_to_group_code(category_from_vehicles)
                         if grupo_code:
                             logging.info(f"✅ [SW-PRIORITY] {car_name} → {sw_key} → {category_from_vehicles} → {grupo_code}")
+                            return grupo_code
+            
+            # ✅ PRIORIDADE MÁXIMA 2: Carros AUTO ANTES de match parcial
+            # Garantir que "Mercedes V Class Auto" não é mapeado como "Mercedes V Class" (M1)
+            if re.search(r'\b(auto|automatic|automático|automatico)\b', car_clean_lower):
+                # Verificar se existe match exato com versão AUTO no VEHICLES
+                # Tentar matches mais específicos primeiro (ordenar por tamanho decrescente)
+                for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
+                    if auto_key in car_clean_lower:
+                        category_from_vehicles = VEHICLES[auto_key]
+                        grupo_code = _map_category_to_group_code(category_from_vehicles)
+                        if grupo_code:
+                            logging.info(f"✅ [AUTO-PRIORITY] {car_name} → {auto_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
             # Remover sufixos comuns que impedem match
