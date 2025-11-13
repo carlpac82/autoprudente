@@ -8588,28 +8588,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                                 car_name = alt_car_name
                                 logging.info(f"✅ [SCRAPING-ALT] Nome extraído do alt: '{car_name}' (original: '{alt_text}')")
                                 print(f"[SCRAPING] Nome extraído do alt da imagem: {car_name} (foto: {src})")
-            
-            # 🔧 DETECTAR TRANSMISSÃO POR ÍCONE (INDIVIDUAL POR CARRO)
-            # Automático: <i class="icon icon-transm-auto size-24"></i>
-            # Manual: <i class="icon icon-transm size-24"></i> (sem "auto")
-            card_transmission = ""
-            try:
-                # Procurar ícone de transmissão no card
-                trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
-                if trans_icon:
-                    card_transmission = "Automatic"
-                    logging.info(f"🔧 [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
-                else:
-                    # Verificar se tem ícone manual (icon-transm SEM auto)
-                    trans_icon_manual = card.select_one("i.icon-transm:not(.icon-transm-auto), i.icon.icon-transm:not(.icon-transm-auto)")
-                    if trans_icon_manual:
-                        card_transmission = "Manual"
-                        logging.info(f"🔧 [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto encontrado)")
-            except Exception as e:
-                logging.warning(f"⚠️ [ICON-TRANS] Erro ao detectar transmissão do card: {e}")
-            
-            # photo extraction
-            try:
+                
                 # PRIORIDADE 2: prefer <picture> sources
                 if not photo:
                     picture_src = None
@@ -8683,6 +8662,26 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                             photo = f"/cdn/img/cars/S/car_{code}.jpg"
             except Exception:
                 pass
+            
+            # 🔧 DETECTAR TRANSMISSÃO POR ÍCONE (INDIVIDUAL POR CARRO)
+            # Automático: <i class="icon icon-transm-auto size-24"></i>
+            # Manual: <i class="icon icon-transm size-24"></i> (sem "auto")
+            card_transmission = ""
+            try:
+                # Procurar ícone de transmissão no card
+                trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
+                if trans_icon:
+                    card_transmission = "Automatic"
+                    logging.info(f"🔧 [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
+                else:
+                    # Verificar se tem ícone manual (icon-transm SEM auto)
+                    trans_icon_manual = card.select_one("i.icon-transm:not(.icon-transm-auto), i.icon.icon-transm:not(.icon-transm-auto)")
+                    if trans_icon_manual:
+                        card_transmission = "Manual"
+                        logging.info(f"🔧 [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto encontrado)")
+            except Exception as e:
+                logging.warning(f"⚠️ [ICON-TRANS] Erro ao detectar transmissão do card: {e}")
+            
             # category
             cat_el = card.select_one(".category, .group, .vehicle-category, [class*='category'], [class*='group'], [class*='categoria'], [class*='grupo']")
             category = cat_el.get_text(strip=True) if cat_el else ""
