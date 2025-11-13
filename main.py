@@ -29456,6 +29456,27 @@ async def initialize_ai_from_history(request: Request):
         logging.error(f"❌ [AI-INIT] Traceback:\n{error_trace}")
         return JSONResponse({"ok": False, "error": error_msg, "trace": error_trace}, status_code=500)
 
+def _safe_float_from_price(price_value):
+    """
+    Converte preço para float de forma segura
+    Aceita: 123.45, "123.45", "123,45 €", "€ 123,45", etc.
+    """
+    if price_value is None:
+        return 0.0
+    
+    if isinstance(price_value, (int, float)):
+        return float(price_value)
+    
+    if isinstance(price_value, str):
+        # Remover símbolo de euro, espaços, e trocar vírgula por ponto
+        clean = price_value.replace('€', '').replace(' ', '').replace(',', '.').strip()
+        try:
+            return float(clean)
+        except (ValueError, TypeError):
+            return 0.0
+    
+    return 0.0
+
 @app.get("/api/ai/get-price")
 async def get_ai_price(request: Request, grupo: str, days: int, location: str):
     """Get AI-suggested price based on automated_search_history from BOTH locations"""
@@ -29518,8 +29539,8 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                             if not suppliers_for_group_day or len(suppliers_for_group_day) < 3:
                                 continue
                             
-                            # Ordenar por preço
-                            suppliers_sorted = sorted(suppliers_for_group_day, key=lambda x: float(x.get('price', 999)))
+                            # Ordenar por preço (usar price_num se disponível, senão price)
+                            suppliers_sorted = sorted(suppliers_for_group_day, key=lambda x: _safe_float_from_price(x.get('price_num') or x.get('price', 999)))
                             
                             # Encontrar posição da AutoPrudente
                             ap_position = None
@@ -29529,7 +29550,7 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                                 is_ap = 'autoprudente' in supplier_name or 'auto prudente' in supplier_name or 'prudente' in supplier_name
                                 if is_ap:
                                     ap_position = idx
-                                    ap_price = float(supp.get('price', 0))
+                                    ap_price = _safe_float_from_price(supp.get('price_num') or supp.get('price', 0))
                                     break
                             
                             if ap_position:
@@ -29585,7 +29606,7 @@ async def get_ai_price(request: Request, grupo: str, days: int, location: str):
                     
                     for supp in suppliers_for_group_day:
                         supplier_name = (supp.get('supplier', '') or '').lower()
-                        price = float(supp.get('price', 0))
+                        price = _safe_float_from_price(supp.get('price_num') or supp.get('price', 0))
                         if price <= 0:
                             continue
                         
