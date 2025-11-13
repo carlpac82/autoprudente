@@ -263,6 +263,7 @@ VEHICLES = {
     'cupra formentor auto': 'SUV Auto',
     'ds4 auto': 'SUV Auto',
     'fiat 500l auto': 'SUV Auto',
+    'fiat 500x': 'SUV Auto',
     'fiat 500x auto': 'SUV Auto',
     'fiat 600 auto': 'SUV Auto',
     'ford ecosport auto': 'SUV Auto',
