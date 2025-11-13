@@ -2027,21 +2027,28 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # PRIORIDADE -0.5: VEÍCULOS 9 LUGARES → SEMPRE N (9 Seater)
     # ANTES de verificar 7 lugares!
+    # IMPORTANTE: Ser MUITO específico para não capturar 7 lugares por engano
     import re
     
     nine_seater_patterns = [
-        r'\bford\s*tourneo\b',
+        # Ford Transit/Tourneo CUSTOM/COURIER (9 lugares)
+        # Mas NÃO Ford Tourneo genérico ou Ford Galaxy (7 lugares)
         r'\bford\s*transit\b',
+        r'\bford\s*tourneo\s*custom\b',
+        
+        # Mercedes Vito (9 lugares) - mas NÃO Mercedes V-Class (7 lugares)
         r'\bmercedes\s*(benz\s*)?vito\b',
-        r'\bmercedes\s*v\s*class\b',
+        
+        # Vans comerciais verdadeiras (9 lugares)
         r'\bopel\s*vivaro\b',
         r'\brenault\s*trafic\b',
         r'\bpeugeot\s*traveller\b',
         r'\bcitroen\s*spacetourer\b',
         r'\btoyota\s*proace\b',
         r'\bfiat\s*talento\b',
+        
+        # VW Caravelle/Transporter (9 lugares) - mas NÃO Multivan (7 lugares)
         r'\b(vw|volkswagen)\s*caravelle\b',
-        r'\b(vw|volkswagen)\s*multivan\b',
         r'\b(vw|volkswagen)\s*transporter\b',
     ]
     
@@ -2061,19 +2068,24 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         r'\bpeugeot\s*5008\b',
         r'\bcitro[eë]n\s*c4\s*picasso\b',
         r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer|grand\s*space\s*tourer)\b',
+        r'\bcitro[eë]n\s*grand\s*picasso\b',  # Variação sem C4
         r'\brenault\s*(grand\s*)?scenic\b',
         r'\b(vw|volkswagen)\s*caddy\b',
+        r'\b(vw|volkswagen)\s*multivan\b',  # 7 lugares (removido de 9)
+        r'\b(vw|volkswagen)\s*sharan\b',
+        r'\b(vw|volkswagen)\s*touran\b',
         r'\bdacia\s*lodgy\b',
         r'\bdacia\s*jogger\b',
         r'\bpeugeot\s*rifter\b',
         r'\bford\s*s[-\s]?max\b',
         r'\bford\s*galaxy\b',
+        r'\bford\s*tourneo\b',  # 7 lugares genérico (removido de 9)
         r'\bopel\s*zafira\b',
-        r'\b(vw|volkswagen)\s*touran\b',
-        r'\b(vw|volkswagen)\s*sharan\b',
-        r'\bseat\s*alhambra\b',
-        r'\bpeugeot\s*traveller\b',
         r'\bopel\s*combo\b',
+        r'\bseat\s*alhambra\b',
+        r'\bskoda\s*kodiaq\b',
+        r'\bmercedes\s*glb\b',  # Mercedes GLB 7 Seater
+        r'\bmercedes\s*v[-\s]?class\b',  # 7 lugares (removido de 9)
     ]
     
     for pattern in seven_seater_patterns:
