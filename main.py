@@ -2145,7 +2145,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # Luxury / Premium → Others (não oferecemos estas categorias)
     if cat in ['luxury', 'premium', 'luxo']:
-        logging.info(f"🚫 [MAP] Luxury excluído (categoria explícita): car='{car_name}', category='{category}'")
+        trans_info = f"[{transmission if transmission else 'N/A'}]"
+        logging.info(f"🚫 [MAP] Luxury excluído (categoria explícita): car='{car_name}' {trans_info}, category='{category}'")
         return "Others"
     
     # 7 Seater / 7 Seats → M1 ou M2 (se automático)
@@ -2374,10 +2375,12 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     if cat in category_map:
         if category_map[cat] is None:
             # Luxury/Premium sem grupo → retorna None para ir para Others
-            logging.info(f"🚫 [MAP] Luxury/Premium excluído: car='{car_name}', category='{category}'")
+            trans_info = f"[{transmission if transmission else 'N/A'}]"
+            logging.info(f"🚫 [MAP] Luxury/Premium excluído: car='{car_name}' {trans_info}, category='{category}'")
             return None
         grupo = category_map[cat]
-        logging.info(f"✅ [MAP] SUCESSO (direto): car='{car_name}' → grupo '{grupo}'")
+        trans_info = f"[{transmission if transmission else 'N/A'}]"
+        logging.info(f"✅ [MAP] SUCESSO (direto): car='{car_name}' {trans_info} → grupo '{grupo}'")
         return grupo
     
     # FALLBACK: Análise inteligente por palavras-chave
@@ -2415,7 +2418,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return "G"  # Cabrio apenas
     
     if any(word in cat for word in ['premium', 'luxury', 'luxo']):
-        logging.info(f"🚫 [MAP] Luxury excluído (fallback): car='{car_name}', category='{category}'")
+        trans_tipo = "AUTOMÁTICO" if is_auto else "MANUAL"
+        logging.info(f"🚫 [MAP] Luxury excluído (fallback): car='{car_name}' [{trans_tipo}], category='{category}'")
         return "Others"  # Luxury não oferecido
     
     if any(word in cat for word in ['mini', 'small', 'pequeno']):
@@ -2434,7 +2438,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return grupo  # Economy
     
     # Se chegou aqui, não conseguiu mapear - LOG CRÍTICO
-    logging.warning(f"⚠️ [MAP-FALLBACK] Categoria não mapeada! car='{car_name}', category='{category}', transmission='{transmission}' → 'Others'")
+    trans_tipo = "AUTOMÁTICO" if is_auto else "MANUAL"
+    logging.warning(f"🔴 [CARRO PERDIDO] '{car_name}' [{trans_tipo}] - categoria '{category}' não mapeada → 'Others'")
     return "Others"
 
 def _send_creds_email(to_email: str, username: str, password: str):
