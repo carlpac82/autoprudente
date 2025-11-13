@@ -103,6 +103,7 @@ VEHICLES = {
     'fiat panda': 'MINI 5 Lugares',
     'hyundai i10': 'MINI 5 Lugares',
     'mitsubishi spacestar': 'MINI 5 Lugares',
+    'toyota aygo x': 'MINI 5 Lugares',
 
     # ========== E1: MINI Auto ==========
     'citroen c1 auto': 'MINI Auto',
@@ -111,6 +112,7 @@ VEHICLES = {
     'mitsubishi spacestar auto': 'MINI Auto',
     'peugeot 108 auto': 'MINI Auto',
     'toyota aygo auto': 'MINI Auto',
+    'toyota aygo x auto': 'MINI Auto',
     'toyota yaris auto': 'MINI Auto',
     'volkswagen up auto': 'MINI Auto',
 
@@ -172,7 +174,6 @@ VEHICLES = {
     'nissan juke': 'SUV',
     'renault captur': 'SUV',
     'seat arona': 'SUV',
-    'toyota aygo x': 'SUV',
     'toyota chr': 'SUV',
     'volkswagen taigo': 'SUV',
     'volkswagen troc': 'SUV',
@@ -309,7 +310,6 @@ VEHICLES = {
     'seat ateca auto': 'SUV Auto',
     'skoda kamiq auto': 'SUV Auto',
     'skoda karoq auto': 'SUV Auto',
-    'toyota aygo x auto': 'SUV Auto',
     'toyota chr auto': 'SUV Auto',
     'toyota rav4 4x4 auto': 'SUV Auto',
     'toyota yaris cross auto': 'SUV Auto',
