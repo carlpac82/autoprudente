@@ -312,59 +312,72 @@ def send_daily_report_for_schedule(schedule, schedule_index):
                 dias_list = json.loads(dias_json) if isinstance(dias_json, str) else dias_json
                 # Parse prices - structure is: {"B1": {3: 25.50, 7: 30.00}, "D": {3: 22.00}}
                 prices_by_group = json.loads(prices_data) if isinstance(prices_data, str) else prices_data
-                # Parse supplier data - structure is: {"3": [car1, car2, ...], "7": [car1, car2, ...]}
+                # Parse supplier data - NEW structure: {"B1": {"7": [car1, car2, ...]}, "D": {"7": [car1, car2, ...]}}
                 supplier_data = json.loads(supplier_data_json) if supplier_data_json and isinstance(supplier_data_json, str) else (supplier_data_json or {})
                 
                 print(f"   [DEBUG] prices_by_group keys: {list(prices_by_group.keys())}", flush=True)
-                print(f"   [DEBUG] supplier_data days: {list(supplier_data.keys())}", flush=True)
+                print(f"   [DEBUG] supplier_data groups: {list(supplier_data.keys())}", flush=True)
                 
                 # Send ALL cars from supplier_data (not just 1 per group)
                 # Filter duplicates: same supplier + car + price + day = duplicate
                 seen_cars = set()
                 total_before = 0
                 
-                for day_str, day_items in supplier_data.items():
-                    total_before += len(day_items)
-                    for item in day_items:
-                        supplier = item.get('supplier', 'Unknown')
-                        car = item.get('car', 'Unknown')
-                        price = item.get('price_num', 0)
+                # NEW: Iterate over groups, then days, then cars
+                # supplier_data = {"B1": {"7": [...], "14": [...]}, "D": {"7": [...]}}
+                for group_code, days_dict in supplier_data.items():
+                    # days_dict = {"7": [car1, car2, ...], "14": [car1, car2, ...]}
+                    if not isinstance(days_dict, dict):
+                        continue  # Skip if not a dict
+                    
+                    for day_str, day_items in days_dict.items():
+                        if not isinstance(day_items, list):
+                            continue  # Skip if not a list
                         
-                        # Create unique key INCLUDING day
-                        # This allows same car to appear in different days
-                        unique_key = f"{day_str}|{supplier}|{car}|{price:.2f}"
-                        
-                        # Skip if already seen
-                        if unique_key in seen_cars:
-                            continue
-                        
-                        seen_cars.add(unique_key)
-                        
-                        # Add location and search_date to each item
-                        # NOTE: The scraping saves 'photo' field, not 'image_url'
-                        photo_url = item.get('photo', '') or item.get('image_url', '')
-                        
-                        result_item = {
-                            'group': item.get('group', 'Unknown'),
-                            'days': int(day_str),
-                            'price': price,
-                            'price_num': price,
-                            'location': location,
-                            'search_date': search_date,
-                            'car_name': item.get('car_clean', 'Unknown'),
-                            'supplier': supplier,
-                            'photo': photo_url,  # For HTML rendering
-                            'image_url': photo_url,  # Backup field
-                            'car': car,
-                        }
-                        
-                        # Debug first item
-                        if len(all_results) == 0:
-                            print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}", flush=True)
-                            print(f"   [DEBUG] Photo URL: {result_item['photo'][:100] if result_item['photo'] else 'EMPTY'}", flush=True)
-                            print(f"   [DEBUG] Item keys from DB: {list(item.keys())}", flush=True)
-                        
-                        all_results.append(result_item)
+                        total_before += len(day_items)
+                        for item in day_items:
+                            if not isinstance(item, dict):
+                                continue  # Skip if not a dict
+                            
+                            supplier = item.get('supplier', 'Unknown')
+                            car = item.get('car', 'Unknown')
+                            price = item.get('price_num', 0)
+                            
+                            # Create unique key INCLUDING day
+                            # This allows same car to appear in different days
+                            unique_key = f"{day_str}|{supplier}|{car}|{price:.2f}"
+                            
+                            # Skip if already seen
+                            if unique_key in seen_cars:
+                                continue
+                            
+                            seen_cars.add(unique_key)
+                            
+                            # Add location and search_date to each item
+                            # NOTE: The scraping saves 'photo' field, not 'image_url'
+                            photo_url = item.get('photo', '') or item.get('image_url', '')
+                            
+                            result_item = {
+                                'group': item.get('group', 'Unknown'),
+                                'days': int(day_str),
+                                'price': price,
+                                'price_num': price,
+                                'location': location,
+                                'search_date': search_date,
+                                'car_name': item.get('car_clean', 'Unknown'),
+                                'supplier': supplier,
+                                'photo': photo_url,  # For HTML rendering
+                                'image_url': photo_url,  # Backup field
+                                'car': car,
+                            }
+                            
+                            # Debug first item
+                            if len(all_results) == 0:
+                                print(f"   [DEBUG] First result: car={result_item['car_name']}, supplier={result_item['supplier']}, group={result_item['group']}, price={result_item['price']}", flush=True)
+                                print(f"   [DEBUG] Photo URL: {result_item['photo'][:100] if result_item['photo'] else 'EMPTY'}", flush=True)
+                                print(f"   [DEBUG] Item keys from DB: {list(item.keys())}", flush=True)
+                            
+                            all_results.append(result_item)
                 
                 print(f"   [DEBUG] Dedup: {total_before} total → {len(seen_cars)} unique (removed {total_before - len(seen_cars)} duplicates)", flush=True)
         
