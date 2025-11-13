@@ -88,6 +88,7 @@ VEHICLES = {
     'citroen c1': 'MINI 4 Lugares',
     'fiat 500': 'MINI 4 Lugares',
     'fiat 500 4p': 'MINI 4 Lugares',
+    'fiat 500 hybrid': 'MINI 4 Lugares',
     'ford ka': 'MINI 4 Lugares',
     'kia picanto': 'MINI 4 Lugares',
     'opel adam': 'MINI 4 Lugares',
@@ -227,7 +228,7 @@ VEHICLES = {
     'peugeot 508': 'Station Wagon',
     'renault clio sw': 'Station Wagon',
     'renault megane sw': 'Station Wagon',
-    'renault megane sw hybrid': 'Station Wagon Auto',
+    'renault megane sw hybrid': 'Station Wagon',
     'seat leon sw': 'Station Wagon',
     'skoda fabia sw': 'Station Wagon',
     'skoda octavia': 'Station Wagon',
@@ -546,11 +547,6 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         return 'Station Wagon Auto'
     
     # Categorias por tipo de veículo
-    if any(x in car for x in ['fiat 500', 'citroen c1', 'toyota aygo', 'volkswagen up', 'peugeot 108', 'hyundai i10']):
-        if '4' in car and 'door' in car:
-            return 'MINI 4 Portas'
-        return 'MINI Auto' if auto else 'MINI 5 Portas'
-    
     if any(x in car for x in ['renault clio', 'peugeot 208', 'ford fiesta', 'seat ibiza', 'hyundai i20', 'opel corsa']):
         return 'ECONOMY Auto' if auto else 'ECONOMY'
     
