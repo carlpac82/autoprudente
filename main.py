@@ -8481,22 +8481,9 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 # Renault Clio SW/estate variants -> J2 (Estate/Station Wagon); autos will be L2 via suffix
                 if re.search(r"\brenault\s*clio\b", cn) and re.search(r"\b(sw|st|sport\s*tourer|tourer|break|estate|kombi|grandtour|grand\s*tour|sporter|wagon)\b", cn):
                     category = "Estate/Station Wagon"
-                # Group J1 (Crossover) models
-                j1_patterns = [
-                    r"\bkia\s*sportage\b",
-                    r"\bnissan\s*qashqai\b",
-                    r"\b(skoda|škoda)\s*kamiq\b",
-                    r"\bhyundai\s*tucson\b",
-                    r"\bseat\s*ateca\b",
-                    r"\bmazda\s*cx[- ]?3\b",
-                    r"\bpeugeot\s*5008\b",
-                    r"\bpeugeot\s*3008\b",
-                    r"\bpeugeot\s*2008\b",
-                    r"\brenault\s*austral\b",
-                    r"\btoyota\s*hilux\b.*\b4x4\b",
-                ]
-                if any(re.search(p, cn) for p in j1_patterns):
-                    category = "Crossover"
+                # ❌ REMOVIDO: j1_patterns que forçavam carros para Crossover (J1)
+                # Estes carros devem ser mapeados via VEHICLES (carjet_direct.py)
+                # Se forem automáticos → L1 (SUV Auto), se manuais → F (SUV)
                 # Peugeot 308 SW: Auto -> L2, else J2; Peugeot 308 base -> D (Economy)
                 if re.search(r"\bpeugeot\s*308\b", cn):
                     if re.search(r"\bsw\b", cn):

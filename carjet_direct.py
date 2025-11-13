@@ -193,7 +193,7 @@ VEHICLES = {
     'peugeot 108 cabrio': 'Cabrio',
     'volkswagen beetle cabrio': 'Cabrio',
 
-    # ========== J1: Crossover ==========
+    # ========== J1: Crossover (Manual) ==========
     'audi q2': 'Crossover',
     'citroen c3 aircross': 'Crossover',
     'citroen c4': 'Crossover',
@@ -220,6 +220,25 @@ VEHICLES = {
     'volkswagen t-cross': 'Crossover',
     'vw tcross': 'Crossover',
     'vw t-cross': 'Crossover',
+    # Versões AUTO dos Crossovers → L1 (SUV Auto)
+    'citroen c3 aircross auto': 'SUV Auto',
+    'citroen c4 auto': 'SUV Auto',
+    'ford kuga auto': 'SUV Auto',
+    'ford puma auto': 'SUV Auto',
+    'jeep avenger auto': 'SUV Auto',
+    'jeep renegade auto': 'SUV Auto',
+    'kia sportage auto': 'SUV Auto',
+    'nissan qashqai auto': 'SUV Auto',
+    'peugeot 2008 auto': 'SUV Auto',
+    'peugeot 3008 auto': 'SUV Auto',
+    'renault austral auto': 'SUV Auto',
+    'seat ateca auto': 'SUV Auto',
+    'skoda kamiq auto': 'SUV Auto',
+    'skoda karoq auto': 'SUV Auto',
+    'volkswagen tcross auto': 'SUV Auto',
+    'volkswagen t-cross auto': 'SUV Auto',
+    'vw tcross auto': 'SUV Auto',
+    'vw t-cross auto': 'SUV Auto',
 
     # ========== J2: Station Wagon ==========
     'citroen elysee': 'Station Wagon',
