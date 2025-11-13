@@ -1023,8 +1023,10 @@
             // Pre-select group if editing
             if (preSelectedGroup) {
                 targetGroupSelect.value = preSelectedGroup;
-                // Trigger change event to load dependencies
-                targetGroupSelect.dispatchEvent(new Event('change'));
+                // Trigger change event to load dependencies (with small delay to ensure DOM is ready)
+                setTimeout(() => {
+                    targetGroupSelect.dispatchEvent(new Event('change'));
+                }, 50);
             }
             
             targetGroupSelect.addEventListener('change', function() {
@@ -1033,6 +1035,7 @@
                     
                     // Load existing rules for this group
                     const existingDeps = groupHierarchyRules[this.value] || [];
+                    console.log(`[EDIT-HIERARCHY] Loading rules for ${this.value}:`, existingDeps);
                     const containers = modal.querySelectorAll('.dep-item-container');
                     
                     containers.forEach(container => {
@@ -1059,9 +1062,12 @@
                             if (existingRule) {
                                 checkbox.checked = true;
                                 operatorSelect.disabled = false;
-                                operatorSelect.value = typeof existingRule === 'string' ? '>=' : existingRule.operator;
+                                const operator = typeof existingRule === 'string' ? '>=' : existingRule.operator;
+                                const percentage = (typeof existingRule === 'object' && existingRule.percentage !== undefined) ? existingRule.percentage : 0;
+                                operatorSelect.value = operator;
                                 pctInput.disabled = false;
-                                pctInput.value = (typeof existingRule === 'object' && existingRule.percentage !== undefined) ? existingRule.percentage : 0;
+                                pctInput.value = percentage;
+                                console.log(`[EDIT-HIERARCHY] Loaded rule for ${checkbox.value}: operator=${operator}, percentage=${percentage}`);
                             } else {
                                 checkbox.checked = false;
                                 operatorSelect.disabled = true;
