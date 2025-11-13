@@ -9467,9 +9467,14 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             
             group_code = map_category_to_group(category, car_name, final_transmission)
             print(f"   📍 [PRE-CHECK] car='{car_name[:30]}' | group='{group_code}'", file=sys.stderr, flush=True)
-            if not car_name or not group_code:
-                print(f"   ❌ [REJECT] no_name={not car_name} | no_group={not group_code}", file=sys.stderr, flush=True)
-                continue
+            if not car_name:
+                # Tentar usar supplier + categoria como fallback
+                car_name = f"{supplier} {category}".strip() if (supplier or category) else "Unknown Car"
+                print(f"   ⚠️ [FALLBACK-NAME] Nome não encontrado, usando: '{car_name}'", file=sys.stderr, flush=True)
+            
+            if not group_code:
+                group_code = "Others"
+                print(f"   ⚠️ [FALLBACK-GROUP] Grupo não encontrado, usando: 'Others'", file=sys.stderr, flush=True)
             
             logging.info(f"✅ [FINAL-RESULT] {car_name} → GRUPO '{group_code}' | {final_transmission} | {supplier} | {price_text}")
             if vehicles_match:
