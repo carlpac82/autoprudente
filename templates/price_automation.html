@@ -4044,9 +4044,9 @@
                 'L1': 'SUV Auto', 'L2': 'Station Wagon Auto', 'M1': '7 Seater', 'M2': '7 Seater Auto', 'N': '9 Seater'
             };
             
-            // Only show card if there's something to display
+            // Always show card for all groups, even if no data yet
             const hasData = allPrices.length > 0;
-            if (!hasData) return null;
+            // if (!hasData) return null; // REMOVED: Cards must always appear
             
             // Store allPrices in window for dynamic reordering
             window[`allPrices_${grupo}_${day}`] = allPrices;
@@ -4069,7 +4069,7 @@
                         </div>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">
-                        ${allPrices.length} results
+                        ${allPrices.length > 0 ? `${allPrices.length} results` : 'No data available yet'}
                     </p>
                 </div>
                 
