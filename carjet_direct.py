@@ -261,6 +261,7 @@ VEHICLES = {
     'citroen c4 auto': 'SUV Auto',
     'citroen c4 cactus auto': 'SUV Auto',
     'citroen c4 auto electric': 'SUV Auto',
+    'citroen c4 electric': 'SUV Auto',
     'citroen c4 x auto electric': 'SUV Auto',
     'citroen c4 x auto, electric': 'SUV Auto',
     'citroen c4 x electric': 'SUV Auto',

@@ -49,6 +49,22 @@ test_cases = [
     ("Seat Leon SW", "Estate/Station Wagon"),
     ("Renault Megane SW", "Estate/Station Wagon"),
     
+    # SUV Auto (L1) - PROBLEMÁTICOS
+    ("Volkswagen T-Roc", "SUV"),  # Manual F ou Auto L1?
+    ("Volkswagen T-Roc Auto", "SUV Automatic"),  # Deve ser L1
+    ("Peugeot 3008 Auto", "SUV Automatic"),  # Deve ser L1
+    
+    # 7 Lugares Auto (M2) - PROBLEMÁTICO
+    ("Peugeot Rifter Auto", "7 Seater Automatic"),  # DEVE SER M2!
+    ("Peugeot Rifter", "7 Seater"),  # Manual M1
+    ("Citroen Grand Spacetourer Auto", "7 Seater Automatic"),  # M2
+    
+    # Crossover vs SUV (J1 vs F)
+    ("Hyundai Kona", "SUV"),  # Deve ser J1 (Crossover)
+    ("Mazda CX3", "SUV"),  # Deve ser J1 (Crossover)
+    ("MG ZS", "SUV"),  # Deve ser J1 (Crossover)
+    ("Opel Mokka", "SUV"),  # Deve ser J1 (Crossover)
+    
     # SUV Automatic (L1)
     ("Peugeot 3008 Auto", "SUV Automatic"),
     

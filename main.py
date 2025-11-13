@@ -2001,6 +2001,11 @@ def _map_category_to_group_code(category: str) -> str:
         "9 seater": "N",
         "9 seats": "N",
         "9 lugares": "N",
+        
+        # X - Luxury
+        "luxury": "X",
+        "premium": "X",
+        "luxo": "X",
     }
     
     return mapping.get(cat, None)
@@ -2108,7 +2113,20 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                             logging.info(f"✅ [SW-PRIORITY] {car_name} → {sw_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
-            # ✅ PRIORIDADE MÁXIMA 2: Carros AUTO ANTES de match parcial
+            # ✅ PRIORIDADE MÁXIMA 2: Carros ELECTRIC ANTES de AUTO (mais específico)
+            # Garantir que "Peugeot 2008 Electric" não é mapeado como "Peugeot 2008" (J1)
+            if re.search(r'\b(electric|eléctric|électric|elétric)\b', car_clean_lower):
+                # Verificar se existe match exato com versão ELECTRIC no VEHICLES
+                # Tentar matches mais específicos primeiro (ordenar por tamanho decrescente)
+                for electric_key in sorted([k for k in VEHICLES.keys() if 'electric' in k.lower()], key=len, reverse=True):
+                    if electric_key in car_clean_lower or car_clean_lower in electric_key:
+                        category_from_vehicles = VEHICLES[electric_key]
+                        grupo_code = _map_category_to_group_code(category_from_vehicles)
+                        if grupo_code:
+                            logging.info(f"✅ [ELECTRIC-PRIORITY] {car_name} → {electric_key} → {category_from_vehicles} → {grupo_code}")
+                            return grupo_code
+            
+            # ✅ PRIORIDADE MÁXIMA 3: Carros AUTO ANTES de match parcial
             # Garantir que "Mercedes V Class Auto" não é mapeado como "Mercedes V Class" (M1)
             if re.search(r'\b(auto|automatic|automático|automatico)\b', car_clean_lower):
                 # Verificar se existe match exato com versão AUTO no VEHICLES
@@ -2124,7 +2142,18 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             # Remover sufixos comuns que impedem match
             # "Peugeot E-208 Electric" → "peugeot e-208"
             # "Toyota Chr Auto" → "toyota chr auto"
+            # MAS manter variações importantes para o match exato
             car_normalized = car_clean_lower
+            
+            # Primeiro tentar match direto COM sufixos (ex: "toyota hilux 4x4")
+            if car_normalized in VEHICLES:
+                category_from_vehicles = VEHICLES[car_normalized]
+                grupo_code = _map_category_to_group_code(category_from_vehicles)
+                if grupo_code:
+                    logging.info(f"✅ [VEHICLES-DIRECT] {car_name} → {category_from_vehicles} → {grupo_code}")
+                    return grupo_code
+            
+            # Se não encontrar, remover sufixos para tentar match parcial
             car_normalized = re.sub(r'\s+(electric|hybrid|diesel|petrol|plug-in|phev)$', '', car_normalized, flags=re.IGNORECASE)
             car_normalized = re.sub(r'\s+4x4$', '', car_normalized, flags=re.IGNORECASE)
             car_normalized = re.sub(r'\s+\d+\s*door(s)?$', '', car_normalized, flags=re.IGNORECASE)
@@ -2320,11 +2349,11 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                'carrinha automatic', 'carrinha auto', 'sw automatic', 'sw auto']:
         return "L2"
     
-    # Luxury / Premium → Others (não oferecemos estas categorias)
+    # Luxury / Premium → X
     if cat in ['luxury', 'premium', 'luxo']:
         trans_info = f"[{transmission if transmission else 'N/A'}]"
-        logging.info(f"🚫 [MAP] Luxury excluído (categoria explícita): car='{car_name}' {trans_info}, category='{category}'")
-        return "Others"
+        logging.info(f"✅ [MAP] Luxury: car='{car_name}' {trans_info}, category='{category}' → grupo 'X'")
+        return "X"
     
     # 7 Seater / 7 Seats → M1 ou M2 (se automático)
     if cat in ['7 seater', '7 seats', '7 lugares', 'people carrier', 'mpv']:
@@ -2543,18 +2572,14 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         "minivan": "N",
         "van": "N",
         
-        # Luxury → Others (não temos grupo específico para premium/luxury)
-        "luxury": None,  # Vai para análise fallback → Others
-        "premium": None,  # Vai para análise fallback → Others
+        # X - Luxury
+        "luxury": "X",
+        "premium": "X",
+        "luxo": "X",
     }
     
     # Tentar match direto primeiro
     if cat in category_map:
-        if category_map[cat] is None:
-            # Luxury/Premium sem grupo → retorna None para ir para Others
-            trans_info = f"[{transmission if transmission else 'N/A'}]"
-            logging.info(f"🚫 [MAP] Luxury/Premium excluído: car='{car_name}' {trans_info}, category='{category}'")
-            return None
         grupo = category_map[cat]
         trans_info = f"[{transmission if transmission else 'N/A'}]"
         logging.info(f"✅ [MAP] SUCESSO (direto): car='{car_name}' {trans_info} → grupo '{grupo}'")
@@ -2596,8 +2621,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     if any(word in cat for word in ['premium', 'luxury', 'luxo']):
         trans_tipo = "AUTOMÁTICO" if is_auto else "MANUAL"
-        logging.info(f"🚫 [MAP] Luxury excluído (fallback): car='{car_name}' [{trans_tipo}], category='{category}'")
-        return "Others"  # Luxury não oferecido
+        logging.info(f"✅ [MAP] Luxury (fallback): car='{car_name}' [{trans_tipo}], category='{category}' → grupo 'X'")
+        return "X"
     
     if any(word in cat for word in ['mini', 'small', 'pequeno']):
         # Verificar se é 4 ou 5 lugares pelo nome do carro
