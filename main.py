@@ -10245,7 +10245,7 @@ def _get_vehicle_groups() -> Dict[str, Dict[str, Any]]:
     return groups
 
 def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[str]) -> List[Dict[str, Any]]:
-    # Secondary guard: blocklist filter to ensure unwanted vehicles never appear
+    # Secondary guard: blocklist filter for LUXURY cars only (NÃO bloquear electric/hybrid!)
     _blocked_models = [
         "Mercedes S Class Auto",
         "MG ZS Auto",
@@ -10258,7 +10258,6 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         "Volvo XC40 Auto",
         "Mercedes C Class Auto",
         "Tesla Model 3 Auto",
-        "Electric",
         "BMW 2 Series Gran Coupe Auto",
         "Mercedes C Class SW Auto",
         "Mercedes E Class Auto",
@@ -10272,7 +10271,6 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         "Volvo EX30 Auto",
         "BMW 3 Series Auto",
         "Volvo V60 4x4 Auto",
-        "Hybrid",
         "Mazda MX5 Cabrio Auto",
         "Mercedes CLA Auto",
     ]
@@ -10302,8 +10300,6 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         r"\bmg\s+zs\b",
         r"\bmazda\s+mx5\b",
         r"\bvolkswagen\s+t-roc\b",
-        r"\belectric\b",
-        r"\bhybrid\b",
     ]
     def _blocked(name: str) -> bool:
         n = _norm_text(name)
