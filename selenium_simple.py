@@ -155,31 +155,8 @@ def scrape_carjet_simple(location, start_dt, end_dt):
         
         time.sleep(1)
         
-        # PASSO 3: Selecionar filtro de transmissão automática
-        print(f"[SELENIUM_SIMPLE] PASSO 3: Selecionando transmissão automática...", file=sys.stderr, flush=True)
-        
-        filter_result = driver.execute_script("""
-            // Encontrar e clicar no filtro de transmissão automática
-            const transRadios = document.querySelectorAll('input[name="frmTrans"]');
-            for (let radio of transRadios) {
-                if (radio.value === 'au') {  // au = Automatic
-                    radio.checked = true;
-                    radio.dispatchEvent(new Event('change', {bubbles: true}));
-                    return true;
-                }
-            }
-            return false;
-        """)
-        
-        if filter_result:
-            print(f"[SELENIUM_SIMPLE] ✅ Filtro automático ativado", file=sys.stderr, flush=True)
-        else:
-            print(f"[SELENIUM_SIMPLE] ⚠️ Filtro automático não encontrado (pode não existir na página inicial)", file=sys.stderr, flush=True)
-        
-        time.sleep(0.5)
-        
-        # PASSO 4: Preencher datas e horas
-        print(f"[SELENIUM_SIMPLE] PASSO 4: Preenchendo datas e horas...", file=sys.stderr, flush=True)
+        # PASSO 3: Preencher datas e horas
+        print(f"[SELENIUM_SIMPLE] PASSO 3: Preenchendo datas e horas...", file=sys.stderr, flush=True)
         
         result = driver.execute_script("""
             function fill(sel, val) {
@@ -229,8 +206,8 @@ def scrape_carjet_simple(location, start_dt, end_dt):
         
         time.sleep(1)
         
-        # PASSO 5: Submit
-        print(f"[SELENIUM_SIMPLE] PASSO 5: Submetendo...", file=sys.stderr, flush=True)
+        # PASSO 4: Submit
+        print(f"[SELENIUM_SIMPLE] PASSO 4: Submetendo...", file=sys.stderr, flush=True)
         driver.execute_script("window.scrollBy(0, 300);")
         time.sleep(0.5)
         driver.execute_script("window.scrollTo(0, 0);")
