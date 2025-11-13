@@ -1915,7 +1915,56 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         if re.search(pattern, car_lower, re.IGNORECASE):
             return "M2" if is_auto else "M1"  # 7 Seater - PRIORIDADE MÁXIMA!
     
-    # PRIORIDADE 0: Categorias explícitas do CarJet (mais confiáveis que tabela manual)
+    # PRIORIDADE 0: Consultar dicionário VEHICLES de carjet_direct.py
+    # NOSSA PARAMETRIZAÇÃO TEM PRIORIDADE SOBRE CATEGORIAS CARJET!
+    # Ex: Se VEHICLES diz que Qashqai é Crossover, ignoramos categoria CarJet
+    if car_name:
+        try:
+            from carjet_direct import VEHICLES
+            
+            # Normalizar nome do carro para consulta (lowercase)
+            car_clean = clean_car_name(car_name)
+            car_clean_lower = car_clean.lower().strip()
+            
+            # Remover sufixos comuns que impedem match
+            # "Peugeot E-208 Electric" → "peugeot e-208"
+            # "Toyota Chr Auto" → "toyota chr auto"
+            car_normalized = car_clean_lower
+            car_normalized = re.sub(r'\s+(electric|hybrid|diesel|petrol|plug-in|phev)$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r'\s+4x4$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r'\s+\d+\s*door(s)?$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r',\s*electric$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = re.sub(r',\s*hybrid$', '', car_normalized, flags=re.IGNORECASE)
+            car_normalized = car_normalized.strip()
+            
+            # Tentar match direto
+            if car_normalized in VEHICLES:
+                category_from_vehicles = VEHICLES[car_normalized]
+                # VEHICLES retorna categoria descritiva (ex: "CROSSOVER", "SUV Auto")
+                # Precisamos mapear para código de grupo (B1, D, F, etc)
+                # IMPORTANTE: Só chamar recursivamente se a categoria for diferente (evitar loop)
+                if category_from_vehicles.lower() != cat:
+                    logging.info(f"🎯 VEHICLES MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
+                    return map_category_to_group(category_from_vehicles, car_name)
+            
+            # Tentar match parcial (buscar chave que está contida no nome ou vice-versa)
+            # Ordenar por tamanho decrescente para pegar matches mais específicos primeiro
+            for vehicle_key in sorted(VEHICLES.keys(), key=len, reverse=True):
+                # Match se o nome do carro contém a chave completa
+                # Ex: "toyota chr auto" contém "toyota chr"
+                if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
+                    category_from_vehicles = VEHICLES[vehicle_key]
+                    # Só chamar recursivamente se a categoria for diferente
+                    if category_from_vehicles.lower() != cat:
+                        logging.info(f"🎯 VEHICLES PARTIAL MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
+                        return map_category_to_group(category_from_vehicles, car_name)
+        except ImportError:
+            pass  # carjet_direct.py não disponível
+        except Exception as e:
+            logging.debug(f"Error consulting VEHICLES: {e}")
+            pass  # Se falhar, continuar para próxima prioridade
+    
+    # PRIORIDADE 1: Categorias explícitas do CarJet (FALLBACK se VEHICLES não tiver)
     # Suporta INGLÊS e PORTUGUÊS
     
     # Mini 4 Seats / Mini 4 Lugares → B1 ou E1 (se automático)
@@ -2125,55 +2174,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             logging.error(f"Error querying car_groups: {e}")
             pass  # Se falhar, continuar para próxima prioridade
     
-    # PRIORIDADE 2: Consultar dicionário VEHICLES de carjet_direct.py
-    # Tentar SEMPRE que tiver car_name, mesmo se category não estiver vazia
-    # (mas evitar loop infinito: só chamar recursivamente se encontrar categoria diferente)
-    if car_name:
-        try:
-            from carjet_direct import VEHICLES
-            import re
-            
-            # Normalizar nome do carro para consulta (lowercase)
-            car_clean = clean_car_name(car_name)
-            car_clean_lower = car_clean.lower().strip()
-            
-            # Remover sufixos comuns que impedem match
-            # "Peugeot E-208 Electric" → "peugeot e-208"
-            # "Toyota Chr Auto" → "toyota chr auto"
-            car_normalized = car_clean_lower
-            car_normalized = re.sub(r'\s+(electric|hybrid|diesel|petrol|plug-in|phev)$', '', car_normalized, flags=re.IGNORECASE)
-            car_normalized = re.sub(r'\s+4x4$', '', car_normalized, flags=re.IGNORECASE)
-            car_normalized = re.sub(r'\s+\d+\s*door(s)?$', '', car_normalized, flags=re.IGNORECASE)
-            car_normalized = re.sub(r',\s*electric$', '', car_normalized, flags=re.IGNORECASE)
-            car_normalized = re.sub(r',\s*hybrid$', '', car_normalized, flags=re.IGNORECASE)
-            car_normalized = car_normalized.strip()
-            
-            # Tentar match direto
-            if car_normalized in VEHICLES:
-                category_from_vehicles = VEHICLES[car_normalized]
-                # VEHICLES retorna categoria descritiva (ex: "ECONOMY", "SUV Auto")
-                # Precisamos mapear para código de grupo (B1, D, F, etc)
-                # Passar car_name também para manter contexto (ex: distinguir automático)
-                # IMPORTANTE: Só chamar recursivamente se a categoria for diferente (evitar loop)
-                if category_from_vehicles.lower() != cat:
-                    return map_category_to_group(category_from_vehicles, car_name)
-            
-            # Tentar match parcial (buscar chave que está contida no nome ou vice-versa)
-            # Ordenar por tamanho decrescente para pegar matches mais específicos primeiro
-            for vehicle_key in sorted(VEHICLES.keys(), key=len, reverse=True):
-                # Match se o nome do carro contém a chave completa
-                # Ex: "toyota chr auto" contém "toyota chr"
-                if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
-                    category_from_vehicles = VEHICLES[vehicle_key]
-                    # Só chamar recursivamente se a categoria for diferente
-                    if category_from_vehicles.lower() != cat:
-                        return map_category_to_group(category_from_vehicles, car_name)
-        except ImportError:
-            pass  # carjet_direct.py não disponível
-        except Exception:
-            pass  # Se falhar, continuar para próxima prioridade
-    
-    # PRIORIDADE 3: CABRIO/CABRIOLET → Grupo G (apenas descapotáveis)
+    # PRIORIDADE 2: CABRIO/CABRIOLET → Grupo G (apenas descapotáveis)
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
         return "G"
     

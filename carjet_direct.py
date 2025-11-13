@@ -474,11 +474,21 @@ VEHICLES = {
     'ford ka': 'MINI 4 Lugares',
     'ford ka': 'MINI 4 Lugares',
     'ford transit custom': '9 Lugares',
-    'ford kuga': 'SUV',
-    'ford kuga auto': 'SUV Auto',
     'dacia jogger auto': '7 Lugares Auto',
     'ds4 auto': 'SUV Auto',
-    'ds4 auto': 'SUV Auto',
+    
+    # CROSSOVERS (corrigido - última definição sobrescreve duplicatas)
+    'nissan qashqai': 'Crossover',
+    'nissan qashqai auto': 'Crossover',  # Auto vai para J1 também
+    'ford kuga': 'Crossover',  # Corrigido: era SUV
+    'ford kuga auto': 'Crossover',  # Corrigido: era SUV Auto
+    'renault austral': 'Crossover',
+    'renault austral auto': 'Crossover',
+    'seat ateca': 'Crossover',  # Corrigido: era SUV
+    'seat ateca auto': 'Crossover',  # Novo
+    'peugeot 2008': 'Crossover',
+    'peugeot 3008': 'Crossover',
+    'skoda kamiq': 'Crossover',
 }
 
 
