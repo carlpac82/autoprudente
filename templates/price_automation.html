@@ -3948,11 +3948,8 @@
         function createComparisonCard(grupo, day, allCarsByDay, automatedPricesByGroup, isGlobalLowest = false) {
             console.log(`[CARD] Creating card for ${grupo}/${day}d`);
             
-            const cars = allCarsByDay[day];
-            if (!cars || cars.length === 0) {
-                console.log(`[CARD] ❌ No cars for day ${day}`);
-                return null;
-            }
+            // ✅ SEMPRE criar card, mesmo sem carros (mostrar "No data available")
+            const cars = allCarsByDay[day] || [];
             
             console.log(`[CARD] Day ${day} has ${cars.length} total cars`);
             
@@ -3963,9 +3960,6 @@
             });
             
             console.log(`[CARD] Group ${grupo} has ${groupCars.length} cars on day ${day}`);
-            
-            // Always show card even if no cars, as long as we have data for ANY group in this day
-            // if (groupCars.length === 0) return null;
             
             // Get automated price
             const automatedPriceRaw = automatedPricesByGroup[grupo]?.[day];
@@ -4025,9 +4019,7 @@
                 'L1': 'SUV Auto', 'L2': 'Station Wagon Auto', 'M1': '7 Seater', 'M2': '7 Seater Auto', 'N': '9 Seater'
             };
             
-            // Only show card if there's something to display
-            const hasData = allPrices.length > 0;
-            if (!hasData) return null;
+            // ✅ SEMPRE mostrar card, mesmo sem dados
             
             // Store allPrices in window for dynamic reordering
             window[`allPrices_${grupo}_${day}`] = allPrices;
@@ -4055,7 +4047,15 @@
                 </div>
                 
                 <div id="price-list-${grupo}-${day}" class="space-y-1 max-h-96 overflow-y-auto scrollbar-thin">
-                    ${allPrices.map((item, index) => {
+                    ${allPrices.length === 0 ? `
+                        <div class="text-center py-8 text-gray-400">
+                            <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="text-sm font-medium">No data available</p>
+                            <p class="text-xs mt-1">No cars found for this group on day ${day}</p>
+                        </div>
+                    ` : allPrices.map((item, index) => {
                         const isFirst = index === 0;
                         const isLast = index === allPrices.length - 1;
                         const position = index + 1;
