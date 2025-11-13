@@ -1903,6 +1903,108 @@ def map_category_to_group(category: str, car_name: str = "", transmission: str =
     logging.info(f"📤 [MAP-OUT] car='{car_name}' → grupo '{final_group}' | original category='{category}'")
     return final_group
 
+def _map_category_to_group_code(category: str) -> str:
+    """
+    Mapeia categoria descritiva (do VEHICLES ou CarJet) para código de grupo.
+    CONVERSÃO DIRETA sem lógica de fallback.
+    """
+    cat = category.strip().lower() if category else ""
+    
+    # Dicionário de mapeamento DIRETO
+    mapping = {
+        # B1 - Mini 4 Lugares
+        "mini 4 doors": "B1",
+        "mini 4 seats": "B1",
+        "mini 4 portas": "B1",
+        "mini 4 lugares": "B1",
+        
+        # B2 - Mini 5 Lugares
+        "mini": "B2",
+        "mini 5 doors": "B2",
+        "mini 5 seats": "B2",
+        "mini 5 portas": "B2",
+        "mini 5 lugares": "B2",
+        
+        # D - Economy
+        "economy": "D",
+        "económico": "D",
+        "compact": "D",
+        "compacto": "D",
+        
+        # E1 - Mini Automatic
+        "mini automatic": "E1",
+        "mini auto": "E1",
+        "mini automático": "E1",
+        
+        # E2 - Economy Automatic
+        "economy automatic": "E2",
+        "economy auto": "E2",
+        "económico automatic": "E2",
+        "económico auto": "E2",
+        "compact automatic": "E2",
+        "compact auto": "E2",
+        
+        # F - SUV
+        "suv": "F",
+        "jeep": "F",
+        
+        # G - Cabrio
+        "cabrio": "G",
+        "cabriolet": "G",
+        "convertible": "G",
+        "conversível": "G",
+        
+        # J1 - Crossover
+        "crossover": "J1",
+        
+        # J2 - Station Wagon
+        "estate/station wagon": "J2",
+        "station wagon": "J2",
+        "estate": "J2",
+        "carrinha": "J2",
+        "sw": "J2",
+        "touring": "J2",
+        
+        # L1 - SUV Automatic
+        "suv automatic": "L1",
+        "suv auto": "L1",
+        "jeep automatic": "L1",
+        "jeep auto": "L1",
+        
+        # L2 - Station Wagon Automatic
+        "station wagon automatic": "L2",
+        "station wagon auto": "L2",
+        "estate automatic": "L2",
+        "estate auto": "L2",
+        "carrinha automatic": "L2",
+        "carrinha auto": "L2",
+        "sw automatic": "L2",
+        "sw auto": "L2",
+        
+        # M1 - 7 Seater
+        "7 seater": "M1",
+        "7 seats": "M1",
+        "7 lugares": "M1",
+        "people carrier": "M1",
+        "mpv": "M1",
+        
+        # M2 - 7 Seater Automatic
+        "7 seater automatic": "M2",
+        "7 seater auto": "M2",
+        "7 seats automatic": "M2",
+        "7 seats auto": "M2",
+        "7 lugares automatic": "M2",
+        "7 lugares auto": "M2",
+        "7 lugares automático": "M2",
+        
+        # N - 9 Seater
+        "9 seater": "N",
+        "9 seats": "N",
+        "9 lugares": "N",
+    }
+    
+    return mapping.get(cat, None)
+
 def _map_category_fallback(category: str, car_name: str = "", transmission: str = "") -> str:
     """Lógica de fallback original para mapeamento de categorias"""
     # Converter para lowercase para mapeamento case-insensitive
@@ -1975,10 +2077,14 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             # Tentar match direto
             if car_normalized in VEHICLES:
                 category_from_vehicles = VEHICLES[car_normalized]
-                # VEHICLES retorna categoria descritiva (ex: "CROSSOVER", "SUV Auto")
-                # Precisamos mapear para código de grupo (B1, D, F, etc)
-                # IMPORTANTE: Só chamar _map_category_fallback para evitar loop infinito
-                if category_from_vehicles.lower() != cat:
+                # ✅ MAPEAR DIRETAMENTE para código de grupo (B1, D, F, etc)
+                # NÃO passar por fallback que pode sobrescrever!
+                grupo_code = _map_category_to_group_code(category_from_vehicles)
+                if grupo_code:
+                    logging.info(f"✅ [VEHICLES-DIRECT] {car_name} → {category_from_vehicles} → {grupo_code} (ignoring CarJet: {category})")
+                    return grupo_code
+                else:
+                    # Se não conseguir mapear direto, usar fallback
                     logging.info(f"🎯 VEHICLES MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
                     return _map_category_fallback(category_from_vehicles, car_name, transmission)
             
@@ -1989,8 +2095,13 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 # Ex: "toyota chr auto" contém "toyota chr"
                 if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
                     category_from_vehicles = VEHICLES[vehicle_key]
-                    # Só chamar _map_category_fallback para evitar loop infinito
-                    if category_from_vehicles.lower() != cat:
+                    # ✅ MAPEAR DIRETAMENTE para código de grupo
+                    grupo_code = _map_category_to_group_code(category_from_vehicles)
+                    if grupo_code:
+                        logging.info(f"✅ [VEHICLES-PARTIAL-DIRECT] {car_name} (matched: {vehicle_key}) → {category_from_vehicles} → {grupo_code} (ignoring CarJet: {category})")
+                        return grupo_code
+                    else:
+                        # Se não conseguir mapear direto, usar fallback
                         logging.info(f"🎯 VEHICLES PARTIAL MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
                         return _map_category_fallback(category_from_vehicles, car_name, transmission)
         except ImportError:
