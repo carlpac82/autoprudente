@@ -8588,7 +8588,28 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                                 car_name = alt_car_name
                                 logging.info(f"✅ [SCRAPING-ALT] Nome extraído do alt: '{car_name}' (original: '{alt_text}')")
                                 print(f"[SCRAPING] Nome extraído do alt da imagem: {car_name} (foto: {src})")
-                
+            
+            # 🔧 DETECTAR TRANSMISSÃO POR ÍCONE (INDIVIDUAL POR CARRO)
+            # Automático: <i class="icon icon-transm-auto size-24"></i>
+            # Manual: <i class="icon icon-transm size-24"></i> (sem "auto")
+            card_transmission = ""
+            try:
+                # Procurar ícone de transmissão no card
+                trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
+                if trans_icon:
+                    card_transmission = "Automatic"
+                    logging.info(f"🔧 [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
+                else:
+                    # Verificar se tem ícone manual (icon-transm SEM auto)
+                    trans_icon_manual = card.select_one("i.icon-transm:not(.icon-transm-auto), i.icon.icon-transm:not(.icon-transm-auto)")
+                    if trans_icon_manual:
+                        card_transmission = "Manual"
+                        logging.info(f"🔧 [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto encontrado)")
+            except Exception as e:
+                logging.warning(f"⚠️ [ICON-TRANS] Erro ao detectar transmissão do card: {e}")
+            
+            # photo extraction
+            try:
                 # PRIORIDADE 2: prefer <picture> sources
                 if not photo:
                     picture_src = None
@@ -9392,11 +9413,13 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             # 2º: 7 lugares, SW patterns
             # 3º: Categoria do CarJet
             # 4º: Fallback
-            logging.info(f"📦 [PRE-MAP] car_name='{car_name}' | category='{category}' | transmission='{transmission_label}'")
-            group_code = map_category_to_group(category, car_name, transmission_label)
+            # USAR card_transmission (do ícone individual) em vez de transmission_label (global)
+            final_transmission = card_transmission or transmission_label
+            logging.info(f"📦 [PRE-MAP] car_name='{car_name}' | category='{category}' | transmission='{final_transmission}' (card:{card_transmission} global:{transmission_label})")
+            group_code = map_category_to_group(category, car_name, final_transmission)
             if not car_name or not group_code:
                 continue
-            logging.info(f"✅ [FINAL-RESULT] car='{car_name}' → grupo '{group_code}' | price={price_text} | supplier={supplier}")
+            logging.info(f"✅ [FINAL-RESULT] car='{car_name}' → grupo '{group_code}' | price={price_text} | supplier={supplier} | transmission={final_transmission}")
             # Capitalizar nome para display (Peugeot 2008 Auto, Renault Megane SW Auto)
             car_name_display = capitalize_car_name(car_name)
             items.append({
@@ -9407,7 +9430,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 "currency": "",
                 "category": category,
                 "group": group_code,
-                "transmission": transmission_label,
+                "transmission": final_transmission,
                 "photo": photo,
                 "link": link,
             })
@@ -9478,6 +9501,19 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 category = "Crossover"
         except Exception:
             pass
+        
+        # 🔧 DETECTAR TRANSMISSÃO POR ÍCONE (FALLBACK PARSING)
+        container_transmission = ""
+        try:
+            trans_icon = container.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
+            if trans_icon:
+                container_transmission = "Automatic"
+            else:
+                trans_icon_manual = container.select_one("i.icon-transm:not(.icon-transm-auto), i.icon.icon-transm:not(.icon-transm-auto)")
+                if trans_icon_manual:
+                    container_transmission = "Manual"
+        except Exception:
+            pass
 
         # link
         link = url_from_row(container, base_url) or base_url
@@ -9490,7 +9526,9 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         # detect currency symbol present in the text
         curr = "EUR" if re.search(r"EUR", price_text, re.I) else ("EUR" if "€" in price_text else "")
         # Mapear categoria para código de grupo
-        group_code = map_category_to_group(category, car_name, transmission_label)
+        # USAR container_transmission (do ícone) em vez de transmission_label (global)
+        final_transmission_fallback = container_transmission or transmission_label
+        group_code = map_category_to_group(category, car_name, final_transmission_fallback)
         items.append({
             "id": idx,
             "car": car_name,
@@ -9499,7 +9537,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             "currency": curr,
             "category": category,
             "group": group_code,
-            "transmission": transmission_label,
+            "transmission": final_transmission_fallback,
             "link": link,
         })
         # REMOVED: if len(items) >= 50: break  # Removido limite para mostrar TODOS os carros
