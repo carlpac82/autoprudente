@@ -1921,46 +1921,66 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # SUV → F ou L1 (se automático)
     # EXCEÇÕES: Veículos 7 lugares que CarJet categoriza como SUV
-    # - Peugeot 5008 Auto → M2 (7 Seater Auto), não L1!
-    # - Citroen C4 Picasso Auto → M2 (7 Seater Auto), não L1!
-    # - Citroen Grand C4 Picasso/Spacetourer Auto → M2 (7 Seater Auto), não L1!
+    # Estes modelos SÃO 7 lugares mas CarJet os categoriza incorretamente como SUV!
     if cat in ['suv', 'jeep']:
         import re
-        # Verificar se é Peugeot 5008 → M1/M2
-        if re.search(r'\bpeugeot\s*5008\b', car_lower, re.IGNORECASE):
-            is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
-            if is_auto:
-                return "M2"  # 7 Seater Auto
-            return "M1"  # 7 Seater Manual
-        
-        # Verificar se é Citroen C4 Picasso (non-Grand) → M1/M2
-        if re.search(r'\bcitro[eë]n\s*c4\s*picasso\b', car_lower, re.IGNORECASE) and not re.search(r'\bgrand\b', car_lower, re.IGNORECASE):
-            is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
-            if is_auto:
-                return "M2"  # 7 Seater Auto
-            return "M1"  # 7 Seater Manual
-        
-        # Verificar se é Citroen Grand C4 Picasso/Spacetourer → M1/M2
-        if re.search(r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer|grand\s*space\s*tourer)\b', car_lower, re.IGNORECASE):
-            is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
-            if is_auto:
-                return "M2"  # 7 Seater Auto
-            return "M1"  # 7 Seater Manual
-        
-        # Normal SUV logic
         is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        
+        # Verificar TODOS os modelos 7 lugares conhecidos
+        seven_seater_models = [
+            (r'\bpeugeot\s*5008\b', 'Peugeot 5008'),
+            (r'\bcitro[eë]n\s*c4\s*picasso\b', 'Citroen C4 Picasso'),
+            (r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer|grand\s*space\s*tourer)\b', 'Citroen Grand Picasso/Spacetourer'),
+            (r'\brenault\s*(grand\s*)?scenic\b', 'Renault Grand Scenic'),
+            (r'\b(vw|volkswagen)\s*caddy\b', 'VW Caddy'),
+            (r'\bdacia\s*lodgy\b', 'Dacia Lodgy'),
+            (r'\bdacia\s*jogger\b', 'Dacia Jogger'),
+            (r'\bpeugeot\s*rifter\b', 'Peugeot Rifter'),
+            (r'\bford\s*s[-\s]?max\b', 'Ford S-Max'),
+            (r'\bford\s*galaxy\b', 'Ford Galaxy'),
+            (r'\bopel\s*zafira\b', 'Opel Zafira'),
+            (r'\b(vw|volkswagen)\s*touran\b', 'VW Touran'),
+            (r'\b(vw|volkswagen)\s*sharan\b', 'VW Sharan'),
+            (r'\bseat\s*alhambra\b', 'Seat Alhambra'),
+            (r'\bpeugeot\s*traveller\b', 'Peugeot Traveller'),
+            (r'\bopel\s*combo\b', 'Opel Combo'),
+        ]
+        
+        for pattern, model_name in seven_seater_models:
+            if re.search(pattern, car_lower, re.IGNORECASE):
+                return "M2" if is_auto else "M1"  # 7 Seater
+        
+        # Normal SUV logic (só se não for 7 lugares)
         return "L1" if is_auto else "F"
     
     # SUV Automatic / SUV Auto → L1 (mas só se não for exceção acima)
     if cat in ['suv automatic', 'suv auto', 'jeep automatic', 'jeep auto']:
         import re
-        # Verificar exceções antes de retornar L1
-        if re.search(r'\bpeugeot\s*5008\b', car_lower, re.IGNORECASE):
-            return "M2"  # 7 Seater Auto
-        if re.search(r'\bcitro[eë]n\s*c4\s*picasso\b', car_lower, re.IGNORECASE) or \
-           re.search(r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer)\b', car_lower, re.IGNORECASE):
-            return "M2"  # 7 Seater Auto
-        return "L1"
+        # Verificar TODAS as exceções 7 lugares antes de retornar L1
+        seven_seater_patterns = [
+            r'\bpeugeot\s*5008\b',
+            r'\bcitro[eë]n\s*c4\s*picasso\b',
+            r'\bcitro[eë]n\s*c4\s*(grand\s*picasso|grand\s*spacetourer)\b',
+            r'\brenault\s*(grand\s*)?scenic\b',
+            r'\b(vw|volkswagen)\s*caddy\b',
+            r'\bdacia\s*lodgy\b',
+            r'\bdacia\s*jogger\b',
+            r'\bpeugeot\s*rifter\b',
+            r'\bford\s*s[-\s]?max\b',
+            r'\bford\s*galaxy\b',
+            r'\bopel\s*zafira\b',
+            r'\b(vw|volkswagen)\s*touran\b',
+            r'\b(vw|volkswagen)\s*sharan\b',
+            r'\bseat\s*alhambra\b',
+            r'\bpeugeot\s*traveller\b',
+            r'\bopel\s*combo\b',
+        ]
+        
+        for pattern in seven_seater_patterns:
+            if re.search(pattern, car_lower, re.IGNORECASE):
+                return "M2"  # 7 Seater Auto
+        
+        return "L1"  # SUV Auto normal
     
     # Station Wagon / Estate / Carrinha → J2 ou L2 (se automático)
     if cat in ['station wagon', 'estate', 'carrinha', 'estate/station wagon', 'sw', 'touring']:
