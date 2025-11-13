@@ -2336,13 +2336,13 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             logging.error(f"Error querying car_groups: {e}")
             pass  # Se falhar, continuar para próxima prioridade
     
-    # PRIORIDADE 2: CABRIO/CABRIOLET → Grupo G (apenas descapotáveis)
+    # PRIORIDADE 2: CABRIO/CABRIOLET → Grupo G (Premium)
     if any(word in car_lower for word in ['cabrio', 'cabriolet', 'convertible', 'conversível']):
         return "G"
     
-    # PRIORIDADE 4: Toyota Aygo X → F (SUV), não confundir com Aygo normal (B1)
-    if 'aygo x' in car_lower or 'aygo-x' in car_lower:
-        return "F"
+    # ❌ REMOVIDO: Toyota Aygo X → Agora controlado pelo VEHICLES dictionary
+    # if 'aygo x' in car_lower or 'aygo-x' in car_lower:
+    #     return "F"
     
     # PRIORIDADE 5: Modelos de 4 LUGARES → B1
     # (Fiat 500, Peugeot 108, C1, VW Up, Kia Picanto, Toyota Aygo)
@@ -8588,15 +8588,15 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 # Citroen C3 (non-Aircross, non-Auto) -> D (Economy)
                 if re.search(r"\bcitro[eë]n\s*c3\b", cn) and not re.search(r"\b(auto|automatic)\b", cn) and not re.search(r"\bc3\s*aircross\b", cn):
                     category = "Economy"
-                # Citroen C3 Aircross Auto -> L1 (SUV Automatic)
-                if re.search(r"\bcitro[eë]n\s*c3\s*aircross\b.*\b(auto|automatic)\b", cn):
-                    category = "SUV Automatic"
-                # Toyota Aygo X -> F (SUV)
-                if re.search(r"\btoyota\s*aygo\s*x\b", cn):
-                    category = "SUV"
-                # Fiat 500L -> J1 (Crossover)
-                if re.search(r"\bfiat\s*500l\b", cn):
-                    category = "Crossover"
+                # ❌ REMOVIDO: Citroen C3 Aircross Auto -> Agora controlado pelo VEHICLES
+                # if re.search(r"\bcitro[eë]n\s*c3\s*aircross\b.*\b(auto|automatic)\b", cn):
+                #     category = "SUV Automatic"
+                # ❌ REMOVIDO: Toyota Aygo X -> Agora controlado pelo VEHICLES
+                # if re.search(r"\btoyota\s*aygo\s*x\b", cn):
+                #     category = "SUV"
+                # ❌ REMOVIDO: Fiat 500L -> Agora controlado pelo VEHICLES
+                # if re.search(r"\bfiat\s*500l\b", cn):
+                #     category = "Crossover"
                 # Renault Clio SW/estate variants -> J2 (Estate/Station Wagon); autos will be L2 via suffix
                 if re.search(r"\brenault\s*clio\b", cn) and re.search(r"\b(sw|st|sport\s*tourer|tourer|break|estate|kombi|grandtour|grand\s*tour|sporter|wagon)\b", cn):
                     category = "Estate/Station Wagon"
@@ -8681,9 +8681,9 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 # Cupra Leon SW Auto -> L2
                 if re.search(r"\bcupra\s*leon\b", cn) and re.search(r"\b(sw|st|sport\s*tourer|sportstourer|estate|variant)\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
                     category = "Station Wagon Automatic"
-                # Toyota Yaris Cross Auto -> L1
-                if re.search(r"\btoyota\s*yaris\s*cross\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
-                    category = "SUV Automatic"
+                # ❌ REMOVIDO: Toyota Yaris Cross Auto -> Agora controlado pelo VEHICLES
+                # if re.search(r"\btoyota\s*yaris\s*cross\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                #     category = "SUV Automatic"
                 # Nissan Juke -> F (SUV) regardless of transmission
                 if re.search(r"\bnissan\s*juke\b", cn):
                     category = "SUV"
@@ -8776,12 +8776,12 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 # Dacia Jogger -> M1 (7 Seater); automatic will auto-suffix to M2 later
                 if re.search(r"\bdacia\s*jogger\b", cn):
                     category = "7 Seater"
-                # Fiat 500X -> J1 (Crossover); Auto -> L1
-                if re.search(r"\bfiat\s*500x\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
-                        category = "SUV Automatic"
-                    else:
-                        category = "Crossover"
+                # ❌ REMOVIDO: Fiat 500X -> Agora controlado pelo VEHICLES
+                # if re.search(r"\bfiat\s*500x\b", cn):
+                #     if _is_auto_flag(cn, _page_text, transmission_label):
+                #         category = "SUV Automatic"
+                #     else:
+                #         category = "Crossover"
                 # VW Beetle Cabrio -> G (Premium)
                 if re.search(r"\b(vw|volkswagen)\s*beetle\b.*\b(cabrio|convertible|cabriolet)\b", cn):
                     category = "Premium"
