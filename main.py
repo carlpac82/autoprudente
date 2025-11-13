@@ -5183,10 +5183,10 @@ async def ai_pricing_analysis(request: Request):
         group_insights = []
         grupos = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
         group_names = {
-            'B1': 'Mini 4 Doors', 'B2': 'Mini Automatic', 'D': 'Economy',
-            'E1': 'Compact 4 Doors', 'E2': 'Compact Automatic', 'F': 'Intermediate',
-            'G': 'Intermediate Automatic', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-            'L1': 'Standard', 'L2': 'Standard Automatic', 'M1': 'Premium', 'M2': 'Premium Automatic', 'N': 'Minivan'
+            'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
+            'E1': 'Compact 4 Seats', 'E2': 'Compact Aut.', 'F': 'Intermediate',
+            'G': 'Intermediate Aut.', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
+            'L1': 'Standard', 'L2': 'Standard Aut.', 'M1': 'Premium', 'M2': 'Premium Aut.', 'N': 'Minivan'
         }
         
         total_data_points = 0
@@ -5315,10 +5315,10 @@ async def ai_deep_analysis(request: Request):
         # Analyze all results
         grupos = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N']
         group_names = {
-            'B1': 'Mini 4 Doors', 'B2': 'Mini Automatic', 'D': 'Economy',
-            'E1': 'Compact 4 Doors', 'E2': 'Compact Automatic', 'F': 'Intermediate',
-            'G': 'Intermediate Automatic', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
-            'L1': 'Standard', 'L2': 'Standard Automatic', 'M1': 'Premium', 'M2': 'Premium Automatic', 'N': 'Minivan'
+            'B1': 'Mini 4 Seats', 'B2': 'Mini 5 Seats', 'D': 'Economy',
+            'E1': 'Compact 4 Seats', 'E2': 'Compact Aut.', 'F': 'Intermediate',
+            'G': 'Intermediate Aut.', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
+            'L1': 'Standard', 'L2': 'Standard Aut.', 'M1': 'Premium', 'M2': 'Premium Aut.', 'N': 'Minivan'
         }
         
         # Aggregate data by group
@@ -10288,9 +10288,14 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         if group_code and group_code in vehicle_groups:
             category_display = vehicle_groups[group_code].get('category', category_display)
         
+        # ✅ ADICIONAR "Aut." aos carros automáticos (se não tiver já)
+        transmission = it.get("transmission", "").lower()
+        if transmission in ["automatic", "automático", "auto"] and "aut." not in car_name_final.lower():
+            car_name_final = f"{car_name_final} Aut."
+        
         row = {
             "supplier": it.get("supplier", ""),
-            "car": car_name_final,  # Usar nome editado final
+            "car": car_name_final,  # Usar nome editado final (com Aut. se automático)
             "price": price_text_in,
             "price_num": price_num,
             "currency": price_curr or it.get("currency", ""),
