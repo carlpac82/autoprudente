@@ -8666,21 +8666,40 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             # 🔧 DETECTAR TRANSMISSÃO POR ÍCONE (INDIVIDUAL POR CARRO)
             # Automático: <i class="icon icon-transm-auto size-24"></i>
             # Manual: <i class="icon icon-transm size-24"></i> (sem "auto")
+            logging.info(f"🔍 [TRANS-DETECT-START] Analisando carro: '{car_name}'")
             card_transmission = ""
+            
+            # DEBUG: Listar TODOS os ícones do card
+            all_icons = card.find_all('i')
+            logging.info(f"   📊 Total de ícones <i> no card: {len(all_icons)}")
+            if all_icons:
+                for idx, icon in enumerate(all_icons[:5]):  # Primeiros 5
+                    classes = ' '.join(icon.get('class', []))
+                    logging.info(f"      Ícone {idx+1}: <i class=\"{classes}\">")
+            
             try:
-                # Procurar ícone de transmissão no card
+                # Procurar ícone de transmissão automática
                 trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
+                logging.info(f"   🔍 Busca 'icon-transm-auto': {'ENCONTRADO ✅' if trans_icon else 'NÃO encontrado'}")
+                
                 if trans_icon:
                     card_transmission = "Automatic"
-                    logging.info(f"🔧 [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
+                    logging.info(f"✅ [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
                 else:
                     # Verificar se tem ícone manual (icon-transm SEM auto)
-                    trans_icon_manual = card.select_one("i.icon-transm:not(.icon-transm-auto), i.icon.icon-transm:not(.icon-transm-auto)")
+                    trans_icon_manual = card.select_one("i.icon-transm")
+                    logging.info(f"   🔍 Busca 'icon-transm' (sem auto): {'ENCONTRADO ✅' if trans_icon_manual else 'NÃO encontrado'}")
+                    
                     if trans_icon_manual:
-                        card_transmission = "Manual"
-                        logging.info(f"🔧 [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto encontrado)")
+                        # Verificar se NÃO tem classe 'icon-transm-auto'
+                        icon_classes = trans_icon_manual.get('class', [])
+                        if 'icon-transm-auto' not in icon_classes:
+                            card_transmission = "Manual"
+                            logging.info(f"✅ [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto encontrado)")
+                        else:
+                            logging.info(f"   ⚠️  Ícone tem AMBAS as classes (transm E transm-auto)")
             except Exception as e:
-                logging.warning(f"⚠️ [ICON-TRANS] Erro ao detectar transmissão do card: {e}")
+                logging.error(f"❌ [ICON-TRANS] Erro ao detectar transmissão de '{car_name}': {e}", exc_info=True)
             
             # category
             cat_el = card.select_one(".category, .group, .vehicle-category, [class*='category'], [class*='group'], [class*='categoria'], [class*='grupo']")
@@ -9414,11 +9433,39 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             # 4º: Fallback
             # USAR card_transmission (do ícone individual) em vez de transmission_label (global)
             final_transmission = card_transmission or transmission_label
-            logging.info(f"📦 [PRE-MAP] car_name='{car_name}' | category='{category}' | transmission='{final_transmission}' (card:{card_transmission} global:{transmission_label})")
+            
+            # 🔍 VERIFICAR VEHICLES (carjet_direct.py) - Comparar com transmissão detectada
+            vehicles_match = None
+            vehicles_transmission = None
+            try:
+                from carjet_direct import VEHICLES
+                car_name_lower = car_name.lower()
+                for veh_name, veh_data in VEHICLES.items():
+                    if veh_name.lower() in car_name_lower or car_name_lower in veh_name.lower():
+                        vehicles_match = veh_name
+                        vehicles_transmission = veh_data.get('transmission', 'Unknown')
+                        vehicles_group = veh_data.get('group', 'Unknown')
+                        
+                        # ALERTA: Se VEHICLES diz Manual mas detectamos Automatic (ou vice-versa)
+                        if vehicles_transmission and final_transmission:
+                            if vehicles_transmission != final_transmission:
+                                logging.warning(f"⚠️  [VEHICLES-CONFLICT] {car_name}:")
+                                logging.warning(f"      VEHICLES diz: {vehicles_transmission} (grupo {vehicles_group})")
+                                logging.warning(f"      DETECTADO: {final_transmission}")
+                        break
+            except Exception as e:
+                pass  # VEHICLES pode não existir
+            
+            logging.info(f"📦 [PRE-MAP] car='{car_name}' | category='{category}' | transmission='{final_transmission}'")
+            logging.info(f"      card_icon={card_transmission} | global={transmission_label} | VEHICLES={vehicles_transmission or 'N/A'}")
+            
             group_code = map_category_to_group(category, car_name, final_transmission)
             if not car_name or not group_code:
                 continue
-            logging.info(f"✅ [FINAL-RESULT] car='{car_name}' → grupo '{group_code}' | price={price_text} | supplier={supplier} | transmission={final_transmission}")
+            
+            logging.info(f"✅ [FINAL-RESULT] {car_name} → GRUPO '{group_code}' | {final_transmission} | {supplier} | {price_text}")
+            if vehicles_match:
+                logging.info(f"      VEHICLES: '{vehicles_match}' → grupo {veh_data.get('group')} | {vehicles_transmission}")
             # Capitalizar nome para display (Peugeot 2008 Auto, Renault Megane SW Auto)
             car_name_display = capitalize_car_name(car_name)
             items.append({
@@ -9435,7 +9482,58 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             })
             idx += 1
         print(f"[PARSE] Stats: price={cards_with_price}, name={cards_with_name}, blocked={cards_blocked}, items={len(items)}")
+        
+        # 📊 ESTATÍSTICAS DETALHADAS DE TRANSMISSÃO E GRUPOS
         if items:
+            logging.info("=" * 80)
+            logging.info("📊 ESTATÍSTICAS DE TRANSMISSÃO E DISTRIBUIÇÃO DE GRUPOS")
+            logging.info("=" * 80)
+            
+            # Contar por transmissão
+            auto_count = sum(1 for it in items if it.get('transmission') == 'Automatic')
+            manual_count = sum(1 for it in items if it.get('transmission') == 'Manual')
+            unknown_count = sum(1 for it in items if it.get('transmission') not in ['Automatic', 'Manual'])
+            
+            logging.info(f"🔵 AUTOMÁTICOS: {auto_count}/{len(items)} ({auto_count*100//len(items)}%)")
+            logging.info(f"🔴 MANUAIS: {manual_count}/{len(items)} ({manual_count*100//len(items)}%)")
+            if unknown_count:
+                logging.info(f"⚪ DESCONHECIDOS: {unknown_count}/{len(items)} ({unknown_count*100//len(items)}%)")
+            
+            # Contar por grupo
+            from collections import defaultdict
+            groups = defaultdict(lambda: {'auto': 0, 'manual': 0, 'unknown': 0})
+            for it in items:
+                group = it.get('group', 'N/A')
+                trans = it.get('transmission', '')
+                if trans == 'Automatic':
+                    groups[group]['auto'] += 1
+                elif trans == 'Manual':
+                    groups[group]['manual'] += 1
+                else:
+                    groups[group]['unknown'] += 1
+            
+            logging.info("")
+            logging.info("📋 DISTRIBUIÇÃO POR GRUPO:")
+            for group in sorted(groups.keys()):
+                g_data = groups[group]
+                total = g_data['auto'] + g_data['manual'] + g_data['unknown']
+                logging.info(f"   Grupo {group}: {total} carros (Auto:{g_data['auto']} | Manual:{g_data['manual']} | Unknown:{g_data['unknown']})")
+            
+            # Listar TODOS os automáticos
+            logging.info("")
+            logging.info("🔵 LISTA COMPLETA DE AUTOMÁTICOS:")
+            auto_cars = [it for it in items if it.get('transmission') == 'Automatic']
+            for it in sorted(auto_cars, key=lambda x: (x.get('group', 'ZZZ'), x.get('car', ''))):
+                logging.info(f"   [{it.get('group', 'N/A')}] {it.get('car', 'N/A'):40} | {it.get('supplier', 'N/A'):20}")
+            
+            # Listar TODOS os manuais
+            logging.info("")
+            logging.info("🔴 LISTA COMPLETA DE MANUAIS:")
+            manual_cars = [it for it in items if it.get('transmission') == 'Manual']
+            for it in sorted(manual_cars, key=lambda x: (x.get('group', 'ZZZ'), x.get('car', ''))):
+                logging.info(f"   [{it.get('group', 'N/A')}] {it.get('car', 'N/A'):40} | {it.get('supplier', 'N/A'):20}")
+            
+            logging.info("=" * 80)
             print(f"[PARSE] Returning {len(items)} items from card parsing")
             return items
     except Exception:
