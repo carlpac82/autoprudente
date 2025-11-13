@@ -120,6 +120,7 @@ VEHICLES = {
     'ford fiesta': 'ECONOMY',
     'ford focus': 'ECONOMY',
     'hyundai i20': 'ECONOMY',
+    'kia ceed': 'ECONOMY',
     'mazda 2': 'ECONOMY',
     'nissan micra': 'ECONOMY',
     'opel astra': 'ECONOMY',
