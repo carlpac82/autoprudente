@@ -174,7 +174,7 @@ VEHICLES = {
     'hyundai kauai': 'SUV',
     'kia stonic': 'SUV',
     'mitsubishi asx': 'SUV',
-    'nissan juke': 'SUV',
+    'nissan juke': 'Crossover',  # J1
     'renault captur': 'SUV',
     'seat arona': 'SUV',
     'toyota chr': 'SUV',
@@ -295,7 +295,7 @@ VEHICLES = {
     'mg ehs auto': 'SUV Auto',
     'mg zs auto': 'SUV Auto',
     'million jeep renegade auto': 'SUV Auto',
-    'nissan juke auto': 'SUV Auto',
+    'nissan juke auto': 'Crossover Auto',  # K1
     'nissan qashqai auto': 'SUV Auto',
     'opel crossland x auto': 'SUV Auto',
     'opel grandland x': 'SUV Auto',
