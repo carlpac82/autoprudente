@@ -7822,7 +7822,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         except Exception:
             return False
 
-    # Blocklist of car models to exclude
+    # Blocklist of car models to exclude (LUXURY cars apenas)
     _blocked_models = [
         "Mercedes S Class Auto",
         "MG ZS Auto",
@@ -7835,7 +7835,6 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         "Volvo XC40 Auto",
         "Mercedes C Class Auto",
         "Tesla Model 3 Auto",
-        "Electric",
         "BMW 2 Series Gran Coupe Auto",
         "Mercedes C Class SW Auto",
         "Mercedes E Class Auto",
@@ -7849,7 +7848,6 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         "Volvo EX30 Auto",
         "BMW 3 Series Auto",
         "Volvo V60 4x4 Auto",
-        "Hybrid",
         "Mazda MX5 Cabrio Auto",
         "Mercedes CLA Auto",
     ]
@@ -7868,7 +7866,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             return False
         if n in _blocked_norm:
             return True
-        # Regex-based strong match on key model families and powertrains
+        # Regex-based strong match on key LUXURY model families (NÃO bloquear electric/hybrid!)
         patterns = [
             r"\bmercedes\s+s\s*class\b",
             r"\bmercedes\s+cla\b",
@@ -7890,8 +7888,6 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             r"\bmg\s+zs\b",
             r"\bmazda\s+mx5\b",
             r"\bvolkswagen\s+t-roc\b",
-            r"\belectric\b",
-            r"\bhybrid\b",
         ]
         import re as _re
         for p in patterns:
