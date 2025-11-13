@@ -9937,9 +9937,8 @@ def build_carjet_form(location_name: str, start_dt, end_dt, lang: str = "pt", cu
         "frmFechaDevolucion": f"{dropoff_dmY} {dropoff_HM}",
         "frmMoneda": currency,
         "frmTipoVeh": "CAR",
-        # FILTRO DE TRANSMISSÃO AUTOMÁTICA - Aplicado no CarJet
-        # tr=20 no GET e frmTrans=au no POST garantem apenas automáticos
-        "frmTrans": "au",  # au=Automatic, ma=Manual
+        # FILTRO DE TRANSMISSÃO REMOVIDO - estava a causar problemas de parsing
+        # "frmTrans": "au",  # au=Automatic, ma=Manual
     }
     return form
 
