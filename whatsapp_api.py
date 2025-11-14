@@ -253,6 +253,77 @@ async def send_image(req: SendImageRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/contacts/add")
+async def add_contact(request: Request):
+    """Adiciona novo contacto manualmente"""
+    try:
+        body = await request.json()
+        name = body.get('name', '').strip()
+        phone_number = body.get('phone_number', '').strip()
+        
+        if not name or not phone_number:
+            return JSONResponse({"success": False, "error": "Nome e telefone são obrigatórios"})
+        
+        conn = await get_db_connection()
+        try:
+            # Verificar se já existe
+            existing = await conn.fetchval("""
+                SELECT id FROM whatsapp_contacts WHERE phone_number = $1
+            """, phone_number)
+            
+            if existing:
+                return JSONResponse({"success": False, "error": "Contacto já existe"})
+            
+            # Inserir contacto
+            contact_id = await conn.fetchval("""
+                INSERT INTO whatsapp_contacts (phone_number, name, created_at)
+                VALUES ($1, $2, NOW())
+                RETURNING id
+            """, phone_number, name)
+            
+            # Criar conversa inicial
+            await conn.execute("""
+                INSERT INTO whatsapp_conversations (contact_id, status, created_at)
+                VALUES ($1, 'open', NOW())
+            """, contact_id)
+            
+            return JSONResponse({"success": True, "contact_id": contact_id})
+        finally:
+            await conn.close()
+    except Exception as e:
+        logger.error(f"❌ Add contact error: {str(e)}")
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+@router.get("/unread-count")
+async def get_unread_count():
+    """Retorna número de mensagens não lidas"""
+    try:
+        conn = await get_db_connection()
+        try:
+            # Contar mensagens não lidas (incoming que não foram respondidas)
+            unread = await conn.fetchval("""
+                SELECT COUNT(DISTINCT c.id)
+                FROM whatsapp_conversations c
+                INNER JOIN whatsapp_messages m ON m.conversation_id = c.id
+                WHERE m.direction = 'inbound'
+                AND c.status IN ('open', 'pending')
+                AND NOT EXISTS (
+                    SELECT 1 FROM whatsapp_messages m2
+                    WHERE m2.conversation_id = c.id
+                    AND m2.direction = 'outbound'
+                    AND m2.timestamp > m.timestamp
+                )
+            """)
+            
+            return JSONResponse({"success": True, "unread_count": unread or 0})
+        finally:
+            await conn.close()
+    except Exception as e:
+        logger.error(f"❌ Get unread count error: {str(e)}")
+        return JSONResponse({"success": True, "unread_count": 0})
+
+
 # ================== CONVERSATIONS ==================
 
 @router.get("/conversations")

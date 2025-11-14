@@ -3848,6 +3848,40 @@ async def debug_test_group():
     result = filter_automatic_only(result)
     return JSONResponse({"ok": True, "items": result})
 
+def is_working_hours():
+    """
+    Verifica se está dentro do horário de trabalho (sazonal)
+    - Novembro a Março: 09:00-17:30
+    - Abril a Outubro: 09:00-18:30
+    Timezone: Europe/Lisbon
+    """
+    try:
+        from zoneinfo import ZoneInfo
+        lisbon_tz = ZoneInfo("Europe/Lisbon")
+        now = datetime.now(lisbon_tz)
+        
+        month = now.month
+        hour = now.hour
+        minute = now.minute
+        
+        # Definir horário de fim baseado no mês
+        if 4 <= month <= 10:  # Abril a Outubro
+            end_hour = 18
+            end_minute = 30
+        else:  # Novembro a Março
+            end_hour = 17
+            end_minute = 30
+        
+        # Verificar se está entre 09:00 e horário de fim
+        start_minutes = 9 * 60  # 09:00
+        end_minutes = end_hour * 60 + end_minute
+        current_minutes = hour * 60 + minute
+        
+        return start_minutes <= current_minutes <= end_minutes
+    except Exception as e:
+        logging.error(f"Error checking working hours: {e}")
+        return False  # Se erro, não assume horário de trabalho
+
 def require_auth(request: Request):
     # Allow internal requests from scheduler
     if request.headers.get("X-Internal-Request") == "scheduler":
@@ -3856,9 +3890,13 @@ def require_auth(request: Request):
     if not request.session.get("auth", False):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    # Enforce inactivity timeout (exceto para role "support" - atendimento)
+    # Enforce inactivity timeout (exceto durante horário de trabalho e role support)
     user_role = request.session.get("role", "user")
-    if user_role != "support":  # Role "support" não expira sessão
+    
+    # Não expirar sessão se:
+    # 1. Role "support" (atendimento) - nunca expira
+    # 2. OU dentro do horário de trabalho (qualquer utilizador)
+    if user_role != "support" and not is_working_hours():
         try:
             now = int(datetime.now(timezone.utc).timestamp())
             last = int(request.session.get("last_active_ts", 0))
