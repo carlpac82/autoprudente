@@ -5259,6 +5259,83 @@ async def admin_test_whatsapp_connection(request: Request):
         traceback.print_exc()
         return JSONResponse({"success": False, "error": str(e)})
 
+@app.post("/api/admin/whatsapp/set-profile-picture")
+async def set_whatsapp_profile_picture(request: Request):
+    """Set WhatsApp Business profile picture"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        import httpx
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Check if PostgreSQL
+                is_postgres = str(con.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with con.cursor() as cur:
+                        cur.execute("SELECT access_token, phone_number_id FROM whatsapp_config WHERE id=1")
+                        row = cur.fetchone()
+                else:
+                    cur = con.execute("SELECT access_token, phone_number_id FROM whatsapp_config WHERE id=1")
+                    row = cur.fetchone()
+                
+                if not row or not row[0] or not row[1]:
+                    return JSONResponse({"success": False, "error": "WhatsApp não configurado"})
+                
+                access_token = row[0]
+                phone_number_id = row[1]
+                
+                # URL pública do logotipo Auto Prudente
+                logo_url = "https://carrental-api-5f8q.onrender.com/static/ap-logo.png"
+                
+                # Update WhatsApp Business profile picture
+                url = f"https://graph.facebook.com/v18.0/{phone_number_id}/whatsapp_business_profile"
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "profile_picture_handle": logo_url
+                }
+                
+                print(f"[WHATSAPP-PROFILE] Setting profile picture: {logo_url}")
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(url, headers=headers, json=payload)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        print(f"[WHATSAPP-PROFILE] ✅ Profile picture updated: {data}")
+                        return JSONResponse({
+                            "success": True, 
+                            "message": "Foto de perfil atualizada com sucesso!"
+                        })
+                    else:
+                        error_msg = response.text
+                        print(f"[WHATSAPP-PROFILE] ❌ Failed: {error_msg}")
+                        return JSONResponse({
+                            "success": False, 
+                            "error": f"Erro ao atualizar foto: {error_msg}"
+                        })
+                        
+            finally:
+                con.close()
+                
+    except httpx.TimeoutException:
+        print("[WHATSAPP-PROFILE] ❌ Timeout")
+        return JSONResponse({"success": False, "error": "Timeout ao conectar com WhatsApp API"})
+    except Exception as e:
+        print(f"[WHATSAPP-PROFILE] ❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(e)})
+
 # ============================================================
 # WHATSAPP DASHBOARD ENDPOINTS
 # ============================================================

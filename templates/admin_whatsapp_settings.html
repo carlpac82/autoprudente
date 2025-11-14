@@ -216,6 +216,9 @@
             <button type="button" onclick="testConnection()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
               Testar Conexão
             </button>
+            <button type="button" onclick="setProfilePicture()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+              🖼️ Definir Foto de Perfil
+            </button>
           </div>
         </form>
       </div>
@@ -330,6 +333,26 @@
           } else {
             alert('❌ Erro: ' + data.error);
           }
+        });
+    }
+
+    function setProfilePicture() {
+      if (!confirm('Definir o logotipo da Auto Prudente como foto de perfil do WhatsApp Business?')) {
+        return;
+      }
+      
+      alert('A definir foto de perfil...');
+      fetch('/api/admin/whatsapp/set-profile-picture', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ ' + data.message);
+          } else {
+            alert('❌ Erro: ' + data.error);
+          }
+        })
+        .catch(err => {
+          alert('❌ Erro ao definir foto: ' + err.message);
         });
     }
 
