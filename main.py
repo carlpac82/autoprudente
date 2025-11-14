@@ -6091,12 +6091,12 @@ async def import_whatsapp_contacts(request: Request):
 
 @app.get("/api/whatsapp/google-contacts/auth-url")
 async def get_google_contacts_auth_url(request: Request):
-    """Get Google OAuth URL for contacts access"""
+    """Generate Google OAuth URL for contacts access"""
     require_auth(request)
     try:
-        # Google OAuth2 configuration
-        client_id = os.getenv('GOOGLE_CLIENT_ID', '')
-        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'https://carrental-api-5f8q.onrender.com/api/whatsapp/google-contacts/callback')
+        # Google OAuth2 configuration for Contacts (separate from Email OAuth)
+        client_id = os.getenv('GOOGLE_CONTACTS_CLIENT_ID', os.getenv('GOOGLE_CLIENT_ID', ''))
+        redirect_uri = os.getenv('GOOGLE_CONTACTS_REDIRECT_URI', os.getenv('GOOGLE_REDIRECT_URI', 'https://carrental-api-5f8q.onrender.com/api/whatsapp/google-contacts/callback'))
         
         if not client_id:
             return JSONResponse({
@@ -6135,9 +6135,10 @@ async def google_contacts_callback(request: Request, code: str = None):
         if not code:
             return HTMLResponse("<h1>Erro: Código de autorização não recebido</h1>")
         
-        client_id = os.getenv('GOOGLE_CLIENT_ID', '')
-        client_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
-        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'https://carrental-api-5f8q.onrender.com/api/whatsapp/google-contacts/callback')
+        # Use specific contacts credentials, fallback to general Google credentials
+        client_id = os.getenv('GOOGLE_CONTACTS_CLIENT_ID', os.getenv('GOOGLE_CLIENT_ID', ''))
+        client_secret = os.getenv('GOOGLE_CONTACTS_CLIENT_SECRET', os.getenv('GOOGLE_CLIENT_SECRET', ''))
+        redirect_uri = os.getenv('GOOGLE_CONTACTS_REDIRECT_URI', os.getenv('GOOGLE_REDIRECT_URI', 'https://carrental-api-5f8q.onrender.com/api/whatsapp/google-contacts/callback'))
         
         # Exchange code for tokens
         import httpx
