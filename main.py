@@ -24304,26 +24304,49 @@ async def save_search_history(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
+                # Check if PostgreSQL
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
                 # Ensure table exists
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS search_history (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        location TEXT NOT NULL,
-                        search_date TEXT NOT NULL,
-                        prices_data TEXT NOT NULL,
-                        price_count INTEGER DEFAULT 0,
-                        searched_by TEXT,
-                        searched_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
-                # Insert search
-                conn.execute("""
-                    INSERT INTO search_history (location, search_date, prices_data, price_count, searched_by)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (location, date, json.dumps(prices), price_count, username))
-                
-                conn.commit()
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS search_history (
+                                id SERIAL PRIMARY KEY,
+                                location TEXT NOT NULL,
+                                search_date TEXT NOT NULL,
+                                prices_data TEXT NOT NULL,
+                                price_count INTEGER DEFAULT 0,
+                                searched_by TEXT,
+                                searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        # Insert search
+                        cur.execute("""
+                            INSERT INTO search_history (location, search_date, prices_data, price_count, searched_by)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (location, date, json.dumps(prices), price_count, username))
+                    conn.commit()
+                else:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS search_history (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            location TEXT NOT NULL,
+                            search_date TEXT NOT NULL,
+                            prices_data TEXT NOT NULL,
+                            price_count INTEGER DEFAULT 0,
+                            searched_by TEXT,
+                            searched_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    # Insert search
+                    conn.execute("""
+                        INSERT INTO search_history (location, search_date, prices_data, price_count, searched_by)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (location, date, json.dumps(prices), price_count, username))
+                    conn.commit()
                 
                 return _no_store_json({"ok": True, "message": "Search saved to history"})
             finally:
@@ -24331,6 +24354,8 @@ async def save_search_history(request: Request):
                 
     except Exception as e:
         import traceback
+        print(f"[SEARCH-HISTORY] ❌ Error saving: {str(e)}")
+        traceback.print_exc()
         log_to_db("ERROR", f"Failed to save search history: {str(e)}", "main", "save_search_history")
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
@@ -24342,14 +24367,27 @@ async def get_search_history(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                cursor = conn.execute("""
-                    SELECT id, location, search_date, prices_data, price_count, searched_by, searched_at
-                    FROM search_history
-                    ORDER BY searched_at DESC
-                    LIMIT 50
-                """)
+                # Check if PostgreSQL
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                rows = cursor.fetchall()
+                if is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT id, location, search_date, prices_data, price_count, searched_by, searched_at
+                            FROM search_history
+                            ORDER BY searched_at DESC
+                            LIMIT 50
+                        """)
+                        rows = cursor.fetchall()
+                else:
+                    cursor = conn.execute("""
+                        SELECT id, location, search_date, prices_data, price_count, searched_by, searched_at
+                        FROM search_history
+                        ORDER BY searched_at DESC
+                        LIMIT 50
+                    """)
+                    rows = cursor.fetchall()
+                
                 history = []
                 
                 for row in rows:
@@ -24360,7 +24398,7 @@ async def get_search_history(request: Request):
                         'prices': json.loads(row[3]) if row[3] else {},
                         'priceCount': row[4],
                         'searchedBy': row[5],
-                        'searchedAt': row[6]
+                        'searchedAt': str(row[6]) if row[6] else None
                     })
                 
                 return _no_store_json({"ok": True, "history": history})
@@ -24369,6 +24407,8 @@ async def get_search_history(request: Request):
                 
     except Exception as e:
         import traceback
+        print(f"[SEARCH-HISTORY] ❌ Error loading: {str(e)}")
+        traceback.print_exc()
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
 
 def _ensure_recent_searches_table():
