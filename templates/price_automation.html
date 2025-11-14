@@ -3050,6 +3050,7 @@
                                      onerror="this.style.display='none'">
                                 <div class="flex-1 min-w-0">
                                     <div class="text-xs font-semibold" style="color: ${cardColor};">AP ${grupo}</div>
+                                    ${item.source === 'AUTOPRUDENTE' ? `<div class="text-[10px] text-gray-600 mt-0.5">M</div>` : ''}
                                 </div>
                                 <div>
                                     <div class="font-bold ${isFirst ? 'text-base' : 'text-sm'}" style="color: ${cardColor};" id="price-display-${grupo}-${day}">${item.price.toFixed(2)}€</div>
@@ -3171,7 +3172,16 @@
             //  UPDATE THE AUTOMATED ITEM PRICE IN THE ARRAY
             if (automatedItem) {
                 automatedItem.price = parseFloat(newPrice);
-                console.log(` Updated automated price in array: ${automatedItem.price}€`);
+
+                // Se existir preço Auto Prudente neste grupo/dia, marcar a origem
+                const hasAutoPrudente = Array.isArray(allPricesData) && allPricesData.some(p => p.type === 'autoprudente');
+                if (hasAutoPrudente) {
+                    automatedItem.source = 'AUTOPRUDENTE';
+                }
+
+                console.log(` Updated automated price in array: ${automatedItem.price}€`, {
+                    source: automatedItem.source || 'UNKNOWN'
+                });
             }
             
             // Update the table input field (RÁPIDO)
@@ -4097,7 +4107,7 @@
             const allPrices = [];
             
             if (automatedPrice) {
-                allPrices.push({ type: 'automated', price: automatedPrice, label: 'Automated Price' });
+                allPrices.push({ type: 'automated', price: automatedPrice, label: 'AP' });
             }
             
             // Add AI suggestion if available
@@ -4198,7 +4208,8 @@
                                              class="w-12 h-8 object-cover rounded flex-shrink-0"
                                              onerror="this.style.display='none'">
                                         <div class="flex-1 min-w-0">
-                                            <div class="text-xs font-semibold" style="color: ${cardColor};">Automated Price ${grupo}</div>
+                                            <div class="text-xs font-semibold" style="color: ${cardColor};">AP ${grupo}</div>
+                                            ${item.source === 'AUTOPRUDENTE' ? `<div class="text-[10px] text-gray-600 mt-0.5">M</div>` : ''}
                                         </div>
                                         <div class="text-right">
                                             <div class="font-bold text-xs" style="color: ${cardColor};" id="price-display-${grupo}-${day}">${parseFloat(item.price).toFixed(2)}€</div>
@@ -4685,25 +4696,23 @@
                 
                 // Render price comparison cards (hidden by default, user can toggle)
                 console.log(`[SAVE-HISTORY-CHECK] autoPrices=${autoPricesGenerated}, realPrices=${realPricesGenerated}, grupos=${Object.keys(automatedPricesByGroup).length}`);
-                
-                if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
-                    console.log('Rendering price comparison cards...');
-                    renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
-                    // Keep cards hidden, show table by default
-                    document.getElementById('priceComparisonCards').classList.add('hidden');
-                    document.getElementById('priceTableContainer').classList.remove('hidden');
-                    
-                    // Save automated prices to history with supplier data
-                    console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}`);
-                    if (autoPricesGenerated > 0) {
-                        console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
-                        const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
-                        console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
-                    } else {
-                        console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated} (must be > 0)`);
-                    }
+
+                // Render cards SEMPRE que a geração termina, mesmo que não existam regras
+                // (cards podem mostrar apenas "No data available yet" quando não há preços)
+                console.log('Rendering price comparison cards...');
+                renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
+                // Manter cards escondidos por padrão e mostrar tabela
+                document.getElementById('priceComparisonCards').classList.add('hidden');
+                document.getElementById('priceTableContainer').classList.remove('hidden');
+
+                // Guardar histórico APENAS se existirem preços automatizados
+                console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}`);
+                if (autoPricesGenerated > 0) {
+                    console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
+                    const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
+                    console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
                 } else {
-                    console.warn(`[SAVE-HISTORY] NO RENDERING: No prices generated (auto=${autoPricesGenerated}, real=${realPricesGenerated})`);
+                    console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated} (must be > 0)`);
                 }
                 
                 progressText.textContent = ' Generation complete!';
@@ -6204,7 +6213,19 @@
             window.dias = dias;
             window.currentSupplierData = supplierData;
             
-            // Ensure table is initialized
+            // Sync selected days for Automated Prices with history days
+            // This ensures that non-default days like 8, 9, 31, 60
+            // are shown in the table and used in CSV exports.
+            if (Array.isArray(dias) && dias.length > 0) {
+                selectedDaysAuto = [...dias].map(d => parseInt(d, 10)).filter(d => !isNaN(d));
+                selectedDaysAuto.sort((a, b) => a - b);
+                // Rebuild chips to reflect these days
+                if (typeof initDayChipsAuto === 'function') {
+                    initDayChipsAuto();
+                }
+            }
+            
+            // Ensure table is initialized with updated selectedDaysAuto
             initTableAuto();
             
             // Fill table with AUTOMATED prices (column "Auto")

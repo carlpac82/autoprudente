@@ -1,0 +1,79 @@
+================================================================================
+TESTE: FILTRO DE TRANSMISSÃO AUTOMÁTICA - CARJET
+Data: 13/11/2025 18:24
+================================================================================
+
+CONFIGURAÇÃO DO TESTE:
+----------------------
+Local: Faro Aeroporto (FAO)
+Data Pickup: 20/11/2025 18:23
+Data Dropoff: 25/11/2025 18:23
+Dias: 5
+Idioma: PT
+Moeda: EUR
+
+RESULTADO DO REQUEST:
+---------------------
+✅ HTML recebido: 455,628 caracteres
+✅ Tipo de página: searchresults (página de resultados)
+✅ Artigos encontrados: 48 carros
+
+VERIFICAÇÃO DO FILTRO:
+----------------------
+✅ Campo frmTrans encontrado no HTML
+✅ Checkbox de transmissão automática está CHECKED
+✅ URL de lista encontrada no HTML (/do/list/)
+
+CARROS RETORNADOS (Todos Automáticos):
+---------------------------------------
+1.  VW Polo Auto
+2.  Toyota Corolla Auto
+3.  VW Golf Auto
+4.  Peugeot 308 Auto
+5.  VW Taigo Auto
+6.  Ford Focus SW Auto
+7.  Mercedes A Class Auto
+8.  Nissan Qashqai Auto
+9.  Nissan Juke Auto
+10. VW Caddy Auto
+11. BMW 1 Series Auto
+12. Citroen C4 Auto
+13. Renault Megane SW Auto, Hybrid
+14. Mitsubishi Spacestar Auto
+15. Mercedes C Class SW Auto
+16. Mini Cooper Cabrio Auto
+17. Mercedes C Class Auto
+18. Mercedes E Class Auto
+19. Mercedes E Class SW Auto
+20. Fiat 500X Auto
+21. Peugeot 3008 Auto
+22. Mini Countryman Auto
+23. VW Multivan Auto
+24. BMW 3 Series Auto
+25. BMW 2 Series Gran Coupe Auto
+26. BMW 3 Series SW Auto
+27. Volvo V60 4x4 Auto, Hybrid
+28. DS4 Auto
+... (e mais)
+
+ANÁLISE DOS RESULTADOS:
+-----------------------
+✅ TESTE PASSOU COM SUCESSO!
+
+Todos os 48 carros retornados têm "Auto" no nome, confirmando que:
+- O filtro frmTrans: "au" está sendo enviado corretamente no POST
+- O CarJet está processando o filtro e retornando apenas automáticos
+- Nenhum carro manual foi encontrado nos resultados
+
+CONCLUSÃO:
+----------
+O filtro de transmissão automática está FUNCIONANDO PERFEITAMENTE.
+Todas as pesquisas ao CarJet agora retornam apenas carros com câmbio automático.
+
+ARQUIVO HTML SALVO:
+-------------------
+carjet_automatic_filter_response.html (455,628 bytes)
+
+================================================================================
+✅ TESTE CONCLUÍDO COM SUCESSO
+================================================================================

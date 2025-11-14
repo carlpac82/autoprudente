@@ -241,50 +241,6 @@ def scrape_carjet_simple(location, start_dt, end_dt):
         # Aguardar conteúdo carregar
         time.sleep(5)
         
-        # 🔧 LIMPAR FILTROS DA SESSÃO ANTERIOR
-        print(f"[SELENIUM_SIMPLE] PASSO 5: Limpando filtros da sessão anterior...", file=sys.stderr, flush=True)
-        try:
-            result = driver.execute_script("""
-                // Desmarcar TODOS os filtros "utilizados anteriormente"
-                let cleared = 0;
-                
-                // 1. Desmarcar checkbox de transmissão automática
-                const transCheck = document.querySelector('#chkTransauUsed, #chkTransAu, input[value="au"][name="frmTrans"]');
-                if (transCheck && transCheck.checked) {
-                    transCheck.checked = false;
-                    transCheck.click();
-                    cleared++;
-                }
-                
-                // 2. Desmarcar checkbox de grupo (FAMI, etc)
-                const groupCheck = document.querySelector('#chkAgrpFamiUsed, #idBoxFAMI');
-                if (groupCheck && groupCheck.checked) {
-                    groupCheck.checked = false;
-                    groupCheck.click();
-                    cleared++;
-                }
-                
-                // 3. Limpar campo frmAgrp (grupo de veículo)
-                const frmAgrp = document.querySelector('input[name="frmAgrp"]');
-                if (frmAgrp) {
-                    frmAgrp.value = '';
-                }
-                
-                // 4. Limpar campo frmTrans (transmissão)
-                const frmTrans = document.querySelector('input[name="frmTrans"]');
-                if (frmTrans) {
-                    frmTrans.value = '';
-                }
-                
-                return {cleared: cleared, success: true};
-            """)
-            print(f"[SELENIUM_SIMPLE] ✅ {result.get('cleared', 0)} filtros desmarcados", file=sys.stderr, flush=True)
-            
-            # Aguardar página recarregar sem filtros
-            time.sleep(3)
-        except Exception as e:
-            print(f"[SELENIUM_SIMPLE] ⚠️ Erro ao limpar filtros: {e}", file=sys.stderr, flush=True)
-        
         final_url = driver.current_url
         print(f"[SELENIUM_SIMPLE] URL final: {final_url}", file=sys.stderr, flush=True)
         
