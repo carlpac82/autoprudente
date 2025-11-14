@@ -4998,12 +4998,14 @@ async def admin_save_whatsapp_config(request: Request):
     
     try:
         body = await request.json()
+        print(f"[WHATSAPP-CONFIG] Saving config: {body.keys()}")
         
         # Save to database (whatsapp_config table)
         with _db_lock:
             con = _db_connect()
             try:
-                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                is_postgres = str(con.__class__).find('psycopg') >= 0
+                print(f"[WHATSAPP-CONFIG] Database type: {'PostgreSQL' if is_postgres else 'SQLite'}")
                 
                 # Create table if not exists (compatible with both SQLite and PostgreSQL)
                 if is_postgres:
@@ -5061,10 +5063,19 @@ async def admin_save_whatsapp_config(request: Request):
                     ))
                     con.commit()
                 
+                print(f"[WHATSAPP-CONFIG] ✅ Configuration saved successfully")
                 return JSONResponse({"ok": True, "message": "WhatsApp configuration saved successfully"})
+            except Exception as db_error:
+                print(f"[WHATSAPP-CONFIG] ❌ Database error: {str(db_error)}")
+                import traceback
+                traceback.print_exc()
+                raise
             finally:
                 con.close()
     except Exception as e:
+        print(f"[WHATSAPP-CONFIG] ❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/whatsapp/quick-replies")
