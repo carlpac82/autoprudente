@@ -467,7 +467,7 @@ import json
 import base64
 
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
-from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse, FileResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse, Response, StreamingResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -5094,6 +5094,62 @@ async def get_whatsapp_quick_replies(request: Request):
         return JSONResponse({"ok": True, "quick_replies": []})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/whatsapp/webhook")
+async def whatsapp_webhook_verify(request: Request):
+    """WhatsApp webhook verification (Meta callback)"""
+    try:
+        # Get query parameters
+        mode = request.query_params.get("hub.mode")
+        token = request.query_params.get("hub.verify_token")
+        challenge = request.query_params.get("hub.challenge")
+        
+        print(f"[WHATSAPP-WEBHOOK] Verification request - mode: {mode}, token: {token}")
+        
+        # Load verify token from database
+        with _db_lock:
+            con = _db_connect()
+            try:
+                cur = con.execute("SELECT verify_token FROM whatsapp_config WHERE id=1")
+                row = cur.fetchone()
+                
+                if not row or not row[0]:
+                    print("[WHATSAPP-WEBHOOK] ❌ No verify token configured in database")
+                    return PlainTextResponse("Verify token not configured", status_code=403)
+                
+                stored_token = row[0]
+                print(f"[WHATSAPP-WEBHOOK] Stored token: {stored_token}")
+                
+                # Verify the request
+                if mode == "subscribe" and token == stored_token:
+                    print(f"[WHATSAPP-WEBHOOK] ✅ Verification successful, returning challenge: {challenge}")
+                    return PlainTextResponse(challenge, status_code=200)
+                else:
+                    print(f"[WHATSAPP-WEBHOOK] ❌ Verification failed - mode: {mode}, token match: {token == stored_token}")
+                    return PlainTextResponse("Verification failed", status_code=403)
+            finally:
+                con.close()
+    except Exception as e:
+        print(f"[WHATSAPP-WEBHOOK] ❌ Error during verification: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return PlainTextResponse(f"Error: {str(e)}", status_code=500)
+
+@app.post("/api/whatsapp/webhook")
+async def whatsapp_webhook_receive(request: Request):
+    """WhatsApp webhook - receive incoming messages"""
+    try:
+        body = await request.json()
+        print(f"[WHATSAPP-WEBHOOK] Received message: {body}")
+        
+        # TODO: Process incoming WhatsApp messages
+        # For now, just acknowledge receipt
+        return JSONResponse({"status": "received"}, status_code=200)
+    except Exception as e:
+        print(f"[WHATSAPP-WEBHOOK] ❌ Error processing message: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/admin/whatsapp/test-connection")
 async def admin_test_whatsapp_connection(request: Request):
