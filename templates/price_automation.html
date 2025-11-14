@@ -1418,21 +1418,26 @@
                 // Load settings
                 const settings = JSON.parse(localStorage.getItem('priceAutomationSettings') || '{}');
                 
+                // Get current location for debugging
+                const currentLocation = document.getElementById('locationAuto')?.value || 'UNKNOWN';
+                console.log(`🔧 [HIERARCHY] Starting for location: ${currentLocation}`);
+                
                 if (!settings.enableGroupHierarchy || !settings.groupHierarchyRules) {
-                    console.log('🔧 [HIERARCHY] Rules disabled or not configured');
+                    console.log(`🔧 [HIERARCHY] Rules disabled or not configured for ${currentLocation}`);
                     return 0;
                 }
                 
                 const rules = settings.groupHierarchyRules;
                 if (Object.keys(rules).length === 0) {
-                    console.log('🔧 [HIERARCHY] No rules defined');
+                    console.log(`🔧 [HIERARCHY] No rules defined for ${currentLocation}`);
                     return 0;
                 }
                 
-                console.log('🔧 [HIERARCHY] Applying dependency rules:', rules);
+                console.log(`🔧 [HIERARCHY] Applying dependency rules for ${currentLocation}:`, rules);
                 
                 let adjustedCount = 0;
                 const allDays = [...selectedDaysAuto]; // Use selected days
+                console.log(`🔧 [HIERARCHY] Processing ${allDays.length} days: ${allDays.join(', ')}`);
                 
                 // Process each group that has dependencies
                 for (const [targetGroup, dependencies] of Object.entries(rules)) {
@@ -1443,10 +1448,20 @@
                     // Process each day
                     for (const day of allDays) {
                         const targetInput = document.querySelector(`#pricesTableAuto input[data-grupo="${targetGroup}"][data-dias="${day}"][data-type="auto"]`);
-                        if (!targetInput || !targetInput.value) continue;
+                        if (!targetInput) {
+                            console.log(`🔧 [HIERARCHY] ⚠️ Input not found for ${targetGroup}/${day}d in ${currentLocation}`);
+                            continue;
+                        }
+                        if (!targetInput.value) {
+                            console.log(`🔧 [HIERARCHY] ⚠️ Empty value for ${targetGroup}/${day}d in ${currentLocation}`);
+                            continue;
+                        }
                         
                         let targetPrice = parseFloat(targetInput.value);
-                        if (isNaN(targetPrice) || targetPrice <= 0) continue;
+                        if (isNaN(targetPrice) || targetPrice <= 0) {
+                            console.log(`🔧 [HIERARCHY] ⚠️ Invalid price ${targetInput.value} for ${targetGroup}/${day}d in ${currentLocation}`);
+                            continue;
+                        }
                         
                         let minRequiredPrice = targetPrice;
                         let adjustmentNeeded = false;
@@ -1458,10 +1473,18 @@
                             const operator = typeof dep === 'string' ? '>=' : dep.operator;
                             
                             const depInput = document.querySelector(`#pricesTableAuto input[data-grupo="${depGroup}"][data-dias="${day}"][data-type="auto"]`);
-                            if (!depInput || !depInput.value) continue;
+                            if (!depInput || !depInput.value) {
+                                console.log(`🔧 [HIERARCHY] ⚠️ Dependency ${depGroup} not found or empty for ${targetGroup}/${day}d in ${currentLocation}`);
+                                continue;
+                            }
                             
                             const depPrice = parseFloat(depInput.value);
-                            if (isNaN(depPrice) || depPrice <= 0) continue;
+                            if (isNaN(depPrice) || depPrice <= 0) {
+                                console.log(`🔧 [HIERARCHY] ⚠️ Invalid dependency price for ${depGroup}/${day}d in ${currentLocation}`);
+                                continue;
+                            }
+                            
+                            console.log(`🔧 [HIERARCHY] Checking ${targetGroup}(${targetPrice.toFixed(2)}€) ${operator} ${depGroup}(${depPrice.toFixed(2)}€) for day ${day} in ${currentLocation}`);
                             
                             // Check if rule is violated
                             let violated = false;
