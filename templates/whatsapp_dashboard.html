@@ -362,15 +362,20 @@
             }
 
             list.innerHTML = contacts.map(contact => `
-                <div class="p-4 border-b hover:bg-[#f0f9fb] cursor-pointer"
-                     onclick="openContactConversation(${contact.id})">
-                    <div class="flex items-start gap-3">
-                        <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0">
-                            <i class="far fa-user text-white"></i>
-                        </div>
+                <div class="p-4 border-b hover:bg-[#f0f9fb] group relative">
+                    <div class="flex items-start gap-3" onclick="openContactConversation(${contact.id})">
+                        ${contact.profile_picture_url ? 
+                            `<img src="${contact.profile_picture_url}" alt="${contact.name}" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0" style="display: none;">
+                                 <i class="far fa-user text-white"></i>
+                             </div>` :
+                            `<div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0">
+                                 <i class="far fa-user text-white"></i>
+                             </div>`
+                        }
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <h4 class="font-semibold truncate">${contact.name || contact.phone_number}</h4>
+                                <h4 class="font-semibold truncate">${contact.name || contact.phone_number}${contact.has_whatsapp === false ? ' ⚠️' : ''}</h4>
                                 <span class="text-xs text-gray-500">${formatTime(contact.last_message_at)}</span>
                             </div>
                             <p class="text-sm text-gray-600 truncate">
@@ -378,9 +383,15 @@
                             </p>
                             <div class="flex gap-2 mt-1">
                                 ${contact.unread_count > 0 ? `<span class="text-xs bg-[#009cb6] text-white px-2 py-0.5 rounded-full">${contact.unread_count} mensagens</span>` : ''}
+                                ${contact.has_whatsapp === true ? '<span class="text-xs text-green-600" title="WhatsApp verificado">✓</span>' : ''}
                             </div>
                         </div>
                     </div>
+                    <button onclick="deleteContact(${contact.id}, event)" 
+                            class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-red-500 hover:bg-red-50 rounded"
+                            title="Eliminar contacto">
+                        <i class="far fa-trash-alt"></i>
+                    </button>
                 </div>
             `).join('');
         }
@@ -605,6 +616,47 @@
             } catch (error) {
                 console.error('Error adding contact:', error);
                 alert('Erro ao adicionar contacto');
+            }
+        }
+
+        async function deleteContact(contactId, event) {
+            event.stopPropagation(); // Prevent opening conversation
+            
+            if (!confirm('Tem certeza que deseja eliminar este contacto? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/whatsapp/contacts/${contactId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // If current conversation is deleted, clear it
+                    if (currentConversation && currentConversation.id === contactId) {
+                        currentConversation = null;
+                        document.getElementById('chat-area').innerHTML = `
+                            <div class="flex items-center justify-center h-full text-gray-400">
+                                <div class="text-center">
+                                    <i class="far fa-comments text-5xl mb-3"></i>
+                                    <p>Selecione uma conversa para começar</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Reload lists
+                    await loadConversations();
+                    await loadContacts();
+                    alert('✅ Contacto eliminado com sucesso!');
+                } else {
+                    alert('❌ Erro ao eliminar: ' + (data.error || 'Desconhecido'));
+                }
+            } catch (error) {
+                console.error('Error deleting contact:', error);
+                alert('❌ Erro ao eliminar contacto');
             }
         }
     </script>

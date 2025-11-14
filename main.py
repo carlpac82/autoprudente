@@ -5076,6 +5076,32 @@ async def admin_save_whatsapp_config(request: Request):
                             expires_at TIMESTAMP
                         )
                     """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+                            id SERIAL PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            phone_number TEXT NOT NULL UNIQUE,
+                            last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            last_message_preview TEXT,
+                            unread_count INTEGER DEFAULT 0,
+                            status VARCHAR(20) DEFAULT 'open',
+                            assigned_to TEXT,
+                            has_whatsapp BOOLEAN,
+                            profile_picture_url TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                            id TEXT PRIMARY KEY,
+                            conversation_id INTEGER REFERENCES whatsapp_conversations(id) ON DELETE CASCADE,
+                            message_text TEXT,
+                            direction VARCHAR(10) NOT NULL,
+                            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status VARCHAR(20) DEFAULT 'sent',
+                            sender_name TEXT
+                        )
+                    """)
                 else:
                     con.execute("""
                         CREATE TABLE IF NOT EXISTS whatsapp_config (
@@ -5093,6 +5119,33 @@ async def admin_save_whatsapp_config(request: Request):
                             access_token TEXT,
                             refresh_token TEXT,
                             expires_at TEXT
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            phone_number TEXT NOT NULL UNIQUE,
+                            last_message_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            last_message_preview TEXT,
+                            unread_count INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'open',
+                            assigned_to TEXT,
+                            has_whatsapp INTEGER,
+                            profile_picture_url TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                            id TEXT PRIMARY KEY,
+                            conversation_id INTEGER,
+                            message_text TEXT,
+                            direction TEXT NOT NULL,
+                            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+                            status TEXT DEFAULT 'sent',
+                            sender_name TEXT,
+                            FOREIGN KEY (conversation_id) REFERENCES whatsapp_conversations(id) ON DELETE CASCADE
                         )
                     """)
                 
@@ -5436,34 +5489,67 @@ async def set_whatsapp_profile_picture(request: Request):
 # WHATSAPP DASHBOARD ENDPOINTS
 # ============================================================
 
-# Temporary in-memory storage for WhatsApp conversations
-# TODO: Migrate to database when implementing full WhatsApp features
-whatsapp_conversations = []
-whatsapp_conversation_counter = 0
-
 @app.get("/api/whatsapp/conversations")
 async def get_whatsapp_conversations(request: Request):
-    """Get WhatsApp conversations"""
+    """Get WhatsApp conversations from database"""
     require_auth(request)
     try:
-        global whatsapp_conversations
-        
         # Filter by status if provided
         status = request.query_params.get('status')
-        conversations = whatsapp_conversations
         
-        if status:
-            conversations = [c for c in conversations if c.get('status') == status]
-        
-        print(f"[WHATSAPP] Returning {len(conversations)} conversations")
-        
-        return JSONResponse({
-            "ok": True,
-            "success": True,
-            "conversations": conversations
-        })
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if status:
+                    query = "SELECT id, name, phone_number, last_message_at, last_message_preview, unread_count, status, assigned_to, has_whatsapp, profile_picture_url FROM whatsapp_conversations WHERE status = "
+                    query += "%s" if is_postgres else "?"
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(query, (status,))
+                            rows = cur.fetchall()
+                    else:
+                        rows = conn.execute(query, (status,)).fetchall()
+                else:
+                    query = "SELECT id, name, phone_number, last_message_at, last_message_preview, unread_count, status, assigned_to, has_whatsapp, profile_picture_url FROM whatsapp_conversations ORDER BY last_message_at DESC"
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(query)
+                            rows = cur.fetchall()
+                    else:
+                        rows = conn.execute(query).fetchall()
+                
+                conversations = []
+                for row in rows:
+                    conversations.append({
+                        "id": row[0],
+                        "name": row[1],
+                        "phone_number": row[2],
+                        "last_message_at": row[3].isoformat() if hasattr(row[3], 'isoformat') else str(row[3]),
+                        "last_message_preview": row[4],
+                        "unread_count": row[5],
+                        "status": row[6],
+                        "assigned_to": row[7],
+                        "has_whatsapp": bool(row[8]) if row[8] is not None else None,
+                        "profile_picture_url": row[9],
+                        "messages": []  # Messages loaded separately
+                    })
+                
+                print(f"[WHATSAPP] Returning {len(conversations)} conversations from database")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "conversations": conversations
+                })
+            finally:
+                conn.close()
+                
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error loading conversations: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/whatsapp/contacts/verify")
@@ -5537,11 +5623,9 @@ async def verify_whatsapp_contact(request: Request):
 
 @app.post("/api/whatsapp/contacts/add")
 async def add_whatsapp_contact(request: Request):
-    """Add a new WhatsApp contact and create a conversation"""
+    """Add a new WhatsApp contact and create a conversation in database"""
     require_auth(request)
     try:
-        global whatsapp_conversations, whatsapp_conversation_counter
-        
         data = await request.json()
         name = data.get('name', '')
         # Accept both 'phone' and 'phone_number' for compatibility
@@ -5595,69 +5679,187 @@ async def add_whatsapp_contact(request: Request):
             except Exception as e:
                 print(f"[WHATSAPP] Warning: Could not verify WhatsApp: {str(e)}")
         
-        # Check if conversation already exists for this phone number
-        existing = next((c for c in whatsapp_conversations if c['phone_number'] == phone), None)
-        
-        if existing:
-            # Update profile picture if found
-            if profile_picture_url:
-                existing['profile_picture_url'] = profile_picture_url
-                existing['has_whatsapp'] = has_whatsapp
-            
-            print(f"[WHATSAPP] Conversation already exists for {phone}")
-            return JSONResponse({
-                "ok": True,
-                "success": True,
-                "message": "Conversa já existe para este contacto",
-                "contact": {
-                    "name": name,
-                    "phone": phone,
-                    "id": existing['id'],
-                    "has_whatsapp": has_whatsapp,
-                    "profile_picture_url": profile_picture_url
-                },
-                "conversation": existing
-            })
-        
-        # Create new conversation
-        from datetime import datetime
-        whatsapp_conversation_counter += 1
-        new_conversation = {
-            "id": whatsapp_conversation_counter,
-            "name": name,
-            "phone_number": phone,
-            "last_message_at": datetime.now().isoformat(),
-            "last_message_preview": "Nova conversa",
-            "unread_count": 0,
-            "status": "open",
-            "assigned_to": None,
-            "messages": [],
-            "has_whatsapp": has_whatsapp,
-            "profile_picture_url": profile_picture_url
-        }
-        
-        whatsapp_conversations.append(new_conversation)
-        
-        print(f"[WHATSAPP] ✅ Created conversation #{new_conversation['id']} for {name} - {phone}")
-        if has_whatsapp is not None:
-            print(f"[WHATSAPP] WhatsApp verified: {has_whatsapp}")
-        print(f"[WHATSAPP] Total conversations: {len(whatsapp_conversations)}")
-        
-        return JSONResponse({
-            "ok": True,
-            "success": True,
-            "message": "Contacto adicionado com sucesso",
-            "contact": {
-                "name": name,
-                "phone": phone,
-                "id": new_conversation['id'],
-                "has_whatsapp": has_whatsapp,
-                "profile_picture_url": profile_picture_url
-            },
-            "conversation": new_conversation
-        })
+        # Save to database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Check if conversation already exists
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, name, phone_number, has_whatsapp, profile_picture_url FROM whatsapp_conversations WHERE phone_number = %s", (phone,))
+                        existing_row = cur.fetchone()
+                else:
+                    existing_row = conn.execute("SELECT id, name, phone_number, has_whatsapp, profile_picture_url FROM whatsapp_conversations WHERE phone_number = ?", (phone,)).fetchone()
+                
+                if existing_row:
+                    # Update if new data available
+                    conv_id = existing_row[0]
+                    if profile_picture_url or has_whatsapp is not None:
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    UPDATE whatsapp_conversations 
+                                    SET profile_picture_url = COALESCE(%s, profile_picture_url),
+                                        has_whatsapp = COALESCE(%s, has_whatsapp),
+                                        name = %s
+                                    WHERE id = %s
+                                """, (profile_picture_url, has_whatsapp, name, conv_id))
+                            conn.commit()
+                        else:
+                            conn.execute("""
+                                UPDATE whatsapp_conversations 
+                                SET profile_picture_url = COALESCE(?, profile_picture_url),
+                                    has_whatsapp = COALESCE(?, has_whatsapp),
+                                    name = ?
+                                WHERE id = ?
+                            """, (profile_picture_url, has_whatsapp, name, conv_id))
+                            conn.commit()
+                    
+                    print(f"[WHATSAPP] ✅ Updated existing conversation #{conv_id}")
+                    return JSONResponse({
+                        "ok": True,
+                        "success": True,
+                        "message": "Conversa já existe para este contacto (atualizada)",
+                        "contact": {
+                            "name": name,
+                            "phone": phone,
+                            "id": conv_id,
+                            "has_whatsapp": has_whatsapp,
+                            "profile_picture_url": profile_picture_url
+                        }
+                    })
+                
+                # Insert new conversation
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO whatsapp_conversations 
+                            (name, phone_number, last_message_preview, has_whatsapp, profile_picture_url)
+                            VALUES (%s, %s, %s, %s, %s)
+                            RETURNING id
+                        """, (name, phone, "Nova conversa", has_whatsapp, profile_picture_url))
+                        new_id = cur.fetchone()[0]
+                    conn.commit()
+                else:
+                    cursor = conn.execute("""
+                        INSERT INTO whatsapp_conversations 
+                        (name, phone_number, last_message_preview, has_whatsapp, profile_picture_url)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (name, phone, "Nova conversa", 1 if has_whatsapp else 0 if has_whatsapp is not None else None, profile_picture_url))
+                    new_id = cursor.lastrowid
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Created conversation #{new_id} for {name} - {phone}")
+                if has_whatsapp is not None:
+                    print(f"[WHATSAPP] WhatsApp verified: {has_whatsapp}")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Contacto adicionado com sucesso",
+                    "contact": {
+                        "name": name,
+                        "phone": phone,
+                        "id": new_id,
+                        "has_whatsapp": has_whatsapp,
+                        "profile_picture_url": profile_picture_url
+                    }
+                })
+            finally:
+                conn.close()
+                
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error adding contact: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
+@app.delete("/api/whatsapp/contacts/{contact_id}")
+async def delete_whatsapp_contact(request: Request, contact_id: int):
+    """Delete a WhatsApp contact/conversation"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Delete conversation (messages will be deleted automatically via CASCADE)
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM whatsapp_conversations WHERE id = %s", (contact_id,))
+                        deleted = cur.rowcount
+                    conn.commit()
+                else:
+                    cursor = conn.execute("DELETE FROM whatsapp_conversations WHERE id = ?", (contact_id,))
+                    deleted = cursor.rowcount
+                    conn.commit()
+                
+                if deleted > 0:
+                    print(f"[WHATSAPP] ✅ Deleted contact #{contact_id}")
+                    return JSONResponse({
+                        "ok": True,
+                        "success": True,
+                        "message": "Contacto eliminado com sucesso"
+                    })
+                else:
+                    return JSONResponse({
+                        "ok": False,
+                        "success": False,
+                        "error": "Contacto não encontrado"
+                    }, status_code=404)
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error deleting contact: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/contacts/bulk-delete")
+async def bulk_delete_contacts(request: Request):
+    """Delete multiple WhatsApp contacts"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        contact_ids = data.get('ids', [])
+        
+        if not contact_ids:
+            return JSONResponse({
+                "ok": False,
+                "error": "Nenhum contacto selecionado"
+            }, status_code=400)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                deleted_count = 0
+                
+                for contact_id in contact_ids:
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("DELETE FROM whatsapp_conversations WHERE id = %s", (contact_id,))
+                            deleted_count += cur.rowcount
+                    else:
+                        cursor = conn.execute("DELETE FROM whatsapp_conversations WHERE id = ?", (contact_id,))
+                        deleted_count += cursor.rowcount
+                
+                conn.commit()
+                print(f"[WHATSAPP] ✅ Deleted {deleted_count} contacts")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": f"{deleted_count} contactos eliminados com sucesso",
+                    "deleted": deleted_count
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error bulk deleting contacts: {str(e)}")
         import traceback
         traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
@@ -5667,18 +5869,33 @@ async def export_whatsapp_contacts(request: Request, format: str = 'json'):
     """Export WhatsApp contacts in JSON or CSV format"""
     require_auth(request)
     try:
-        global whatsapp_conversations
+        # Load contacts from database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                query = "SELECT name, phone_number, last_message_at, status FROM whatsapp_conversations ORDER BY name"
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query)
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute(query).fetchall()
+                
+                contacts = [
+                    {
+                        "name": row[0],
+                        "phone_number": row[1],
+                        "last_message_at": row[2].isoformat() if hasattr(row[2], 'isoformat') else str(row[2]),
+                        "status": row[3]
+                    }
+                    for row in rows
+                ]
+            finally:
+                conn.close()
         
-        # Extract contacts from conversations
-        contacts = [
-            {
-                "name": conv.get('name', ''),
-                "phone_number": conv.get('phone_number', ''),
-                "last_message_at": conv.get('last_message_at', ''),
-                "status": conv.get('status', 'open')
-            }
-            for conv in whatsapp_conversations
-        ]
+        from datetime import datetime
         
         if format == 'json':
             import json
@@ -5730,11 +5947,9 @@ async def export_whatsapp_contacts(request: Request, format: str = 'json'):
 
 @app.post("/api/whatsapp/contacts/import")
 async def import_whatsapp_contacts(request: Request):
-    """Import WhatsApp contacts from JSON or CSV"""
+    """Import WhatsApp contacts from JSON or CSV into database"""
     require_auth(request)
     try:
-        global whatsapp_conversations, whatsapp_conversation_counter
-        
         data = await request.json()
         contacts = data.get('contacts', [])
         
@@ -5748,41 +5963,56 @@ async def import_whatsapp_contacts(request: Request):
         imported_count = 0
         skipped_count = 0
         
-        for contact in contacts:
-            name = contact.get('name', '').strip()
-            phone = contact.get('phone_number', '').strip()
-            
-            if not name or not phone:
-                skipped_count += 1
-                continue
-            
-            # Check if conversation already exists
-            existing = next((c for c in whatsapp_conversations if c['phone_number'] == phone), None)
-            
-            if existing:
-                # Update name if provided
-                if name:
-                    existing['name'] = name
-                skipped_count += 1
-                continue
-            
-            # Create new conversation
-            from datetime import datetime
-            whatsapp_conversation_counter += 1
-            new_conversation = {
-                "id": whatsapp_conversation_counter,
-                "name": name,
-                "phone_number": phone,
-                "last_message_at": datetime.now().isoformat(),
-                "last_message_preview": "Contacto importado",
-                "unread_count": 0,
-                "status": "open",
-                "assigned_to": None,
-                "messages": []
-            }
-            
-            whatsapp_conversations.append(new_conversation)
-            imported_count += 1
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                for contact in contacts:
+                    name = contact.get('name', '').strip()
+                    phone = contact.get('phone_number', '').strip()
+                    
+                    if not name or not phone:
+                        skipped_count += 1
+                        continue
+                    
+                    # Check if conversation already exists
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT id, name FROM whatsapp_conversations WHERE phone_number = %s", (phone,))
+                            existing = cur.fetchone()
+                    else:
+                        existing = conn.execute("SELECT id, name FROM whatsapp_conversations WHERE phone_number = ?", (phone,)).fetchone()
+                    
+                    if existing:
+                        # Update name if provided and different
+                        if name and name != existing[1]:
+                            if is_postgres:
+                                with conn.cursor() as cur:
+                                    cur.execute("UPDATE whatsapp_conversations SET name = %s WHERE id = %s", (name, existing[0]))
+                            else:
+                                conn.execute("UPDATE whatsapp_conversations SET name = ? WHERE id = ?", (name, existing[0]))
+                        skipped_count += 1
+                        continue
+                    
+                    # Insert new conversation
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO whatsapp_conversations (name, phone_number, last_message_preview)
+                                VALUES (%s, %s, %s)
+                            """, (name, phone, "Contacto importado"))
+                    else:
+                        conn.execute("""
+                            INSERT INTO whatsapp_conversations (name, phone_number, last_message_preview)
+                            VALUES (?, ?, ?)
+                        """, (name, phone, "Contacto importado"))
+                    
+                    imported_count += 1
+                
+                conn.commit()
+            finally:
+                conn.close()
         
         print(f"[WHATSAPP] ✅ Imported {imported_count} contacts, skipped {skipped_count}")
         
@@ -6028,30 +6258,59 @@ async def sync_google_contacts(request: Request):
 
 @app.get("/api/whatsapp/conversations/{conversation_id}/messages")
 async def get_conversation_messages(request: Request, conversation_id: int):
-    """Get messages for a specific conversation"""
+    """Get messages for a specific conversation from database"""
     require_auth(request)
     try:
-        global whatsapp_conversations
-        
-        # Find conversation
-        conversation = next((c for c in whatsapp_conversations if c['id'] == conversation_id), None)
-        
-        if not conversation:
-            return JSONResponse({
-                "ok": False,
-                "success": False,
-                "error": "Conversa não encontrada"
-            }, status_code=404)
-        
-        messages = conversation.get('messages', [])
-        
-        print(f"[WHATSAPP] Returning {len(messages)} messages for conversation #{conversation_id}")
-        
-        return JSONResponse({
-            "ok": True,
-            "success": True,
-            "messages": messages
-        })
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Check if conversation exists
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM whatsapp_conversations WHERE id = %s", (conversation_id,))
+                        exists = cur.fetchone()
+                else:
+                    exists = conn.execute("SELECT id FROM whatsapp_conversations WHERE id = ?", (conversation_id,)).fetchone()
+                
+                if not exists:
+                    return JSONResponse({
+                        "ok": False,
+                        "success": False,
+                        "error": "Conversa não encontrada"
+                    }, status_code=404)
+                
+                # Load messages
+                query = "SELECT id, message_text, direction, timestamp, status, sender_name FROM whatsapp_messages WHERE conversation_id = " + ("%s" if is_postgres else "?") + " ORDER BY timestamp ASC"
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query, (conversation_id,))
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute(query, (conversation_id,)).fetchall()
+                
+                messages = [
+                    {
+                        "id": row[0],
+                        "text": row[1],
+                        "direction": row[2],
+                        "timestamp": row[3].isoformat() if hasattr(row[3], 'isoformat') else str(row[3]),
+                        "status": row[4],
+                        "sender": row[5]
+                    }
+                    for row in rows
+                ]
+                
+                print(f"[WHATSAPP] Returning {len(messages)} messages for conversation #{conversation_id}")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "messages": messages
+                })
+            finally:
+                conn.close()
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error loading messages: {str(e)}")
         import traceback
@@ -6063,8 +6322,6 @@ async def send_whatsapp_message(request: Request):
     """Send a WhatsApp message"""
     require_auth(request)
     try:
-        global whatsapp_conversations
-        
         data = await request.json()
         phone_number = data.get('phone_number', '')
         message_text = data.get('message', '')
@@ -6138,33 +6395,65 @@ async def send_whatsapp_message(request: Request):
         
         print(f"[WHATSAPP] ✅ Message sent successfully: {response_data}")
         
-        # Add message to conversation history
+        # Save message to database
         from datetime import datetime
-        message_obj = {
-            "id": response_data.get('messages', [{}])[0].get('id', ''),
-            "content": message_text,
-            "direction": "outbound",
-            "timestamp": datetime.now().isoformat(),
-            "status": "sent"
-        }
+        message_id = response_data.get('messages', [{}])[0].get('id', '')
         
-        # Find conversation and add message
-        conversation = next((c for c in whatsapp_conversations if c['phone_number'] == phone_number), None)
-        
-        if conversation:
-            if 'messages' not in conversation:
-                conversation['messages'] = []
-            conversation['messages'].append(message_obj)
-            conversation['last_message_at'] = message_obj['timestamp']
-            conversation['last_message_preview'] = message_text[:50] + ('...' if len(message_text) > 50 else '')
-            
-            print(f"[WHATSAPP] Added message to conversation #{conversation['id']}")
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Find or create conversation
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (phone_number,))
+                        conv_row = cur.fetchone()
+                else:
+                    conv_row = conn.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = ?", (phone_number,)).fetchone()
+                
+                if conv_row:
+                    conversation_id = conv_row[0]
+                    
+                    # Insert message
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO whatsapp_messages (id, conversation_id, message_text, direction, status)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """, (message_id, conversation_id, message_text, "outbound", "sent"))
+                            
+                            # Update conversation
+                            cur.execute("""
+                                UPDATE whatsapp_conversations 
+                                SET last_message_at = CURRENT_TIMESTAMP,
+                                    last_message_preview = %s
+                                WHERE id = %s
+                            """, (message_text[:50] + ('...' if len(message_text) > 50 else ''), conversation_id))
+                        conn.commit()
+                    else:
+                        conn.execute("""
+                            INSERT INTO whatsapp_messages (id, conversation_id, message_text, direction, status)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (message_id, conversation_id, message_text, "outbound", "sent"))
+                        
+                        conn.execute("""
+                            UPDATE whatsapp_conversations 
+                            SET last_message_at = CURRENT_TIMESTAMP,
+                                last_message_preview = ?
+                            WHERE id = ?
+                        """, (message_text[:50] + ('...' if len(message_text) > 50 else ''), conversation_id))
+                        conn.commit()
+                    
+                    print(f"[WHATSAPP] Saved message to conversation #{conversation_id}")
+            finally:
+                conn.close()
         
         return JSONResponse({
             "ok": True,
             "success": True,
             "message": "Mensagem enviada com sucesso",
-            "message_id": message_obj['id']
+            "message_id": message_id
         })
         
     except Exception as e:
@@ -6179,48 +6468,68 @@ async def send_whatsapp_message(request: Request):
 
 @app.post("/api/whatsapp/conversations/{conversation_id}/mark-read")
 async def mark_conversation_read(request: Request, conversation_id: int):
-    """Mark conversation as read"""
+    """Mark conversation as read in database"""
     require_auth(request)
     try:
-        global whatsapp_conversations
-        
-        # Find conversation
-        conversation = next((c for c in whatsapp_conversations if c['id'] == conversation_id), None)
-        
-        if not conversation:
-            return JSONResponse({
-                "ok": False,
-                "success": False,
-                "error": "Conversa não encontrada"
-            }, status_code=404)
-        
-        # Mark as read
-        conversation['unread_count'] = 0
-        
-        print(f"[WHATSAPP] Marked conversation #{conversation_id} as read")
-        
-        return JSONResponse({
-            "ok": True,
-            "success": True
-        })
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Update unread_count
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("UPDATE whatsapp_conversations SET unread_count = 0 WHERE id = %s", (conversation_id,))
+                        updated = cur.rowcount
+                    conn.commit()
+                else:
+                    cursor = conn.execute("UPDATE whatsapp_conversations SET unread_count = 0 WHERE id = ?", (conversation_id,))
+                    updated = cursor.rowcount
+                    conn.commit()
+                
+                if updated > 0:
+                    print(f"[WHATSAPP] Marked conversation #{conversation_id} as read")
+                    return JSONResponse({
+                        "ok": True,
+                        "success": True,
+                        "message": "Conversa marcada como lida"
+                    })
+                else:
+                    return JSONResponse({
+                        "ok": False,
+                        "success": False,
+                        "error": "Conversa não encontrada"
+                    }, status_code=404)
+            finally:
+                conn.close()
     except Exception as e:
-        print(f"[WHATSAPP] ❌ Error marking conversation as read: {str(e)}")
+        print(f"[WHATSAPP] ❌ Error marking as read: {str(e)}")
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/whatsapp/unread-count")
-async def get_whatsapp_unread_count(request: Request):
-    """Get unread message count"""
+async def get_unread_count(request: Request):
+    """Get unread message count from database"""
     require_auth(request)
     try:
-        global whatsapp_conversations
-        
-        # Count total unread messages
-        unread_count = sum(c.get('unread_count', 0) for c in whatsapp_conversations)
-        
-        return JSONResponse({
-            "ok": True,
-            "unread": unread_count
-        })
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COALESCE(SUM(unread_count), 0) FROM whatsapp_conversations")
+                        unread_count = cur.fetchone()[0]
+                else:
+                    row = conn.execute("SELECT COALESCE(SUM(unread_count), 0) FROM whatsapp_conversations").fetchone()
+                    unread_count = row[0] if row else 0
+                
+                return JSONResponse({
+                    "ok": True,
+                    "unread": int(unread_count)
+                })
+            finally:
+                conn.close()
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error getting unread count: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
