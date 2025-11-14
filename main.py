@@ -5255,6 +5255,213 @@ async def admin_save_whatsapp_config(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/admin/whatsapp/force-create-tables")
+async def force_create_whatsapp_tables(request: Request):
+    """Force create WhatsApp tables - Emergency endpoint"""
+    require_auth(request)
+    try:
+        print("[WHATSAPP] 🔧 Force creating WhatsApp tables...")
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                is_postgres = str(con.__class__).find('psycopg') >= 0
+                print(f"[WHATSAPP] Database type: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                
+                if is_postgres:
+                    with con.cursor() as cur:
+                        print("[WHATSAPP] Creating whatsapp_config table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_config (
+                                id INTEGER PRIMARY KEY,
+                                access_token TEXT,
+                                phone_number_id TEXT,
+                                business_account_id TEXT,
+                                verify_token TEXT,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        print("[WHATSAPP] Creating google_oauth_tokens table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                                service VARCHAR(50) PRIMARY KEY,
+                                access_token TEXT,
+                                refresh_token TEXT,
+                                expires_at TIMESTAMP
+                            )
+                        """)
+                        
+                        print("[WHATSAPP] Creating whatsapp_conversations table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL,
+                                phone_number TEXT NOT NULL UNIQUE,
+                                last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                last_message_preview TEXT,
+                                unread_count INTEGER DEFAULT 0,
+                                status VARCHAR(20) DEFAULT 'open',
+                                assigned_to TEXT,
+                                has_whatsapp BOOLEAN,
+                                profile_picture_url TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        print("[WHATSAPP] Creating whatsapp_messages table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                                id TEXT PRIMARY KEY,
+                                conversation_id INTEGER REFERENCES whatsapp_conversations(id) ON DELETE CASCADE,
+                                message_text TEXT,
+                                direction VARCHAR(10) NOT NULL,
+                                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                status VARCHAR(20) DEFAULT 'sent',
+                                sender_name TEXT
+                            )
+                        """)
+                        
+                        print("[WHATSAPP] Creating whatsapp_templates table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_templates (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL,
+                                category VARCHAR(50) NOT NULL,
+                                language_code VARCHAR(5) NOT NULL,
+                                status VARCHAR(20) DEFAULT 'pending',
+                                content_pt TEXT,
+                                content_en TEXT,
+                                content_fr TEXT,
+                                content_de TEXT,
+                                whatsapp_template_id TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                approved_at TIMESTAMP,
+                                UNIQUE(name, language_code)
+                            )
+                        """)
+                        
+                        print("[WHATSAPP] Creating whatsapp_quick_replies table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
+                                id SERIAL PRIMARY KEY,
+                                shortcut TEXT NOT NULL UNIQUE,
+                                category VARCHAR(50),
+                                content_pt TEXT NOT NULL,
+                                content_en TEXT NOT NULL,
+                                content_fr TEXT NOT NULL,
+                                content_de TEXT NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        con.commit()
+                        print("[WHATSAPP] ✅ All PostgreSQL tables created successfully!")
+                else:
+                    # SQLite
+                    print("[WHATSAPP] Creating tables for SQLite...")
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_config (
+                            id INTEGER PRIMARY KEY,
+                            access_token TEXT,
+                            phone_number_id TEXT,
+                            business_account_id TEXT,
+                            verify_token TEXT,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                            service TEXT PRIMARY KEY,
+                            access_token TEXT,
+                            refresh_token TEXT,
+                            expires_at TEXT
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            phone_number TEXT NOT NULL UNIQUE,
+                            last_message_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            last_message_preview TEXT,
+                            unread_count INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'open',
+                            assigned_to TEXT,
+                            has_whatsapp INTEGER,
+                            profile_picture_url TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                            id TEXT PRIMARY KEY,
+                            conversation_id INTEGER,
+                            message_text TEXT,
+                            direction TEXT NOT NULL,
+                            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+                            status TEXT DEFAULT 'sent',
+                            sender_name TEXT,
+                            FOREIGN KEY (conversation_id) REFERENCES whatsapp_conversations(id) ON DELETE CASCADE
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_templates (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            language_code TEXT NOT NULL,
+                            status TEXT DEFAULT 'pending',
+                            content_pt TEXT,
+                            content_en TEXT,
+                            content_fr TEXT,
+                            content_de TEXT,
+                            whatsapp_template_id TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            approved_at TEXT,
+                            UNIQUE(name, language_code)
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            shortcut TEXT NOT NULL UNIQUE,
+                            category TEXT,
+                            content_pt TEXT NOT NULL,
+                            content_en TEXT NOT NULL,
+                            content_fr TEXT NOT NULL,
+                            content_de TEXT NOT NULL,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    con.commit()
+                    print("[WHATSAPP] ✅ All SQLite tables created successfully!")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "✅ Todas as tabelas WhatsApp foram criadas com sucesso!",
+                    "database_type": "PostgreSQL" if is_postgres else "SQLite"
+                })
+                
+            except Exception as db_error:
+                print(f"[WHATSAPP] ❌ Error creating tables: {str(db_error)}")
+                import traceback
+                traceback.print_exc()
+                return JSONResponse({
+                    "ok": False,
+                    "success": False,
+                    "error": str(db_error)
+                }, status_code=500)
+            finally:
+                con.close()
+                
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/whatsapp/quick-replies")
 async def get_whatsapp_quick_replies(request: Request):
     """Get WhatsApp quick replies"""

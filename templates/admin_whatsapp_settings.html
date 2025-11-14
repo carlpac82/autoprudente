@@ -215,7 +215,7 @@
             </p>
           </div>
 
-          <div class="flex gap-3">
+          <div class="flex gap-3 flex-wrap">
             <button type="submit" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e] transition">
               Guardar Configurações
             </button>
@@ -224,6 +224,9 @@
             </button>
             <button type="button" onclick="setProfilePicture()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
               🖼️ Definir Foto de Perfil
+            </button>
+            <button type="button" onclick="forceCreateTables()" class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition" title="Cria as tabelas WhatsApp na base de dados (usar se erro 'relation does not exist')">
+              🔧 Criar Tabelas DB
             </button>
           </div>
         </form>
@@ -465,6 +468,35 @@
             alert('❌ Erro: ' + data.error);
           }
         });
+    }
+
+    async function forceCreateTables() {
+      if (!confirm('🔧 Criar/Recriar tabelas WhatsApp na base de dados?\n\nUsa isto APENAS se tiveres erro "relation does not exist".\nAs tabelas existentes NÃO serão apagadas.')) {
+        return;
+      }
+      
+      const btn = event.target;
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ A criar tabelas...';
+      
+      try {
+        const response = await fetch('/api/admin/whatsapp/force-create-tables', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✅ ' + data.message + '\n\nBase de dados: ' + data.database_type + '\n\nPodes agora adicionar contactos!');
+          // Recarrega a página para limpar cache
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          alert('❌ Erro ao criar tabelas:\n' + data.error);
+        }
+      } catch (error) {
+        alert('❌ Erro: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     }
 
     function setProfilePicture() {
