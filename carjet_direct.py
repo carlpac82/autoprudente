@@ -80,7 +80,123 @@ SUPPLIER_MAP = {
 }
 
 
-# Mapeamento manual de veículos para categorias
+def map_category_to_group_code(category: str) -> str:
+    """
+    Mapeia categoria descritiva para código de grupo.
+    Ex: "MINI Auto" → "E1", "7 Lugares Auto" → "M2"
+    """
+    cat = category.strip().lower() if category else ""
+    
+    # Mapeamento direto categoria → código de grupo
+    mapping = {
+        # B1 - MINI 4 Lugares
+        "mini 4 doors": "B1",
+        "mini 4 seats": "B1",
+        "mini 4 portas": "B1",
+        "mini 4 lugares": "B1",
+        
+        # B2 - MINI 5 Lugares
+        "mini": "B2",
+        "mini 5 doors": "B2",
+        "mini 5 seats": "B2",
+        "mini 5 portas": "B2",
+        "mini 5 lugares": "B2",
+        
+        # D - Economy
+        "economy": "D",
+        "económico": "D",
+        "compact": "D",
+        "compacto": "D",
+        
+        # E1 - MINI Auto
+        "mini automatic": "E1",
+        "mini auto": "E1",
+        "mini automático": "E1",
+        
+        # E2 - Economy Auto
+        "economy automatic": "E2",
+        "economy auto": "E2",
+        "económico automatic": "E2",
+        "económico auto": "E2",
+        "compact automatic": "E2",
+        "compact auto": "E2",
+        
+        # F - SUV
+        "suv": "F",
+        "jeep": "F",
+        
+        # G - Cabrio
+        "cabrio": "G",
+        "cabriolet": "G",
+        "convertible": "G",
+        "conversível": "G",
+        
+        # J1 - Crossover
+        "crossover": "J1",
+        
+        # J2 - Station Wagon
+        "estate/station wagon": "J2",
+        "station wagon": "J2",
+        "estate": "J2",
+        "carrinha": "J2",
+        "sw": "J2",
+        "touring": "J2",
+        
+        # K1 - Crossover Auto
+        "crossover automatic": "K1",
+        "crossover auto": "K1",
+        
+        # L1 - SUV Auto
+        "suv automatic": "L1",
+        "suv auto": "L1",
+        "jeep automatic": "L1",
+        "jeep auto": "L1",
+        
+        # L2 - Station Wagon Auto
+        "station wagon automatic": "L2",
+        "station wagon auto": "L2",
+        "estate automatic": "L2",
+        "estate auto": "L2",
+        "carrinha automatic": "L2",
+        "carrinha auto": "L2",
+        "sw automatic": "L2",
+        "sw auto": "L2",
+        
+        # M1 - 7 Lugares
+        "7 seater": "M1",
+        "7 seats": "M1",
+        "7 lugares": "M1",
+        "people carrier": "M1",
+        "mpv": "M1",
+        
+        # M2 - 7 Lugares Auto
+        "7 seater automatic": "M2",
+        "7 seater auto": "M2",
+        "7 seats automatic": "M2",
+        "7 seats auto": "M2",
+        "7 lugares automatic": "M2",
+        "7 lugares auto": "M2",
+        "7 lugares automático": "M2",
+        
+        # N - 9 Lugares
+        "9 seater": "N",
+        "9 seats": "N",
+        "9 lugares": "N",
+        
+        # X - Luxury
+        "luxury": "X",
+        "luxo": "X",
+        "premium": "X",
+    }
+    
+    # Tentar match direto
+    if cat in mapping:
+        return mapping[cat]
+    
+    # Fallback: retornar "Others" se não encontrar
+    return "Others"
+
+
 # Mapeamento manual de veículos para categorias
 # IMPORTANTE: As categorias DEVEM corresponder ao category_map em main.py
 VEHICLES = {
@@ -961,6 +1077,9 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 # Detectar categoria
                 category = detect_category_from_car(car_name, transmission)
                 
+                # Mapear categoria para código de grupo (B1, D, E1, M2, etc)
+                group_code = map_category_to_group_code(category)
+                
                 items.append({
                     'id': idx,
                     'car': car_name,
@@ -968,6 +1087,7 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                     'supplier': supplier,
                     'price': price,
                     'category': category,
+                    'group': group_code,  # ✅ NOVO: Código do grupo já mapeado
                     'transmission': transmission,
                     'photo': photo,
                     'currency': 'EUR',
