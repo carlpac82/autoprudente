@@ -7,15 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --brand-teal: #009cb6;
+            --brand-yellow: #f59e0b;
+            --brand-header: #7ec6e0;
+        }
         .chat-container {
             height: calc(100vh - 12rem);
         }
         .conversation-item:hover {
-            background-color: #f3f4f6;
+            background-color: #f0f9fb;
         }
         .conversation-item.active {
-            background-color: #dbeafe;
-            border-left: 4px solid #3b82f6;
+            background-color: #e0f7fa;
+            border-left: 4px solid var(--brand-teal);
         }
         .message-bubble {
             max-width: 70%;
@@ -26,8 +31,31 @@
             border: 1px solid #e5e7eb;
         }
         .message-outbound {
-            background-color: #dcf8c6;
-            border: 1px solid #c8e6c9;
+            background-color: #e0f7fa;
+            border: 1px solid var(--brand-teal);
+        }
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-button.active {
+            border-bottom-color: var(--brand-teal);
+            color: var(--brand-teal);
+            font-weight: 600;
+        }
+        .tab-button:hover {
+            background-color: #f0f9fb;
+        }
+        .avatar-circle {
+            background: linear-gradient(135deg, #009cb6 0%, #7ec6e0 100%);
+        }
+        .filter-btn.active {
+            background-color: var(--brand-teal) !important;
+            color: white !important;
+        }
+        .filter-btn:hover:not(.active) {
+            background-color: #f0f9fb;
         }
     </style>
     <script>
@@ -69,12 +97,22 @@
             <div class="lg:col-span-1 bg-white rounded-lg shadow-lg">
                 <!-- Search & Filters -->
                 <div class="p-4 border-b">
+                    <!-- Tabs -->
+                    <div class="flex border-b mb-3">
+                        <button class="tab-button active" onclick="switchTab('conversations')" id="tab-conversations">
+                            <i class="far fa-comments mr-2"></i>Conversas
+                        </button>
+                        <button class="tab-button" onclick="switchTab('contacts')" id="tab-contacts">
+                            <i class="far fa-address-book mr-2"></i>Contactos
+                        </button>
+                    </div>
+                    
                     <div class="flex gap-2 mb-3">
-                        <input type="text" id="search-conversations" 
-                               placeholder="Procurar conversas..." 
+                        <input type="text" id="search-input" 
+                               placeholder="Procurar..." 
                                class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009cb6]">
                         <button onclick="openAddContactModal()" 
-                                class="px-4 py-2 bg-[#10b981] text-white rounded-lg hover:bg-[#059669] transition-all flex items-center gap-2 whitespace-nowrap"
+                                class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#f59e0b] transition-all flex items-center gap-2 whitespace-nowrap"
                                 title="Adicionar Novo Contacto">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -82,29 +120,41 @@
                             <span class="hidden lg:inline">Adicionar</span>
                         </button>
                     </div>
-                    <div class="flex gap-2">
+                    <!-- Status Filter Tabs (only for conversations) -->
+                    <div id="status-filters" class="flex gap-2">
                         <button onclick="filterConversations('all')" 
-                                class="flex-1 px-3 py-1 text-sm rounded filter-btn active">
+                                class="flex-1 px-3 py-1 text-sm rounded filter-btn active bg-[#009cb6] text-white">
                             Todas
                         </button>
                         <button onclick="filterConversations('open')" 
-                                class="flex-1 px-3 py-1 text-sm rounded filter-btn">
+                                class="flex-1 px-3 py-1 text-sm rounded filter-btn bg-white text-gray-700 border">
                             Abertas
                         </button>
                         <button onclick="filterConversations('pending')" 
-                                class="flex-1 px-3 py-1 text-sm rounded filter-btn">
+                                class="flex-1 px-3 py-1 text-sm rounded filter-btn bg-white text-gray-700 border">
                             Pendentes
                         </button>
                     </div>
                 </div>
 
                 <!-- Conversations List -->
-                <div id="conversations-list" class="overflow-y-auto" style="height: calc(100% - 120px);">
+                <div id="conversations-list" class="overflow-y-auto" style="height: calc(100vh - 20rem);">
                     <!-- Conversations will be loaded here -->
                     <div class="flex items-center justify-center h-full text-gray-400">
                         <div class="text-center">
-                            <i class="fas fa-comments text-5xl mb-3"></i>
+                            <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
                             <p>A carregar conversas...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contacts List (hidden by default) -->
+                <div id="contacts-list" class="hidden overflow-y-auto" style="height: calc(100vh - 20rem);">
+                    <!-- Contacts will be loaded here -->
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
+                            <p>A carregar contactos...</p>
                         </div>
                     </div>
                 </div>
@@ -115,8 +165,8 @@
                 <!-- Chat Header -->
                 <div id="chat-header" class="p-4 border-b flex items-center justify-between bg-gray-50">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user text-gray-600"></i>
+                        <div class="w-10 h-10 avatar-circle rounded-full flex items-center justify-center">
+                            <i class="far fa-user text-white"></i>
                         </div>
                         <div>
                             <h3 class="font-semibold" id="chat-contact-name">Selecione uma conversa</h3>
@@ -124,11 +174,11 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="markAsResolved()" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
-                            <i class="fas fa-check mr-1"></i>Resolver
+                        <button onclick="resolveConversation()" class="px-3 py-1 bg-[#009cb6] text-white rounded text-sm hover:bg-[#f59e0b]">
+                            <i class="far fa-check-circle mr-1"></i>Resolver
                         </button>
-                        <button onclick="assignToMe()" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
-                            <i class="fas fa-user-check mr-1"></i>Atribuir a Mim
+                        <button onclick="assignToMe()" class="px-3 py-1 bg-[#009cb6] text-white rounded text-sm hover:bg-[#f59e0b]">
+                            <i class="far fa-user mr-1"></i>Atribuir a Mim
                         </button>
                     </div>
                 </div>
@@ -146,9 +196,8 @@
                 <!-- Message Input -->
                 <div class="p-4 border-t bg-white">
                     <div class="flex gap-2 mb-2">
-                        <button onclick="showQuickReplies()" class="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
-                            <i class="fas fa-bolt mr-1"></i>Respostas Rápidas
-                        </button>
+                        <button onclick="sendQuickReply('Bom dia! Como podemos ajudar?')" class="px-4 py-2 bg-gray-100 hover:bg-[#f0f9fb] text-gray-700 rounded-lg text-sm"><i class="far fa-comment-dots mr-1"></i> Bom dia</button>
+                        <button onclick="sendQuickReply('templates')" class="px-4 py-2 bg-gray-100 hover:bg-[#f0f9fb] text-gray-700 rounded-lg text-sm"><i class="far fa-file-alt mr-1"></i> Templates</button>
                         <button onclick="showTemplates()" class="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
                             <i class="fas fa-file-alt mr-1"></i>Templates
                         </button>
@@ -159,7 +208,7 @@
                                class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009cb6]"
                                onkeypress="if(event.key === 'Enter') sendMessage()">
                         <button onclick="sendMessage()" 
-                                class="px-6 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#008a9e] transition">
+                                class="px-6 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#f59e0b] transition">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -214,8 +263,8 @@
                 <div class="conversation-item p-4 border-b cursor-pointer ${conv.id === currentConversation?.id ? 'active' : ''}"
                      onclick="selectConversation(${conv.id})">
                     <div class="flex items-start gap-3">
-                        <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-user text-gray-600"></i>
+                        <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="far fa-user text-white"></i>
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
@@ -224,9 +273,9 @@
                             </div>
                             <p class="text-sm text-gray-600 truncate">${conv.last_message_preview || 'Nova conversa'}</p>
                             <div class="flex gap-2 mt-1">
-                                ${conv.unread_count > 0 ? `<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">${conv.unread_count}</span>` : ''}
-                                ${conv.status === 'pending' ? '<span class="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full">Pendente</span>' : ''}
-                                ${conv.assigned_to ? `<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">${conv.assigned_to}</span>` : ''}
+                                ${conv.unread_count > 0 ? `<span class="text-xs bg-[#009cb6] text-white px-2 py-0.5 rounded-full">${conv.unread_count}</span>` : ''}
+                                ${conv.status === 'pending' ? '<span class="text-xs bg-[#f59e0b] text-white px-2 py-0.5 rounded-full">Pendente</span>' : ''}
+                                ${conv.assigned_to ? `<span class="text-xs bg-[#7ec6e0] text-white px-2 py-0.5 rounded-full">${conv.assigned_to}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -253,6 +302,87 @@
             } catch (error) {
                 console.error('Error updating unread badge:', error);
             }
+        }
+
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            // Show/hide lists
+            if (tab === 'conversations') {
+                document.getElementById('conversations-list').classList.remove('hidden');
+                document.getElementById('contacts-list').classList.add('hidden');
+                document.getElementById('status-filters').classList.remove('hidden');
+                document.getElementById('search-input').placeholder = 'Procurar conversas...';
+            } else if (tab === 'contacts') {
+                document.getElementById('conversations-list').classList.add('hidden');
+                document.getElementById('contacts-list').classList.remove('hidden');
+                document.getElementById('status-filters').classList.add('hidden');
+                document.getElementById('search-input').placeholder = 'Procurar contactos...';
+                loadContacts();
+            }
+        }
+
+        async function loadContacts() {
+            try {
+                const response = await fetch('/api/whatsapp/conversations');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderContacts(data.conversations);
+                }
+            } catch (error) {
+                console.error('Error loading contacts:', error);
+            }
+        }
+
+        function renderContacts(contacts) {
+            const list = document.getElementById('contacts-list');
+            
+            if (contacts.length === 0) {
+                list.innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="far fa-address-book text-5xl mb-3"></i>
+                            <p>Nenhum contacto</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = contacts.map(contact => `
+                <div class="p-4 border-b hover:bg-[#f0f9fb] cursor-pointer"
+                     onclick="openContactConversation(${contact.id})">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="far fa-user text-white"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-semibold truncate">${contact.name || contact.phone_number}</h4>
+                                <span class="text-xs text-gray-500">${formatTime(contact.last_message_at)}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 truncate">
+                                <i class="fab fa-whatsapp mr-1"></i>${contact.phone_number}
+                            </p>
+                            <div class="flex gap-2 mt-1">
+                                ${contact.unread_count > 0 ? `<span class="text-xs bg-[#009cb6] text-white px-2 py-0.5 rounded-full">${contact.unread_count} mensagens</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openContactConversation(contactId) {
+            // Switch to conversations tab
+            switchTab('conversations');
+            // Select the conversation
+            setTimeout(() => selectConversation(contactId), 100);
         }
 
         async function selectConversation(conversationId) {
@@ -403,11 +533,19 @@
             alert('Funcionalidade de templates em desenvolvimento');
         }
 
-        function markAsResolved() {
+        function resolveConversation() {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
             alert('Funcionalidade em desenvolvimento');
         }
 
         function assignToMe() {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
             alert('Funcionalidade em desenvolvimento');
         }
 
