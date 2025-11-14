@@ -10917,7 +10917,7 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         # NOVA PRIORIDADE DE FOTOS:
         # 1. vehicle_photos (por nome de carro) - CONTROLADO PELO USER
         # 2. car_groups.photo_url (por código de grupo) - ADMIN
-        # 3. Scraping CarJet (fallback)
+        # 3. Scraping CarJet (APENAS se válida, não placeholder)
         photo_url = ""
         
         # 1º: Tentar buscar foto por nome de carro (vehicle_photos)
@@ -10934,11 +10934,27 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
                     import sys
                     print(f"[PHOTOS] ⚙️ Using car_groups photo for group {group_code}: {photo_url[:80]}", file=sys.stderr, flush=True)
             else:
-                # 3º: Fallback para foto do scraping
-                photo_url = it.get("photo", "")
-                if len(detailed) == 0 and len(summary) == 0 and photo_url:
-                    import sys
-                    print(f"[PHOTOS] ⚠️ Fallback to scraped photo: {photo_url[:80]}", file=sys.stderr, flush=True)
+                # 3º: Fallback para foto do scraping (APENAS se válida)
+                scraped_photo = it.get("photo", "")
+                # FILTRAR placeholders inválidos (loading-car.png, placeholders genéricos)
+                is_valid_photo = scraped_photo and not any(invalid in scraped_photo.lower() for invalid in [
+                    'loading-car.png',
+                    'placeholder',
+                    'no-image',
+                    'noimage',
+                    'default-car'
+                ])
+                
+                if is_valid_photo:
+                    photo_url = scraped_photo
+                    if len(detailed) == 0 and len(summary) == 0:
+                        import sys
+                        print(f"[PHOTOS] 🔄 Using scraped photo: {photo_url[:80]}", file=sys.stderr, flush=True)
+                else:
+                    # Sem foto válida disponível
+                    if len(detailed) == 0 and len(summary) == 0:
+                        import sys
+                        print(f"[PHOTOS] ❌ No valid photo for '{car_name_final}' (group: {group_code})", file=sys.stderr, flush=True)
         
         # Use car_groups category if group is known, otherwise use scraped category
         category_display = it.get("category", "")
