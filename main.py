@@ -4175,6 +4175,20 @@ async def admin_root(request: Request, section: str = None):
         "section": section or "users"
     })
 
+@app.get("/admin/whatsapp", response_class=HTMLResponse)
+async def admin_whatsapp_settings(request: Request):
+    """WhatsApp Settings - Templates, Quick Replies, Automations, Facebook Connection"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    response = templates.TemplateResponse("admin_whatsapp_settings.html", {
+        "request": request
+    })
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
 @app.get("/price-history", response_class=HTMLResponse)
 async def price_history(request: Request):
     """Página de histórico e gráficos de preços"""
@@ -4921,6 +4935,78 @@ async def admin_update_inspection_permissions(request: Request, user_id: int):
                 con.close()
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/admin/whatsapp/save-config")
+async def admin_save_whatsapp_config(request: Request):
+    """Save WhatsApp connection configuration"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        body = await request.json()
+        
+        # Save to database (whatsapp_config table)
+        with _db_lock:
+            con = _db_connect()
+            try:
+                # Create table if not exists
+                con.execute("""
+                    CREATE TABLE IF NOT EXISTS whatsapp_config (
+                        id INTEGER PRIMARY KEY,
+                        access_token TEXT,
+                        phone_number_id TEXT,
+                        business_account_id TEXT,
+                        verify_token TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Upsert configuration
+                con.execute("""
+                    INSERT OR REPLACE INTO whatsapp_config (id, access_token, phone_number_id, business_account_id, verify_token, updated_at)
+                    VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, (
+                    body.get('access_token', ''),
+                    body.get('phone_number_id', ''),
+                    body.get('business_account_id', ''),
+                    body.get('verify_token', '')
+                ))
+                con.commit()
+                
+                return JSONResponse({"ok": True, "message": "WhatsApp configuration saved successfully"})
+            finally:
+                con.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/admin/whatsapp/test-connection")
+async def admin_test_whatsapp_connection(request: Request):
+    """Test WhatsApp API connection"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        # TODO: Implementar teste real com WhatsApp API
+        # Por agora retorna sucesso se houver configuração
+        with _db_lock:
+            con = _db_connect()
+            try:
+                cur = con.execute("SELECT access_token, phone_number_id FROM whatsapp_config WHERE id=1")
+                row = cur.fetchone()
+                
+                if not row or not row[0] or not row[1]:
+                    return JSONResponse({"success": False, "error": "WhatsApp não configurado"})
+                
+                # TODO: Fazer request real para WhatsApp API para validar
+                return JSONResponse({"success": True, "message": "Configuração encontrada"})
+            finally:
+                con.close()
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
 # --- Admin UI ---
 @app.get("/test/carjet-mobile", response_class=HTMLResponse)

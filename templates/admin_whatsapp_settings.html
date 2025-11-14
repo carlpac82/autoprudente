@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin • WhatsApp Settings</title>
+  <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-btn.active { background-color: #009cb6; color: white; }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <header class="bg-[#009cb6] border-b">
+    <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/"><img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" /></a>
+      </div>
+      <nav class="flex items-center gap-3 text-white text-sm">
+        <a href="/" class="hover:underline">Prices</a>
+        <span class="opacity-90">WhatsApp Settings</span>
+        <form method="post" action="/logout"><button class="hover:underline">Logout</button></form>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-6">
+    <!-- Navigation Tabs -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">WhatsApp Settings</h2>
+      <div class="flex items-center gap-2">
+        <a href="/admin/settings" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Price Adjustment</a>
+        <a href="/admin/whatsapp" class="px-3 py-2 rounded bg-[#009cb6] text-white text-sm border border-[#009cb6] hover:bg-[#0086a1] transition-colors">WhatsApp</a>
+        <a href="/admin/users" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Users</a>
+        <a href="/admin/contracts" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Inspeções</a>
+      </div>
+    </div>
+
+    <!-- Sub-tabs for WhatsApp Settings -->
+    <div class="bg-white rounded-lg shadow mb-4">
+      <div class="border-b border-gray-200">
+        <nav class="flex gap-2 p-2">
+          <button onclick="showTab('connection')" class="tab-btn active px-4 py-2 text-sm font-medium rounded transition-colors">
+            📱 Conexão Facebook
+          </button>
+          <button onclick="showTab('templates')" class="tab-btn px-4 py-2 text-sm font-medium rounded transition-colors hover:bg-gray-100">
+            📋 Templates
+          </button>
+          <button onclick="showTab('quick-replies')" class="tab-btn px-4 py-2 text-sm font-medium rounded transition-colors hover:bg-gray-100">
+            ⚡ Respostas Rápidas
+          </button>
+          <button onclick="showTab('automations')" class="tab-btn px-4 py-2 text-sm font-medium rounded transition-colors hover:bg-gray-100">
+            🤖 Automações
+          </button>
+        </nav>
+      </div>
+
+      <!-- Tab 1: Connection -->
+      <div id="connection" class="tab-content active p-6">
+        <h3 class="text-lg font-semibold mb-4">Conexão com Facebook Business</h3>
+        
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-blue-700">
+                Para usar o WhatsApp Business API, precisas de configurar uma conta Meta Business.
+                Segue o guia em <code>WHATSAPP_SETUP_GUIDE.md</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form method="post" action="/api/admin/whatsapp/save-config" class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Access Token</label>
+            <input type="password" name="access_token" value="" placeholder="EAA..." class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+            <p class="text-xs text-gray-500 mt-1">Permanent Access Token do Meta for Developers</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Phone Number ID</label>
+            <input type="text" name="phone_number_id" value="" placeholder="123456789..." class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+            <p class="text-xs text-gray-500 mt-1">ID do número de telefone WhatsApp Business</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Business Account ID</label>
+            <input type="text" name="business_account_id" value="" placeholder="987654321..." class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+            <p class="text-xs text-gray-500 mt-1">WhatsApp Business Account ID</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Webhook Verify Token</label>
+            <input type="text" name="verify_token" value="" placeholder="seu_token_secreto_123" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-[#009cb6] focus:ring-2 focus:ring-[#009cb6]" />
+            <p class="text-xs text-gray-500 mt-1">Token para verificação do webhook (cria uma senha segura)</p>
+          </div>
+
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-gray-800 mb-2">Webhook URL (Configurar no Meta)</h4>
+            <code class="text-sm bg-gray-800 text-green-400 px-3 py-2 rounded block">
+              https://carrental-api-5f8q.onrender.com/api/whatsapp/webhook
+            </code>
+            <p class="text-xs text-gray-600 mt-2">
+              Configura este URL no Meta for Developers → WhatsApp → Configuration → Webhook
+            </p>
+          </div>
+
+          <div class="flex gap-3">
+            <button type="submit" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e] transition">
+              Guardar Configurações
+            </button>
+            <button type="button" onclick="testConnection()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+              Testar Conexão
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab 2: Templates (PARTE 2 NO PRÓXIMO COMANDO) -->
+      <div id="templates" class="tab-content p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg font-semibold">Templates de Mensagens</h3>
+          <button onclick="showCreateTemplateModal()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e]">
+            + Criar Template
+          </button>
+        </div>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+          <p class="text-sm text-yellow-700">
+            ⚠️ Templates precisam ser aprovados pelo WhatsApp antes de usar. O processo pode levar até 24 horas.
+          </p>
+        </div>
+
+        <div id="templatesList" class="space-y-4">
+          <!-- Templates will be loaded here -->
+          <p class="text-gray-500 text-center py-8">Nenhum template criado ainda. Clica em "Criar Template" para começar.</p>
+        </div>
+      </div>
+
+      <!-- Tab 3: Quick Replies -->
+      <div id="quick-replies" class="tab-content p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg font-semibold">Respostas Rápidas</h3>
+          <button onclick="showCreateQuickReplyModal()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e]">
+            + Criar Resposta Rápida
+          </button>
+        </div>
+
+        <div id="quickRepliesList" class="space-y-3">
+          <!-- Quick replies will be loaded here -->
+        </div>
+      </div>
+
+      <!-- Tab 4: Automations -->
+      <div id="automations" class="tab-content p-6">
+        <h3 class="text-lg font-semibold mb-6">Mensagens Automatizadas</h3>
+
+        <div class="space-y-6">
+          <!-- Auto-reply -->
+          <div class="border rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-medium">Resposta Automática Inicial</h4>
+              <label class="flex items-center gap-2">
+                <input type="checkbox" id="autoReplyEnabled" class="w-4 h-4 text-[#009cb6]" />
+                <span class="text-sm">Ativar</span>
+              </label>
+            </div>
+            <textarea id="autoReplyMessage" rows="3" class="w-full rounded-md border-gray-300" placeholder="Olá! Obrigado pelo contacto. Um membro da nossa equipa responderá em breve."></textarea>
+            <p class="text-xs text-gray-500 mt-1">Enviada automaticamente quando cliente envia primeira mensagem</p>
+          </div>
+
+          <!-- Booking confirmation -->
+          <div class="border rounded-lg p-4">
+            <h4 class="font-medium mb-3">Confirmação de Reserva</h4>
+            <select id="bookingTemplateSelect" class="w-full rounded-md border-gray-300 mb-2">
+              <option value="">Selecionar template...</option>
+            </select>
+            <label class="flex items-center gap-2 mt-2">
+              <input type="checkbox" class="w-4 h-4 text-[#009cb6]" />
+              <span class="text-sm">Enviar automaticamente ao criar reserva</span>
+            </label>
+          </div>
+
+          <!-- Pickup reminder -->
+          <div class="border rounded-lg p-4">
+            <h4 class="font-medium mb-3">Lembrete de Pickup</h4>
+            <select id="pickupTemplateSelect" class="w-full rounded-md border-gray-300 mb-2">
+              <option value="">Selecionar template...</option>
+            </select>
+            <select class="w-full rounded-md border-gray-300 mt-2">
+              <option value="24">24 horas antes</option>
+              <option value="12">12 horas antes</option>
+              <option value="6">6 horas antes</option>
+              <option value="2">2 horas antes</option>
+            </select>
+            <label class="flex items-center gap-2 mt-2">
+              <input type="checkbox" class="w-4 h-4 text-[#009cb6]" />
+              <span class="text-sm">Enviar automaticamente</span>
+            </label>
+          </div>
+
+          <button onclick="saveAutomations()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e]">
+            Guardar Automações
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function testConnection() {
+      alert('A testar conexão com WhatsApp API...');
+      fetch('/api/admin/whatsapp/test-connection', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Conexão bem sucedida!');
+          } else {
+            alert('❌ Erro: ' + data.error);
+          }
+        });
+    }
+
+    function showCreateTemplateModal() {
+      alert('Modal de criação de template (implementar)');
+    }
+
+    function showCreateQuickReplyModal() {
+      alert('Modal de criação de resposta rápida (implementar)');
+    }
+
+    function saveAutomations() {
+      alert('Automações guardadas!');
+    }
+
+    // Load quick replies on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('/api/whatsapp/quick-replies')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            renderQuickReplies(data.quick_replies);
+          }
+        });
+    });
+
+    function renderQuickReplies(replies) {
+      const container = document.getElementById('quickRepliesList');
+      if (!replies || replies.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhuma resposta rápida criada.</p>';
+        return;
+      }
+      
+      container.innerHTML = replies.map(reply => `
+        <div class="border rounded-lg p-4 hover:shadow-md transition">
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <code class="text-sm bg-gray-100 px-2 py-1 rounded">${reply.shortcut}</code>
+                <span class="font-medium">${reply.title}</span>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">${reply.category || 'geral'}</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-2">${reply.message_text}</p>
+              <p class="text-xs text-gray-400 mt-2">Usado ${reply.usage_count || 0} vezes</p>
+            </div>
+            <button onclick="deleteQuickReply(${reply.id})" class="text-red-600 hover:text-red-800">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function deleteQuickReply(id) {
+      if (!confirm('Tens a certeza que queres apagar esta resposta rápida?')) return;
+      
+      fetch(`/api/whatsapp/quick-replies/${id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            location.reload();
+          }
+        });
+    }
+  </script>
+</body>
+</html>
