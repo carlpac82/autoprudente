@@ -30,6 +30,15 @@
             border: 1px solid #c8e6c9;
         }
     </style>
+    <script>
+        // User info for message signatures
+        {% if current_user %}
+        const currentUserName = "{{ (current_user.first_name + ' ' + current_user.last_name).strip() or current_user.username }}";
+        {% else %}
+        const currentUserName = "Auto Prudente";
+        {% endif %}
+        const companyName = "Auto Prudente Rent a Car";
+    </script>
 </head>
 <body class="bg-gray-100">
     <!-- Header -->
@@ -295,13 +304,17 @@
             
             if (!message) return;
 
+            // Add automatic signature
+            const signature = `\n\n${currentUserName}\n${companyName}`;
+            const messageWithSignature = message + signature;
+
             try {
                 const response = await fetch('/api/whatsapp/send-message', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         phone_number: currentConversation.phone_number,
-                        message: message
+                        message: messageWithSignature
                     })
                 });
 

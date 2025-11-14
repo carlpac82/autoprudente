@@ -4191,8 +4191,22 @@ async def whatsapp_dashboard(request: Request):
     except HTTPException:
         return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
     
+    # Get current user info for message signatures
+    user_id = request.session.get("user_id")
+    current_user = None
+    if user_id:
+        conn = _db_connect()
+        try:
+            current_user = conn.execute("""
+                SELECT id, username, first_name, last_name, email
+                FROM users WHERE id = ?
+            """, (user_id,)).fetchone()
+        finally:
+            conn.close()
+    
     response = templates.TemplateResponse("whatsapp_dashboard.html", {
-        "request": request
+        "request": request,
+        "current_user": current_user
     })
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return response
