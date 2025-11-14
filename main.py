@@ -10789,21 +10789,42 @@ def normalize_and_sort(items: List[Dict[str, Any]], supplier_priority: Optional[
         """Busca foto na tabela vehicle_photos pelo nome do carro"""
         if not car_name:
             return ""
+        
+        # Normalizar nome: lowercase, remover vírgulas, "ou similar", "or similar", espaços extras
         vehicle_key = car_name.lower().strip()
+        vehicle_key = vehicle_key.replace(',', '').replace('  ', ' ')
+        vehicle_key = vehicle_key.split('ou similar')[0].split('or similar')[0].strip()
+        
+        # Remover sufixos comuns que não são parte do nome base
+        import re
+        vehicle_key = re.sub(r'\s+(hybrid|electric|diesel|petrol|aut\.|auto)$', '', vehicle_key, flags=re.IGNORECASE).strip()
+        
         try:
             with _db_lock:
                 conn = _db_connect()
                 try:
                     if conn.__class__.__module__ == 'psycopg2.extensions':
-                        # PostgreSQL
+                        # PostgreSQL - Tentar match exato primeiro, depois LIKE
                         with conn.cursor() as cur:
+                            # 1º: Match exato
                             cur.execute("SELECT photo_url FROM vehicle_photos WHERE vehicle_name = %s", (vehicle_key,))
+                            row = cur.fetchone()
+                            if row and row[0]:
+                                return row[0]
+                            
+                            # 2º: Match parcial (LIKE) - pega "vw polo" se tiver "volkswagen polo"
+                            cur.execute("SELECT photo_url FROM vehicle_photos WHERE vehicle_name LIKE %s LIMIT 1", (f"%{vehicle_key}%",))
                             row = cur.fetchone()
                             if row and row[0]:
                                 return row[0]
                     else:
                         # SQLite
                         row = conn.execute("SELECT photo_url FROM vehicle_photos WHERE vehicle_name = ?", (vehicle_key,)).fetchone()
+                        if row and row[0]:
+                            return row[0]
+                        
+                        # Match parcial SQLite
+                        row = conn.execute("SELECT photo_url FROM vehicle_photos WHERE vehicle_name LIKE ? LIMIT 1", (f"%{vehicle_key}%",)).fetchone()
                         if row and row[0]:
                             return row[0]
                 finally:
