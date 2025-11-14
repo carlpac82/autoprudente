@@ -5058,79 +5058,80 @@ async def admin_save_whatsapp_config(request: Request):
                 
                 # Create table if not exists (compatible with both SQLite and PostgreSQL)
                 if is_postgres:
-                    con.execute("""
-                        CREATE TABLE IF NOT EXISTS whatsapp_config (
-                            id INTEGER PRIMARY KEY,
-                            access_token TEXT,
-                            phone_number_id TEXT,
-                            business_account_id TEXT,
-                            verify_token TEXT,
-                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    con.execute("""
-                        CREATE TABLE IF NOT EXISTS google_oauth_tokens (
-                            service VARCHAR(50) PRIMARY KEY,
-                            access_token TEXT,
-                            refresh_token TEXT,
-                            expires_at TIMESTAMP
-                        )
-                    """)
-                    con.execute("""
-                        CREATE TABLE IF NOT EXISTS whatsapp_conversations (
-                            id SERIAL PRIMARY KEY,
-                            name TEXT NOT NULL,
-                            phone_number TEXT NOT NULL UNIQUE,
-                            last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            last_message_preview TEXT,
-                            unread_count INTEGER DEFAULT 0,
-                            status VARCHAR(20) DEFAULT 'open',
-                            assigned_to TEXT,
-                            has_whatsapp BOOLEAN,
-                            profile_picture_url TEXT,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
-                    con.execute("""
-                        CREATE TABLE IF NOT EXISTS whatsapp_messages (
-                            id TEXT PRIMARY KEY,
-                            conversation_id INTEGER REFERENCES whatsapp_conversations(id) ON DELETE CASCADE,
-                            message_text TEXT,
-                            direction VARCHAR(10) NOT NULL,
-                            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            status VARCHAR(20) DEFAULT 'sent',
-                            sender_name TEXT
-                        )
-                    """)
-                    con.execute("""
-                        CREATE TABLE IF NOT EXISTS whatsapp_templates (
-                            id SERIAL PRIMARY KEY,
-                            name TEXT NOT NULL,
-                            category VARCHAR(50) NOT NULL,
-                            language_code VARCHAR(5) NOT NULL,
-                            status VARCHAR(20) DEFAULT 'pending',
-                            content_pt TEXT,
-                            content_en TEXT,
-                            content_fr TEXT,
-                            content_de TEXT,
-                            whatsapp_template_id TEXT,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            approved_at TIMESTAMP,
-                            UNIQUE(name, language_code)
-                        )
-                    """)
-                    con.execute("""
-                        CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
-                            id SERIAL PRIMARY KEY,
-                            shortcut TEXT NOT NULL UNIQUE,
-                            category VARCHAR(50),
-                            content_pt TEXT NOT NULL,
-                            content_en TEXT NOT NULL,
-                            content_fr TEXT NOT NULL,
-                            content_de TEXT NOT NULL,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    """)
+                    with con.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_config (
+                                id INTEGER PRIMARY KEY,
+                                access_token TEXT,
+                                phone_number_id TEXT,
+                                business_account_id TEXT,
+                                verify_token TEXT,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                                service VARCHAR(50) PRIMARY KEY,
+                                access_token TEXT,
+                                refresh_token TEXT,
+                                expires_at TIMESTAMP
+                            )
+                        """)
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL,
+                                phone_number TEXT NOT NULL UNIQUE,
+                                last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                last_message_preview TEXT,
+                                unread_count INTEGER DEFAULT 0,
+                                status VARCHAR(20) DEFAULT 'open',
+                                assigned_to TEXT,
+                                has_whatsapp BOOLEAN,
+                                profile_picture_url TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                                id TEXT PRIMARY KEY,
+                                conversation_id INTEGER REFERENCES whatsapp_conversations(id) ON DELETE CASCADE,
+                                message_text TEXT,
+                                direction VARCHAR(10) NOT NULL,
+                                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                status VARCHAR(20) DEFAULT 'sent',
+                                sender_name TEXT
+                            )
+                        """)
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_templates (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL,
+                                category VARCHAR(50) NOT NULL,
+                                language_code VARCHAR(5) NOT NULL,
+                                status VARCHAR(20) DEFAULT 'pending',
+                                content_pt TEXT,
+                                content_en TEXT,
+                                content_fr TEXT,
+                                content_de TEXT,
+                                whatsapp_template_id TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                approved_at TIMESTAMP,
+                                UNIQUE(name, language_code)
+                            )
+                        """)
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
+                                id SERIAL PRIMARY KEY,
+                                shortcut TEXT NOT NULL UNIQUE,
+                                category VARCHAR(50),
+                                content_pt TEXT NOT NULL,
+                                content_en TEXT NOT NULL,
+                                content_fr TEXT NOT NULL,
+                                content_de TEXT NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
                 else:
                     con.execute("""
                         CREATE TABLE IF NOT EXISTS whatsapp_config (
