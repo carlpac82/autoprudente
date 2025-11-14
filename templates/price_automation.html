@@ -1410,10 +1410,11 @@
             return null;
         }
         
-        async function applyGroupHierarchyRules() {
+        async function applyGroupHierarchyRules(automatedPricesByGroup = {}) {
             /**
              * CRITICAL: Apply group dependency rules to enforce pricing hierarchy
              * Example: If D >= B1 AND D >= B2, ensure D price is at least max(B1, B2)
+             * @param {Object} automatedPricesByGroup - Object storing automated prices by group and day
              */
             try {
                 // Load settings
@@ -4697,7 +4698,7 @@
                 console.log('🔧 [HIERARCHY-CALL] About to call applyGroupHierarchyRules()...');
                 console.log('🔧 [HIERARCHY-CALL] Function exists?', typeof applyGroupHierarchyRules);
                 console.log('🔧 [HIERARCHY-CALL] automatedPricesByGroup:', Object.keys(automatedPricesByGroup));
-                const adjustedPrices = await applyGroupHierarchyRules();
+                const adjustedPrices = await applyGroupHierarchyRules(automatedPricesByGroup);
                 console.log(`🔧 [HIERARCHY-CALL] Function returned: ${adjustedPrices} adjustments`);
                 if (adjustedPrices > 0) {
                     console.log(`🔧 [HIERARCHY] Adjusted ${adjustedPrices} prices to respect dependency rules`);
