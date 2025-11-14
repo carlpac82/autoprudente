@@ -558,6 +558,7 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     car_normalized = car_normalized.replace('.', '')  # Remover pontos
     car_normalized = re.sub(r'\s+', ' ', car_normalized)  # Normalizar espaços
     car_normalized = re.sub(r'\baut\b', 'auto', car_normalized)  # "aut" → "auto" (ex: "Galaxy Aut" → "Galaxy Auto")
+    car_normalized = re.sub(r'\bauto\s+auto\b', 'auto', car_normalized)  # Remove "auto auto" duplicado
     
     # Tentar match direto
     if car_normalized in VEHICLES:
