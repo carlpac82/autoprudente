@@ -1207,13 +1207,13 @@
                 const cachedData = loadCacheFromStorage(currentLocation);
                 if (cachedData) {
                     window.aiPricesCache = cachedData;
-                    showToast(`✅ Preços AI carregados do cache (hoje)`, 'success');
+                    showNotification(`Preços AI carregados do cache (hoje)`, 'success');
                     return;
                 }
             }
             
             console.log(`🤖 Loading AI prices for ${currentLocation}...`);
-            showLoadingToast('Carregando preços AI do servidor...', 'info');
+            console.log('Carregando preços AI do servidor...');
             
             window.aiPricesCache = {};
             
@@ -1236,7 +1236,7 @@
                 const batchNum = Math.floor(i / BATCH_SIZE) + 1;
                 
                 // Update progress
-                showLoadingToast(`Carregando preços AI... ${batchNum}/${totalBatches}`, 'info');
+                console.log(`Carregando preços AI... ${batchNum}/${totalBatches}`);
                 
                 const batchPromises = batch.map(async ({ grupo, days, currentLocation }) => {
                     try {
@@ -1269,7 +1269,7 @@
             // Save to localStorage for next time
             saveCacheToStorage(currentLocation, window.aiPricesCache);
             
-            showToast(`✅ ${Object.keys(window.aiPricesCache).length} preços AI carregados!`, 'success');
+            showNotification(`${Object.keys(window.aiPricesCache).length} preços AI carregados!`, 'success');
         }
         
         // Get AI suggested price from cache (synchronous)
@@ -8677,7 +8677,7 @@ Continue?`);
         setTimeout(async () => {
             try {
                 // Step 1: Read all history first
-                showLoadingToast('Inicializando histórico AI...', 'info');
+                console.log('Inicializando histórico AI...');
                 await initializeAIFromHistory();
                 
                 // Step 2: Load AI prices for current location
@@ -8685,7 +8685,7 @@ Continue?`);
                 console.log('✅ AI prices cache initialized');
             } catch (err) {
                 console.error('❌ Failed to initialize AI cache:', err);
-                showToast('Erro ao inicializar cache AI', 'error');
+                showNotification('Erro ao inicializar cache AI', 'error');
             }
         }, 500);
     </script>
