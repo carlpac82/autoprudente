@@ -151,6 +151,12 @@
             </svg>
             <span>Automações</span>
           </button>
+          <button onclick="showTab('contacts')" class="tab-btn px-4 py-2 text-sm font-medium rounded transition-colors hover:bg-gray-100 flex items-center gap-2">
+            <svg class="w-4 h-4 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span>Contactos</span>
+          </button>
         </nav>
       </div>
 
@@ -311,6 +317,103 @@
           </button>
         </div>
       </div>
+
+      <!-- Tab 5: Contacts -->
+      <div id="contacts" class="tab-content p-6">
+        <h3 class="text-lg font-semibold mb-6">Gestão de Contactos</h3>
+
+        <div class="space-y-6">
+          <!-- Export Contacts -->
+          <div class="border rounded-lg p-4">
+            <h4 class="font-medium mb-3 flex items-center gap-2">
+              <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Exportar Contactos
+            </h4>
+            <p class="text-sm text-gray-600 mb-4">Descarregue todos os contactos do WhatsApp em formato JSON ou CSV</p>
+            <div class="flex gap-2">
+              <button onclick="exportContacts('json')" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#f59e0b] transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Exportar JSON
+              </button>
+              <button onclick="exportContacts('csv')" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#f59e0b] transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Exportar CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Import Contacts -->
+          <div class="border rounded-lg p-4">
+            <h4 class="font-medium mb-3 flex items-center gap-2">
+              <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m3-4v12"/>
+              </svg>
+              Importar Contactos
+            </h4>
+            <p class="text-sm text-gray-600 mb-4">Carregue contactos a partir de ficheiro JSON ou CSV</p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium mb-2">Ficheiro JSON/CSV</label>
+                <input type="file" id="import-file" accept=".json,.csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-[#009cb6] file:text-white hover:file:bg-[#f59e0b] transition" />
+                <p class="text-xs text-gray-500 mt-1">Formato esperado: [{"name": "Nome", "phone_number": "+351912345678"}]</p>
+              </div>
+              <button onclick="importContacts()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#f59e0b] transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                Importar Contactos
+              </button>
+            </div>
+          </div>
+
+          <!-- Import from WhatsApp Backup -->
+          <div class="border rounded-lg p-4 bg-green-50">
+            <h4 class="font-medium mb-3 flex items-center gap-2">
+              <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+              </svg>
+              Importar do Backup WhatsApp Android
+            </h4>
+            <p class="text-sm text-gray-600 mb-4">Carregue um ficheiro de chat exportado do WhatsApp (.txt)</p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium mb-2">Ficheiro de Chat WhatsApp (.txt)</label>
+                <input type="file" id="whatsapp-backup-file" accept=".txt" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700 transition" />
+                <p class="text-xs text-gray-500 mt-1">
+                  Abra o WhatsApp → Conversa → Mais opções (⋮) → Mais → Exportar conversa → Sem multimédia
+                </p>
+              </div>
+              <button onclick="importWhatsAppBackup()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                Importar do Backup WhatsApp
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="border rounded-lg p-4 bg-blue-50">
+            <h4 class="font-medium mb-2">Estatísticas</h4>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-gray-600">Total de Contactos:</p>
+                <p class="text-2xl font-bold text-[#009cb6]" id="total-contacts">0</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Conversas Ativas:</p>
+                <p class="text-2xl font-bold text-[#009cb6]" id="active-conversations">0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -435,6 +538,192 @@
           }
         });
     }
+
+    // ===== Contacts Import/Export Functions =====
+    
+    async function exportContacts(format) {
+      try {
+        const response = await fetch(`/api/whatsapp/contacts/export?format=${format}`);
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `whatsapp_contacts_${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        alert(`✅ Contactos exportados com sucesso em formato ${format.toUpperCase()}!`);
+      } catch (error) {
+        console.error('Error exporting contacts:', error);
+        alert('❌ Erro ao exportar contactos: ' + error.message);
+      }
+    }
+
+    async function importContacts() {
+      const fileInput = document.getElementById('import-file');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Por favor, selecione um ficheiro');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = e.target.result;
+          let contacts;
+          
+          if (file.name.endsWith('.json')) {
+            contacts = JSON.parse(content);
+          } else if (file.name.endsWith('.csv')) {
+            contacts = parseCSV(content);
+          } else {
+            alert('Formato de ficheiro não suportado');
+            return;
+          }
+          
+          const response = await fetch('/api/whatsapp/contacts/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contacts })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            alert(`✅ ${data.imported} contactos importados com sucesso!`);
+            fileInput.value = '';
+            loadContactStats();
+          } else {
+            alert('❌ Erro: ' + data.error);
+          }
+        } catch (error) {
+          console.error('Error importing contacts:', error);
+          alert('❌ Erro ao importar contactos: ' + error.message);
+        }
+      };
+      
+      reader.readAsText(file);
+    }
+
+    async function importWhatsAppBackup() {
+      const fileInput = document.getElementById('whatsapp-backup-file');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Por favor, selecione um ficheiro de chat WhatsApp');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = e.target.result;
+          const contacts = parseWhatsAppChat(content);
+          
+          if (contacts.length === 0) {
+            alert('Nenhum contacto encontrado no ficheiro');
+            return;
+          }
+          
+          if (!confirm(`Foram encontrados ${contacts.length} contactos. Deseja importar?`)) {
+            return;
+          }
+          
+          const response = await fetch('/api/whatsapp/contacts/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contacts })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            alert(`✅ ${data.imported} contactos importados do backup WhatsApp!`);
+            fileInput.value = '';
+            loadContactStats();
+          } else {
+            alert('❌ Erro: ' + data.error);
+          }
+        } catch (error) {
+          console.error('Error importing WhatsApp backup:', error);
+          alert('❌ Erro ao importar backup: ' + error.message);
+        }
+      };
+      
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function parseCSV(csvContent) {
+      const lines = csvContent.split('\n');
+      const contacts = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const [name, phone] = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+        if (name && phone) {
+          contacts.push({ name, phone_number: phone });
+        }
+      }
+      
+      return contacts;
+    }
+
+    function parseWhatsAppChat(chatContent) {
+      const contacts = new Map();
+      
+      // WhatsApp format: [DD/MM/YYYY, HH:MM:SS] Contact Name: Message
+      const messageRegex = /\[(\d{2}\/\d{2}\/\d{4}),\s*(\d{2}:\d{2}:\d{2})\]\s*([^:]+):\s*(.*)/g;
+      
+      let match;
+      while ((match = messageRegex.exec(chatContent)) !== null) {
+        const contactName = match[3].trim();
+        
+        // Skip system messages
+        if (contactName.includes('mudou') || contactName.includes('changed') || 
+            contactName.includes('criou') || contactName.includes('created')) {
+          continue;
+        }
+        
+        // Add contact (Map prevents duplicates)
+        if (!contacts.has(contactName)) {
+          contacts.set(contactName, {
+            name: contactName,
+            phone_number: '' // Will need to be filled manually or matched
+          });
+        }
+      }
+      
+      return Array.from(contacts.values());
+    }
+
+    async function loadContactStats() {
+      try {
+        const response = await fetch('/api/whatsapp/conversations');
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('total-contacts').textContent = data.conversations.length;
+          const activeCount = data.conversations.filter(c => c.status === 'open').length;
+          document.getElementById('active-conversations').textContent = activeCount;
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
+    // Load stats on page load for contacts tab
+    document.addEventListener('DOMContentLoaded', () => {
+      loadContactStats();
+    });
 
     // Hide header and navigation tabs when in iframe mode
     if (isIframe) {

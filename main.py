@@ -5525,6 +5525,144 @@ async def add_whatsapp_contact(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/whatsapp/contacts/export")
+async def export_whatsapp_contacts(request: Request, format: str = 'json'):
+    """Export WhatsApp contacts in JSON or CSV format"""
+    require_auth(request)
+    try:
+        global whatsapp_conversations
+        
+        # Extract contacts from conversations
+        contacts = [
+            {
+                "name": conv.get('name', ''),
+                "phone_number": conv.get('phone_number', ''),
+                "last_message_at": conv.get('last_message_at', ''),
+                "status": conv.get('status', 'open')
+            }
+            for conv in whatsapp_conversations
+        ]
+        
+        if format == 'json':
+            import json
+            from starlette.responses import Response
+            json_data = json.dumps(contacts, indent=2, ensure_ascii=False)
+            return Response(
+                content=json_data,
+                media_type="application/json",
+                headers={
+                    "Content-Disposition": f"attachment; filename=whatsapp_contacts_{datetime.now().strftime('%Y%m%d')}.json"
+                }
+            )
+        elif format == 'csv':
+            import io
+            import csv
+            from starlette.responses import StreamingResponse
+            
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(['name', 'phone_number', 'last_message_at', 'status'])
+            
+            for contact in contacts:
+                writer.writerow([
+                    contact['name'],
+                    contact['phone_number'],
+                    contact['last_message_at'],
+                    contact['status']
+                ])
+            
+            output.seek(0)
+            return StreamingResponse(
+                iter([output.getvalue()]),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=whatsapp_contacts_{datetime.now().strftime('%Y%m%d')}.csv"
+                }
+            )
+        else:
+            return JSONResponse({
+                "ok": False,
+                "error": "Formato não suportado. Use 'json' ou 'csv'"
+            }, status_code=400)
+            
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error exporting contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/contacts/import")
+async def import_whatsapp_contacts(request: Request):
+    """Import WhatsApp contacts from JSON or CSV"""
+    require_auth(request)
+    try:
+        global whatsapp_conversations, whatsapp_conversation_counter
+        
+        data = await request.json()
+        contacts = data.get('contacts', [])
+        
+        if not contacts:
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "Nenhum contacto para importar"
+            }, status_code=400)
+        
+        imported_count = 0
+        skipped_count = 0
+        
+        for contact in contacts:
+            name = contact.get('name', '').strip()
+            phone = contact.get('phone_number', '').strip()
+            
+            if not name or not phone:
+                skipped_count += 1
+                continue
+            
+            # Check if conversation already exists
+            existing = next((c for c in whatsapp_conversations if c['phone_number'] == phone), None)
+            
+            if existing:
+                # Update name if provided
+                if name:
+                    existing['name'] = name
+                skipped_count += 1
+                continue
+            
+            # Create new conversation
+            from datetime import datetime
+            whatsapp_conversation_counter += 1
+            new_conversation = {
+                "id": whatsapp_conversation_counter,
+                "name": name,
+                "phone_number": phone,
+                "last_message_at": datetime.now().isoformat(),
+                "last_message_preview": "Contacto importado",
+                "unread_count": 0,
+                "status": "open",
+                "assigned_to": None,
+                "messages": []
+            }
+            
+            whatsapp_conversations.append(new_conversation)
+            imported_count += 1
+        
+        print(f"[WHATSAPP] ✅ Imported {imported_count} contacts, skipped {skipped_count}")
+        
+        return JSONResponse({
+            "ok": True,
+            "success": True,
+            "imported": imported_count,
+            "skipped": skipped_count,
+            "message": f"{imported_count} contactos importados, {skipped_count} ignorados (duplicados ou inválidos)"
+        })
+        
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error importing contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/whatsapp/conversations/{conversation_id}/messages")
 async def get_conversation_messages(request: Request, conversation_id: int):
     """Get messages for a specific conversation"""
