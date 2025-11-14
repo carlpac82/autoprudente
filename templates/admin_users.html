@@ -72,6 +72,7 @@
                 <select class="text-xs px-2 py-1 rounded border role-select" data-user-id="{{ u.id }}" onchange="handlePermissionChange({{ u.id }})">
                   <option value="user" {% if u.role == 'user' %}selected{% endif %}>User</option>
                   <option value="receptionist" {% if u.role == 'receptionist' %}selected{% endif %}>Receptionist</option>
+                  <option value="support" {% if u.role == 'support' %}selected{% endif %}>Support (WhatsApp + Inspeções)</option>
                   <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
                 </select>
               </td>
