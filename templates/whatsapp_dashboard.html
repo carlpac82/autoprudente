@@ -180,6 +180,25 @@
                         <button onclick="assignToMe()" class="px-3 py-1 bg-[#009cb6] text-white rounded text-sm hover:bg-[#f59e0b]">
                             <i class="far fa-user mr-1"></i>Atribuir a Mim
                         </button>
+                        <div class="relative">
+                            <button onclick="toggleConversationMenu()" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div id="conversation-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                                <button onclick="exportCurrentConversation()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
+                                    <i class="fas fa-download text-blue-600"></i>
+                                    <span>Exportar Conversa</span>
+                                </button>
+                                <button onclick="archiveCurrentConversation()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
+                                    <i class="fas fa-archive text-gray-600"></i>
+                                    <span>Arquivar</span>
+                                </button>
+                                <button onclick="deleteCurrentConversation()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600">
+                                    <i class="fas fa-trash"></i>
+                                    <span>Eliminar</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -565,6 +584,132 @@
                 return;
             }
             alert('Funcionalidade em desenvolvimento');
+        }
+        
+        // Conversation Menu Functions
+        function toggleConversationMenu() {
+            const menu = document.getElementById('conversation-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('conversation-menu');
+            const button = e.target.closest('button[onclick="toggleConversationMenu()"]');
+            if (menu && !menu.contains(e.target) && !button) {
+                menu.classList.add('hidden');
+            }
+        });
+        
+        async function exportCurrentConversation() {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
+            
+            document.getElementById('conversation-menu').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`/api/whatsapp/conversations/${currentConversation.id}/export`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    // Download as JSON
+                    const dataStr = JSON.stringify(data.data, null, 2);
+                    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = data.filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    
+                    alert('✅ Conversa exportada com sucesso!');
+                } else {
+                    alert('❌ Erro ao exportar: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error exporting conversation:', error);
+                alert('❌ Erro ao exportar conversa');
+            }
+        }
+        
+        async function archiveCurrentConversation() {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
+            
+            if (!confirm('Arquivar esta conversa?')) return;
+            
+            document.getElementById('conversation-menu').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`/api/whatsapp/conversations/${currentConversation.id}/archive`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Conversa arquivada!');
+                    // Reload conversations
+                    loadConversations();
+                    currentConversation = null;
+                    document.getElementById('messages-area').innerHTML = `
+                        <div class="flex items-center justify-center h-full text-gray-400">
+                            <div class="text-center">
+                                <i class="fas fa-comments text-5xl mb-3"></i>
+                                <p>Selecione uma conversa para começar</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    alert('❌ Erro ao arquivar: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error archiving conversation:', error);
+                alert('❌ Erro ao arquivar conversa');
+            }
+        }
+        
+        async function deleteCurrentConversation() {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
+            
+            if (!confirm('Tem a certeza que deseja eliminar esta conversa? Esta ação não pode ser desfeita.')) return;
+            
+            document.getElementById('conversation-menu').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`/api/whatsapp/contacts/${currentConversation.id}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Conversa eliminada!');
+                    // Reload conversations
+                    loadConversations();
+                    currentConversation = null;
+                    document.getElementById('messages-area').innerHTML = `
+                        <div class="flex items-center justify-center h-full text-gray-400">
+                            <div class="text-center">
+                                <i class="fas fa-comments text-5xl mb-3"></i>
+                                <p>Selecione uma conversa para começar</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    alert('❌ Erro ao eliminar: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+                alert('❌ Erro ao eliminar conversa');
+            }
         }
 
         // Add Contact Modal Functions

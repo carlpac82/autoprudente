@@ -5102,6 +5102,35 @@ async def admin_save_whatsapp_config(request: Request):
                             sender_name TEXT
                         )
                     """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_templates (
+                            id SERIAL PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            category VARCHAR(50) NOT NULL,
+                            language_code VARCHAR(5) NOT NULL,
+                            status VARCHAR(20) DEFAULT 'pending',
+                            content_pt TEXT,
+                            content_en TEXT,
+                            content_fr TEXT,
+                            content_de TEXT,
+                            whatsapp_template_id TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            approved_at TIMESTAMP,
+                            UNIQUE(name, language_code)
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
+                            id SERIAL PRIMARY KEY,
+                            shortcut TEXT NOT NULL UNIQUE,
+                            category VARCHAR(50),
+                            content_pt TEXT NOT NULL,
+                            content_en TEXT NOT NULL,
+                            content_fr TEXT NOT NULL,
+                            content_de TEXT NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
                 else:
                     con.execute("""
                         CREATE TABLE IF NOT EXISTS whatsapp_config (
@@ -5146,6 +5175,35 @@ async def admin_save_whatsapp_config(request: Request):
                             status TEXT DEFAULT 'sent',
                             sender_name TEXT,
                             FOREIGN KEY (conversation_id) REFERENCES whatsapp_conversations(id) ON DELETE CASCADE
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_templates (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            language_code TEXT NOT NULL,
+                            status TEXT DEFAULT 'pending',
+                            content_pt TEXT,
+                            content_en TEXT,
+                            content_fr TEXT,
+                            content_de TEXT,
+                            whatsapp_template_id TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            approved_at TEXT,
+                            UNIQUE(name, language_code)
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_quick_replies (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            shortcut TEXT NOT NULL UNIQUE,
+                            category TEXT,
+                            content_pt TEXT NOT NULL,
+                            content_en TEXT NOT NULL,
+                            content_fr TEXT NOT NULL,
+                            content_de TEXT NOT NULL,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
                 
@@ -6532,6 +6590,429 @@ async def get_unread_count(request: Request):
                 conn.close()
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error getting unread count: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Templates ---
+@app.get("/api/whatsapp/templates")
+async def get_templates(request: Request):
+    """Get all WhatsApp templates"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, name, category, language_code, status, content_pt, content_en, content_fr, content_de, whatsapp_template_id, created_at, approved_at FROM whatsapp_templates ORDER BY created_at DESC")
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute("SELECT id, name, category, language_code, status, content_pt, content_en, content_fr, content_de, whatsapp_template_id, created_at, approved_at FROM whatsapp_templates ORDER BY created_at DESC").fetchall()
+                
+                templates = [
+                    {
+                        "id": row[0],
+                        "name": row[1],
+                        "category": row[2],
+                        "language_code": row[3],
+                        "status": row[4],
+                        "content_pt": row[5],
+                        "content_en": row[6],
+                        "content_fr": row[7],
+                        "content_de": row[8],
+                        "whatsapp_template_id": row[9],
+                        "created_at": row[10].isoformat() if hasattr(row[10], 'isoformat') else str(row[10]),
+                        "approved_at": row[11].isoformat() if row[11] and hasattr(row[11], 'isoformat') else str(row[11]) if row[11] else None
+                    }
+                    for row in rows
+                ]
+                
+                return JSONResponse({"ok": True, "templates": templates})
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error getting templates: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/templates")
+async def create_template(request: Request):
+    """Create a new WhatsApp template"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        name = data.get('name', '').strip()
+        category = data.get('category', 'UTILITY')
+        content_pt = data.get('content_pt', '').strip()
+        content_en = data.get('content_en', '').strip()
+        content_fr = data.get('content_fr', '').strip()
+        content_de = data.get('content_de', '').strip()
+        
+        if not name or not (content_pt or content_en or content_fr or content_de):
+            return JSONResponse({
+                "ok": False,
+                "error": "Nome e pelo menos um conteúdo de idioma são obrigatórios"
+            }, status_code=400)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Insert for each language that has content
+                languages = []
+                if content_pt: languages.append(('pt_PT', 'pt'))
+                if content_en: languages.append(('en', 'en'))
+                if content_fr: languages.append(('fr', 'fr'))
+                if content_de: languages.append(('de', 'de'))
+                
+                template_ids = []
+                for lang_code, lang_key in languages:
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO whatsapp_templates (name, category, language_code, content_pt, content_en, content_fr, content_de, status)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                RETURNING id
+                            """, (name, category, lang_code, content_pt, content_en, content_fr, content_de, 'pending'))
+                            template_ids.append(cur.fetchone()[0])
+                    else:
+                        cursor = conn.execute("""
+                            INSERT INTO whatsapp_templates (name, category, language_code, content_pt, content_en, content_fr, content_de, status)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (name, category, lang_code, content_pt, content_en, content_fr, content_de, 'pending'))
+                        template_ids.append(cursor.lastrowid)
+                
+                conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Created template '{name}' in {len(languages)} languages")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": f"Template '{name}' criado em {len(languages)} idiomas. Aguardando aprovação do WhatsApp.",
+                    "template_ids": template_ids
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error creating template: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.delete("/api/whatsapp/templates/{template_id}")
+async def delete_template(request: Request, template_id: int):
+    """Delete a WhatsApp template"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM whatsapp_templates WHERE id = %s", (template_id,))
+                    conn.commit()
+                else:
+                    conn.execute("DELETE FROM whatsapp_templates WHERE id = ?", (template_id,))
+                    conn.commit()
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Template eliminado com sucesso"
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error deleting template: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Quick Replies ---
+@app.get("/api/whatsapp/quick-replies")
+async def get_quick_replies(request: Request):
+    """Get all quick replies"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, shortcut, category, content_pt, content_en, content_fr, content_de, created_at FROM whatsapp_quick_replies ORDER BY shortcut")
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute("SELECT id, shortcut, category, content_pt, content_en, content_fr, content_de, created_at FROM whatsapp_quick_replies ORDER BY shortcut").fetchall()
+                
+                quick_replies = [
+                    {
+                        "id": row[0],
+                        "shortcut": row[1],
+                        "category": row[2],
+                        "content_pt": row[3],
+                        "content_en": row[4],
+                        "content_fr": row[5],
+                        "content_de": row[6],
+                        "created_at": row[7].isoformat() if hasattr(row[7], 'isoformat') else str(row[7])
+                    }
+                    for row in rows
+                ]
+                
+                return JSONResponse({"ok": True, "quick_replies": quick_replies})
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error getting quick replies: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/quick-replies")
+async def create_quick_reply(request: Request):
+    """Create a new quick reply"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        shortcut = data.get('shortcut', '').strip()
+        category = data.get('category', '').strip()
+        content_pt = data.get('content_pt', '').strip()
+        content_en = data.get('content_en', '').strip()
+        content_fr = data.get('content_fr', '').strip()
+        content_de = data.get('content_de', '').strip()
+        
+        if not shortcut or not content_pt or not content_en or not content_fr or not content_de:
+            return JSONResponse({
+                "ok": False,
+                "error": "Atalho e conteúdo em todos os idiomas são obrigatórios"
+            }, status_code=400)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO whatsapp_quick_replies (shortcut, category, content_pt, content_en, content_fr, content_de)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                            RETURNING id
+                        """, (shortcut, category, content_pt, content_en, content_fr, content_de))
+                        quick_reply_id = cur.fetchone()[0]
+                    conn.commit()
+                else:
+                    cursor = conn.execute("""
+                        INSERT INTO whatsapp_quick_replies (shortcut, category, content_pt, content_en, content_fr, content_de)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (shortcut, category, content_pt, content_en, content_fr, content_de))
+                    quick_reply_id = cursor.lastrowid
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Created quick reply '{shortcut}'")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": f"Resposta rápida '{shortcut}' criada com sucesso",
+                    "id": quick_reply_id
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error creating quick reply: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.delete("/api/whatsapp/quick-replies/{reply_id}")
+async def delete_quick_reply(request: Request, reply_id: int):
+    """Delete a quick reply"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM whatsapp_quick_replies WHERE id = %s", (reply_id,))
+                    conn.commit()
+                else:
+                    conn.execute("DELETE FROM whatsapp_quick_replies WHERE id = ?", (reply_id,))
+                    conn.commit()
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Resposta rápida eliminada com sucesso"
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error deleting quick reply: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Archive Conversations ---
+@app.post("/api/whatsapp/conversations/{conversation_id}/archive")
+async def archive_conversation(request: Request, conversation_id: int):
+    """Archive a conversation"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Add archived column if not exists
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT FALSE")
+                        cur.execute("UPDATE whatsapp_conversations SET archived = TRUE WHERE id = %s", (conversation_id,))
+                    conn.commit()
+                else:
+                    try:
+                        conn.execute("ALTER TABLE whatsapp_conversations ADD COLUMN archived INTEGER DEFAULT 0")
+                    except:
+                        pass  # Column already exists
+                    conn.execute("UPDATE whatsapp_conversations SET archived = 1 WHERE id = ?", (conversation_id,))
+                    conn.commit()
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Conversa arquivada com sucesso"
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error archiving conversation: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/conversations/{conversation_id}/unarchive")
+async def unarchive_conversation(request: Request, conversation_id: int):
+    """Unarchive a conversation"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("UPDATE whatsapp_conversations SET archived = FALSE WHERE id = %s", (conversation_id,))
+                    conn.commit()
+                else:
+                    conn.execute("UPDATE whatsapp_conversations SET archived = 0 WHERE id = ?", (conversation_id,))
+                    conn.commit()
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Conversa desarquivada com sucesso"
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error unarchiving conversation: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Export Individual Conversation ---
+@app.get("/api/whatsapp/conversations/{conversation_id}/export")
+async def export_conversation(request: Request, conversation_id: int):
+    """Export a single conversation with all messages"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Get conversation info
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT name, phone_number, created_at FROM whatsapp_conversations WHERE id = %s", (conversation_id,))
+                        conv_row = cur.fetchone()
+                else:
+                    conv_row = conn.execute("SELECT name, phone_number, created_at FROM whatsapp_conversations WHERE id = ?", (conversation_id,)).fetchone()
+                
+                if not conv_row:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "Conversa não encontrada"
+                    }, status_code=404)
+                
+                # Get all messages
+                query = "SELECT message_text, direction, timestamp, status FROM whatsapp_messages WHERE conversation_id = " + ("%s" if is_postgres else "?") + " ORDER BY timestamp ASC"
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query, (conversation_id,))
+                        msg_rows = cur.fetchall()
+                else:
+                    msg_rows = conn.execute(query, (conversation_id,)).fetchall()
+                
+                export_data = {
+                    "name": conv_row[0],
+                    "phone_number": conv_row[1],
+                    "created_at": conv_row[2].isoformat() if hasattr(conv_row[2], 'isoformat') else str(conv_row[2]),
+                    "messages": [
+                        {
+                            "text": msg[0],
+                            "direction": msg[1],
+                            "timestamp": msg[2].isoformat() if hasattr(msg[2], 'isoformat') else str(msg[2]),
+                            "status": msg[3]
+                        }
+                        for msg in msg_rows
+                    ]
+                }
+                
+                from datetime import datetime
+                filename = f"conversa_{conv_row[0].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                return JSONResponse({
+                    "ok": True,
+                    "filename": filename,
+                    "data": export_data
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error exporting conversation: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Detect Language ---
+@app.post("/api/whatsapp/detect-language")
+async def detect_language(request: Request):
+    """Detect language from phone number country code"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        phone_number = data.get('phone_number', '')
+        
+        # Simple detection based on country code
+        if phone_number.startswith('351'):
+            language = 'pt'
+        elif phone_number.startswith('44'):
+            language = 'en'
+        elif phone_number.startswith('33'):
+            language = 'fr'
+        elif phone_number.startswith('49'):
+            language = 'de'
+        else:
+            language = 'en'  # Default to English
+        
+        return JSONResponse({
+            "ok": True,
+            "language": language
+        })
+    except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 # --- Admin UI ---
