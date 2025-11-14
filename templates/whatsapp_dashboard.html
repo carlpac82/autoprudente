@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Dashboard • Auto Prudente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .chat-container {
+            height: calc(100vh - 12rem);
+        }
+        .conversation-item:hover {
+            background-color: #f3f4f6;
+        }
+        .conversation-item.active {
+            background-color: #dbeafe;
+            border-left: 4px solid #3b82f6;
+        }
+        .message-bubble {
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message-inbound {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+        }
+        .message-outbound {
+            background-color: #dcf8c6;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-[#009cb6] text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fab fa-whatsapp text-3xl"></i>
+                    <h1 class="text-2xl font-bold">WhatsApp Dashboard</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="connection-status" class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <span class="text-sm">Conectado</span>
+                    </span>
+                    <button onclick="window.location.href='/'" class="bg-white text-[#009cb6] px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                        <i class="fas fa-home mr-2"></i>Voltar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 chat-container">
+            <!-- Conversations List -->
+            <div class="lg:col-span-1 bg-white rounded-lg shadow-lg">
+                <!-- Search & Filters -->
+                <div class="p-4 border-b">
+                    <input type="text" id="search-conversations" 
+                           placeholder="Procurar conversas..." 
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009cb6]">
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="filterConversations('all')" 
+                                class="flex-1 px-3 py-1 text-sm rounded filter-btn active">
+                            Todas
+                        </button>
+                        <button onclick="filterConversations('open')" 
+                                class="flex-1 px-3 py-1 text-sm rounded filter-btn">
+                            Abertas
+                        </button>
+                        <button onclick="filterConversations('pending')" 
+                                class="flex-1 px-3 py-1 text-sm rounded filter-btn">
+                            Pendentes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Conversations List -->
+                <div id="conversations-list" class="overflow-y-auto" style="height: calc(100% - 120px);">
+                    <!-- Conversations will be loaded here -->
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fas fa-comments text-5xl mb-3"></i>
+                            <p>A carregar conversas...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-lg flex flex-col">
+                <!-- Chat Header -->
+                <div id="chat-header" class="p-4 border-b flex items-center justify-between bg-gray-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-gray-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold" id="chat-contact-name">Selecione uma conversa</h3>
+                            <p class="text-xs text-gray-500" id="chat-contact-phone"></p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="markAsResolved()" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                            <i class="fas fa-check mr-1"></i>Resolver
+                        </button>
+                        <button onclick="assignToMe()" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                            <i class="fas fa-user-check mr-1"></i>Atribuir a Mim
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div id="messages-area" class="flex-1 overflow-y-auto p-4 bg-gray-50" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlMGUwZTAiLz48L3N2Zz4=');">
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fas fa-comments text-5xl mb-3"></i>
+                            <p>Selecione uma conversa para começar</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div class="p-4 border-t bg-white">
+                    <div class="flex gap-2 mb-2">
+                        <button onclick="showQuickReplies()" class="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
+                            <i class="fas fa-bolt mr-1"></i>Respostas Rápidas
+                        </button>
+                        <button onclick="showTemplates()" class="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
+                            <i class="fas fa-file-alt mr-1"></i>Templates
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="message-input" 
+                               placeholder="Digite sua mensagem..." 
+                               class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009cb6]"
+                               onkeypress="if(event.key === 'Enter') sendMessage()">
+                        <button onclick="sendMessage()" 
+                                class="px-6 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#008a9e] transition">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentConversation = null;
+        let conversations = [];
+        let messages = [];
+
+        // Load conversations on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversations();
+            // Poll for new messages every 5 seconds
+            setInterval(loadConversations, 5000);
+        });
+
+        async function loadConversations(status = null) {
+            try {
+                const url = status ? `/api/whatsapp/conversations?status=${status}` : '/api/whatsapp/conversations';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    conversations = data.conversations;
+                    renderConversations();
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        function renderConversations() {
+            const list = document.getElementById('conversations-list');
+            
+            if (conversations.length === 0) {
+                list.innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fas fa-inbox text-5xl mb-3"></i>
+                            <p>Nenhuma conversa</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = conversations.map(conv => `
+                <div class="conversation-item p-4 border-b cursor-pointer ${conv.id === currentConversation?.id ? 'active' : ''}"
+                     onclick="selectConversation(${conv.id})">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-gray-600"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-semibold truncate">${conv.name || conv.phone_number}</h4>
+                                <span class="text-xs text-gray-500">${formatTime(conv.last_message_at)}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 truncate">${conv.last_message_preview || 'Nova conversa'}</p>
+                            <div class="flex gap-2 mt-1">
+                                ${conv.unread_count > 0 ? `<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">${conv.unread_count}</span>` : ''}
+                                ${conv.status === 'pending' ? '<span class="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full">Pendente</span>' : ''}
+                                ${conv.assigned_to ? `<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">${conv.assigned_to}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function selectConversation(conversationId) {
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+
+            currentConversation = conversation;
+            
+            // Update header
+            document.getElementById('chat-contact-name').textContent = conversation.name || 'Cliente';
+            document.getElementById('chat-contact-phone').textContent = conversation.phone_number;
+
+            // Load messages
+            await loadMessages(conversationId);
+            
+            // Re-render conversations to update active state
+            renderConversations();
+        }
+
+        async function loadMessages(conversationId) {
+            try {
+                const response = await fetch(`/api/whatsapp/conversations/${conversationId}/messages`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    messages = data.messages.reverse(); // Reverse to show oldest first
+                    renderMessages();
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        function renderMessages() {
+            const area = document.getElementById('messages-area');
+            
+            if (messages.length === 0) {
+                area.innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <p>Nenhuma mensagem ainda</p>
+                    </div>
+                `;
+                return;
+            }
+
+            area.innerHTML = messages.map(msg => `
+                <div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-3">
+                    <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} rounded-lg p-3 shadow">
+                        <p class="text-sm">${escapeHtml(msg.content)}</p>
+                        <div class="flex items-center justify-between gap-2 mt-1">
+                            <span class="text-xs text-gray-500">${formatTime(msg.timestamp)}</span>
+                            ${msg.direction === 'outbound' ? `<span class="text-xs text-gray-500"><i class="fas fa-check${msg.status === 'read' ? '-double text-blue-500' : msg.status === 'delivered' ? '-double' : ''}"></i></span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Scroll to bottom
+            area.scrollTop = area.scrollHeight;
+        }
+
+        async function sendMessage() {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
+
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            try {
+                const response = await fetch('/api/whatsapp/send-message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        phone_number: currentConversation.phone_number,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    input.value = '';
+                    // Reload messages
+                    await loadMessages(currentConversation.id);
+                } else {
+                    alert('Erro ao enviar mensagem');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Erro ao enviar mensagem');
+            }
+        }
+
+        function filterConversations(status) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active', 'bg-[#009cb6]', 'text-white'));
+            event.target.classList.add('active', 'bg-[#009cb6]', 'text-white');
+            
+            // Load conversations with filter
+            loadConversations(status === 'all' ? null : status);
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Agora';
+            if (diffMins < 60) return `${diffMins}m`;
+            if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h`;
+            return date.toLocaleDateString('pt-PT');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showQuickReplies() {
+            alert('Funcionalidade de respostas rápidas em desenvolvimento');
+        }
+
+        function showTemplates() {
+            alert('Funcionalidade de templates em desenvolvimento');
+        }
+
+        function markAsResolved() {
+            alert('Funcionalidade em desenvolvimento');
+        }
+
+        function assignToMe() {
+            alert('Funcionalidade em desenvolvimento');
+        }
+    </script>
+</body>
+</html>

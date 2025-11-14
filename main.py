@@ -624,6 +624,14 @@ app.add_middleware(
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, same_site="lax")
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
+# WhatsApp API Router
+try:
+    from whatsapp_api import router as whatsapp_router
+    app.include_router(whatsapp_router)
+    logging.info("📱 WhatsApp API endpoints loaded")
+except ImportError as e:
+    logging.warning(f"⚠️ WhatsApp API not available: {e}")
+
 # Exception handler to ensure CORS headers on all responses (including errors)
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -4107,6 +4115,20 @@ async def home(request: Request):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
+    return response
+
+@app.get("/whatsapp", response_class=HTMLResponse)
+async def whatsapp_dashboard(request: Request):
+    """WhatsApp Dashboard for messaging"""
+    try:
+        require_auth(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=HTTP_303_SEE_OTHER)
+    
+    response = templates.TemplateResponse("whatsapp_dashboard.html", {
+        "request": request
+    })
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return response
 
 @app.get("/admin", response_class=HTMLResponse)
