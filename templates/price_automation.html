@@ -4695,6 +4695,8 @@
                 
                 // ✅ APPLY GROUP HIERARCHY RULES (enforce D >= B1, B2, etc)
                 console.log('🔧 [HIERARCHY-CALL] About to call applyGroupHierarchyRules()...');
+                console.log('🔧 [HIERARCHY-CALL] Function exists?', typeof applyGroupHierarchyRules);
+                console.log('🔧 [HIERARCHY-CALL] automatedPricesByGroup:', Object.keys(automatedPricesByGroup));
                 const adjustedPrices = await applyGroupHierarchyRules();
                 console.log(`🔧 [HIERARCHY-CALL] Function returned: ${adjustedPrices} adjustments`);
                 if (adjustedPrices > 0) {
