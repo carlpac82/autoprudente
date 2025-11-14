@@ -5285,11 +5285,15 @@ async def add_whatsapp_contact(request: Request):
     try:
         data = await request.json()
         name = data.get('name', '')
-        phone = data.get('phone', '')
+        # Accept both 'phone' and 'phone_number' for compatibility
+        phone = data.get('phone') or data.get('phone_number', '')
+        
+        print(f"[WHATSAPP] Received data: name='{name}', phone='{phone}'")
         
         if not name or not phone:
             return JSONResponse({
                 "ok": False,
+                "success": False,
                 "error": "Nome e telefone são obrigatórios"
             }, status_code=400)
         
@@ -5299,6 +5303,7 @@ async def add_whatsapp_contact(request: Request):
         
         return JSONResponse({
             "ok": True,
+            "success": True,
             "message": "Contacto adicionado com sucesso",
             "contact": {
                 "name": name,
@@ -5310,7 +5315,7 @@ async def add_whatsapp_contact(request: Request):
         print(f"[WHATSAPP] ❌ Error adding contact: {str(e)}")
         import traceback
         traceback.print_exc()
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/whatsapp/unread-count")
 async def get_whatsapp_unread_count(request: Request):
