@@ -4997,8 +4997,16 @@ async def admin_save_whatsapp_config(request: Request):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
     
     try:
-        body = await request.json()
-        print(f"[WHATSAPP-CONFIG] Saving config: {body.keys()}")
+        # Accept both JSON and form data
+        content_type = request.headers.get('content-type', '')
+        if 'application/json' in content_type:
+            body = await request.json()
+            print(f"[WHATSAPP-CONFIG] Received JSON data: {body.keys()}")
+        else:
+            # Form data
+            form = await request.form()
+            body = dict(form)
+            print(f"[WHATSAPP-CONFIG] Received form data: {body.keys()}")
         
         # Save to database (whatsapp_config table)
         with _db_lock:
