@@ -5259,6 +5259,74 @@ async def admin_test_whatsapp_connection(request: Request):
         traceback.print_exc()
         return JSONResponse({"success": False, "error": str(e)})
 
+# ============================================================
+# WHATSAPP DASHBOARD ENDPOINTS
+# ============================================================
+
+@app.get("/api/whatsapp/conversations")
+async def get_whatsapp_conversations(request: Request):
+    """Get WhatsApp conversations"""
+    require_auth(request)
+    try:
+        # TODO: Implement database storage for conversations
+        # For now, return empty list
+        return JSONResponse({
+            "ok": True,
+            "conversations": []
+        })
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error loading conversations: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/contacts/add")
+async def add_whatsapp_contact(request: Request):
+    """Add a new WhatsApp contact"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        name = data.get('name', '')
+        phone = data.get('phone', '')
+        
+        if not name or not phone:
+            return JSONResponse({
+                "ok": False,
+                "error": "Nome e telefone são obrigatórios"
+            }, status_code=400)
+        
+        # TODO: Implement database storage for contacts
+        # For now, just return success
+        print(f"[WHATSAPP] Adding contact: {name} - {phone}")
+        
+        return JSONResponse({
+            "ok": True,
+            "message": "Contacto adicionado com sucesso",
+            "contact": {
+                "name": name,
+                "phone": phone,
+                "id": phone  # Use phone as temporary ID
+            }
+        })
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error adding contact: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/whatsapp/unread-count")
+async def get_whatsapp_unread_count(request: Request):
+    """Get unread message count"""
+    require_auth(request)
+    try:
+        # TODO: Implement unread count from database
+        # For now, return 0
+        return JSONResponse({
+            "ok": True,
+            "unread": 0
+        })
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error getting unread count: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # --- Admin UI ---
 @app.get("/test/carjet-mobile", response_class=HTMLResponse)
 async def test_carjet_mobile(request: Request):
