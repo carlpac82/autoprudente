@@ -6525,6 +6525,215 @@ async def send_whatsapp_message(request: Request):
             "error": str(e)
         }, status_code=500)
 
+@app.post("/api/whatsapp/send-media")
+async def send_whatsapp_media(request: Request):
+    """Send a WhatsApp media message (image or document)"""
+    require_auth(request)
+    try:
+        from fastapi import File, UploadFile, Form
+        
+        # Get form data
+        form = await request.form()
+        phone_number = form.get('phone_number')
+        media_type = form.get('media_type', 'document')  # 'image' or 'document'
+        caption = form.get('caption', '')
+        file = form.get('file')
+        
+        if not phone_number or not file:
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "Número de telefone e ficheiro são obrigatórios"
+            }, status_code=400)
+        
+        # Get WhatsApp config from database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+                        config_row = cur.fetchone()
+                else:
+                    cur = conn.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+                    config_row = cur.fetchone()
+                
+                if not config_row:
+                    return JSONResponse({
+                        "ok": False,
+                        "success": False,
+                        "error": "WhatsApp não está configurado"
+                    }, status_code=400)
+                
+                access_token = config_row[0]
+                phone_number_id = config_row[1]
+            finally:
+                conn.close()
+        
+        # Clean phone number
+        clean_phone = ''.join(filter(str.isdigit, phone_number))
+        
+        # Read file content
+        file_content = await file.read()
+        file_name = file.filename
+        
+        # Upload media to WhatsApp first
+        import httpx
+        
+        # Step 1: Upload media
+        upload_url = f"https://graph.facebook.com/v18.0/{phone_number_id}/media"
+        
+        files_data = {
+            'file': (file_name, file_content, file.content_type),
+            'messaging_product': (None, 'whatsapp'),
+            'type': (None, file.content_type)
+        }
+        
+        headers_upload = {
+            "Authorization": f"Bearer {access_token}"
+        }
+        
+        print(f"[WHATSAPP] Uploading media: {file_name} ({media_type})")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            upload_response = await client.post(upload_url, headers=headers_upload, files=files_data)
+            upload_data = upload_response.json()
+        
+        if upload_response.status_code != 200:
+            print(f"[WHATSAPP] ❌ Error uploading media: {upload_data}")
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": upload_data.get('error', {}).get('message', 'Erro ao fazer upload do ficheiro')
+            }, status_code=400)
+        
+        media_id = upload_data.get('id')
+        
+        if not media_id:
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "Erro ao obter ID do media"
+            }, status_code=400)
+        
+        print(f"[WHATSAPP] ✅ Media uploaded, ID: {media_id}")
+        
+        # Step 2: Send message with media
+        send_url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
+        headers_send = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Build payload based on media type
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": clean_phone,
+            "type": media_type
+        }
+        
+        if media_type == 'image':
+            payload['image'] = {
+                "id": media_id
+            }
+            if caption:
+                payload['image']['caption'] = caption
+        else:  # document
+            payload['document'] = {
+                "id": media_id,
+                "filename": file_name
+            }
+            if caption:
+                payload['document']['caption'] = caption
+        
+        print(f"[WHATSAPP] Sending {media_type} to {clean_phone}...")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(send_url, headers=headers_send, json=payload)
+            response_data = response.json()
+        
+        if response.status_code != 200:
+            print(f"[WHATSAPP] ❌ Error sending media: {response_data}")
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": response_data.get('error', {}).get('message', 'Erro ao enviar media')
+            }, status_code=400)
+        
+        print(f"[WHATSAPP] ✅ Media message sent successfully")
+        
+        # Save message to database
+        from datetime import datetime
+        message_id = response_data.get('messages', [{}])[0].get('id', '')
+        message_text = caption if caption else f"[{media_type.upper()}] {file_name}"
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Find conversation
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (clean_phone,))
+                        conv_row = cur.fetchone()
+                else:
+                    conv_row = conn.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = ?", (clean_phone,)).fetchone()
+                
+                if conv_row:
+                    conversation_id = conv_row[0]
+                    
+                    # Insert message
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO whatsapp_messages (id, conversation_id, message_text, direction, status)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """, (message_id, conversation_id, message_text, "outbound", "sent"))
+                            
+                            # Update conversation
+                            cur.execute("""
+                                UPDATE whatsapp_conversations 
+                                SET last_message_at = CURRENT_TIMESTAMP,
+                                    last_message_preview = %s
+                                WHERE id = %s
+                            """, (message_text[:50] + ('...' if len(message_text) > 50 else ''), conversation_id))
+                        conn.commit()
+                    else:
+                        conn.execute("""
+                            INSERT INTO whatsapp_messages (id, conversation_id, message_text, direction, status)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (message_id, conversation_id, message_text, "outbound", "sent"))
+                        
+                        conn.execute("""
+                            UPDATE whatsapp_conversations 
+                            SET last_message_at = CURRENT_TIMESTAMP,
+                                last_message_preview = ?
+                            WHERE id = ?
+                        """, (message_text[:50] + ('...' if len(message_text) > 50 else ''), conversation_id))
+                        conn.commit()
+            finally:
+                conn.close()
+        
+        return JSONResponse({
+            "ok": True,
+            "success": True,
+            "message": "Media enviado com sucesso",
+            "message_id": message_id
+        })
+        
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error sending media: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "ok": False,
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
 @app.post("/api/whatsapp/conversations/{conversation_id}/mark-read")
 async def mark_conversation_read(request: Request, conversation_id: int):
     """Mark conversation as read in database"""
