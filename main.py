@@ -5714,27 +5714,31 @@ async def send_whatsapp_message(request: Request):
             }, status_code=400)
         
         # Get WhatsApp config from database
-        conn = await get_db_connection()
-        cursor = conn.cursor()
-        
-        if using_postgres:
-            cursor.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
-        else:
-            cursor.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
-        
-        config_row = cursor.fetchone()
-        
-        if not config_row:
-            conn.close()
-            return JSONResponse({
-                "ok": False,
-                "success": False,
-                "error": "WhatsApp não está configurado"
-            }, status_code=400)
-        
-        access_token = config_row[0]
-        phone_number_id = config_row[1]
-        conn.close()
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Check if PostgreSQL
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+                        config_row = cur.fetchone()
+                else:
+                    cur = conn.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+                    config_row = cur.fetchone()
+                
+                if not config_row:
+                    return JSONResponse({
+                        "ok": False,
+                        "success": False,
+                        "error": "WhatsApp não está configurado"
+                    }, status_code=400)
+                
+                access_token = config_row[0]
+                phone_number_id = config_row[1]
+            finally:
+                conn.close()
         
         # Clean phone number (remove non-digits)
         clean_phone = ''.join(filter(str.isdigit, phone_number))
