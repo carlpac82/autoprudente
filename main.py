@@ -9925,60 +9925,22 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
 
 def filter_automatic_only(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Filtra apenas carros com transmissão automática.
+    FILTRO DESATIVADO - Retorna TODOS os carros (manuais + automáticos).
     
-    Aplica DEPOIS do scraping para permitir análise correta de todos os carros
-    e garantir mapeamento correto de grupos (Crossover vs SUV, etc).
+    Função mantida para compatibilidade mas agora retorna todos os items sem filtrar.
+    A categorização correta (B1, B2, E1, E2, etc) garante separação entre manuais e automáticos.
     
     Args:
         items: Lista de carros parseados do CarJet
     
     Returns:
-        Lista filtrada contendo apenas automáticos
+        Lista completa (sem filtragem)
     """
-    if not items:
-        return items
-    
-    automatic_cars = []
-    manual_count = 0
-    unknown_count = 0
-    
-    for item in items:
-        transmission = (item.get('transmission') or '').lower()
-        car_name = (item.get('car') or item.get('name') or '').lower()
-        
-        # Verificar se é EXPLICITAMENTE manual
-        is_manual = 'manual' in transmission and 'automatic' not in transmission
-        
-        if is_manual:
-            manual_count += 1
-            continue
-        
-        # Verificar se é automático (por campo ou nome)
-        is_automatic = (
-            'auto' in transmission or
-            'automatic' in transmission or
-            'automático' in transmission or
-            'automatico' in transmission or
-            ' auto' in car_name  # Ex: "VW Polo Auto"
-        )
-        
-        if is_automatic:
-            automatic_cars.append(item)
-        else:
-            # Sem informação clara - INCLUIR por segurança (já que usamos frmTrans=au)
-            unknown_count += 1
-            automatic_cars.append(item)
-    
-    # Log detalhado do filtro
+    # DESATIVADO: Retornar TODOS os carros sem filtrar
     import sys
-    print(f"[FILTER] 🔧 Input: {len(items)} | Output: {len(automatic_cars)} | Removed: {manual_count} manual | Unknown: {unknown_count}", 
+    print(f"[FILTER] ⚠️ FILTRO DESATIVADO - Retornando TODOS os {len(items) if items else 0} carros (manuais + automáticos)", 
           file=sys.stderr, flush=True)
-    if manual_count > 0:
-        print(f"[FILTER] ⚠️ WARNING: Found {manual_count} manual cars despite frmTrans=au filter!", 
-              file=sys.stderr, flush=True)
-    
-    return automatic_cars
+    return items if items else []
 
 
 def build_carjet_form(location_name: str, start_dt, end_dt, lang: str = "pt", currency: str = "EUR") -> Dict[str, Any]:
