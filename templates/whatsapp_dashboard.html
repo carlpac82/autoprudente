@@ -234,6 +234,27 @@
             `).join('');
         }
 
+        async function updateUnreadBadge() {
+            try {
+                const response = await fetch('/api/whatsapp/unread-count');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    const badge = document.getElementById('whatsapp-unread-badge');
+                    if (badge) {
+                        if (data.unread > 0) {
+                            badge.textContent = data.unread;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating unread badge:', error);
+            }
+        }
+
         async function selectConversation(conversationId) {
             const conversation = conversations.find(c => c.id === conversationId);
             if (!conversation) return;
@@ -244,11 +265,24 @@
             document.getElementById('chat-contact-name').textContent = conversation.name || 'Cliente';
             document.getElementById('chat-contact-phone').textContent = conversation.phone_number;
 
+            // Mark as read
+            try {
+                await fetch(`/api/whatsapp/conversations/${conversationId}/mark-read`, {
+                    method: 'POST'
+                });
+                conversation.unread_count = 0;
+            } catch (error) {
+                console.error('Error marking conversation as read:', error);
+            }
+
             // Load messages
             await loadMessages(conversationId);
             
             // Re-render conversations to update active state
             renderConversations();
+            
+            // Update unread count badge
+            updateUnreadBadge();
         }
 
         async function loadMessages(conversationId) {

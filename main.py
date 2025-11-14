@@ -5180,17 +5180,97 @@ async def whatsapp_webhook_verify(request: Request):
 async def whatsapp_webhook_receive(request: Request):
     """WhatsApp webhook - receive incoming messages"""
     try:
-        body = await request.json()
-        print(f"[WHATSAPP-WEBHOOK] Received message: {body}")
+        global whatsapp_conversations, whatsapp_conversation_counter
         
-        # TODO: Process incoming WhatsApp messages
-        # For now, just acknowledge receipt
+        body = await request.json()
+        print(f"[WHATSAPP-WEBHOOK] Received webhook: {body}")
+        
+        # Process incoming messages
+        if 'entry' in body:
+            for entry in body['entry']:
+                for change in entry.get('changes', []):
+                    if change.get('value', {}).get('messages'):
+                        for message in change['value']['messages']:
+                            from datetime import datetime
+                            
+                            # Extract message data
+                            from_phone = message.get('from', '')
+                            message_type = message.get('type', 'text')
+                            message_id = message.get('id', '')
+                            timestamp = message.get('timestamp', str(int(datetime.now().timestamp())))
+                            
+                            # Get message content
+                            message_content = ''
+                            if message_type == 'text':
+                                message_content = message.get('text', {}).get('body', '')
+                            elif message_type == 'image':
+                                message_content = '[Imagem recebida]'
+                            elif message_type == 'document':
+                                message_content = '[Documento recebido]'
+                            elif message_type == 'audio':
+                                message_content = '[Áudio recebido]'
+                            else:
+                                message_content = f'[{message_type}]'
+                            
+                            # Get contact info from webhook
+                            contact_name = None
+                            if 'contacts' in change['value']:
+                                for contact in change['value']['contacts']:
+                                    if contact.get('wa_id') == from_phone:
+                                        contact_name = contact.get('profile', {}).get('name', from_phone)
+                                        break
+                            
+                            if not contact_name:
+                                contact_name = from_phone
+                            
+                            print(f"[WHATSAPP-WEBHOOK] Message from {contact_name} ({from_phone}): {message_content}")
+                            
+                            # Find or create conversation
+                            conversation = next((c for c in whatsapp_conversations if c['phone_number'] == from_phone), None)
+                            
+                            if not conversation:
+                                # Create new conversation
+                                whatsapp_conversation_counter += 1
+                                conversation = {
+                                    "id": whatsapp_conversation_counter,
+                                    "name": contact_name,
+                                    "phone_number": from_phone,
+                                    "last_message_at": datetime.now().isoformat(),
+                                    "last_message_preview": message_content[:50] + ('...' if len(message_content) > 50 else ''),
+                                    "unread_count": 1,
+                                    "status": "open",
+                                    "assigned_to": None,
+                                    "messages": []
+                                }
+                                whatsapp_conversations.append(conversation)
+                                print(f"[WHATSAPP-WEBHOOK] ✅ Created new conversation #{conversation['id']}")
+                            
+                            # Add message to conversation
+                            message_obj = {
+                                "id": message_id,
+                                "content": message_content,
+                                "direction": "inbound",
+                                "timestamp": datetime.fromtimestamp(int(timestamp)).isoformat(),
+                                "status": "received",
+                                "type": message_type
+                            }
+                            
+                            conversation['messages'].append(message_obj)
+                            conversation['last_message_at'] = message_obj['timestamp']
+                            conversation['last_message_preview'] = message_content[:50] + ('...' if len(message_content) > 50 else '')
+                            conversation['unread_count'] = conversation.get('unread_count', 0) + 1
+                            
+                            print(f"[WHATSAPP-WEBHOOK] ✅ Added message to conversation #{conversation['id']}")
+                            print(f"[WHATSAPP-WEBHOOK] Total conversations: {len(whatsapp_conversations)}")
+        
+        # Always return 200 to acknowledge receipt
         return JSONResponse({"status": "received"}, status_code=200)
     except Exception as e:
         print(f"[WHATSAPP-WEBHOOK] ❌ Error processing message: {str(e)}")
         import traceback
         traceback.print_exc()
-        return JSONResponse({"error": str(e)}, status_code=500)
+        # Still return 200 to avoid Meta retrying
+        return JSONResponse({"status": "error", "error": str(e)}, status_code=200)
 
 @app.post("/api/admin/whatsapp/test-connection")
 async def admin_test_whatsapp_connection(request: Request):
@@ -5340,26 +5420,43 @@ async def set_whatsapp_profile_picture(request: Request):
 # WHATSAPP DASHBOARD ENDPOINTS
 # ============================================================
 
+# Temporary in-memory storage for WhatsApp conversations
+# TODO: Migrate to database when implementing full WhatsApp features
+whatsapp_conversations = []
+whatsapp_conversation_counter = 0
+
 @app.get("/api/whatsapp/conversations")
 async def get_whatsapp_conversations(request: Request):
     """Get WhatsApp conversations"""
     require_auth(request)
     try:
-        # TODO: Implement database storage for conversations
-        # For now, return empty list
+        global whatsapp_conversations
+        
+        # Filter by status if provided
+        status = request.query_params.get('status')
+        conversations = whatsapp_conversations
+        
+        if status:
+            conversations = [c for c in conversations if c.get('status') == status]
+        
+        print(f"[WHATSAPP] Returning {len(conversations)} conversations")
+        
         return JSONResponse({
             "ok": True,
-            "conversations": []
+            "success": True,
+            "conversations": conversations
         })
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error loading conversations: {str(e)}")
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/whatsapp/contacts/add")
 async def add_whatsapp_contact(request: Request):
-    """Add a new WhatsApp contact"""
+    """Add a new WhatsApp contact and create a conversation"""
     require_auth(request)
     try:
+        global whatsapp_conversations, whatsapp_conversation_counter
+        
         data = await request.json()
         name = data.get('name', '')
         # Accept both 'phone' and 'phone_number' for compatibility
@@ -5374,9 +5471,42 @@ async def add_whatsapp_contact(request: Request):
                 "error": "Nome e telefone são obrigatórios"
             }, status_code=400)
         
-        # TODO: Implement database storage for contacts
-        # For now, just return success
-        print(f"[WHATSAPP] Adding contact: {name} - {phone}")
+        # Check if conversation already exists for this phone number
+        existing = next((c for c in whatsapp_conversations if c['phone_number'] == phone), None)
+        
+        if existing:
+            print(f"[WHATSAPP] Conversation already exists for {phone}")
+            return JSONResponse({
+                "ok": True,
+                "success": True,
+                "message": "Conversa já existe para este contacto",
+                "contact": {
+                    "name": name,
+                    "phone": phone,
+                    "id": existing['id']
+                },
+                "conversation": existing
+            })
+        
+        # Create new conversation
+        from datetime import datetime
+        whatsapp_conversation_counter += 1
+        new_conversation = {
+            "id": whatsapp_conversation_counter,
+            "name": name,
+            "phone_number": phone,
+            "last_message_at": datetime.now().isoformat(),
+            "last_message_preview": "Nova conversa",
+            "unread_count": 0,
+            "status": "open",
+            "assigned_to": None,
+            "messages": []
+        }
+        
+        whatsapp_conversations.append(new_conversation)
+        
+        print(f"[WHATSAPP] ✅ Created conversation #{new_conversation['id']} for {name} - {phone}")
+        print(f"[WHATSAPP] Total conversations: {len(whatsapp_conversations)}")
         
         return JSONResponse({
             "ok": True,
@@ -5385,8 +5515,9 @@ async def add_whatsapp_contact(request: Request):
             "contact": {
                 "name": name,
                 "phone": phone,
-                "id": phone  # Use phone as temporary ID
-            }
+                "id": new_conversation['id']
+            },
+            "conversation": new_conversation
         })
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error adding contact: {str(e)}")
@@ -5394,16 +5525,196 @@ async def add_whatsapp_contact(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/whatsapp/conversations/{conversation_id}/messages")
+async def get_conversation_messages(request: Request, conversation_id: int):
+    """Get messages for a specific conversation"""
+    require_auth(request)
+    try:
+        global whatsapp_conversations
+        
+        # Find conversation
+        conversation = next((c for c in whatsapp_conversations if c['id'] == conversation_id), None)
+        
+        if not conversation:
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "Conversa não encontrada"
+            }, status_code=404)
+        
+        messages = conversation.get('messages', [])
+        
+        print(f"[WHATSAPP] Returning {len(messages)} messages for conversation #{conversation_id}")
+        
+        return JSONResponse({
+            "ok": True,
+            "success": True,
+            "messages": messages
+        })
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error loading messages: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/whatsapp/send-message")
+async def send_whatsapp_message(request: Request):
+    """Send a WhatsApp message"""
+    require_auth(request)
+    try:
+        global whatsapp_conversations
+        
+        data = await request.json()
+        phone_number = data.get('phone_number', '')
+        message_text = data.get('message', '')
+        
+        if not phone_number or not message_text:
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "Número de telefone e mensagem são obrigatórios"
+            }, status_code=400)
+        
+        # Get WhatsApp config from database
+        conn = await get_db_connection()
+        cursor = conn.cursor()
+        
+        if using_postgres:
+            cursor.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+        else:
+            cursor.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+        
+        config_row = cursor.fetchone()
+        
+        if not config_row:
+            conn.close()
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "WhatsApp não está configurado"
+            }, status_code=400)
+        
+        access_token = config_row[0]
+        phone_number_id = config_row[1]
+        conn.close()
+        
+        # Clean phone number (remove non-digits)
+        clean_phone = ''.join(filter(str.isdigit, phone_number))
+        
+        # Send message via WhatsApp API
+        import httpx
+        url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": clean_phone,
+            "type": "text",
+            "text": {
+                "body": message_text
+            }
+        }
+        
+        print(f"[WHATSAPP] Sending message to {clean_phone}...")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+            response_data = response.json()
+        
+        if response.status_code != 200:
+            print(f"[WHATSAPP] ❌ Error sending message: {response_data}")
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": response_data.get('error', {}).get('message', 'Erro desconhecido')
+            }, status_code=400)
+        
+        print(f"[WHATSAPP] ✅ Message sent successfully: {response_data}")
+        
+        # Add message to conversation history
+        from datetime import datetime
+        message_obj = {
+            "id": response_data.get('messages', [{}])[0].get('id', ''),
+            "content": message_text,
+            "direction": "outbound",
+            "timestamp": datetime.now().isoformat(),
+            "status": "sent"
+        }
+        
+        # Find conversation and add message
+        conversation = next((c for c in whatsapp_conversations if c['phone_number'] == phone_number), None)
+        
+        if conversation:
+            if 'messages' not in conversation:
+                conversation['messages'] = []
+            conversation['messages'].append(message_obj)
+            conversation['last_message_at'] = message_obj['timestamp']
+            conversation['last_message_preview'] = message_text[:50] + ('...' if len(message_text) > 50 else '')
+            
+            print(f"[WHATSAPP] Added message to conversation #{conversation['id']}")
+        
+        return JSONResponse({
+            "ok": True,
+            "success": True,
+            "message": "Mensagem enviada com sucesso",
+            "message_id": message_obj['id']
+        })
+        
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error sending message: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "ok": False,
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+@app.post("/api/whatsapp/conversations/{conversation_id}/mark-read")
+async def mark_conversation_read(request: Request, conversation_id: int):
+    """Mark conversation as read"""
+    require_auth(request)
+    try:
+        global whatsapp_conversations
+        
+        # Find conversation
+        conversation = next((c for c in whatsapp_conversations if c['id'] == conversation_id), None)
+        
+        if not conversation:
+            return JSONResponse({
+                "ok": False,
+                "success": False,
+                "error": "Conversa não encontrada"
+            }, status_code=404)
+        
+        # Mark as read
+        conversation['unread_count'] = 0
+        
+        print(f"[WHATSAPP] Marked conversation #{conversation_id} as read")
+        
+        return JSONResponse({
+            "ok": True,
+            "success": True
+        })
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error marking conversation as read: {str(e)}")
+        return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/whatsapp/unread-count")
 async def get_whatsapp_unread_count(request: Request):
     """Get unread message count"""
     require_auth(request)
     try:
-        # TODO: Implement unread count from database
-        # For now, return 0
+        global whatsapp_conversations
+        
+        # Count total unread messages
+        unread_count = sum(c.get('unread_count', 0) for c in whatsapp_conversations)
+        
         return JSONResponse({
             "ok": True,
-            "unread": 0
+            "unread": unread_count
         })
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error getting unread count: {str(e)}")
