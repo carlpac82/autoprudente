@@ -31,3 +31,4 @@ logs/
 cache/
 __pycache__/
 backups/
+WHATSAPP_CREDENTIALS.txt
