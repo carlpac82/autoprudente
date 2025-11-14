@@ -5201,22 +5201,62 @@ async def admin_test_whatsapp_connection(request: Request):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
     
     try:
-        # TODO: Implementar teste real com WhatsApp API
-        # Por agora retorna sucesso se houver configuração
+        import httpx
+        
         with _db_lock:
             con = _db_connect()
             try:
-                cur = con.execute("SELECT access_token, phone_number_id FROM whatsapp_config WHERE id=1")
-                row = cur.fetchone()
+                # Check if PostgreSQL
+                is_postgres = str(con.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with con.cursor() as cur:
+                        cur.execute("SELECT access_token, phone_number_id FROM whatsapp_config WHERE id=1")
+                        row = cur.fetchone()
+                else:
+                    cur = con.execute("SELECT access_token, phone_number_id FROM whatsapp_config WHERE id=1")
+                    row = cur.fetchone()
                 
                 if not row or not row[0] or not row[1]:
                     return JSONResponse({"success": False, "error": "WhatsApp não configurado"})
                 
-                # TODO: Fazer request real para WhatsApp API para validar
-                return JSONResponse({"success": True, "message": "Configuração encontrada"})
+                access_token = row[0]
+                phone_number_id = row[1]
+                
+                # Test real connection to WhatsApp API
+                url = f"https://graph.facebook.com/v18.0/{phone_number_id}"
+                headers = {"Authorization": f"Bearer {access_token}"}
+                
+                print(f"[WHATSAPP-TEST] Testing connection to: {url}")
+                
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(url, headers=headers)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        print(f"[WHATSAPP-TEST] ✅ Connection successful: {data}")
+                        return JSONResponse({
+                            "success": True, 
+                            "message": f"Conexão testada com sucesso! Phone: {data.get('display_phone_number', 'N/A')}"
+                        })
+                    else:
+                        error_msg = response.text
+                        print(f"[WHATSAPP-TEST] ❌ Connection failed: {error_msg}")
+                        return JSONResponse({
+                            "success": False, 
+                            "error": f"Erro na API do WhatsApp: {error_msg}"
+                        })
+                        
             finally:
                 con.close()
+                
+    except httpx.TimeoutException:
+        print("[WHATSAPP-TEST] ❌ Timeout")
+        return JSONResponse({"success": False, "error": "Timeout ao conectar com WhatsApp API"})
     except Exception as e:
+        print(f"[WHATSAPP-TEST] ❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"success": False, "error": str(e)})
 
 # --- Admin UI ---
