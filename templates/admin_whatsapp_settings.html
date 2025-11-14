@@ -345,8 +345,24 @@
       alert('Automações guardadas!');
     }
 
-    // Load quick replies on page load
+    // Load WhatsApp configuration on page load
     document.addEventListener('DOMContentLoaded', () => {
+      // Load config
+      fetch('/api/admin/whatsapp/get-config')
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok && data.configured) {
+            const config = data.config;
+            document.querySelector('input[name="access_token"]').value = config.access_token || '';
+            document.querySelector('input[name="phone_number_id"]').value = config.phone_number_id || '';
+            document.querySelector('input[name="business_account_id"]').value = config.business_account_id || '';
+            document.querySelector('input[name="verify_token"]').value = config.verify_token || '';
+            console.log('[WHATSAPP] Configuration loaded from database');
+          }
+        })
+        .catch(err => console.error('[WHATSAPP] Error loading config:', err));
+      
+      // Load quick replies
       fetch('/api/whatsapp/quick-replies')
         .then(r => r.json())
         .then(data => {

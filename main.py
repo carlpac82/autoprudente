@@ -4988,6 +4988,47 @@ async def admin_update_inspection_permissions(request: Request, user_id: int):
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/admin/whatsapp/get-config")
+async def admin_get_whatsapp_config(request: Request):
+    """Get WhatsApp connection configuration"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        with _db_lock:
+            con = _db_connect()
+            try:
+                is_postgres = str(con.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with con.cursor() as cur:
+                        cur.execute("SELECT access_token, phone_number_id, business_account_id, verify_token FROM whatsapp_config WHERE id=1")
+                        row = cur.fetchone()
+                else:
+                    cur = con.execute("SELECT access_token, phone_number_id, business_account_id, verify_token FROM whatsapp_config WHERE id=1")
+                    row = cur.fetchone()
+                
+                if not row:
+                    return JSONResponse({"ok": True, "configured": False, "config": {}})
+                
+                config = {
+                    "access_token": row[0] or "",
+                    "phone_number_id": row[1] or "",
+                    "business_account_id": row[2] or "",
+                    "verify_token": row[3] or ""
+                }
+                
+                return JSONResponse({"ok": True, "configured": True, "config": config})
+            finally:
+                con.close()
+    except Exception as e:
+        print(f"[WHATSAPP-CONFIG] ❌ Error loading config: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/admin/whatsapp/save-config")
 async def admin_save_whatsapp_config(request: Request):
     """Save WhatsApp connection configuration"""
