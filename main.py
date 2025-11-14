@@ -5003,33 +5003,76 @@ async def admin_save_whatsapp_config(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                # Create table if not exists
-                con.execute("""
-                    CREATE TABLE IF NOT EXISTS whatsapp_config (
-                        id INTEGER PRIMARY KEY,
-                        access_token TEXT,
-                        phone_number_id TEXT,
-                        business_account_id TEXT,
-                        verify_token TEXT,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
                 
-                # Upsert configuration
-                con.execute("""
-                    INSERT OR REPLACE INTO whatsapp_config (id, access_token, phone_number_id, business_account_id, verify_token, updated_at)
-                    VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                """, (
-                    body.get('access_token', ''),
-                    body.get('phone_number_id', ''),
-                    body.get('business_account_id', ''),
-                    body.get('verify_token', '')
-                ))
-                con.commit()
+                # Create table if not exists (compatible with both SQLite and PostgreSQL)
+                if is_postgres:
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_config (
+                            id INTEGER PRIMARY KEY,
+                            access_token TEXT,
+                            phone_number_id TEXT,
+                            business_account_id TEXT,
+                            verify_token TEXT,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                else:
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_config (
+                            id INTEGER PRIMARY KEY,
+                            access_token TEXT,
+                            phone_number_id TEXT,
+                            business_account_id TEXT,
+                            verify_token TEXT,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                
+                # Upsert configuration (different syntax for PostgreSQL vs SQLite)
+                if is_postgres:
+                    with con.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO whatsapp_config (id, access_token, phone_number_id, business_account_id, verify_token, updated_at)
+                            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (id) DO UPDATE SET
+                                access_token = EXCLUDED.access_token,
+                                phone_number_id = EXCLUDED.phone_number_id,
+                                business_account_id = EXCLUDED.business_account_id,
+                                verify_token = EXCLUDED.verify_token,
+                                updated_at = CURRENT_TIMESTAMP
+                        """, (
+                            1,
+                            body.get('access_token', ''),
+                            body.get('phone_number_id', ''),
+                            body.get('business_account_id', ''),
+                            body.get('verify_token', '')
+                        ))
+                    con.commit()
+                else:
+                    con.execute("""
+                        INSERT OR REPLACE INTO whatsapp_config (id, access_token, phone_number_id, business_account_id, verify_token, updated_at)
+                        VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (
+                        body.get('access_token', ''),
+                        body.get('phone_number_id', ''),
+                        body.get('business_account_id', ''),
+                        body.get('verify_token', '')
+                    ))
+                    con.commit()
                 
                 return JSONResponse({"ok": True, "message": "WhatsApp configuration saved successfully"})
             finally:
                 con.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/whatsapp/quick-replies")
+async def get_whatsapp_quick_replies(request: Request):
+    """Get WhatsApp quick replies"""
+    try:
+        # TODO: Implementar depois - por agora retorna vazio
+        return JSONResponse({"ok": True, "quick_replies": []})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
