@@ -111,6 +111,11 @@ VEHICLES = {
     'fiat 500 electric': 'MINI Auto',
     'fiat 500e': 'MINI Auto',
     'fiat 500 e': 'MINI Auto',
+    'fiat 500 hybrid aut': 'MINI Auto',  # FIX: Fiat 500 Hybrid automático (ponto removido na normalização)
+    'fiat 500 hybrid auto': 'MINI Auto',  # FIX: Variação com "auto"
+    'fiat panda hybrid aut': 'MINI Auto',  # FIX: Fiat Panda Hybrid automático (ponto removido na normalização)
+    'fiat panda hybrid auto': 'MINI Auto',  # FIX: Variação com "auto"
+    'fiat panda auto': 'MINI Auto',  # FIX: Fiat Panda automático
     'kia picanto auto': 'MINI Auto',
     'mitsubishi spacestar auto': 'MINI Auto',
     'peugeot 108 auto': 'MINI Auto',
@@ -295,7 +300,7 @@ VEHICLES = {
     'mg ehs auto': 'SUV Auto',
     'mg zs auto': 'SUV Auto',
     'million jeep renegade auto': 'SUV Auto',
-    'nissan juke auto': 'Crossover Auto',  # K1
+    'nissan juke auto': 'SUV Auto',  # FIX: L1 não K1
     'nissan qashqai auto': 'SUV Auto',
     'opel crossland x auto': 'SUV Auto',
     'opel grandland x': 'SUV Auto',
@@ -550,6 +555,7 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     # 1. PRIORIDADE: Consultar dicionário VEHICLES para match exato
     # Normalizar nome do carro para busca
     car_normalized = car
+    car_normalized = car_normalized.replace('.', '')  # Remover pontos
     car_normalized = re.sub(r'\s+', ' ', car_normalized)  # Normalizar espaços
     
     # Tentar match direto
