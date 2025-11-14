@@ -1437,8 +1437,9 @@
                 console.log(`🔧 [HIERARCHY] Applying dependency rules for ${currentLocation}:`, rules);
                 
                 let adjustedCount = 0;
-                const allDays = [...selectedDaysAuto]; // Use selected days
-                console.log(`🔧 [HIERARCHY] Processing ${allDays.length} days: ${allDays.join(', ')}`);
+                // ✅ FIX: Process ALL days that have prices, not just selected chips
+                const allDays = Array.from(new Set([...selectedDaysAuto, ...Object.keys(automatedPricesByGroup).flatMap(g => Object.keys(automatedPricesByGroup[g]).map(d => parseInt(d)))])).sort((a,b) => a-b);
+                console.log(`🔧 [HIERARCHY] Processing ${allDays.length} days (selected: ${selectedDaysAuto.length}, with prices: ${allDays.length}): ${allDays.join(', ')}`);
                 
                 // Process each group that has dependencies
                 for (const [targetGroup, dependencies] of Object.entries(rules)) {
