@@ -398,6 +398,34 @@
             </div>
           </div>
 
+          <!-- Google Contacts Integration -->
+          <div class="border rounded-lg p-4 bg-purple-50">
+            <h4 class="font-medium mb-3 flex items-center gap-2">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+              Sincronizar com Google Contacts
+            </h4>
+            <p class="text-sm text-gray-600 mb-4">Importe contactos directamente da sua conta Google com fotos de perfil</p>
+            <div class="space-y-3">
+              <button onclick="authorizeGoogleContacts()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 488 512">
+                  <path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"/>
+                </svg>
+                Autorizar Google
+              </button>
+              <button onclick="syncGoogleContacts()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#f59e0b] transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Sincronizar Contactos
+              </button>
+              <p class="text-xs text-gray-500">
+                <strong>Nota:</strong> É necessário configurar as variáveis de ambiente GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Render.
+              </p>
+            </div>
+          </div>
+
           <!-- Stats -->
           <div class="border rounded-lg p-4 bg-blue-50">
             <h4 class="font-medium mb-2">Estatísticas</h4>
@@ -703,6 +731,61 @@
       }
       
       return Array.from(contacts.values());
+    }
+
+    async function authorizeGoogleContacts() {
+      try {
+        const response = await fetch('/api/whatsapp/google-contacts/auth-url');
+        const data = await response.json();
+        
+        if (data.ok && data.auth_url) {
+          // Open Google OAuth in popup
+          const width = 600;
+          const height = 700;
+          const left = (screen.width - width) / 2;
+          const top = (screen.height - height) / 2;
+          
+          window.open(
+            data.auth_url,
+            'Google Authorization',
+            `width=${width},height=${height},left=${left},top=${top}`
+          );
+        } else {
+          alert('❌ Erro: ' + (data.error || 'Não foi possível obter URL de autorização'));
+        }
+      } catch (error) {
+        console.error('Error authorizing Google:', error);
+        alert('❌ Erro ao autorizar Google: ' + error.message);
+      }
+    }
+
+    async function syncGoogleContacts() {
+      if (!confirm('Deseja sincronizar contactos do Google? Isto pode demorar alguns segundos.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/whatsapp/google-contacts/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✅ ${data.imported} contactos importados do Google!\n${data.skipped} contactos ignorados (duplicados).`);
+          loadContactStats();
+        } else {
+          if (response.status === 401) {
+            alert('❌ Google Contacts não autorizado.\nPor favor, clique em "Autorizar Google" primeiro.');
+          } else {
+            alert('❌ Erro: ' + data.error);
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing Google contacts:', error);
+        alert('❌ Erro ao sincronizar: ' + error.message);
+      }
     }
 
     async function loadContactStats() {

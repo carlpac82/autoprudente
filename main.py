@@ -5068,6 +5068,14 @@ async def admin_save_whatsapp_config(request: Request):
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                            service VARCHAR(50) PRIMARY KEY,
+                            access_token TEXT,
+                            refresh_token TEXT,
+                            expires_at TIMESTAMP
+                        )
+                    """)
                 else:
                     con.execute("""
                         CREATE TABLE IF NOT EXISTS whatsapp_config (
@@ -5077,6 +5085,14 @@ async def admin_save_whatsapp_config(request: Request):
                             business_account_id TEXT,
                             verify_token TEXT,
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                            service TEXT PRIMARY KEY,
+                            access_token TEXT,
+                            refresh_token TEXT,
+                            expires_at TEXT
                         )
                     """)
                 
@@ -5450,6 +5466,75 @@ async def get_whatsapp_conversations(request: Request):
         print(f"[WHATSAPP] ❌ Error loading conversations: {str(e)}")
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/whatsapp/contacts/verify")
+async def verify_whatsapp_contact(request: Request):
+    """Verify if a phone number has WhatsApp and get profile picture"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        phone = data.get('phone_number', '')
+        
+        if not phone:
+            return JSONResponse({
+                "ok": False,
+                "error": "Número de telefone é obrigatório"
+            }, status_code=400)
+        
+        # Get WhatsApp config
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+                        config_row = cur.fetchone()
+                else:
+                    cur = conn.execute("SELECT access_token, phone_number_id FROM whatsapp_config LIMIT 1")
+                    config_row = cur.fetchone()
+                
+                if not config_row:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "WhatsApp não configurado"
+                    }, status_code=400)
+                
+                access_token = config_row[0]
+                phone_number_id = config_row[1]
+            finally:
+                conn.close()
+        
+        clean_phone = ''.join(filter(str.isdigit, phone))
+        
+        # Try to get contact profile
+        import httpx
+        url = f"https://graph.facebook.com/v18.0/{clean_phone}/profile_picture"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        has_whatsapp = False
+        profile_picture_url = None
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    has_whatsapp = True
+                    # Get redirect URL for profile picture
+                    profile_picture_url = str(response.url)
+        except:
+            pass
+        
+        return JSONResponse({
+            "ok": True,
+            "has_whatsapp": has_whatsapp,
+            "profile_picture_url": profile_picture_url,
+            "phone_number": clean_phone
+        })
+        
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error verifying contact: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/whatsapp/contacts/add")
 async def add_whatsapp_contact(request: Request):
     """Add a new WhatsApp contact and create a conversation"""
@@ -5461,6 +5546,7 @@ async def add_whatsapp_contact(request: Request):
         name = data.get('name', '')
         # Accept both 'phone' and 'phone_number' for compatibility
         phone = data.get('phone') or data.get('phone_number', '')
+        verify_whatsapp = data.get('verify_whatsapp', False)
         
         print(f"[WHATSAPP] Received data: name='{name}', phone='{phone}'")
         
@@ -5471,10 +5557,53 @@ async def add_whatsapp_contact(request: Request):
                 "error": "Nome e telefone são obrigatórios"
             }, status_code=400)
         
+        # Verify WhatsApp if requested
+        has_whatsapp = None
+        profile_picture_url = None
+        
+        if verify_whatsapp:
+            try:
+                with _db_lock:
+                    conn = _db_connect()
+                    try:
+                        is_postgres = str(conn.__class__).find('psycopg') >= 0
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute("SELECT access_token FROM whatsapp_config LIMIT 1")
+                                config_row = cur.fetchone()
+                        else:
+                            cur = conn.execute("SELECT access_token FROM whatsapp_config LIMIT 1")
+                            config_row = cur.fetchone()
+                        
+                        if config_row:
+                            access_token = config_row[0]
+                            clean_phone = ''.join(filter(str.isdigit, phone))
+                            
+                            import httpx
+                            url = f"https://graph.facebook.com/v18.0/{clean_phone}/profile_picture"
+                            headers = {"Authorization": f"Bearer {access_token}"}
+                            
+                            async with httpx.AsyncClient() as client:
+                                response = await client.get(url, headers=headers, timeout=10.0)
+                                if response.status_code == 200:
+                                    has_whatsapp = True
+                                    profile_picture_url = str(response.url)
+                                else:
+                                    has_whatsapp = False
+                    finally:
+                        conn.close()
+            except Exception as e:
+                print(f"[WHATSAPP] Warning: Could not verify WhatsApp: {str(e)}")
+        
         # Check if conversation already exists for this phone number
         existing = next((c for c in whatsapp_conversations if c['phone_number'] == phone), None)
         
         if existing:
+            # Update profile picture if found
+            if profile_picture_url:
+                existing['profile_picture_url'] = profile_picture_url
+                existing['has_whatsapp'] = has_whatsapp
+            
             print(f"[WHATSAPP] Conversation already exists for {phone}")
             return JSONResponse({
                 "ok": True,
@@ -5483,7 +5612,9 @@ async def add_whatsapp_contact(request: Request):
                 "contact": {
                     "name": name,
                     "phone": phone,
-                    "id": existing['id']
+                    "id": existing['id'],
+                    "has_whatsapp": has_whatsapp,
+                    "profile_picture_url": profile_picture_url
                 },
                 "conversation": existing
             })
@@ -5500,12 +5631,16 @@ async def add_whatsapp_contact(request: Request):
             "unread_count": 0,
             "status": "open",
             "assigned_to": None,
-            "messages": []
+            "messages": [],
+            "has_whatsapp": has_whatsapp,
+            "profile_picture_url": profile_picture_url
         }
         
         whatsapp_conversations.append(new_conversation)
         
         print(f"[WHATSAPP] ✅ Created conversation #{new_conversation['id']} for {name} - {phone}")
+        if has_whatsapp is not None:
+            print(f"[WHATSAPP] WhatsApp verified: {has_whatsapp}")
         print(f"[WHATSAPP] Total conversations: {len(whatsapp_conversations)}")
         
         return JSONResponse({
@@ -5515,7 +5650,9 @@ async def add_whatsapp_contact(request: Request):
             "contact": {
                 "name": name,
                 "phone": phone,
-                "id": new_conversation['id']
+                "id": new_conversation['id'],
+                "has_whatsapp": has_whatsapp,
+                "profile_picture_url": profile_picture_url
             },
             "conversation": new_conversation
         })
@@ -5662,6 +5799,232 @@ async def import_whatsapp_contacts(request: Request):
         import traceback
         traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/whatsapp/google-contacts/auth-url")
+async def get_google_contacts_auth_url(request: Request):
+    """Get Google OAuth URL for contacts access"""
+    require_auth(request)
+    try:
+        # Google OAuth2 configuration
+        client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'https://carrental-api-5f8q.onrender.com/api/whatsapp/google-contacts/callback')
+        
+        if not client_id:
+            return JSONResponse({
+                "ok": False,
+                "error": "Google Client ID não configurado"
+            }, status_code=400)
+        
+        # Scopes for People API (contacts)
+        scopes = [
+            'https://www.googleapis.com/auth/contacts.readonly',
+            'https://www.googleapis.com/auth/userinfo.profile'
+        ]
+        
+        auth_url = (
+            f"https://accounts.google.com/o/oauth2/v2/auth?"
+            f"client_id={client_id}&"
+            f"redirect_uri={redirect_uri}&"
+            f"response_type=code&"
+            f"scope={'+'.join(scopes)}&"
+            f"access_type=offline&"
+            f"prompt=consent"
+        )
+        
+        return JSONResponse({
+            "ok": True,
+            "auth_url": auth_url
+        })
+    except Exception as e:
+        print(f"[GOOGLE] ❌ Error generating auth URL: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/whatsapp/google-contacts/callback")
+async def google_contacts_callback(request: Request, code: str = None):
+    """Handle Google OAuth callback"""
+    try:
+        if not code:
+            return HTMLResponse("<h1>Erro: Código de autorização não recebido</h1>")
+        
+        client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
+        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'https://carrental-api-5f8q.onrender.com/api/whatsapp/google-contacts/callback')
+        
+        # Exchange code for tokens
+        import httpx
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(token_url, data=data, timeout=30.0)
+            tokens = response.json()
+        
+        if 'access_token' not in tokens:
+            return HTMLResponse(f"<h1>Erro ao obter token: {tokens.get('error', 'Desconhecido')}</h1>")
+        
+        # Store tokens in database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO google_oauth_tokens (service, access_token, refresh_token, expires_at)
+                            VALUES ('contacts', %s, %s, NOW() + INTERVAL '3600 seconds')
+                            ON CONFLICT (service) DO UPDATE 
+                            SET access_token = EXCLUDED.access_token,
+                                refresh_token = EXCLUDED.refresh_token,
+                                expires_at = EXCLUDED.expires_at
+                        """, (tokens['access_token'], tokens.get('refresh_token')))
+                    conn.commit()
+                else:
+                    conn.execute("""
+                        INSERT OR REPLACE INTO google_oauth_tokens (service, access_token, refresh_token, expires_at)
+                        VALUES ('contacts', ?, ?, datetime('now', '+3600 seconds'))
+                    """, (tokens['access_token'], tokens.get('refresh_token')))
+                    conn.commit()
+            finally:
+                conn.close()
+        
+        return HTMLResponse("""
+            <html>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1 style="color: #009cb6;">✅ Autorização Concluída!</h1>
+                    <p>Pode fechar esta janela e voltar ao WhatsApp Dashboard.</p>
+                    <script>
+                        setTimeout(() => window.close(), 3000);
+                    </script>
+                </body>
+            </html>
+        """)
+    except Exception as e:
+        print(f"[GOOGLE] ❌ Error in OAuth callback: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return HTMLResponse(f"<h1>Erro: {str(e)}</h1>")
+
+@app.post("/api/whatsapp/google-contacts/sync")
+async def sync_google_contacts(request: Request):
+    """Sync contacts from Google"""
+    require_auth(request)
+    try:
+        global whatsapp_conversations, whatsapp_conversation_counter
+        
+        # Get access token
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT access_token FROM google_oauth_tokens WHERE service = 'contacts' AND expires_at > NOW()")
+                        token_row = cur.fetchone()
+                else:
+                    cur = conn.execute("SELECT access_token FROM google_oauth_tokens WHERE service = 'contacts' AND expires_at > datetime('now')")
+                    token_row = cur.fetchone()
+                
+                if not token_row:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "Google Contacts não está autorizado. Por favor, autorize primeiro."
+                    }, status_code=401)
+                
+                access_token = token_row[0]
+            finally:
+                conn.close()
+        
+        # Fetch contacts from Google People API
+        import httpx
+        url = "https://people.googleapis.com/v1/people/me/connections?personFields=names,phoneNumbers,photos"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=30.0)
+            data = response.json()
+        
+        if response.status_code != 200:
+            return JSONResponse({
+                "ok": False,
+                "error": f"Erro ao buscar contactos: {data.get('error', {}).get('message', 'Desconhecido')}"
+            }, status_code=400)
+        
+        # Process contacts
+        imported_count = 0
+        skipped_count = 0
+        
+        for person in data.get('connections', []):
+            names = person.get('names', [])
+            phone_numbers = person.get('phoneNumbers', [])
+            photos = person.get('photos', [])
+            
+            if not names or not phone_numbers:
+                skipped_count += 1
+                continue
+            
+            name = names[0].get('displayName', '')
+            phone = phone_numbers[0].get('canonicalForm', phone_numbers[0].get('value', ''))
+            photo_url = photos[0].get('url', '') if photos else None
+            
+            # Clean phone
+            clean_phone = ''.join(filter(str.isdigit, phone))
+            
+            if len(clean_phone) < 9:
+                skipped_count += 1
+                continue
+            
+            # Check if exists
+            existing = next((c for c in whatsapp_conversations if c['phone_number'] == clean_phone), None)
+            
+            if existing:
+                # Update with Google photo if available
+                if photo_url and not existing.get('profile_picture_url'):
+                    existing['profile_picture_url'] = photo_url
+                skipped_count += 1
+                continue
+            
+            # Create new conversation
+            from datetime import datetime
+            whatsapp_conversation_counter += 1
+            new_conversation = {
+                "id": whatsapp_conversation_counter,
+                "name": name,
+                "phone_number": clean_phone,
+                "last_message_at": datetime.now().isoformat(),
+                "last_message_preview": "Importado do Google",
+                "unread_count": 0,
+                "status": "open",
+                "assigned_to": None,
+                "messages": [],
+                "profile_picture_url": photo_url
+            }
+            
+            whatsapp_conversations.append(new_conversation)
+            imported_count += 1
+        
+        print(f"[GOOGLE] ✅ Synced {imported_count} contacts from Google, skipped {skipped_count}")
+        
+        return JSONResponse({
+            "ok": True,
+            "success": True,
+            "imported": imported_count,
+            "skipped": skipped_count,
+            "message": f"{imported_count} contactos importados do Google, {skipped_count} ignorados"
+        })
+        
+    except Exception as e:
+        print(f"[GOOGLE] ❌ Error syncing contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/whatsapp/conversations/{conversation_id}/messages")
 async def get_conversation_messages(request: Request, conversation_id: int):

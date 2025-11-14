@@ -263,12 +263,18 @@
                 <div class="conversation-item p-4 border-b cursor-pointer ${conv.id === currentConversation?.id ? 'active' : ''}"
                      onclick="selectConversation(${conv.id})">
                     <div class="flex items-start gap-3">
-                        <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0">
-                            <i class="far fa-user text-white"></i>
-                        </div>
+                        ${conv.profile_picture_url ? 
+                            `<img src="${conv.profile_picture_url}" alt="${conv.name}" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0" style="display: none;">
+                                 <i class="far fa-user text-white"></i>
+                             </div>` :
+                            `<div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0">
+                                 <i class="far fa-user text-white"></i>
+                             </div>`
+                        }
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <h4 class="font-semibold truncate">${conv.name || conv.phone_number}</h4>
+                                <h4 class="font-semibold truncate">${conv.name || conv.phone_number}${conv.has_whatsapp === false ? ' ⚠️' : ''}</h4>
                                 <span class="text-xs text-gray-500">${formatTime(conv.last_message_at)}</span>
                             </div>
                             <p class="text-sm text-gray-600 truncate">${conv.last_message_preview || 'Nova conversa'}</p>
@@ -276,6 +282,7 @@
                                 ${conv.unread_count > 0 ? `<span class="text-xs bg-[#009cb6] text-white px-2 py-0.5 rounded-full">${conv.unread_count}</span>` : ''}
                                 ${conv.status === 'pending' ? '<span class="text-xs bg-[#f59e0b] text-white px-2 py-0.5 rounded-full">Pendente</span>' : ''}
                                 ${conv.assigned_to ? `<span class="text-xs bg-[#7ec6e0] text-white px-2 py-0.5 rounded-full">${conv.assigned_to}</span>` : ''}
+                                ${conv.has_whatsapp === true ? '<span class="text-xs text-green-600" title="WhatsApp verificado">✓</span>' : ''}
                             </div>
                         </div>
                     </div>
