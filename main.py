@@ -3855,18 +3855,21 @@ def require_auth(request: Request):
     
     if not request.session.get("auth", False):
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # Enforce inactivity timeout
-    try:
-        now = int(datetime.now(timezone.utc).timestamp())
-        last = int(request.session.get("last_active_ts", 0))
-        if last and now - last > IDLE_TIMEOUT_SECONDS:
-            request.session.clear()
-            raise HTTPException(status_code=401, detail="Session expired")
-        # update last activity timestamp
-        request.session["last_active_ts"] = now
-    except Exception:
-        # if any parsing error, refresh the timestamp anyway
-        request.session["last_active_ts"] = int(datetime.now(timezone.utc).timestamp())
+    
+    # Enforce inactivity timeout (exceto para role "support" - atendimento)
+    user_role = request.session.get("role", "user")
+    if user_role != "support":  # Role "support" não expira sessão
+        try:
+            now = int(datetime.now(timezone.utc).timestamp())
+            last = int(request.session.get("last_active_ts", 0))
+            if last and now - last > IDLE_TIMEOUT_SECONDS:
+                request.session.clear()
+                raise HTTPException(status_code=401, detail="Session expired")
+            # update last activity timestamp
+            request.session["last_active_ts"] = now
+        except Exception:
+            # if any parsing error, refresh the timestamp anyway
+            request.session["last_active_ts"] = int(datetime.now(timezone.utc).timestamp())
 
 def require_admin(request: Request):
     require_auth(request)
@@ -3878,6 +3881,7 @@ def require_role_access(request: Request, allowed_pages: list = None):
     Restringe acesso baseado no role do utilizador.
     
     - Admin: acesso total
+    - Support (Atendimento): apenas WhatsApp e Inspeção de Veículos
     - Recepcionist: apenas páginas permitidas (veículos, histórico)
     - Outros: acesso normal
     
@@ -3893,14 +3897,38 @@ def require_role_access(request: Request, allowed_pages: list = None):
     
     # Verificar role do utilizador
     user_role = request.session.get("role", "")
+    current_path = request.url.path
+    
+    # Role "support" (atendimento): apenas WhatsApp e Inspeção de Veículos
+    if user_role == "support":
+        support_allowed_pages = [
+            "/whatsapp",
+            "/api/whatsapp",
+            "/vehicle-inspection",
+            "/inspection-history",
+            "/api/inspections",
+            "/api/inspection",
+            "/api/vehicles",
+            "/healthz",
+            "/static/",
+            "/logout",
+            "/api/profile-picture",
+            "/api/current-user",
+            "/api/user-settings"
+        ]
+        is_allowed = any(current_path.startswith(page) for page in support_allowed_pages)
+        if not is_allowed:
+            raise HTTPException(
+                status_code=403, 
+                detail="Acesso negado. Role 'support' só pode aceder a WhatsApp e Inspeção de Veículos."
+            )
+        return
     
     # Se não for rececionista, deixa passar
     if user_role != "recepcionist":
         return
     
     # Rececionista: verificar se está numa página permitida
-    current_path = request.url.path
-    
     # Páginas permitidas para rececionistas (padrão)
     if allowed_pages is None:
         allowed_pages = [
@@ -4857,7 +4885,7 @@ async def admin_users_delete(request: Request, user_id: int):
 async def admin_update_inspection_permissions(request: Request, user_id: int):
     """
     Update user role and inspection access permission.
-    Body: {role: "user|receptionist|admin", can_access_inspection: 0|1}
+    Body: {role: "user|receptionist|support|admin", can_access_inspection: 0|1}
     """
     try:
         require_admin(request)
@@ -4870,7 +4898,7 @@ async def admin_update_inspection_permissions(request: Request, user_id: int):
         can_access = int(body.get("can_access_inspection", 0))
         
         # Validate role
-        if role not in ["user", "receptionist", "admin"]:
+        if role not in ["user", "receptionist", "support", "admin"]:
             return JSONResponse({"ok": False, "error": "Invalid role"}, status_code=400)
         
         with _db_lock:
