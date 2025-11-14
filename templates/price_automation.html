@@ -1628,7 +1628,8 @@
                 return adjustedCount;
                 
             } catch (error) {
-                console.error('🔧 [HIERARCHY] Error applying rules:', error);
+                console.error('🔧 [HIERARCHY] ❌ ERROR applying rules:', error);
+                console.error('🔧 [HIERARCHY] ❌ Stack trace:', error.stack);
                 return 0;
             }
         }
@@ -4691,7 +4692,9 @@
                 console.log(` Auto: ${autoPricesGenerated}, Real: ${realPricesGenerated}`);
                 
                 // ✅ APPLY GROUP HIERARCHY RULES (enforce D >= B1, B2, etc)
+                console.log('🔧 [HIERARCHY-CALL] About to call applyGroupHierarchyRules()...');
                 const adjustedPrices = await applyGroupHierarchyRules();
+                console.log(`🔧 [HIERARCHY-CALL] Function returned: ${adjustedPrices} adjustments`);
                 if (adjustedPrices > 0) {
                     console.log(`🔧 [HIERARCHY] Adjusted ${adjustedPrices} prices to respect dependency rules`);
                 }
