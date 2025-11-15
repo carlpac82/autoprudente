@@ -818,15 +818,6 @@
                         </button>
                     </div>
                     
-                    <!-- Month Selection Chips (like days) -->
-                    <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <div id="historyMonthChips" class="flex flex-wrap gap-2">
-                                <!-- Chips de meses serão gerados aqui -->
-                            </div>
-                        </div>
-                    </div>
-                    
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsAutomated">
                         <!-- Botões de meses (ver histórico individual) serão gerados aqui -->
                     </div>
@@ -5920,12 +5911,6 @@
                 // Clear month buttons container
                 containerAutomated.innerHTML = '';
                 
-                // Clear month chips container
-                const chipsContainer = document.getElementById('historyMonthChips');
-                if (chipsContainer) {
-                    chipsContainer.innerHTML = '';
-                }
-                
                 // CRITICAL: Also clear the history table/cards container
                 const historyTableContainer = document.getElementById('historyTableContainer');
                 if (historyTableContainer) {
@@ -5934,11 +5919,6 @@
                     const versionCards = historyTableContainer.querySelectorAll('.history-version-table');
                     versionCards.forEach(card => card.remove());
                     console.log('📅 [GENERATE-HISTORY] Cleared', versionCards.length, 'version cards from previous view');
-                }
-                
-                // Initialize selected months array if not exists
-                if (!window.selectedMonthsHistory) {
-                    window.selectedMonthsHistory = [];
                 }
                 
                 // Store available month data for later use
@@ -5969,25 +5949,6 @@
                         };
                     }
                     
-                    // Create CHIP (short month name, for selection)
-                    if (chipsContainer && hasData) {
-                        const chip = document.createElement('button');
-                        const shortMonth = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                        const isSelected = window.selectedMonthsHistory.includes(monthKey);
-                        
-                        chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                            isSelected 
-                                ? 'bg-[#009cb6] text-white' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`;
-                        chip.textContent = shortMonth;
-                        chip.title = monthName;
-                        chip.dataset.monthKey = monthKey;
-                        chip.onclick = () => toggleMonthSelection(monthKey);
-                        
-                        chipsContainer.appendChild(chip);
-                    }
-                    
                     // Create BUTTON (full month name, to view history)
                     const buttonAutomated = document.createElement('button');
                     buttonAutomated.className = `p-3 border rounded text-sm ${hasData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
@@ -6014,29 +5975,6 @@
                 containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-red-500">Error loading history</div>';
                 showNotification('Error loading search history', 'error');
             }
-        }
-        
-        // Toggle month selection (like day chips)
-        function toggleMonthSelection(monthKey) {
-            const index = window.selectedMonthsHistory.indexOf(monthKey);
-            if (index > -1) {
-                window.selectedMonthsHistory.splice(index, 1);
-            } else {
-                window.selectedMonthsHistory.push(monthKey);
-            }
-            
-            // Update chip visual
-            const chip = document.querySelector(`[data-month-key="${monthKey}"]`);
-            if (chip) {
-                const isSelected = window.selectedMonthsHistory.includes(monthKey);
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isSelected 
-                        ? 'bg-[#009cb6] text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`;
-            }
-            
-            console.log('📅 Selected months:', window.selectedMonthsHistory);
         }
         
 
