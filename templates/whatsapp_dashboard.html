@@ -385,17 +385,26 @@
 
         async function loadConversations(status = null) {
             try {
-                const url = status ? `/api/whatsapp/conversations?status=${status}` : '/api/whatsapp/conversations';
+                console.log('[LOAD CONVERSATIONS] Fetching...', status ? `(status: ${status})` : '');
+                const timestamp = Date.now(); // Cache bust
+                const url = status 
+                    ? `/api/whatsapp/conversations?status=${status}&_=${timestamp}` 
+                    : `/api/whatsapp/conversations?_=${timestamp}`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
+                console.log('[LOAD CONVERSATIONS] Received:', data.conversations?.length, 'conversations');
+                
                 if (data.success) {
                     // Backend já ordena por mais recente primeiro
-                    conversations = data.conversations;
+                    conversations = data.conversations || [];
                     renderConversations();
+                    console.log('[LOAD CONVERSATIONS] Rendered!');
+                } else {
+                    console.error('[LOAD CONVERSATIONS] Error:', data.error);
                 }
             } catch (error) {
-                console.error('Error loading conversations:', error);
+                console.error('[LOAD CONVERSATIONS] Exception:', error);
             }
         }
 
@@ -495,14 +504,22 @@
 
         async function loadContacts() {
             try {
-                const response = await fetch('/api/whatsapp/conversations');
+                console.log('[LOAD CONTACTS] Fetching...');
+                const response = await fetch('/api/whatsapp/conversations?_=' + Date.now()); // Cache bust
                 const data = await response.json();
                 
+                console.log('[LOAD CONTACTS] Received:', data.conversations?.length, 'contacts');
+                
                 if (data.success) {
-                    renderContacts(data.conversations);
+                    // Update global conversations array
+                    conversations = data.conversations || [];
+                    renderContacts(conversations);
+                    console.log('[LOAD CONTACTS] Rendered!');
+                } else {
+                    console.error('[LOAD CONTACTS] Error:', data.error);
                 }
             } catch (error) {
-                console.error('Error loading contacts:', error);
+                console.error('[LOAD CONTACTS] Exception:', error);
             }
         }
 
@@ -1127,18 +1144,24 @@
 
                 if (data.success) {
                     closeAddContactModal();
+                    
+                    console.log('[ADD CONTACT] Success! Contact ID:', data.contact?.id);
+                    console.log('[ADD CONTACT] Waiting for DB commit...');
+                    
+                    // Delay para garantir commit da BD
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    console.log('[ADD CONTACT] Reloading lists...');
+                    
+                    // SEMPRE recarregar AMBAS as listas
+                    await Promise.all([
+                        loadContacts(),
+                        loadConversations()
+                    ]);
+                    
+                    console.log('[ADD CONTACT] Lists reloaded!');
+                    
                     alert('✅ Contacto adicionado com sucesso!');
-                    
-                    // Small delay to ensure DB commit completes
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    
-                    // Reload appropriate tab
-                    const contactsListVisible = !document.getElementById('contacts-list').classList.contains('hidden');
-                    if (contactsListVisible) {
-                        await loadContacts();
-                    } else {
-                        await loadConversations();
-                    }
                 } else {
                     alert('Erro ao adicionar contacto: ' + (data.error || 'Desconhecido'));
                 }
