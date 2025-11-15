@@ -5072,24 +5072,32 @@ def _ensure_whatsapp_config_token_column(con, is_postgres):
     try:
         if is_postgres:
             # First, check if column exists to avoid errors
-            with con.cursor() as cur:
-                cur.execute("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='whatsapp_config' AND column_name='token_expires_at'
-                """)
-                exists = cur.fetchone()
-            
-            if not exists:
+            try:
                 with con.cursor() as cur:
                     cur.execute("""
-                        ALTER TABLE whatsapp_config
-                        ADD COLUMN token_expires_at TIMESTAMP
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='whatsapp_config' AND column_name='token_expires_at'
                     """)
-                con.commit()
-                print("[WHATSAPP] ✅ Added token_expires_at column (PostgreSQL)")
-            else:
-                print("[WHATSAPP] Column token_expires_at already exists (PostgreSQL)")
+                    exists = cur.fetchone()
+                
+                if not exists:
+                    with con.cursor() as cur:
+                        cur.execute("""
+                            ALTER TABLE whatsapp_config
+                            ADD COLUMN token_expires_at TIMESTAMP
+                        """)
+                    con.commit()
+                    print("[WHATSAPP] ✅ Added token_expires_at column (PostgreSQL)")
+                else:
+                    print("[WHATSAPP] Column token_expires_at already exists (PostgreSQL)")
+            except Exception as e:
+                # If any error, rollback the transaction to reset state
+                try:
+                    con.rollback()
+                except:
+                    pass
+                print(f"[WHATSAPP] Column check/add handled: {str(e)}")
         else:
             # SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we try-catch
             try:
@@ -5106,6 +5114,11 @@ def _ensure_whatsapp_config_token_column(con, is_postgres):
                     raise
     except Exception as e:
         print(f"[WHATSAPP] Error ensuring token_expires_at column: {str(e)}")
+        # Rollback to clear any failed transaction
+        try:
+            con.rollback()
+        except:
+            pass
         # Don't raise - continue even if column already exists
 
 def _get_whatsapp_config_row():
