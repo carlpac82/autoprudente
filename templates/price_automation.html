@@ -6385,8 +6385,17 @@
                             <div class="flex-1">
                                 <h3 class="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
                                     <span>Versão ${index + 1}</span>
+                                    ${historyData.periodInfo ? `<span class="px-2 py-0.5 bg-[#8b5cf6] text-white text-[10px] font-bold rounded uppercase">Período</span>` : ''}
                                     ${historyData.search_type === 'automated' ? '<span class="px-2 py-0.5 bg-[#f4ad0f] text-white text-[10px] font-bold rounded uppercase">Auto</span>' : '<span class="px-2 py-0.5 bg-[#009cb6] text-white text-[10px] font-bold rounded uppercase">Current</span>'}
                                 </h3>
+                                ${historyData.periodInfo ? `
+                                <p class="text-sm font-medium text-[#8b5cf6] mb-1">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    ${historyData.periodInfo.startDay}-${historyData.periodInfo.endDay} ${historyData.periodInfo.monthName}
+                                </p>
+                                ` : ''}
                                 <p class="text-sm text-gray-600 mb-2">
                                     <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -6820,12 +6829,13 @@
             return priceCount;
         }
         
-        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated', supplierData = {}) {
+        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated', supplierData = {}, periodInfo = null) {
             console.log('[SAVE-FUNCTION] saveAutomatedPriceHistory called with:', {
                 grupos: Object.keys(automatedPricesByGroup || {}).length,
                 dias: dias?.length,
                 searchType: searchType,
-                supplierDataDays: Object.keys(supplierData || {}).length
+                supplierDataDays: Object.keys(supplierData || {}).length,
+                hasPeriodInfo: !!periodInfo
             });
             
             if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
@@ -6881,18 +6891,26 @@
             
             // Send to server (PostgreSQL)
             try {
+                const payload = {
+                    location: location,
+                    searchType: searchType,
+                    pickupDate: pickupDate,
+                    prices: pricesData,
+                    dias: dias,
+                    priceCount: priceCount,
+                    supplierData: supplierData
+                };
+                
+                // Include period info if available
+                if (periodInfo) {
+                    payload.periodInfo = periodInfo;
+                    console.log('[SAVE-FUNCTION] Including period info:', periodInfo);
+                }
+                
                 const response = await fetch('/api/automated-search/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        location: location,
-                        searchType: searchType,
-                        pickupDate: pickupDate,
-                        prices: pricesData,
-                        dias: dias,
-                        priceCount: priceCount,
-                        supplierData: supplierData
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
                 const result = await response.json();
