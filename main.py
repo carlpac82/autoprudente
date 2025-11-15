@@ -6498,20 +6498,42 @@ async def add_whatsapp_contact(request: Request):
                                 VALUES (%s, %s, %s, %s)
                                 RETURNING id
                             """, (name, phone, has_whatsapp, profile_picture_url))
-                            result = cur.fetchone()
-                            print(f"[WHATSAPP] 🔍 RETURNING result for contact: {result}")
-                            conn.commit()  # COMMIT IMEDIATAMENTE
                             
-                            # SEMPRE usar fallback query (mais confiável)
-                            print(f"[WHATSAPP] 🔍 Querying contact by phone to get real ID...")
-                            cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s ORDER BY id DESC LIMIT 1", (phone,))
-                            fallback = cur.fetchone()
-                            if fallback and fallback[0]:
-                                contact_id = fallback[0]
-                                print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
-                            else:
-                                print(f"[WHATSAPP] ❌ CRITICAL: Contact not found even after insert!")
-                                raise ValueError(f"Failed to create contact - not found in database")
+                            # Try to get ID from RETURNING
+                            try:
+                                result = cur.fetchone()
+                                print(f"[WHATSAPP] 🔍 RETURNING result for contact: {result}")
+                                if result and result[0] and result[0] > 0:
+                                    contact_id = result[0]
+                                    conn.commit()
+                                    print(f"[WHATSAPP] ✅ Created new contact #{contact_id} via RETURNING")
+                                else:
+                                    # RETURNING failed - commit and use fallback with NEW cursor
+                                    print(f"[WHATSAPP] ⚠️ RETURNING returned invalid ID, using fallback...")
+                                    conn.commit()
+                                    
+                                    # NEW cursor for fallback query
+                                    with conn.cursor() as cur2:
+                                        cur2.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s ORDER BY id DESC LIMIT 1", (phone,))
+                                        fallback = cur2.fetchone()
+                                        if fallback and fallback[0]:
+                                            contact_id = fallback[0]
+                                            print(f"[WHATSAPP] ✅ Created new contact #{contact_id} via fallback")
+                                        else:
+                                            print(f"[WHATSAPP] ❌ CRITICAL: Contact not found even after insert!")
+                                            raise ValueError(f"Failed to create contact - not found in database")
+                            except Exception as e:
+                                print(f"[WHATSAPP] ⚠️ Error reading RETURNING: {e}")
+                                conn.commit()
+                                # Use fallback with NEW cursor
+                                with conn.cursor() as cur2:
+                                    cur2.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s ORDER BY id DESC LIMIT 1", (phone,))
+                                    fallback = cur2.fetchone()
+                                    if fallback and fallback[0]:
+                                        contact_id = fallback[0]
+                                        print(f"[WHATSAPP] ✅ Created new contact #{contact_id} via fallback after error")
+                                    else:
+                                        raise ValueError(f"Failed to create contact - not found in database")
                 else:
                     # SQLite version
                     contact_row = conn.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = ?", (phone,)).fetchone()
