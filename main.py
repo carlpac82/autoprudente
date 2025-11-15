@@ -6479,6 +6479,7 @@ async def add_whatsapp_contact(request: Request):
                         
                         if contact_row:
                             contact_id = contact_row[0]
+                            print(f"[WHATSAPP] 📌 Found existing contact #{contact_id}")
                             # Update contact with new data
                             cur.execute("""
                                 UPDATE whatsapp_contacts 
@@ -6487,6 +6488,7 @@ async def add_whatsapp_contact(request: Request):
                                     profile_picture_url = COALESCE(%s, profile_picture_url)
                                 WHERE id = %s
                             """, (name, has_whatsapp, profile_picture_url, contact_id))
+                            conn.commit()
                             print(f"[WHATSAPP] ✅ Updated existing contact #{contact_id}")
                         else:
                             # Create new contact
@@ -6495,29 +6497,44 @@ async def add_whatsapp_contact(request: Request):
                                 VALUES (%s, %s, %s, %s)
                                 RETURNING id
                             """, (name, phone, has_whatsapp, profile_picture_url))
-                            contact_id = cur.fetchone()[0]
-                            print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
-                    conn.commit()
+                            result = cur.fetchone()
+                            conn.commit()  # COMMIT IMEDIATAMENTE
+                            contact_id = result[0]
+                            print(f"[WHATSAPP] ✅ Created new contact #{contact_id} (committed)")
+                    
+                    # Validar que contact_id não é None ou 0
+                    if not contact_id or contact_id == 0:
+                        raise ValueError(f"Invalid contact_id: {contact_id}")
                 else:
                     # SQLite version
                     contact_row = conn.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = ?", (phone,)).fetchone()
                     if contact_row:
                         contact_id = contact_row[0]
+                        print(f"[WHATSAPP] 📌 Found existing contact #{contact_id}")
                         conn.execute("""
                             UPDATE whatsapp_contacts 
                             SET name = ?, has_whatsapp = COALESCE(?, has_whatsapp),
                                 profile_picture_url = COALESCE(?, profile_picture_url)
                             WHERE id = ?
                         """, (name, has_whatsapp, profile_picture_url, contact_id))
+                        conn.commit()
+                        print(f"[WHATSAPP] ✅ Updated existing contact #{contact_id}")
                     else:
                         cursor = conn.execute("""
                             INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp, profile_picture_url)
                             VALUES (?, ?, ?, ?)
                         """, (name, phone, has_whatsapp, profile_picture_url))
                         contact_id = cursor.lastrowid
-                    conn.commit()
+                        conn.commit()  # COMMIT IMEDIATAMENTE
+                        print(f"[WHATSAPP] ✅ Created new contact #{contact_id} (committed)")
+                    
+                    # Validar que contact_id não é None ou 0
+                    if not contact_id or contact_id == 0:
+                        raise ValueError(f"Invalid contact_id: {contact_id}")
                 
                 # STEP 2: Create or update CONVERSATION linked to contact
+                print(f"[WHATSAPP] 📝 Creating conversation with contact_id={contact_id}, phone={phone}")
+                
                 if is_postgres:
                     with conn.cursor() as cur:
                         # Check if conversation already exists
@@ -6526,24 +6543,28 @@ async def add_whatsapp_contact(request: Request):
                         
                         if conv_row:
                             conversation_id = conv_row[0]
+                            print(f"[WHATSAPP] 📌 Found existing conversation #{conversation_id}")
                             # Update conversation with contact_id
                             cur.execute("""
                                 UPDATE whatsapp_conversations 
                                 SET contact_id = %s
                                 WHERE id = %s
                             """, (contact_id, conversation_id))
+                            conn.commit()
                             print(f"[WHATSAPP] ✅ Updated existing conversation #{conversation_id} (linked to contact #{contact_id})")
                         else:
                             # Create new conversation linked to contact
+                            print(f"[WHATSAPP] 🆕 Creating new conversation (contact_id={contact_id})")
                             cur.execute("""
                                 INSERT INTO whatsapp_conversations 
                                 (contact_id, phone_number, last_message_preview)
                                 VALUES (%s, %s, %s)
                                 RETURNING id
                             """, (contact_id, phone, "Nova conversa"))
-                            conversation_id = cur.fetchone()[0]
+                            result = cur.fetchone()
+                            conn.commit()
+                            conversation_id = result[0]
                             print(f"[WHATSAPP] ✅ Created new conversation #{conversation_id} for contact #{contact_id}")
-                    conn.commit()
                 else:
                     # SQLite version
                     conv_row = conn.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = ?", (phone,)).fetchone()
