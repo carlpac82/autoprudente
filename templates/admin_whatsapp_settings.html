@@ -222,11 +222,12 @@
             <button type="button" onclick="testConnection()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
               Testar Conexão
             </button>
-            <button type="button" onclick="setProfilePicture()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-              🖼️ Definir Foto de Perfil
-            </button>
+            <label class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition cursor-pointer">
+              <input type="file" id="profile-picture-file" accept="image/*" class="hidden" onchange="setCustomProfilePicture(event)">
+              <span>🖼️ Carregar Foto Personalizada</span>
+            </label>
             <button type="button" onclick="forceCreateTables()" class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition" title="Cria as tabelas WhatsApp na base de dados (usar se erro 'relation does not exist')">
-              🔧 Criar Tabelas DB
+              ⚠️ Criar Tabelas
             </button>
           </div>
         </form>
@@ -499,13 +500,31 @@
       }
     }
 
-    function setProfilePicture() {
-      if (!confirm('Definir o logotipo da Auto Prudente como foto de perfil do WhatsApp Business?')) {
+    function setCustomProfilePicture(event) {
+      const file = event.target.files[0];
+      if (!file) {
         return;
       }
-      
+
+      if (!file.type.startsWith('image/')) {
+        alert('Seleciona um ficheiro de imagem válido.');
+        return;
+      }
+
+      const proceed = confirm('Enviar esta imagem como foto de perfil do WhatsApp Business?');
+      if (!proceed) {
+        event.target.value = '';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
       alert('A definir foto de perfil...');
-      fetch('/api/admin/whatsapp/set-profile-picture', { method: 'POST' })
+      fetch('/api/admin/whatsapp/set-profile-picture', {
+        method: 'POST',
+        body: formData
+      })
         .then(r => r.json())
         .then(data => {
           if (data.success) {
@@ -516,6 +535,9 @@
         })
         .catch(err => {
           alert('❌ Erro ao definir foto: ' + err.message);
+        })
+        .finally(() => {
+          event.target.value = '';
         });
     }
 

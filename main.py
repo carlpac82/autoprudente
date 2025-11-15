@@ -5835,7 +5835,7 @@ async def admin_test_whatsapp_connection(request: Request):
 
 @app.post("/api/admin/whatsapp/set-profile-picture")
 async def set_whatsapp_profile_picture(request: Request, file: UploadFile = File(None)):
-    """Set WhatsApp Business profile picture"""
+    """Set WhatsApp Business profile picture - supports custom upload or default logo"""
     try:
         require_admin(request)
     except HTTPException:
@@ -5843,6 +5843,7 @@ async def set_whatsapp_profile_picture(request: Request, file: UploadFile = File
     
     try:
         import httpx
+        import os
         
         with _db_lock:
             con = _db_connect()
@@ -5863,44 +5864,63 @@ async def set_whatsapp_profile_picture(request: Request, file: UploadFile = File
                 
                 access_token = row[0]
                 phone_number_id = row[1]
-                
-                # URL pública do logotipo Auto Prudente
-                logo_url = "https://carrental-api-5f8q.onrender.com/static/ap-logo.png"
-                
-                # Update WhatsApp Business profile picture
-                url = f"https://graph.facebook.com/v18.0/{phone_number_id}/whatsapp_business_profile"
-                headers = {
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json"
-                }
-                payload = {"messaging_product": "whatsapp"}
-                if media_handle:
-                    payload["profile_picture_handle"] = media_handle
-                else:
-                    payload["profile_picture_url"] = logo_url
-                
-                print(f"[WHATSAPP-PROFILE] Setting profile picture: {logo_url}")
-                
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(url, headers=headers, json=payload)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        print(f"[WHATSAPP-PROFILE] ✅ Profile picture updated: {data}")
-                        return JSONResponse({
-                            "success": True, 
-                            "message": "Foto de perfil atualizada com sucesso!"
-                        })
-                    else:
-                        error_msg = response.text
-                        print(f"[WHATSAPP-PROFILE] ❌ Failed: {error_msg}")
-                        return JSONResponse({
-                            "success": False, 
-                            "error": f"Erro ao atualizar foto: {error_msg}"
-                        })
-                        
             finally:
                 con.close()
+        
+        # Determine which image to use
+        image_url = None
+        media_handle = None
+        
+        if file:
+            # Custom file uploaded
+            print(f"[WHATSAPP-PROFILE] Custom file uploaded: {file.filename}")
+            
+            # Save to static folder
+            upload_dir = "static/whatsapp_business"
+            os.makedirs(upload_dir, exist_ok=True)
+            filepath = os.path.join(upload_dir, "profile_picture.jpg")
+            
+            contents = await file.read()
+            with open(filepath, 'wb') as f:
+                f.write(contents)
+            
+            # Use full URL to uploaded file
+            image_url = f"https://carrental-api-5f8q.onrender.com/{filepath}"
+            print(f"[WHATSAPP-PROFILE] Using uploaded file: {image_url}")
+        else:
+            # Use default Auto Prudente logo
+            image_url = "https://carrental-api-5f8q.onrender.com/static/ap-logo.png"
+            print(f"[WHATSAPP-PROFILE] Using default logo: {image_url}")
+        
+        # Update WhatsApp Business profile picture
+        url = f"https://graph.facebook.com/v18.0/{phone_number_id}/whatsapp_business_profile"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "messaging_product": "whatsapp",
+            "profile_picture_url": image_url
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                data = response.json()
+                print(f"[WHATSAPP-PROFILE] ✅ Profile picture updated: {data}")
+                return JSONResponse({
+                    "success": True, 
+                    "message": "Foto de perfil do WhatsApp Business atualizada com sucesso!",
+                    "url": image_url
+                })
+            else:
+                error_msg = response.text
+                print(f"[WHATSAPP-PROFILE] ❌ Failed: {error_msg}")
+                return JSONResponse({
+                    "success": False, 
+                    "error": f"Erro na API do WhatsApp: {error_msg}"
+                })
                 
     except httpx.TimeoutException:
         print("[WHATSAPP-PROFILE] ❌ Timeout")
@@ -6649,18 +6669,15 @@ async def google_contacts_callback(request: Request, code: str = None):
                 
                 if is_postgres:
                     with conn.cursor() as cur:
+                        # PostgreSQL: Usar UPSERT com ON CONFLICT
                         cur.execute("""
-                            UPDATE google_oauth_tokens
-                            SET access_token = %s,
-                                refresh_token = %s,
-                                expires_at = NOW() + INTERVAL '3600 seconds'
-                            WHERE service = 'contacts'
+                            INSERT INTO google_oauth_tokens (service, access_token, refresh_token, expires_at)
+                            VALUES ('contacts', %s, %s, NOW() + INTERVAL '3600 seconds')
+                            ON CONFLICT (service) DO UPDATE SET
+                                access_token = EXCLUDED.access_token,
+                                refresh_token = EXCLUDED.refresh_token,
+                                expires_at = EXCLUDED.expires_at
                         """, (tokens['access_token'], tokens.get('refresh_token')))
-                        if cur.rowcount == 0:
-                            cur.execute("""
-                                INSERT INTO google_oauth_tokens (service, access_token, refresh_token, expires_at)
-                                VALUES ('contacts', %s, %s, NOW() + INTERVAL '3600 seconds')
-                            """, (tokens['access_token'], tokens.get('refresh_token')))
                     conn.commit()
                 else:
                     conn.execute("""
