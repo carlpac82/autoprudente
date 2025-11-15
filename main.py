@@ -33826,11 +33826,11 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 
                 if is_postgres:
                     with conn.cursor() as cur:
-                        # Try to get all searches with supplier_data and period_info (newest schema)
+                        # Try to get all searches with supplier_data
                         try:
                             query = f"""
                                 SELECT id, location, search_type, search_date, month_key, 
-                                       prices_data, dias, price_count, supplier_data, period_info
+                                       prices_data, dias, price_count, supplier_data
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
@@ -33841,10 +33841,9 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             rows = cur.fetchall()
                             logging.info(f"📊 [HISTORY-FILTER] Found {len(rows)} total rows from database")
                             has_supplier_data = True
-                            has_period_info = True
                         except Exception as e:
                             # Column doesn't exist - rollback transaction and use old schema
-                            logging.warning(f"period_info or supplier_data column not found, using old schema: {e}")
+                            logging.warning(f"supplier_data column not found, using old schema: {e}")
                             conn.rollback()
                             query = f"""
                                 SELECT id, location, search_type, search_date, month_key, 
@@ -33857,7 +33856,6 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             cur.execute(query, params)
                             rows = cur.fetchall()
                             has_supplier_data = False
-                            has_period_info = False
                 else:
                     placeholders = ','.join(['?' for _ in month_keys])
                     try:
@@ -33871,7 +33869,6 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
                         has_supplier_data = True
-                        has_period_info = False  # SQLite doesn't have period_info column
                     except Exception as e:
                         logging.warning(f"supplier_data column not found, using old schema: {e}")
                         conn.rollback()
@@ -33885,7 +33882,6 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
                         has_supplier_data = False
-                        has_period_info = False  # SQLite doesn't have period_info column
                 
                 # Group by month_key and search_type
                 import json
@@ -33893,15 +33889,11 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 logging.info(f"📊 [HISTORY-FILTER] Processing {len(rows)} rows...")
                 
                 for row in rows:
-                    if has_period_info:
-                        search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data, period_info = row
-                    elif has_supplier_data:
+                    if has_supplier_data:
                         search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
-                        period_info = None
                     else:
                         search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count = row
                         supplier_data = None
-                        period_info = None
                     
                     locations_found.add(row_location)
                     logging.info(f"📊 [HISTORY-FILTER] Row {search_id}: location='{row_location}', month={month_key}, type={search_type}")
@@ -33921,8 +33913,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         'prices': json.loads(prices_data) if isinstance(prices_data, str) else prices_data,
                         'dias': json.loads(dias) if isinstance(dias, str) else dias,
                         'priceCount': price_count,
-                        'supplierData': json.loads(supplier_data) if supplier_data and isinstance(supplier_data, str) else (supplier_data if supplier_data else {}),
-                        'periodInfo': json.loads(period_info) if period_info and isinstance(period_info, str) else (period_info if period_info else None)
+                        'supplierData': json.loads(supplier_data) if supplier_data and isinstance(supplier_data, str) else (supplier_data if supplier_data else {})
                     }
                     
                     history[month_key][search_type].append(entry)
@@ -34048,51 +34039,6 @@ async def add_pickup_date_column(request: Request):
                 
     except Exception as e:
         logging.error(f"❌ [MIGRATION] Error adding pickup_date column: {str(e)}", exc_info=True)
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-@app.post("/api/automated-search/add-period-info-column")
-async def add_period_info_column(request: Request):
-    """Add period_info column to automated_search_history table"""
-    # No auth for migration - temporary
-    try:
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
-                
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        # Check if column exists
-                        cur.execute("""
-                            SELECT column_name 
-                            FROM information_schema.columns 
-                            WHERE table_name='automated_search_history' AND column_name='period_info'
-                        """)
-                        exists = cur.fetchone()
-                        
-                        if exists:
-                            logging.info("✅ [MIGRATION] Column period_info already exists (checked)")
-                            return JSONResponse({"ok": True, "message": "Column period_info already exists"})
-                    
-                    # Add column (will fail gracefully if already exists)
-                    try:
-                        cur.execute("ALTER TABLE automated_search_history ADD COLUMN period_info JSONB")
-                        conn.commit()
-                        logging.info("✅ [MIGRATION] Added period_info column to automated_search_history")
-                        return JSONResponse({"ok": True, "message": "Column period_info added successfully"})
-                    except Exception as add_error:
-                        if "already exists" in str(add_error).lower():
-                            logging.info("✅ [MIGRATION] Column period_info already exists (caught on ADD)")
-                            conn.rollback()
-                            return JSONResponse({"ok": True, "message": "Column period_info already exists"})
-                        else:
-                            raise
-                
-            finally:
-                conn.close()
-                
-    except Exception as e:
-        logging.error(f"❌ [MIGRATION] Error adding period_info column: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/automated-search/delete-without-pickup-date")
