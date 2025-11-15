@@ -5054,17 +5054,33 @@ def format_iso_timestamp(value: datetime):
     return value.replace(microsecond=0).isoformat()
 
 def _ensure_whatsapp_config_token_column(con, is_postgres):
-    if is_postgres:
-        with con.cursor() as cur:
-            cur.execute("""
-                ALTER TABLE whatsapp_config
-                ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP
-            """)
-    else:
-        con.execute("""
-            ALTER TABLE whatsapp_config
-            ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP
-        """)
+    """Ensure token_expires_at column exists in whatsapp_config table"""
+    try:
+        if is_postgres:
+            with con.cursor() as cur:
+                cur.execute("""
+                    ALTER TABLE whatsapp_config
+                    ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP
+                """)
+            con.commit()
+            print("[WHATSAPP] ✅ Ensured token_expires_at column exists (PostgreSQL)")
+        else:
+            # SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we try-catch
+            try:
+                con.execute("""
+                    ALTER TABLE whatsapp_config
+                    ADD COLUMN token_expires_at TIMESTAMP
+                """)
+                con.commit()
+                print("[WHATSAPP] ✅ Added token_expires_at column (SQLite)")
+            except Exception as e:
+                if "duplicate column" in str(e).lower():
+                    print("[WHATSAPP] Column token_expires_at already exists (SQLite)")
+                else:
+                    raise
+    except Exception as e:
+        print(f"[WHATSAPP] Error ensuring token_expires_at column: {str(e)}")
+        # Don't raise - continue even if column already exists
 
 def _get_whatsapp_config_row():
     with _db_lock:
@@ -5164,7 +5180,22 @@ async def _whatsapp_token_refresh_worker():
 
 @app.on_event("startup")
 async def startup_whatsapp_token_refresher():
+    """Initialize WhatsApp token refresh worker and ensure database schema is up to date"""
     global _whatsapp_token_refresh_task
+    
+    # Ensure token_expires_at column exists before starting worker
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                _ensure_whatsapp_config_token_column(conn, is_postgres)
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"[WHATSAPP] Error ensuring database schema: {str(e)}")
+    
+    # Start token refresh worker
     if _whatsapp_token_refresh_task is None:
         logging.info("[WHATSAPP] Starting token refresh worker")
         _whatsapp_token_refresh_task = asyncio.create_task(_whatsapp_token_refresh_worker())
