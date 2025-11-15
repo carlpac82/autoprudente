@@ -3478,7 +3478,7 @@
           const response = await fetch('/api/whatsapp/unread-count');
           if (response.ok) {
             const data = await response.json();
-            const unreadCount = data.unread_count || 0;
+            const unreadCount = data.unread || 0;
             
             const badge = document.getElementById('whatsapp-notification-badge');
             const countBadge = document.getElementById('whatsapp-notification-count');
