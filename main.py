@@ -7455,6 +7455,104 @@ async def get_templates(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/whatsapp/templates/sync-status")
+async def sync_template_status(request: Request):
+    """Sync template status from WhatsApp API"""
+    require_auth(request)
+    try:
+        # Get WhatsApp config
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT access_token, business_account_id FROM whatsapp_config WHERE id=1")
+                        config_row = cur.fetchone()
+                else:
+                    config_row = conn.execute("SELECT access_token, business_account_id FROM whatsapp_config WHERE id=1").fetchone()
+                
+                if not config_row or not config_row[0] or not config_row[1]:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "WhatsApp não configurado. Configure access_token e business_account_id primeiro."
+                    }, status_code=400)
+                
+                access_token = config_row[0]
+                business_account_id = config_row[1]
+            finally:
+                conn.close()
+        
+        # Call WhatsApp API to get templates
+        import httpx
+        url = f"https://graph.facebook.com/v18.0/{business_account_id}/message_templates"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=30.0)
+            
+            if response.status_code != 200:
+                return JSONResponse({
+                    "ok": False,
+                    "error": f"WhatsApp API error: {response.status_code} - {response.text}"
+                }, status_code=response.status_code)
+            
+            data = response.json()
+            whatsapp_templates = data.get('data', [])
+            
+            # Update database with actual status
+            updates_count = 0
+            with _db_lock:
+                conn = _db_connect()
+                try:
+                    is_postgres = str(conn.__class__).find('psycopg') >= 0
+                    
+                    for wa_template in whatsapp_templates:
+                        template_name = wa_template.get('name')
+                        template_status = wa_template.get('status')  # APPROVED, PENDING, REJECTED
+                        template_id = wa_template.get('id')
+                        
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    UPDATE whatsapp_templates 
+                                    SET status = %s, 
+                                        whatsapp_template_id = %s,
+                                        approved_at = CASE WHEN %s = 'APPROVED' THEN CURRENT_TIMESTAMP ELSE approved_at END
+                                    WHERE name = %s
+                                """, (template_status, template_id, template_status, template_name))
+                                updates_count += cur.rowcount
+                        else:
+                            cursor = conn.execute("""
+                                UPDATE whatsapp_templates 
+                                SET status = ?, 
+                                    whatsapp_template_id = ?,
+                                    approved_at = CASE WHEN ? = 'APPROVED' THEN CURRENT_TIMESTAMP ELSE approved_at END
+                                WHERE name = ?
+                            """, (template_status, template_id, template_status, template_name))
+                            updates_count += cursor.rowcount
+                    
+                    conn.commit()
+                    
+                    print(f"[WHATSAPP] ✅ Synced {updates_count} templates from WhatsApp API")
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "success": True,
+                        "message": f"Sincronizado {updates_count} templates",
+                        "total_templates": len(whatsapp_templates),
+                        "updates": updates_count
+                    })
+                finally:
+                    conn.close()
+                    
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error syncing template status: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/whatsapp/templates")
 async def create_template(request: Request):
     """Create a new WhatsApp template"""
