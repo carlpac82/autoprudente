@@ -5702,15 +5702,6 @@ async def force_create_whatsapp_tables(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
 
-@app.get("/api/whatsapp/quick-replies")
-async def get_whatsapp_quick_replies(request: Request):
-    """Get WhatsApp quick replies"""
-    try:
-        # TODO: Implementar depois - por agora retorna vazio
-        return JSONResponse({"ok": True, "quick_replies": []})
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
 @app.get("/api/whatsapp/webhook")
 async def whatsapp_webhook_verify(request: Request):
     """WhatsApp webhook verification (Meta callback)"""
