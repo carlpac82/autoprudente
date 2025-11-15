@@ -5391,19 +5391,31 @@ async def admin_save_whatsapp_config(request: Request):
                             expires_at TEXT
                         )
                     """)
+                    
+                    # Create contacts table (separate from conversations)
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            phone_number TEXT NOT NULL UNIQUE,
+                            has_whatsapp INTEGER,
+                            profile_picture_url TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
                     con.execute("""
                         CREATE TABLE IF NOT EXISTS whatsapp_conversations (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            name TEXT NOT NULL,
+                            contact_id INTEGER,
                             phone_number TEXT NOT NULL UNIQUE,
                             last_message_at TEXT DEFAULT CURRENT_TIMESTAMP,
                             last_message_preview TEXT,
                             unread_count INTEGER DEFAULT 0,
                             status TEXT DEFAULT 'open',
                             assigned_to TEXT,
-                            has_whatsapp INTEGER,
-                            profile_picture_url TEXT,
-                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (contact_id) REFERENCES whatsapp_contacts(id)
                         )
                     """)
                     con.execute("""
@@ -5532,19 +5544,29 @@ async def force_create_whatsapp_tables(request: Request):
                             )
                         """)
                         
+                        print("[WHATSAPP] Creating whatsapp_contacts table...")
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL,
+                                phone_number TEXT NOT NULL UNIQUE,
+                                has_whatsapp BOOLEAN,
+                                profile_picture_url TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
                         print("[WHATSAPP] Creating whatsapp_conversations table...")
                         cur.execute("""
                             CREATE TABLE IF NOT EXISTS whatsapp_conversations (
                                 id SERIAL PRIMARY KEY,
-                                name TEXT NOT NULL,
+                                contact_id INTEGER REFERENCES whatsapp_contacts(id),
                                 phone_number TEXT NOT NULL UNIQUE,
                                 last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                 last_message_preview TEXT,
                                 unread_count INTEGER DEFAULT 0,
                                 status VARCHAR(20) DEFAULT 'open',
                                 assigned_to TEXT,
-                                has_whatsapp BOOLEAN,
-                                profile_picture_url TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
                         """)
@@ -5618,19 +5640,31 @@ async def force_create_whatsapp_tables(request: Request):
                             expires_at TEXT
                         )
                     """)
+                    
+                    print("[WHATSAPP] Creating whatsapp_contacts table...")
+                    con.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            phone_number TEXT NOT NULL UNIQUE,
+                            has_whatsapp INTEGER,
+                            profile_picture_url TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
                     con.execute("""
                         CREATE TABLE IF NOT EXISTS whatsapp_conversations (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            name TEXT NOT NULL,
+                            contact_id INTEGER,
                             phone_number TEXT NOT NULL UNIQUE,
                             last_message_at TEXT DEFAULT CURRENT_TIMESTAMP,
                             last_message_preview TEXT,
                             unread_count INTEGER DEFAULT 0,
                             status TEXT DEFAULT 'open',
                             assigned_to TEXT,
-                            has_whatsapp INTEGER,
-                            profile_picture_url TEXT,
-                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (contact_id) REFERENCES whatsapp_contacts(id)
                         )
                     """)
                     con.execute("""
@@ -5824,6 +5858,28 @@ async def whatsapp_webhook_receive(request: Request):
                                                 contact_id = cur.fetchone()[0]
                                                 print(f"[WHATSAPP-WEBHOOK] Created new contact #{contact_id}")
                                         conn.commit()
+                                    else:
+                                        # SQLite version - create contact first
+                                        contact_row = conn.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = ?", (from_phone,)).fetchone()
+                                        
+                                        if contact_row:
+                                            contact_id = contact_row[0]
+                                            # Update contact name if provided
+                                            conn.execute("""
+                                                UPDATE whatsapp_contacts 
+                                                SET name = ?, has_whatsapp = 1
+                                                WHERE id = ?
+                                            """, (contact_name, contact_id))
+                                            print(f"[WHATSAPP-WEBHOOK] Updated contact #{contact_id}")
+                                        else:
+                                            # Create new contact
+                                            cursor = conn.execute("""
+                                                INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp)
+                                                VALUES (?, ?, 1)
+                                            """, (contact_name, from_phone))
+                                            contact_id = cursor.lastrowid
+                                            print(f"[WHATSAPP-WEBHOOK] Created new contact #{contact_id}")
+                                        conn.commit()
                                     
                                     # STEP 2: Find or create CONVERSATION linked to contact
                                     if is_postgres:
@@ -5854,9 +5910,10 @@ async def whatsapp_webhook_receive(request: Request):
                                                 UPDATE whatsapp_conversations 
                                                 SET last_message_at = CURRENT_TIMESTAMP,
                                                     last_message_preview = ?,
-                                                    unread_count = unread_count + 1
+                                                    unread_count = unread_count + 1,
+                                                    contact_id = ?
                                                 WHERE id = ?
-                                            """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), conversation_id))
+                                            """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), contact_id, conversation_id))
                                             conn.commit()
                                     else:
                                         # Create new conversation linked to contact
@@ -5873,9 +5930,9 @@ async def whatsapp_webhook_receive(request: Request):
                                         else:
                                             cursor = conn.execute("""
                                                 INSERT INTO whatsapp_conversations 
-                                                (phone_number, last_message_at, last_message_preview, unread_count, status)
-                                                VALUES (?, datetime('now'), ?, 1, 'open')
-                                            """, (from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
+                                                (contact_id, phone_number, last_message_at, last_message_preview, unread_count, status)
+                                                VALUES (?, ?, datetime('now'), ?, 1, 'open')
+                                            """, (contact_id, from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
                                             conversation_id = cursor.lastrowid
                                             conn.commit()
                                         
@@ -6139,7 +6196,7 @@ async def set_whatsapp_profile_picture(request: Request, file: UploadFile = File
 
 @app.get("/api/whatsapp/conversations")
 async def get_whatsapp_conversations(request: Request):
-    """Get WhatsApp conversations from database"""
+    """Get WhatsApp conversations from database WITH contact data"""
     require_auth(request)
     try:
         # Filter by status if provided
@@ -6150,9 +6207,18 @@ async def get_whatsapp_conversations(request: Request):
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
+                # JOIN with whatsapp_contacts to get contact data
                 if status:
-                    query = "SELECT id, name, phone_number, last_message_at, last_message_preview, unread_count, status, assigned_to, has_whatsapp, profile_picture_url FROM whatsapp_conversations WHERE status = "
-                    query += "%s" if is_postgres else "?"
+                    query = """
+                        SELECT conv.id, conv.phone_number, conv.last_message_at, conv.last_message_preview,
+                               conv.unread_count, conv.status, conv.assigned_to,
+                               cont.id as contact_id, cont.name as contact_name, 
+                               cont.has_whatsapp, cont.profile_picture_url
+                        FROM whatsapp_conversations conv
+                        LEFT JOIN whatsapp_contacts cont ON conv.contact_id = cont.id
+                        WHERE conv.status = """ + ("%s" if is_postgres else "?") + """
+                        ORDER BY COALESCE(conv.last_message_at, conv.created_at) DESC
+                    """
                     if is_postgres:
                         with conn.cursor() as cur:
                             cur.execute(query, (status,))
@@ -6160,12 +6226,15 @@ async def get_whatsapp_conversations(request: Request):
                     else:
                         rows = conn.execute(query, (status,)).fetchall()
                 else:
-                    # Show all conversations, including those without messages
+                    # Show all conversations with contact data
                     query = """
-                        SELECT c.id, c.name, c.phone_number, c.last_message_at, c.last_message_preview, 
-                               c.unread_count, c.status, c.assigned_to, c.has_whatsapp, c.profile_picture_url 
-                        FROM whatsapp_conversations c
-                        ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+                        SELECT conv.id, conv.phone_number, conv.last_message_at, conv.last_message_preview,
+                               conv.unread_count, conv.status, conv.assigned_to,
+                               cont.id as contact_id, cont.name as contact_name, 
+                               cont.has_whatsapp, cont.profile_picture_url
+                        FROM whatsapp_conversations conv
+                        LEFT JOIN whatsapp_contacts cont ON conv.contact_id = cont.id
+                        ORDER BY COALESCE(conv.last_message_at, conv.created_at) DESC
                     """
                     if is_postgres:
                         with conn.cursor() as cur:
@@ -6176,21 +6245,25 @@ async def get_whatsapp_conversations(request: Request):
                 
                 conversations = []
                 for row in rows:
+                    # Use contact name if available, fallback to phone
+                    display_name = row[8] if row[8] else row[1]  # contact_name or phone_number
+                    
                     conversations.append({
                         "id": row[0],
-                        "name": row[1],
-                        "phone_number": row[2],
-                        "last_message_at": row[3].isoformat() if hasattr(row[3], 'isoformat') else str(row[3]),
-                        "last_message_preview": row[4],
-                        "unread_count": row[5],
-                        "status": row[6],
-                        "assigned_to": row[7],
-                        "has_whatsapp": bool(row[8]) if row[8] is not None else None,
-                        "profile_picture_url": row[9],
+                        "name": display_name,
+                        "phone_number": row[1],
+                        "last_message_at": row[2].isoformat() if hasattr(row[2], 'isoformat') else str(row[2]),
+                        "last_message_preview": row[3],
+                        "unread_count": row[4],
+                        "status": row[5],
+                        "assigned_to": row[6],
+                        "contact_id": row[7],  # NEW: contact ID
+                        "has_whatsapp": bool(row[9]) if row[9] is not None else None,
+                        "profile_picture_url": row[10],
                         "messages": []  # Messages loaded separately
                     })
                 
-                print(f"[WHATSAPP] Returning {len(conversations)} conversations from database")
+                print(f"[WHATSAPP] Returning {len(conversations)} conversations (with contact data) from database")
                 
                 return JSONResponse({
                     "ok": True,
@@ -6275,6 +6348,61 @@ async def verify_whatsapp_contact(request: Request):
         print(f"[WHATSAPP] ❌ Error verifying contact: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/whatsapp/contacts")
+async def get_whatsapp_contacts(request: Request):
+    """Get all WhatsApp contacts with conversation count"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Get contacts with conversation count
+                query = """
+                    SELECT c.id, c.name, c.phone_number, c.has_whatsapp, c.profile_picture_url, c.created_at,
+                           COUNT(conv.id) as conversation_count
+                    FROM whatsapp_contacts c
+                    LEFT JOIN whatsapp_conversations conv ON c.id = conv.contact_id
+                    GROUP BY c.id, c.name, c.phone_number, c.has_whatsapp, c.profile_picture_url, c.created_at
+                    ORDER BY c.created_at DESC
+                """
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query)
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute(query).fetchall()
+                
+                contacts = []
+                for row in rows:
+                    contacts.append({
+                        "id": row[0],
+                        "name": row[1],
+                        "phone_number": row[2],
+                        "has_whatsapp": bool(row[3]) if row[3] is not None else None,
+                        "profile_picture_url": row[4],
+                        "created_at": row[5].isoformat() if hasattr(row[5], 'isoformat') else str(row[5]),
+                        "conversation_count": row[6]
+                    })
+                
+                print(f"[WHATSAPP] Returning {len(contacts)} contacts from database")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "contacts": contacts
+                })
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error getting contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/whatsapp/contacts/add")
 async def add_whatsapp_contact(request: Request):
     """Add a new WhatsApp contact and create a conversation in database"""
@@ -6333,79 +6461,106 @@ async def add_whatsapp_contact(request: Request):
             except Exception as e:
                 print(f"[WHATSAPP] Warning: Could not verify WhatsApp: {str(e)}")
         
-        # Save to database
+        # Save to database - PROPER SEPARATION: Contact first, then Conversation
         with _db_lock:
             conn = _db_connect()
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                # Check if conversation already exists
+                contact_id = None
+                conversation_id = None
+                
+                # STEP 1: Create or update CONTACT in whatsapp_contacts
                 if is_postgres:
                     with conn.cursor() as cur:
-                        cur.execute("SELECT id, name, phone_number, has_whatsapp, profile_picture_url FROM whatsapp_conversations WHERE phone_number = %s", (phone,))
-                        existing_row = cur.fetchone()
-                else:
-                    existing_row = conn.execute("SELECT id, name, phone_number, has_whatsapp, profile_picture_url FROM whatsapp_conversations WHERE phone_number = ?", (phone,)).fetchone()
-                
-                if existing_row:
-                    # Update if new data available
-                    conv_id = existing_row[0]
-                    if profile_picture_url or has_whatsapp is not None:
-                        if is_postgres:
-                            with conn.cursor() as cur:
-                                cur.execute("""
-                                    UPDATE whatsapp_conversations 
-                                    SET profile_picture_url = COALESCE(%s, profile_picture_url),
-                                        has_whatsapp = COALESCE(%s, has_whatsapp),
-                                        name = %s
-                                    WHERE id = %s
-                                """, (profile_picture_url, has_whatsapp, name, conv_id))
-                            conn.commit()
+                        # Check if contact already exists
+                        cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s", (phone,))
+                        contact_row = cur.fetchone()
+                        
+                        if contact_row:
+                            contact_id = contact_row[0]
+                            # Update contact with new data
+                            cur.execute("""
+                                UPDATE whatsapp_contacts 
+                                SET name = %s,
+                                    has_whatsapp = COALESCE(%s, has_whatsapp),
+                                    profile_picture_url = COALESCE(%s, profile_picture_url)
+                                WHERE id = %s
+                            """, (name, has_whatsapp, profile_picture_url, contact_id))
+                            print(f"[WHATSAPP] ✅ Updated existing contact #{contact_id}")
                         else:
-                            conn.execute("""
-                                UPDATE whatsapp_conversations 
-                                SET profile_picture_url = COALESCE(?, profile_picture_url),
-                                    has_whatsapp = COALESCE(?, has_whatsapp),
-                                    name = ?
-                                WHERE id = ?
-                            """, (profile_picture_url, has_whatsapp, name, conv_id))
-                            conn.commit()
-                    
-                    print(f"[WHATSAPP] ✅ Updated existing conversation #{conv_id}")
-                    return JSONResponse({
-                        "ok": True,
-                        "success": True,
-                        "message": "Conversa já existe para este contacto (atualizada)",
-                        "contact": {
-                            "name": name,
-                            "phone": phone,
-                            "id": conv_id,
-                            "has_whatsapp": has_whatsapp,
-                            "profile_picture_url": profile_picture_url
-                        }
-                    })
-                
-                # Insert new conversation
-                if is_postgres:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            INSERT INTO whatsapp_conversations 
-                            (name, phone_number, last_message_preview, has_whatsapp, profile_picture_url)
-                            VALUES (%s, %s, %s, %s, %s)
-                            RETURNING id
-                        """, (name, phone, "Nova conversa", has_whatsapp, profile_picture_url))
-                        new_id = cur.fetchone()[0]
+                            # Create new contact
+                            cur.execute("""
+                                INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp, profile_picture_url)
+                                VALUES (%s, %s, %s, %s)
+                                RETURNING id
+                            """, (name, phone, has_whatsapp, profile_picture_url))
+                            contact_id = cur.fetchone()[0]
+                            print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
                     conn.commit()
                 else:
-                    cursor = conn.execute("""
-                        INSERT INTO whatsapp_conversations 
-                        (name, phone_number, last_message_preview, has_whatsapp, profile_picture_url)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (name, phone, "Nova conversa", 1 if has_whatsapp else 0 if has_whatsapp is not None else None, profile_picture_url))
-                    new_id = cursor.lastrowid
+                    # SQLite version
+                    contact_row = conn.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = ?", (phone,)).fetchone()
+                    if contact_row:
+                        contact_id = contact_row[0]
+                        conn.execute("""
+                            UPDATE whatsapp_contacts 
+                            SET name = ?, has_whatsapp = COALESCE(?, has_whatsapp),
+                                profile_picture_url = COALESCE(?, profile_picture_url)
+                            WHERE id = ?
+                        """, (name, has_whatsapp, profile_picture_url, contact_id))
+                    else:
+                        cursor = conn.execute("""
+                            INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp, profile_picture_url)
+                            VALUES (?, ?, ?, ?)
+                        """, (name, phone, has_whatsapp, profile_picture_url))
+                        contact_id = cursor.lastrowid
                     conn.commit()
                 
-                print(f"[WHATSAPP] ✅ Created conversation #{new_id} for {name} - {phone}")
+                # STEP 2: Create or update CONVERSATION linked to contact
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Check if conversation already exists
+                        cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (phone,))
+                        conv_row = cur.fetchone()
+                        
+                        if conv_row:
+                            conversation_id = conv_row[0]
+                            # Update conversation with contact_id
+                            cur.execute("""
+                                UPDATE whatsapp_conversations 
+                                SET contact_id = %s
+                                WHERE id = %s
+                            """, (contact_id, conversation_id))
+                            print(f"[WHATSAPP] ✅ Updated existing conversation #{conversation_id} (linked to contact #{contact_id})")
+                        else:
+                            # Create new conversation linked to contact
+                            cur.execute("""
+                                INSERT INTO whatsapp_conversations 
+                                (contact_id, phone_number, last_message_preview)
+                                VALUES (%s, %s, %s)
+                                RETURNING id
+                            """, (contact_id, phone, "Nova conversa"))
+                            conversation_id = cur.fetchone()[0]
+                            print(f"[WHATSAPP] ✅ Created new conversation #{conversation_id} for contact #{contact_id}")
+                    conn.commit()
+                else:
+                    # SQLite version
+                    conv_row = conn.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = ?", (phone,)).fetchone()
+                    if conv_row:
+                        conversation_id = conv_row[0]
+                        conn.execute("UPDATE whatsapp_conversations SET contact_id = ? WHERE id = ?", (contact_id, conversation_id))
+                        print(f"[WHATSAPP] ✅ Updated existing conversation #{conversation_id} (linked to contact #{contact_id})")
+                    else:
+                        cursor = conn.execute("""
+                            INSERT INTO whatsapp_conversations (contact_id, phone_number, last_message_preview)
+                            VALUES (?, ?, ?)
+                        """, (contact_id, phone, "Nova conversa"))
+                        conversation_id = cursor.lastrowid
+                        print(f"[WHATSAPP] ✅ Created new conversation #{conversation_id} for contact #{contact_id}")
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Final result: Contact #{contact_id}, Conversation #{conversation_id}")
                 if has_whatsapp is not None:
                     print(f"[WHATSAPP] WhatsApp verified: {has_whatsapp}")
                 
@@ -6416,7 +6571,8 @@ async def add_whatsapp_contact(request: Request):
                     "contact": {
                         "name": name,
                         "phone": phone,
-                        "id": new_id,
+                        "id": contact_id,
+                        "conversation_id": conversation_id,
                         "has_whatsapp": has_whatsapp,
                         "profile_picture_url": profile_picture_url
                     }
@@ -6445,51 +6601,79 @@ async def delete_whatsapp_contact(request: Request, contact_id: int):
                 
                 if is_postgres:
                     with conn.cursor() as cur:
-                        # First, get phone_number from conversation (backward compatibility)
-                        cur.execute("SELECT phone_number FROM whatsapp_conversations WHERE id = %s", (contact_id,))
-                        row = cur.fetchone()
+                        # STEP 1: Verificar se contacto existe
+                        cur.execute("SELECT id, phone_number FROM whatsapp_contacts WHERE id = %s", (contact_id,))
+                        contact_row = cur.fetchone()
                         
-                        if row:
-                            phone_number = row[0]
-                            # Delete ALL conversations for this phone number
-                            cur.execute("DELETE FROM whatsapp_messages WHERE conversation_id IN (SELECT id FROM whatsapp_conversations WHERE phone_number = %s)", (phone_number,))
-                            cur.execute("DELETE FROM whatsapp_conversations WHERE phone_number = %s", (phone_number,))
-                            # Try to delete from contacts table too (if it exists)
-                            cur.execute("DELETE FROM whatsapp_contacts WHERE phone_number = %s", (phone_number,))
-                            deleted = cur.rowcount
-                        else:
-                            deleted = 0
+                        if not contact_row:
+                            return JSONResponse({
+                                "ok": False,
+                                "success": False,
+                                "error": "Contacto não encontrado"
+                            }, status_code=404)
+                        
+                        phone_number = contact_row[1]
+                        
+                        # STEP 2: Apagar todas as MENSAGENS das conversas deste contacto
+                        cur.execute("""
+                            DELETE FROM whatsapp_messages 
+                            WHERE conversation_id IN (
+                                SELECT id FROM whatsapp_conversations WHERE contact_id = %s
+                            )
+                        """, (contact_id,))
+                        
+                        # STEP 3: Apagar todas as CONVERSAS deste contacto
+                        cur.execute("DELETE FROM whatsapp_conversations WHERE contact_id = %s", (contact_id,))
+                        conversations_deleted = cur.rowcount
+                        
+                        # STEP 4: Apagar o CONTACTO
+                        cur.execute("DELETE FROM whatsapp_contacts WHERE id = %s", (contact_id,))
+                        
                     conn.commit()
-                else:
-                    # Get phone number
-                    cursor = conn.execute("SELECT phone_number FROM whatsapp_conversations WHERE id = ?", (contact_id,))
-                    row = cursor.fetchone()
                     
-                    if row:
-                        phone_number = row[0]
-                        # Delete ALL conversations for this phone number
-                        conn.execute("DELETE FROM whatsapp_messages WHERE conversation_id IN (SELECT id FROM whatsapp_conversations WHERE phone_number = ?)", (phone_number,))
-                        conn.execute("DELETE FROM whatsapp_conversations WHERE phone_number = ?", (phone_number,))
-                        # Try to delete from contacts table too
-                        conn.execute("DELETE FROM whatsapp_contacts WHERE phone_number = ?", (phone_number,))
-                        deleted = 1
-                    else:
-                        deleted = 0
-                    conn.commit()
-                
-                if deleted >= 0:  # Changed to >= 0 because we might not delete from contacts if it doesn't exist
-                    print(f"[WHATSAPP] ✅ Deleted ALL data for contact #{contact_id}")
+                    print(f"[WHATSAPP] ✅ Deleted contact #{contact_id} and {conversations_deleted} conversations")
+                    
                     return JSONResponse({
                         "ok": True,
                         "success": True,
-                        "message": "Contacto e todas as conversas eliminados com sucesso"
+                        "message": f"Contacto e {conversations_deleted} conversas eliminados com sucesso"
                     })
                 else:
+                    # SQLite version
+                    cursor = conn.execute("SELECT id, phone_number FROM whatsapp_contacts WHERE id = ?", (contact_id,))
+                    contact_row = cursor.fetchone()
+                    
+                    if not contact_row:
+                        return JSONResponse({
+                            "ok": False,
+                            "success": False,
+                            "error": "Contacto não encontrado"
+                        }, status_code=404)
+                    
+                    phone_number = contact_row[1]
+                    
+                    # Delete messages
+                    conn.execute("""
+                        DELETE FROM whatsapp_messages 
+                        WHERE conversation_id IN (
+                            SELECT id FROM whatsapp_conversations WHERE contact_id = ?
+                        )
+                    """, (contact_id,))
+                    
+                    # Delete conversations
+                    conn.execute("DELETE FROM whatsapp_conversations WHERE contact_id = ?", (contact_id,))
+                    
+                    # Delete contact
+                    conn.execute("DELETE FROM whatsapp_contacts WHERE id = ?", (contact_id,))
+                    conn.commit()
+                    
+                    print(f"[WHATSAPP] ✅ Deleted contact #{contact_id}")
+                    
                     return JSONResponse({
-                        "ok": False,
-                        "success": False,
-                        "error": "Contacto não encontrado"
-                    }, status_code=404)
+                        "ok": True,
+                        "success": True,
+                        "message": "Contacto e conversas eliminados com sucesso"
+                    })
             finally:
                 conn.close()
     except Exception as e:
@@ -7186,7 +7370,7 @@ async def send_whatsapp_message(request: Request):
         
         print(f"[WHATSAPP] ✅ Message sent successfully: {response_data}")
         
-        # Save message to database
+        # Save message to database - PROPER SEPARATION: ensure contact exists
         from datetime import datetime
         message_id = response_data.get('messages', [{}])[0].get('id', '')
         
@@ -7195,7 +7379,29 @@ async def send_whatsapp_message(request: Request):
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                # Find or create conversation
+                contact_id = None
+                conversation_id = None
+                
+                # STEP 1: Find or create CONTACT
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s", (clean_phone,))
+                        contact_row = cur.fetchone()
+                        
+                        if not contact_row:
+                            # Create contact if doesn't exist
+                            cur.execute("""
+                                INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp)
+                                VALUES (%s, %s, TRUE)
+                                RETURNING id
+                            """, (clean_phone, clean_phone))
+                            contact_id = cur.fetchone()[0]
+                            print(f"[WHATSAPP] Created contact #{contact_id} for outbound message")
+                        else:
+                            contact_id = contact_row[0]
+                    conn.commit()
+                
+                # STEP 2: Find or create CONVERSATION linked to contact
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (phone_number,))
@@ -7205,6 +7411,11 @@ async def send_whatsapp_message(request: Request):
                 
                 if conv_row:
                     conversation_id = conv_row[0]
+                    
+                    # Update conversation with contact_id if missing
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("UPDATE whatsapp_conversations SET contact_id = %s WHERE id = %s AND contact_id IS NULL", (contact_id, conversation_id))
                     
                     # Insert message
                     if is_postgres:
@@ -7340,7 +7551,7 @@ async def send_whatsapp_template(request: Request):
         
         print(f"[WHATSAPP] ✅ Template sent successfully: {response_data}")
         
-        # Save message to database
+        # Save message to database - PROPER SEPARATION: ensure contact exists
         from datetime import datetime
         message_id = response_data.get('messages', [{}])[0].get('id', '')
         template_preview = f"📋 Template: {template_name} ({language_code})"
@@ -7350,7 +7561,29 @@ async def send_whatsapp_template(request: Request):
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                # Find or create conversation
+                contact_id = None
+                conversation_id = None
+                
+                # STEP 1: Find or create CONTACT
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s", (clean_phone,))
+                        contact_row = cur.fetchone()
+                        
+                        if not contact_row:
+                            # Create contact if doesn't exist
+                            cur.execute("""
+                                INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp)
+                                VALUES (%s, %s, TRUE)
+                                RETURNING id
+                            """, (clean_phone, clean_phone))
+                            contact_id = cur.fetchone()[0]
+                            print(f"[WHATSAPP] Created contact #{contact_id} for template message")
+                        else:
+                            contact_id = contact_row[0]
+                    conn.commit()
+                
+                # STEP 2: Find or create conversation
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (phone_number,))
@@ -7360,6 +7593,11 @@ async def send_whatsapp_template(request: Request):
                 
                 if conv_row:
                     conversation_id = conv_row[0]
+                    
+                    # Update conversation with contact_id if missing
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("UPDATE whatsapp_conversations SET contact_id = %s WHERE id = %s AND contact_id IS NULL", (contact_id, conversation_id))
                     
                     # Insert message
                     if is_postgres:
@@ -7553,7 +7791,7 @@ async def send_whatsapp_media(request: Request):
         
         print(f"[WHATSAPP] ✅ Media message sent successfully")
         
-        # Save message to database
+        # Save message to database - PROPER SEPARATION: ensure contact exists
         from datetime import datetime
         message_id = response_data.get('messages', [{}])[0].get('id', '')
         message_text = caption if caption else f"[{media_type.upper()}] {file_name}"
@@ -7563,7 +7801,29 @@ async def send_whatsapp_media(request: Request):
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                # Find conversation
+                contact_id = None
+                conversation_id = None
+                
+                # STEP 1: Find or create CONTACT
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s", (clean_phone,))
+                        contact_row = cur.fetchone()
+                        
+                        if not contact_row:
+                            # Create contact if doesn't exist
+                            cur.execute("""
+                                INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp)
+                                VALUES (%s, %s, TRUE)
+                                RETURNING id
+                            """, (clean_phone, clean_phone))
+                            contact_id = cur.fetchone()[0]
+                            print(f"[WHATSAPP] Created contact #{contact_id} for media message")
+                        else:
+                            contact_id = contact_row[0]
+                    conn.commit()
+                
+                # STEP 2: Find conversation
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (clean_phone,))
@@ -7573,6 +7833,11 @@ async def send_whatsapp_media(request: Request):
                 
                 if conv_row:
                     conversation_id = conv_row[0]
+                    
+                    # Update conversation with contact_id if missing
+                    if is_postgres:
+                        with conn.cursor() as cur:
+                            cur.execute("UPDATE whatsapp_conversations SET contact_id = %s WHERE id = %s AND contact_id IS NULL", (contact_id, conversation_id))
                     
                     # Insert message
                     if is_postgres:
@@ -8338,6 +8603,134 @@ async def delete_all_whatsapp_contacts(request: Request):
                 conn.close()
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error deleting all contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Create WhatsApp Contacts Table ---
+@app.post("/api/admin/whatsapp/create-contacts-table")
+async def create_whatsapp_contacts_table(request: Request):
+    """Create whatsapp_contacts table if it doesn't exist"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Robust PostgreSQL detection
+                is_postgres = (
+                    conn.__class__.__module__ == 'psycopg2.extensions' or 
+                    os.environ.get('DATABASE_URL') is not None
+                )
+                print(f"[WHATSAPP] Database type: {'PostgreSQL' if is_postgres else 'SQLite'}")
+                print(f"[WHATSAPP] Connection class: {conn.__class__.__module__}")
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        table_created = False
+                        column_added = False
+                        
+                        # Check if table exists
+                        cur.execute("""
+                            SELECT EXISTS (
+                                SELECT FROM information_schema.tables 
+                                WHERE table_name = 'whatsapp_contacts'
+                            );
+                        """)
+                        table_exists = cur.fetchone()[0]
+                        
+                        if not table_exists:
+                            # Create table
+                            print("[WHATSAPP] Creating whatsapp_contacts table...")
+                            cur.execute("""
+                                CREATE TABLE whatsapp_contacts (
+                                    id SERIAL PRIMARY KEY,
+                                    name TEXT NOT NULL,
+                                    phone_number TEXT NOT NULL UNIQUE,
+                                    has_whatsapp BOOLEAN,
+                                    profile_picture_url TEXT,
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            table_created = True
+                            print("[WHATSAPP] ✅ Table whatsapp_contacts created!")
+                        else:
+                            print("[WHATSAPP] Table whatsapp_contacts already exists")
+                        
+                        # Check if contact_id column exists in conversations
+                        cur.execute("""
+                            SELECT EXISTS (
+                                SELECT FROM information_schema.columns 
+                                WHERE table_name = 'whatsapp_conversations' 
+                                AND column_name = 'contact_id'
+                            );
+                        """)
+                        has_contact_id = cur.fetchone()[0]
+                        
+                        if not has_contact_id:
+                            print("[WHATSAPP] Adding contact_id column to whatsapp_conversations...")
+                            cur.execute("""
+                                ALTER TABLE whatsapp_conversations 
+                                ADD COLUMN contact_id INTEGER REFERENCES whatsapp_contacts(id);
+                            """)
+                            column_added = True
+                            print("[WHATSAPP] ✅ Column contact_id added!")
+                        else:
+                            print("[WHATSAPP] Column contact_id already exists")
+                        
+                        conn.commit()
+                        print("[WHATSAPP] ✅ Database schema updated successfully!")
+                        
+                        return JSONResponse({
+                            "ok": True,
+                            "success": True,
+                            "message": "Schema atualizado com sucesso!",
+                            "table_created": table_created,
+                            "column_added": column_added,
+                            "table_already_existed": table_exists,
+                            "column_already_existed": has_contact_id
+                        })
+                else:
+                    # SQLite
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            phone_number TEXT NOT NULL UNIQUE,
+                            has_whatsapp INTEGER,
+                            profile_picture_url TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    # Check if contact_id column exists in conversations
+                    cursor = conn.execute("PRAGMA table_info(whatsapp_conversations)")
+                    columns = [row[1] for row in cursor.fetchall()]
+                    has_contact_id = 'contact_id' in columns
+                    
+                    if not has_contact_id:
+                        print("[WHATSAPP] Adding contact_id column to whatsapp_conversations (SQLite)...")
+                        conn.execute("""
+                            ALTER TABLE whatsapp_conversations 
+                            ADD COLUMN contact_id INTEGER REFERENCES whatsapp_contacts(id)
+                        """)
+                    
+                    conn.commit()
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "success": True,
+                        "message": "Tabela whatsapp_contacts criada (SQLite)",
+                        "contact_id_added": not has_contact_id
+                    })
+                    
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error creating table: {str(e)}")
         import traceback
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)

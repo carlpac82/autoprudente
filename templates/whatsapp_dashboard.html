@@ -505,16 +505,16 @@
 
         async function loadContacts() {
             try {
-                console.log('[LOAD CONTACTS] Fetching...');
-                const response = await fetch('/api/whatsapp/conversations?_=' + Date.now()); // Cache bust
+                console.log('[LOAD CONTACTS] Fetching from /api/whatsapp/contacts...');
+                const response = await fetch('/api/whatsapp/contacts?_=' + Date.now()); // Cache bust
                 const data = await response.json();
                 
-                console.log('[LOAD CONTACTS] Received:', data.conversations?.length, 'contacts');
+                console.log('[LOAD CONTACTS] Received:', data.contacts?.length, 'contacts');
                 
                 if (data.success) {
-                    // Update global conversations array
-                    conversations = data.conversations || [];
-                    renderContacts(conversations);
+                    // Store contacts globally
+                    const contactsList = data.contacts || [];
+                    renderContacts(contactsList);
                     console.log('[LOAD CONTACTS] Rendered!');
                 } else {
                     console.error('[LOAD CONTACTS] Error:', data.error);
@@ -541,7 +541,7 @@
 
             list.innerHTML = contacts.map(contact => `
                 <div class="p-3 border-b border-gray-200 hover:bg-[#f5f6f6] group relative cursor-pointer transition-all">
-                    <div class="flex items-center gap-3" onclick="openContactConversation(${contact.id})">
+                    <div class="flex items-center gap-3">
                         ${contact.profile_picture_url ? 
                             `<img src="${contact.profile_picture_url}" alt="${contact.name}" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                              <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0" style="display: none;">
@@ -555,7 +555,7 @@
                             <div class="flex justify-between items-center mb-1">
                                 <h4 class="font-semibold text-gray-900 truncate">${contact.name || contact.phone_number}${contact.has_whatsapp === false ? ' ⚠️' : ''}</h4>
                                 <div class="flex items-center gap-2">
-                                    ${contact.unread_count > 0 ? `<span class="unread-badge">${contact.unread_count}</span>` : ''}
+                                    ${contact.conversation_count > 0 ? `<span class="text-xs text-gray-500">${contact.conversation_count} conversa${contact.conversation_count > 1 ? 's' : ''}</span>` : ''}
                                 </div>
                             </div>
                             <p class="text-sm text-gray-600 truncate">
@@ -565,7 +565,7 @@
                     </div>
                     <button onclick="deleteContact(${contact.id}, event)" 
                             class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-red-500 hover:bg-red-50 rounded"
-                            title="Eliminar contacto">
+                            title="Eliminar contacto e TODAS conversas">
                         <i class="far fa-trash-alt"></i>
                     </button>
                 </div>
@@ -1389,7 +1389,7 @@
 
         // Delete Conversation
         async function deleteConversation(conversationId) {
-            if (!confirm('ATENÇÃO: Esta ação é irreversível!\\n\\nTem a certeza que deseja eliminar permanentemente esta conversa e todas as suas mensagens?')) {
+            if (!confirm('Eliminar CONVERSA?\n\nApaga: conversa + mensagens\nMantém: contacto (para apagar contacto, use o tab Contactos)\nAção PERMANENTE\n\nTem certeza?')) {
                 return;
             }
             
