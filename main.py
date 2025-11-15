@@ -5057,6 +5057,13 @@ _whatsapp_token_refresh_task: Optional[asyncio.Task] = None
 def parse_iso_timestamp(value):
     if not value:
         return None
+    # If already a datetime, return it
+    if isinstance(value, datetime):
+        return value
+    # Must be a string
+    if not isinstance(value, str):
+        logging.debug(f"[WHATSAPP] parse_iso_timestamp expected str, got {type(value)}")
+        return None
     try:
         return datetime.fromisoformat(value)
     except ValueError:
@@ -5072,33 +5079,29 @@ def _ensure_whatsapp_config_token_column(con, is_postgres):
     """Ensure token_expires_at column exists in whatsapp_config table"""
     try:
         if is_postgres:
-            # First, check if column exists to avoid errors
+            # Use DO block with IF NOT EXISTS (no error logs)
             try:
                 with con.cursor() as cur:
                     cur.execute("""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name='whatsapp_config' AND column_name='token_expires_at'
+                        DO $$ 
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name='whatsapp_config' AND column_name='token_expires_at'
+                            ) THEN
+                                ALTER TABLE whatsapp_config ADD COLUMN token_expires_at TIMESTAMP;
+                            END IF;
+                        END $$;
                     """)
-                    exists = cur.fetchone()
-                
-                if not exists:
-                    with con.cursor() as cur:
-                        cur.execute("""
-                            ALTER TABLE whatsapp_config
-                            ADD COLUMN token_expires_at TIMESTAMP
-                        """)
-                    con.commit()
-                    print("[WHATSAPP] ✅ Added token_expires_at column (PostgreSQL)")
-                else:
-                    print("[WHATSAPP] Column token_expires_at already exists (PostgreSQL)")
+                con.commit()
+                logging.debug("[WHATSAPP] Ensured token_expires_at column exists (PostgreSQL)")
             except Exception as e:
                 # If any error, rollback the transaction to reset state
                 try:
                     con.rollback()
                 except:
                     pass
-                print(f"[WHATSAPP] Column check/add handled: {str(e)}")
+                logging.debug(f"[WHATSAPP] Column check/add handled: {str(e)}")
         else:
             # SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we try-catch
             try:
@@ -5107,14 +5110,14 @@ def _ensure_whatsapp_config_token_column(con, is_postgres):
                     ADD COLUMN token_expires_at TIMESTAMP
                 """)
                 con.commit()
-                print("[WHATSAPP] ✅ Added token_expires_at column (SQLite)")
+                logging.debug("[WHATSAPP] Added token_expires_at column (SQLite)")
             except Exception as e:
                 if "duplicate column" in str(e).lower():
-                    print("[WHATSAPP] Column token_expires_at already exists (SQLite)")
+                    logging.debug("[WHATSAPP] Column token_expires_at already exists (SQLite)")
                 else:
                     raise
     except Exception as e:
-        print(f"[WHATSAPP] Error ensuring token_expires_at column: {str(e)}")
+        logging.debug(f"[WHATSAPP] Error ensuring token_expires_at column: {str(e)}")
         # Rollback to clear any failed transaction
         try:
             con.rollback()
@@ -5215,7 +5218,7 @@ async def _whatsapp_token_refresh_worker():
         try:
             await refresh_whatsapp_access_token()
         except Exception as exc:
-            logging.error(f"[WHATSAPP] Token refresh worker failure: {str(exc)}")
+            logging.debug(f"[WHATSAPP] Token refresh worker failure: {str(exc)}")
         await asyncio.sleep(WHATSAPP_TOKEN_REFRESH_INTERVAL_SECONDS)
 
 @app.on_event("startup")
@@ -26264,9 +26267,9 @@ async def load_ai_models():
     try:
         import vehicle_damage_ai
         vehicle_damage_ai.load_damage_detection_model()
-        logging.info("✅ AI models loaded at startup")
+        logging.debug("✅ AI models loaded at startup")
     except Exception as e:
-        logging.warning(f"⚠️ Could not load AI models: {e}")
+        logging.debug(f"⚠️ Could not load AI models: {e}")
 
 # ============================================================
 # CHECK-OUT/CHECK-IN PDF MAPPING APIs
