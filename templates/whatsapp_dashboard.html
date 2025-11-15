@@ -41,6 +41,10 @@
             max-width: 65%;
             word-wrap: break-word;
             position: relative;
+            transition: all 0.2s ease;
+        }
+        .group:hover .message-bubble {
+            box-shadow: 0 2px 8px rgba(0,0,0,.2);
         }
         .message-inbound {
             background-color: rgba(245, 158, 11, 0.2);
@@ -244,7 +248,7 @@
                 </div>
 
                 <!-- Messages Area -->
-                <div id="messages-area" class="flex-1 overflow-y-auto p-4 bg-gray-50" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlMGUwZTAiLz48L3N2Zz4=');">
+                <div id="messages-area" class="overflow-y-auto p-4 bg-gray-50" style="height: calc(100vh - 280px); background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlMGUwZTAiLz48L3N2Zz4=');">
                     <div class="flex items-center justify-center h-full text-gray-400">
                         <div class="text-center">
                             <i class="fas fa-comments text-5xl mb-3"></i>
@@ -635,8 +639,8 @@
                             <span class="text-xs text-gray-500">${formatTime(msg.timestamp)}</span>
                             ${msg.direction === 'outbound' ? `<i class="fas fa-check${msg.status === 'read' ? '-double text-[#53bdeb]' : msg.status === 'delivered' ? '-double text-gray-500' : ' text-gray-400'}" style="font-size: 10px;"></i>` : ''}
                         </div>
-                        <button onclick="deleteMessage(${msg.id})" class="absolute -right-8 top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600" title="Eliminar mensagem">
-                            <i class="fas fa-trash text-xs"></i>
+                        <button onclick="deleteMessage('${msg.id}')" class="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 shadow-lg z-10" title="Eliminar mensagem">
+                            <i class="fas fa-times text-sm"></i>
                         </button>
                     </div>
                 </div>
