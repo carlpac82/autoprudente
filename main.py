@@ -2813,7 +2813,19 @@ try:
                 "email": "comercial.autoprudente@gmail.com",
                 "mobile": "+351 911 747 478",
                 "profile_picture": "/static/profiles/dprudente.jpg",
-                "is_admin": False
+                "is_admin": False,
+                "role": ""
+            },
+            {
+                "username": "LP",
+                "password": "LP.2025",
+                "first_name": "LP",
+                "last_name": "Support",
+                "email": "support@autoprudente.com",
+                "mobile": "",
+                "profile_picture": "",
+                "is_admin": False,
+                "role": "support"
             }
         ]
         
@@ -2829,8 +2841,9 @@ try:
                             # Convert integers to boolean for PostgreSQL
                             is_admin_val = True if user.get("is_admin", 0) == 1 else False
                             enabled_val = True if user.get("enabled", 1) == 1 else False
+                            user_role = user.get("role", "user")
                             con.execute(
-                                "INSERT INTO users (username, password_hash, first_name, last_name, email, mobile, profile_picture_path, is_admin, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                                "INSERT INTO users (username, password_hash, first_name, last_name, email, mobile, profile_picture_path, is_admin, enabled, role, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                                 (
                                     user["username"],
                                     pw_hash,
@@ -2841,6 +2854,7 @@ try:
                                     user["profile_picture"],
                                     is_admin_val,
                                     enabled_val,
+                                    user_role,
                                     time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
                                 )
                             )
