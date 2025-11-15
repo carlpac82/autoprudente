@@ -17103,8 +17103,6 @@ async def save_automated_price_rules(request: Request):
     
     try:
         data = await request.json()
-        logging.info(f"💾 Saving automated price rules for {len(data)} locations")
-        logging.info(f"📦 Data structure: {list(data.keys())}")
         
         # 🚨 PROTEÇÃO: Contar quantas regras reais existem
         total_rules = 0
@@ -17115,8 +17113,6 @@ async def save_automated_price_rules(request: Request):
                         if 'days' in month_data:
                             total_rules += len(month_data['days'])
         
-        logging.info(f"📊 Total rules to save: {total_rules}")
-        
         # 🚨 PROTEÇÃO: Se tentando salvar 0 regras, verificar se já existem regras
         if total_rules == 0:
             with _db_lock:
@@ -17124,10 +17120,12 @@ async def save_automated_price_rules(request: Request):
                 try:
                     cursor = conn.execute("SELECT COUNT(*) FROM automated_price_rules")
                     existing_count = cursor.fetchone()[0]
-                    logging.warning(f"⚠️ Attempting to save 0 rules, but {existing_count} rules exist in database!")
+                    # Changed to DEBUG to reduce log noise (protection still active)
+                    logging.debug(f"⚠️ Attempting to save 0 rules, but {existing_count} rules exist in database!")
                     
                     if existing_count > 0:
-                        logging.error(f"❌ BLOCKED: Refusing to delete {existing_count} existing rules with empty save!")
+                        # Changed to DEBUG - protection still active, just silent
+                        logging.debug(f"🛡️ BLOCKED: Refusing to delete {existing_count} existing rules with empty save!")
                         return JSONResponse({
                             "ok": False, 
                             "error": f"Cannot save empty rules when {existing_count} rules exist. Use Clear All button explicitly.",
