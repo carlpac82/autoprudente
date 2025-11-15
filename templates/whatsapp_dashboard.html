@@ -522,7 +522,7 @@
             area.innerHTML = messages.map(msg => `
                 <div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-3">
                     <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} rounded-lg p-3 shadow">
-                        <p class="text-sm">${escapeHtml(msg.content)}</p>
+                        <p class="text-sm">${escapeHtml(msg.text || msg.content || '')}</p>
                         <div class="flex items-center justify-between gap-2 mt-1">
                             <span class="text-xs text-gray-500">${formatTime(msg.timestamp)}</span>
                             ${msg.direction === 'outbound' ? `<span class="text-xs text-gray-500"><i class="fas fa-check${msg.status === 'read' ? '-double text-blue-500' : msg.status === 'delivered' ? '-double' : ''}"></i></span>` : ''}

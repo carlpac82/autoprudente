@@ -460,6 +460,7 @@ import secrets
 import re
 from urllib.parse import urljoin
 from typing import List, Dict, Any, Optional, Tuple
+import asyncio
 from datetime import datetime, timezone, timedelta
 import traceback as _tb
 import logging
@@ -5029,6 +5030,160 @@ async def admin_get_whatsapp_config(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+WHATSAPP_TOKEN_REFRESH_BUFFER = timedelta(days=3)
+WHATSAPP_TOKEN_REFRESH_INTERVAL_SECONDS = 60 * 60  # Check for refresh every hour
+
+_whatsapp_token_refresh_task: Optional[asyncio.Task] = None
+
+def parse_iso_timestamp(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        try:
+            return datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except Exception:
+            return None
+
+def format_iso_timestamp(value: datetime):
+    return value.replace(microsecond=0).isoformat()
+
+def _ensure_whatsapp_config_token_column(con, is_postgres):
+    if is_postgres:
+        with con.cursor() as cur:
+            cur.execute("""
+                ALTER TABLE whatsapp_config
+                ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP
+            """)
+    else:
+        con.execute("""
+            ALTER TABLE whatsapp_config
+            ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP
+        """)
+
+def _get_whatsapp_config_row():
+    with _db_lock:
+        conn = _db_connect()
+        try:
+            is_postgres = str(conn.__class__).find('psycopg') >= 0
+            _ensure_whatsapp_config_token_column(conn, is_postgres)
+            if is_postgres:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT access_token, phone_number_id, business_account_id, verify_token, token_expires_at FROM whatsapp_config WHERE id=1")
+                    row = cur.fetchone()
+            else:
+                row = conn.execute("SELECT access_token, phone_number_id, business_account_id, verify_token, token_expires_at FROM whatsapp_config WHERE id=1").fetchone()
+            return row
+        finally:
+            conn.close()
+
+async def refresh_whatsapp_access_token(force: bool = False):
+    row = _get_whatsapp_config_row()
+    if not row or not row[0]:
+        print("[WHATSAPP] Access token not configured")
+        return False
+
+    access_token, phone_number_id, business_account_id, verify_token, expires_at = row
+    expires_dt = parse_iso_timestamp(expires_at)
+    if not force and expires_dt and expires_dt > datetime.utcnow() + WHATSAPP_TOKEN_REFRESH_BUFFER:
+        return True
+
+    app_id = os.getenv('WHATSAPP_APP_ID')
+    app_secret = os.getenv('WHATSAPP_APP_SECRET')
+    if not app_id or not app_secret:
+        print("[WHATSAPP] Missing WHATSAPP_APP_ID/WHATSAPP_APP_SECRET for token refresh")
+        return False
+
+    refresh_url = "https://graph.facebook.com/oauth/access_token"
+    params = {
+        'grant_type': 'fb_exchange_token',
+        'client_id': app_id,
+        'client_secret': app_secret,
+        'fb_exchange_token': access_token
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(refresh_url, params=params)
+        if response.status_code != 200:
+            print(f"[WHATSAPP] ❌ Token refresh failed: {response.text}")
+            return False
+
+        data = response.json()
+        new_token = data.get('access_token')
+        expires_in = data.get('expires_in', 60 * 24 * 60 * 60)
+        if not new_token:
+            print("[WHATSAPP] ❌ No new access token returned")
+            return False
+
+        new_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                if str(conn.__class__).find('psycopg') >= 0:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                                UPDATE whatsapp_config
+                                SET access_token = %s,
+                                    token_expires_at = %s,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE id = 1
+                            """,
+                            (new_token, format_iso_timestamp(new_expires_at))
+                        )
+                else:
+                    conn.execute(
+                        """
+                            UPDATE whatsapp_config
+                            SET access_token = ?,
+                                token_expires_at = ?,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = 1
+                        """,
+                        (new_token, format_iso_timestamp(new_expires_at))
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+
+    print(f"[WHATSAPP] refreshed token, expires at {new_expires_at}")
+    return True
+
+async def _whatsapp_token_refresh_worker():
+    while True:
+        try:
+            await refresh_whatsapp_access_token()
+        except Exception as exc:
+            logging.error(f"[WHATSAPP] Token refresh worker failure: {str(exc)}")
+        await asyncio.sleep(WHATSAPP_TOKEN_REFRESH_INTERVAL_SECONDS)
+
+@app.on_event("startup")
+async def startup_whatsapp_token_refresher():
+    global _whatsapp_token_refresh_task
+    if _whatsapp_token_refresh_task is None:
+        logging.info("[WHATSAPP] Starting token refresh worker")
+        _whatsapp_token_refresh_task = asyncio.create_task(_whatsapp_token_refresh_worker())
+
+@app.on_event("shutdown")
+async def shutdown_whatsapp_token_refresher():
+    global _whatsapp_token_refresh_task
+    if _whatsapp_token_refresh_task:
+        _whatsapp_token_refresh_task.cancel()
+        try:
+            await _whatsapp_token_refresh_task
+        except asyncio.CancelledError:
+            pass
+        _whatsapp_token_refresh_task = None
+
+@app.post("/api/admin/whatsapp/refresh-token")
+async def refresh_whatsapp_token_endpoint(request: Request):
+    require_auth(request)
+    success = await refresh_whatsapp_access_token(force=True)
+    if success:
+        return JSONResponse({"ok": True, "success": True, "message": "Token renovado"})
+    return JSONResponse({"ok": False, "success": False, "error": "Não foi possível renovar o token"}, status_code=400)
+
 @app.post("/api/admin/whatsapp/save-config")
 async def admin_save_whatsapp_config(request: Request):
     """Save WhatsApp connection configuration"""
@@ -6374,13 +6529,17 @@ async def google_contacts_callback(request: Request, code: str = None):
                 if is_postgres:
                     with conn.cursor() as cur:
                         cur.execute("""
-                            INSERT INTO google_oauth_tokens (service, access_token, refresh_token, expires_at)
-                            VALUES ('contacts', %s, %s, NOW() + INTERVAL '3600 seconds')
-                            ON CONFLICT (service) DO UPDATE 
-                            SET access_token = EXCLUDED.access_token,
-                                refresh_token = EXCLUDED.refresh_token,
-                                expires_at = EXCLUDED.expires_at
+                            UPDATE google_oauth_tokens
+                            SET access_token = %s,
+                                refresh_token = %s,
+                                expires_at = NOW() + INTERVAL '3600 seconds'
+                            WHERE service = 'contacts'
                         """, (tokens['access_token'], tokens.get('refresh_token')))
+                        if cur.rowcount == 0:
+                            cur.execute("""
+                                INSERT INTO google_oauth_tokens (service, access_token, refresh_token, expires_at)
+                                VALUES ('contacts', %s, %s, NOW() + INTERVAL '3600 seconds')
+                            """, (tokens['access_token'], tokens.get('refresh_token')))
                     conn.commit()
                 else:
                     conn.execute("""
