@@ -5797,7 +5797,35 @@ async def whatsapp_webhook_receive(request: Request):
                                 try:
                                     is_postgres = str(conn.__class__).find('psycopg') >= 0
                                     
-                                    # Find or create conversation in database
+                                    # STEP 1: Find or create CONTACT first
+                                    contact_id = None
+                                    if is_postgres:
+                                        with conn.cursor() as cur:
+                                            # Try to find existing contact
+                                            cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s", (from_phone,))
+                                            contact_row = cur.fetchone()
+                                            
+                                            if contact_row:
+                                                contact_id = contact_row[0]
+                                                # Update contact name if provided
+                                                cur.execute("""
+                                                    UPDATE whatsapp_contacts 
+                                                    SET name = %s, has_whatsapp = TRUE
+                                                    WHERE id = %s
+                                                """, (contact_name, contact_id))
+                                                print(f"[WHATSAPP-WEBHOOK] Updated contact #{contact_id}")
+                                            else:
+                                                # Create new contact
+                                                cur.execute("""
+                                                    INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp)
+                                                    VALUES (%s, %s, TRUE)
+                                                    RETURNING id
+                                                """, (contact_name, from_phone))
+                                                contact_id = cur.fetchone()[0]
+                                                print(f"[WHATSAPP-WEBHOOK] Created new contact #{contact_id}")
+                                        conn.commit()
+                                    
+                                    # STEP 2: Find or create CONVERSATION linked to contact
                                     if is_postgres:
                                         with conn.cursor() as cur:
                                             cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (from_phone,))
@@ -5816,9 +5844,10 @@ async def whatsapp_webhook_receive(request: Request):
                                                     UPDATE whatsapp_conversations 
                                                     SET last_message_at = CURRENT_TIMESTAMP,
                                                         last_message_preview = %s,
-                                                        unread_count = unread_count + 1
+                                                        unread_count = unread_count + 1,
+                                                        contact_id = %s
                                                     WHERE id = %s
-                                                """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), conversation_id))
+                                                """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), contact_id, conversation_id))
                                             conn.commit()
                                         else:
                                             conn.execute("""
@@ -5830,27 +5859,27 @@ async def whatsapp_webhook_receive(request: Request):
                                             """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), conversation_id))
                                             conn.commit()
                                     else:
-                                        # Create new conversation
+                                        # Create new conversation linked to contact
                                         if is_postgres:
                                             with conn.cursor() as cur:
                                                 cur.execute("""
                                                     INSERT INTO whatsapp_conversations 
-                                                    (name, phone_number, last_message_at, last_message_preview, unread_count, status, has_whatsapp)
-                                                    VALUES (%s, %s, CURRENT_TIMESTAMP, %s, 1, 'open', TRUE)
+                                                    (contact_id, phone_number, last_message_at, last_message_preview, unread_count, status)
+                                                    VALUES (%s, %s, CURRENT_TIMESTAMP, %s, 1, 'open')
                                                     RETURNING id
-                                                """, (contact_name, from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
+                                                """, (contact_id, from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
                                                 conversation_id = cur.fetchone()[0]
                                             conn.commit()
                                         else:
                                             cursor = conn.execute("""
                                                 INSERT INTO whatsapp_conversations 
-                                                (name, phone_number, last_message_at, last_message_preview, unread_count, status, has_whatsapp)
-                                                VALUES (?, ?, datetime('now'), ?, 1, 'open', 1)
-                                            """, (contact_name, from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
+                                                (phone_number, last_message_at, last_message_preview, unread_count, status)
+                                                VALUES (?, datetime('now'), ?, 1, 'open')
+                                            """, (from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
                                             conversation_id = cursor.lastrowid
                                             conn.commit()
                                         
-                                        print(f"[WHATSAPP-WEBHOOK] ✅ Created new conversation #{conversation_id}")
+                                        print(f"[WHATSAPP-WEBHOOK] ✅ Created new conversation #{conversation_id} for contact #{contact_id}")
                                     
                                     # Insert message into database
                                     message_timestamp = datetime.fromtimestamp(int(timestamp))
@@ -8309,6 +8338,94 @@ async def delete_all_whatsapp_contacts(request: Request):
                 conn.close()
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error deleting all contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Migrate Conversations to Contacts ---
+@app.post("/api/admin/whatsapp/migrate-contacts")
+async def migrate_conversations_to_contacts(request: Request):
+    """Migrate existing conversations to use whatsapp_contacts table properly"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if not is_postgres:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "Migration only supported on PostgreSQL"
+                    }, status_code=400)
+                
+                migrated_count = 0
+                skipped_count = 0
+                
+                with conn.cursor() as cur:
+                    # Get all conversations without contact_id or with missing contact
+                    cur.execute("""
+                        SELECT id, phone_number, name, profile_picture_url, has_whatsapp
+                        FROM whatsapp_conversations
+                        WHERE contact_id IS NULL 
+                           OR contact_id NOT IN (SELECT id FROM whatsapp_contacts)
+                        ORDER BY created_at
+                    """)
+                    conversations = cur.fetchall()
+                    
+                    print(f"[MIGRATION] Found {len(conversations)} conversations to migrate")
+                    
+                    for conv in conversations:
+                        conv_id, phone_number, name, profile_pic, has_whatsapp = conv
+                        
+                        # Try to find existing contact by phone_number
+                        cur.execute("""
+                            SELECT id FROM whatsapp_contacts 
+                            WHERE phone_number = %s
+                        """, (phone_number,))
+                        contact_row = cur.fetchone()
+                        
+                        if contact_row:
+                            contact_id = contact_row[0]
+                            print(f"[MIGRATION] Found existing contact {contact_id} for phone {phone_number}")
+                        else:
+                            # Create new contact
+                            cur.execute("""
+                                INSERT INTO whatsapp_contacts (name, phone_number, has_whatsapp, profile_picture_url)
+                                VALUES (%s, %s, %s, %s)
+                                RETURNING id
+                            """, (name or phone_number, phone_number, has_whatsapp, profile_pic))
+                            contact_id = cur.fetchone()[0]
+                            print(f"[MIGRATION] Created new contact {contact_id} for phone {phone_number}")
+                        
+                        # Update conversation with contact_id
+                        cur.execute("""
+                            UPDATE whatsapp_conversations
+                            SET contact_id = %s
+                            WHERE id = %s
+                        """, (contact_id, conv_id))
+                        
+                        migrated_count += 1
+                    
+                    conn.commit()
+                
+                print(f"[MIGRATION] ✅ Migrated {migrated_count} conversations to contacts")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": f"Migração concluída",
+                    "migrated": migrated_count,
+                    "skipped": skipped_count
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[MIGRATION] ❌ Error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
