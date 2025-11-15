@@ -6562,9 +6562,20 @@ async def add_whatsapp_contact(request: Request):
                                 RETURNING id
                             """, (contact_id, phone, "Nova conversa"))
                             result = cur.fetchone()
+                            print(f"[WHATSAPP] 🔍 RETURNING result: {result}")
+                            
+                            if result and result[0]:
+                                conversation_id = result[0]
+                                print(f"[WHATSAPP] ✅ Created new conversation #{conversation_id} for contact #{contact_id}")
+                            else:
+                                # Fallback: query for the conversation we just created
+                                print(f"[WHATSAPP] ⚠️ RETURNING didn't work, querying manually...")
+                                cur.execute("SELECT id FROM whatsapp_conversations WHERE contact_id = %s AND phone_number = %s ORDER BY id DESC LIMIT 1", (contact_id, phone))
+                                fallback = cur.fetchone()
+                                conversation_id = fallback[0] if fallback else None
+                                print(f"[WHATSAPP] ✅ Found conversation via fallback: #{conversation_id}")
+                            
                             conn.commit()
-                            conversation_id = result[0]
-                            print(f"[WHATSAPP] ✅ Created new conversation #{conversation_id} for contact #{contact_id}")
                 else:
                     # SQLite version
                     conv_row = conn.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = ?", (phone,)).fetchone()
