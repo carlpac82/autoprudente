@@ -33871,6 +33871,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
                         has_supplier_data = True
+                        has_period_info = False  # SQLite doesn't have period_info column
                     except Exception as e:
                         logging.warning(f"supplier_data column not found, using old schema: {e}")
                         conn.rollback()
@@ -33884,6 +33885,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
                         has_supplier_data = False
+                        has_period_info = False  # SQLite doesn't have period_info column
                 
                 # Group by month_key and search_type
                 import json
