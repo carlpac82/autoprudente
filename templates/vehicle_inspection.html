@@ -635,7 +635,7 @@
     
     <!-- Hidden Logout Form -->
     <form id="logoutForm" action="/logout" method="POST" style="display: none;">
-        <button type="submit">Logout</button>
+        <button type="submit" id="logoutSubmitBtn">Logout</button>
     </form>
     
     <!-- WhatsApp Modal (Role Support apenas) -->
@@ -707,16 +707,22 @@
             console.log('[LOGOUT] Function called');
             
             if (confirm('Tem a certeza que deseja terminar a sessão?')) {
-                console.log('[LOGOUT] User confirmed - submitting form');
+                console.log('[LOGOUT] User confirmed - triggering submit button click');
                 
-                // Use traditional form submit (most reliable across all browsers)
-                const form = document.getElementById('logoutForm');
-                if (form) {
-                    console.log('[LOGOUT] Form found, submitting...');
-                    form.submit();
+                // Trigger click on submit button (more reliable than form.submit())
+                const submitBtn = document.getElementById('logoutSubmitBtn');
+                if (submitBtn) {
+                    console.log('[LOGOUT] Submit button found, clicking...');
+                    submitBtn.click();
                 } else {
-                    console.error('[LOGOUT] Form not found! Fallback to location redirect');
-                    window.location.href = '/logout';
+                    console.error('[LOGOUT] Submit button not found! Fallback to POST');
+                    // Fallback: create and submit form dynamically
+                    fetch('/logout', {
+                        method: 'POST',
+                        credentials: 'same-origin'
+                    }).then(() => {
+                        window.location.href = '/login';
+                    });
                 }
             } else {
                 console.log('[LOGOUT] User cancelled');
