@@ -429,47 +429,38 @@
                                 <!-- Will be populated by JS -->
                             </select>
                         </div>
-                        <!-- Period Chips (Auto-detected from Calendar Scan) -->
+                        <!-- Period Price Detection -->
                         <div id="periodSelectorAuto" class="hidden">
-                            <div class="mb-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Períodos Detetados (Mudanças de Tarifa)</label>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <button onclick="runPriceCalendarScan()" 
-                                            class="px-3 py-1.5 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-all text-sm flex items-center gap-1"
-                                            title="Detetar períodos de mudança de tarifa">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                        <span>Detetar Períodos</span>
-                                    </button>
-                                    <button onclick="toggleAllPeriods()" 
-                                            class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
-                                            title="Selecionar/Desselecionar Todos os Períodos">
-                                        <svg class="w-5 h-5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    </button>
+                            <!-- Step 1: Select Month -->
+                            <div id="periodMonthSelection" class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">1. Selecionar Mês para Análise de Períodos</label>
+                                <div class="text-center mb-2">
+                                    <span id="periodYear" class="text-lg font-semibold text-gray-700">2025</span>
                                 </div>
-                                <div id="periodChipsContainer" class="flex flex-wrap gap-2">
-                                    <div class="text-sm text-gray-500 italic">Execute "Detetar Períodos" para identificar mudanças de tarifa</div>
+                                <div class="flex flex-wrap gap-2 justify-center" id="periodMonthChips">
+                                    <!-- Month chips will be generated here: JAN, FEV, MAR... -->
                                 </div>
                             </div>
-                            <!-- Download Selected Periods Button -->
-                            <div class="mt-3 flex gap-2">
-                                <button onclick="downloadSelectedPeriods()" 
-                                        id="btnDownloadSelectedPeriods"
-                                        class="px-4 py-2 bg-[#10b981] text-white rounded-lg hover:bg-[#059669] transition-all flex items-center gap-2 font-medium text-sm"
-                                        title="Descarregar períodos selecionados (cada período = 1 ficheiro)">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                    </svg>
-                                    <span>Descarregar Períodos Selecionados</span>
-                                </button>
+                            
+                            <!-- Step 2: Auto-detect and show periods -->
+                            <div id="periodDetectionResults" class="hidden">
+                                <div class="mb-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">2. Períodos Detetados (Mudanças de Preço)</label>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <div id="periodDetectionStatus" class="text-sm text-gray-600"></div>
+                                        <button onclick="toggleAllPeriods()" 
+                                                class="ml-auto p-1.5 hover:bg-gray-100 rounded transition-colors" 
+                                                title="Selecionar/Desselecionar Todos os Períodos">
+                                            <svg class="w-5 h-5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div id="periodChipsContainer" class="flex flex-wrap gap-2">
+                                        <div class="text-sm text-gray-500 italic">Selecione um mês para detetar períodos automaticamente</div>
+                                    </div>
+                                </div>
                             </div>
-                            <!-- Hidden select for compatibility -->
-                            <select id="periodPickerAuto" class="hidden">
-                                <option value="">Load Calendar Scan first...</option>
-                            </select>
                         </div>
                     </div>
                 </div>
@@ -4815,7 +4806,14 @@
                 console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}`);
                 if (autoPricesGenerated > 0) {
                     console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
-                    const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
+                    
+                    // Capture period information if periods were selected
+                    const periodInfo = getSelectedPeriodsInfo();
+                    if (periodInfo) {
+                        console.log(`[SAVE-HISTORY] Including period info:`, periodInfo);
+                    }
+                    
+                    const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay, periodInfo);
                     console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
                 } else {
                     console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated} (must be > 0)`);
@@ -6339,6 +6337,36 @@
             document.getElementById('historyTableContainer').classList.add('hidden');
         }
         
+        // Helper functions for period info display
+        function generatePeriodBadge(historyData) {
+            if (!historyData.periodInfo || !historyData.periodInfo.selected_periods || historyData.periodInfo.selected_periods.length === 0) {
+                return '';
+            }
+            const count = historyData.periodInfo.selected_periods.length;
+            const label = count === 1 ? 'Período' : 'Períodos';
+            return '<span class="px-2 py-0.5 bg-[#8b5cf6] text-white text-[10px] font-bold rounded uppercase">' + count + ' ' + label + '</span>';
+        }
+        
+        function generatePeriodDetails(historyData) {
+            if (!historyData.periodInfo || !historyData.periodInfo.selected_periods || historyData.periodInfo.selected_periods.length === 0) {
+                return '';
+            }
+            
+            const periods = historyData.periodInfo.selected_periods.map(p => {
+                const startDate = new Date(p.start_date);
+                const endDate = new Date(p.end_date);
+                const startStr = startDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                const endStr = endDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                return '<span class="px-2 py-0.5 bg-[#8b5cf6] bg-opacity-10 text-[#8b5cf6] rounded text-[10px] font-medium">' + 
+                       startStr + ' - ' + endStr + ' (' + p.days + 'd, ' + p.avg_price.toFixed(2) + '€)</span>';
+            }).join(' ');
+            
+            return '<div class="text-xs text-gray-600 mb-2 flex flex-wrap gap-1">' +
+                   '<svg class="w-4 h-4 inline mr-1 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>' +
+                   '</svg>' + periods + '</div>';
+        }
+        
         function showHistoryMonthFromServer(monthKey, monthName, type, historyArray) {
             if (!historyArray || historyArray.length === 0) {
                 showNotification('No history data available', 'warning');
@@ -6385,17 +6413,10 @@
                             <div class="flex-1">
                                 <h3 class="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
                                     <span>Versão ${index + 1}</span>
-                                    ${historyData.periodInfo ? `<span class="px-2 py-0.5 bg-[#8b5cf6] text-white text-[10px] font-bold rounded uppercase">Período</span>` : ''}
+                                    ${generatePeriodBadge(historyData)}
                                     ${historyData.search_type === 'automated' ? '<span class="px-2 py-0.5 bg-[#f4ad0f] text-white text-[10px] font-bold rounded uppercase">Auto</span>' : '<span class="px-2 py-0.5 bg-[#009cb6] text-white text-[10px] font-bold rounded uppercase">Current</span>'}
                                 </h3>
-                                ${historyData.periodInfo ? `
-                                <p class="text-sm font-medium text-[#8b5cf6] mb-1">
-                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                    ${historyData.periodInfo.startDay}-${historyData.periodInfo.endDay} ${historyData.periodInfo.monthName}
-                                </p>
-                                ` : ''}
+                                ${generatePeriodDetails(historyData)}
                                 <p class="text-sm text-gray-600 mb-2">
                                     <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -8763,7 +8784,7 @@ Continue?`);
                 initializeYearPicker();
             } else if (dateType === 'period') {
                 document.getElementById('periodSelectorAuto').classList.remove('hidden');
-                loadPricePeriodsFromHistory();
+                initializePeriodDetection();
             }
         }
         
@@ -9077,6 +9098,346 @@ Continue?`);
             });
             
             console.log('📅 [PERIODS] Toggle all - Selected:', window.selectedPeriods);
+        }
+        
+        // ===== NEW PERIOD DETECTION SYSTEM =====
+        
+        // Initialize period detection with month selection
+        function initializePeriodDetection() {
+            console.log('🔍 [PERIOD-DETECTION] Initializing...');
+            
+            // Reset state
+            window.selectedPeriodMonth = null;
+            window.detectedPeriods = [];
+            window.selectedPeriods = [];
+            window.downloadedPeriods = new Set();
+            
+            // Hide results, show month selection
+            document.getElementById('periodDetectionResults').classList.add('hidden');
+            document.getElementById('periodMonthSelection').classList.remove('hidden');
+            
+            // Generate month chips
+            generatePeriodMonthChips();
+        }
+        
+        // Generate month chips (JAN, FEV, MAR...)
+        function generatePeriodMonthChips() {
+            const container = document.getElementById('periodMonthChips');
+            const yearDisplay = document.getElementById('periodYear');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Current year
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            yearDisplay.textContent = currentYear;
+            
+            // Generate 12 month chips
+            const monthNames = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+            
+            monthNames.forEach((monthName, monthIndex) => {
+                const chip = document.createElement('button');
+                const monthKey = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+                
+                chip.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all border-2 bg-white text-gray-700 border-gray-300 hover:bg-[#f6b511] hover:text-white hover:border-[#f6b511]';
+                chip.textContent = monthName;
+                chip.dataset.monthKey = monthKey;
+                chip.dataset.monthIndex = monthIndex;
+                chip.onclick = () => selectMonthForPeriodDetection(monthKey, monthIndex);
+                
+                container.appendChild(chip);
+            });
+            
+            console.log('📅 [PERIOD-DETECTION] Generated 12 month chips for', currentYear);
+        }
+        
+        // Select month and detect periods automatically
+        async function selectMonthForPeriodDetection(monthKey, monthIndex) {
+            console.log('🔍 [PERIOD-DETECTION] Month selected:', monthKey);
+            
+            // Visual feedback - mark as selected (yellow)
+            document.querySelectorAll('#periodMonthChips button').forEach(btn => {
+                btn.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all border-2 bg-white text-gray-700 border-gray-300 hover:bg-[#f6b511] hover:text-white hover:border-[#f6b511]';
+            });
+            const selectedChip = document.querySelector(`#periodMonthChips button[data-month-key="${monthKey}"]`);
+            if (selectedChip) {
+                selectedChip.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all border-2 bg-[#f6b511] text-white border-[#f6b511]';
+            }
+            
+            // Store selection
+            window.selectedPeriodMonth = monthKey;
+            
+            // Show loading
+            showNotification('A detetar períodos de preços... Aguarde, isto pode levar alguns minutos.', 'info');
+            
+            // Start automatic period detection
+            await detectPricePeriods(monthKey, monthIndex);
+        }
+        
+        // Detect price periods by scanning all days of the month
+        async function detectPricePeriods(monthKey, monthIndex) {
+            console.log('🔍 [PERIOD-DETECTION] Starting detection for', monthKey);
+            
+            const [year, month] = monthKey.split('-').map(Number);
+            const location = document.getElementById('locationAuto').value;
+            
+            // Get all days in the month
+            const daysInMonth = new Date(year, month, 0).getDate();
+            console.log('📅 [PERIOD-DETECTION] Days in month:', daysInMonth);
+            
+            // Store price data for each day
+            const priceData = {};
+            
+            // Update status
+            const statusDiv = document.getElementById('periodDetectionStatus');
+            statusDiv.textContent = 'A pesquisar preços...';
+            
+            // Search for 3d and 7d rentals for each day
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                statusDiv.textContent = `A pesquisar dia ${day}/${daysInMonth}...`;
+                
+                try {
+                    // Search for 3 days
+                    const prices3d = await searchDayPrices(dateStr, location, 3);
+                    // Search for 7 days
+                    const prices7d = await searchDayPrices(dateStr, location, 7);
+                    
+                    priceData[dateStr] = {
+                        day: day,
+                        prices3d: prices3d,
+                        prices7d: prices7d,
+                        avgPrice: (prices3d.avg + prices7d.avg) / 2
+                    };
+                    
+                    console.log(`📊 [PERIOD-DETECTION] Day ${day}: 3d=${prices3d.avg.toFixed(2)}€, 7d=${prices7d.avg.toFixed(2)}€, avg=${priceData[dateStr].avgPrice.toFixed(2)}€`);
+                    
+                } catch (error) {
+                    console.error(`❌ [PERIOD-DETECTION] Error searching day ${day}:`, error);
+                }
+            }
+            
+            // Analyze prices and create periods
+            const periods = analyzeAndCreatePeriods(priceData, year, month);
+            
+            console.log('🎯 [PERIOD-DETECTION] Detected', periods.length, 'periods');
+            
+            // Store and display
+            window.detectedPeriods = periods;
+            displayDetectedPeriods(periods);
+            
+            // Mark month as completed (blue)
+            const monthChip = document.querySelector(`#periodMonthChips button[data-month-key="${monthKey}"]`);
+            if (monthChip) {
+                monthChip.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all border-2 bg-[#009cb6] text-white border-[#009cb6]';
+            }
+            
+            statusDiv.textContent = `${periods.length} períodos detetados`;
+            showNotification(`Deteção completa! Encontrados ${periods.length} períodos de preços`, 'success');
+        }
+        
+        // Search prices for a specific day
+        async function searchDayPrices(dateStr, location, days) {
+            try {
+                const response = await fetch('/api/track-by-params', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        location: location,
+                        start_date: dateStr,
+                        start_time: '15:00',
+                        days: days,
+                        lang: 'pt',
+                        currency: 'EUR'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.items || data.items.length === 0) {
+                    return { avg: 0, min: 0, max: 0, count: 0 };
+                }
+                
+                // Calculate average price
+                const prices = data.items.map(item => parseFloat(item.price_num || 0)).filter(p => p > 0);
+                if (prices.length === 0) {
+                    return { avg: 0, min: 0, max: 0, count: 0 };
+                }
+                
+                const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+                const min = Math.min(...prices);
+                const max = Math.max(...prices);
+                
+                return { avg, min, max, count: prices.length };
+                
+            } catch (error) {
+                console.error('❌ [PERIOD-DETECTION] Search error:', error);
+                return { avg: 0, min: 0, max: 0, count: 0 };
+            }
+        }
+        
+        // Analyze price data and create periods (1-4 periods)
+        function analyzeAndCreatePeriods(priceData, year, month) {
+            console.log('🎯 [PERIOD-DETECTION] Analyzing prices to create periods...');
+            
+            const dates = Object.keys(priceData).sort();
+            const prices = dates.map(date => priceData[date].avgPrice);
+            
+            // Calculate thresholds for significant changes
+            const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+            const threshold = avgPrice * 0.15; // 15% change is significant
+            
+            console.log(`📊 [PERIOD-DETECTION] Average price: ${avgPrice.toFixed(2)}€, threshold: ${threshold.toFixed(2)}€`);
+            
+            const periods = [];
+            let currentPeriodStart = 0;
+            let currentPeriodPrices = [];
+            
+            for (let i = 0; i < prices.length; i++) {
+                currentPeriodPrices.push(prices[i]);
+                
+                // Check if we should create a new period
+                const shouldCreateNewPeriod = (i === prices.length - 1) || // Last day
+                    (i < prices.length - 1 && Math.abs(prices[i + 1] - (currentPeriodPrices.reduce((s, p) => s + p, 0) / currentPeriodPrices.length)) > threshold);
+                
+                if (shouldCreateNewPeriod && currentPeriodPrices.length >= 3) { // Minimum 3 days per period
+                    const startDate = dates[currentPeriodStart];
+                    const endDate = dates[i];
+                    const periodAvg = currentPeriodPrices.reduce((s, p) => s + p, 0) / currentPeriodPrices.length;
+                    
+                    periods.push({
+                        index: periods.length,
+                        start_date: startDate,
+                        end_date: endDate,
+                        days: currentPeriodPrices.length,
+                        avg_price: parseFloat(periodAvg.toFixed(2)),
+                        min_price: Math.min(...currentPeriodPrices),
+                        max_price: Math.max(...currentPeriodPrices)
+                    });
+                    
+                    console.log(`📅 [PERIOD-DETECTION] Period ${periods.length}: ${startDate} to ${endDate} (${currentPeriodPrices.length}d, avg ${periodAvg.toFixed(2)}€)`);
+                    
+                    // Start new period
+                    currentPeriodStart = i + 1;
+                    currentPeriodPrices = [];
+                    
+                    // Limit to 4 periods max
+                    if (periods.length >= 4) break;
+                }
+            }
+            
+            // Ensure at least 1 period
+            if (periods.length === 0 && dates.length > 0) {
+                periods.push({
+                    index: 0,
+                    start_date: dates[0],
+                    end_date: dates[dates.length - 1],
+                    days: dates.length,
+                    avg_price: parseFloat(avgPrice.toFixed(2)),
+                    min_price: Math.min(...prices),
+                    max_price: Math.max(...prices)
+                });
+                console.log('📅 [PERIOD-DETECTION] Created single period (no significant changes)');
+            }
+            
+            return periods;
+        }
+        
+        // Display detected periods as chips
+        function displayDetectedPeriods(periods) {
+            const container = document.getElementById('periodChipsContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            window.selectedPeriods = [];
+            
+            if (periods.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-500 italic">Nenhum período detetado</div>';
+                return;
+            }
+            
+            periods.forEach((period, index) => {
+                const startDate = new Date(period.start_date);
+                const endDate = new Date(period.end_date);
+                
+                const startStr = startDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                const endStr = endDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                
+                const chip = document.createElement('button');
+                chip.className = 'px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 bg-white text-gray-700 border-gray-300 hover:bg-[#f6b511] hover:text-white hover:border-[#f6b511]';
+                chip.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        <div class="font-semibold">Período ${index + 1}</div>
+                        <div class="text-xs">${startStr} - ${endStr} (${period.days}d)</div>
+                        <div class="text-xs">€${period.avg_price}</div>
+                    </div>
+                `;
+                chip.dataset.periodIndex = index;
+                chip.onclick = () => togglePeriodSelectionNew(index);
+                
+                container.appendChild(chip);
+            });
+            
+            // Show results section
+            document.getElementById('periodDetectionResults').classList.remove('hidden');
+        }
+        
+        // Toggle period selection (new system)
+        function togglePeriodSelectionNew(periodIndex) {
+            const index = window.selectedPeriods.indexOf(periodIndex);
+            if (index > -1) {
+                window.selectedPeriods.splice(index, 1);
+            } else {
+                window.selectedPeriods.push(periodIndex);
+            }
+            
+            // Update chip visual - amarelo quando selecionado
+            const chip = document.querySelector(`#periodChipsContainer button[data-period-index="${periodIndex}"]`);
+            if (chip) {
+                const isSelected = window.selectedPeriods.includes(periodIndex);
+                chip.className = isSelected 
+                    ? 'px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 bg-[#f6b511] text-white border-[#f6b511]'
+                    : 'px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 bg-white text-gray-700 border-gray-300 hover:bg-[#f6b511] hover:text-white hover:border-[#f6b511]';
+            }
+            
+            console.log('📅 [PERIOD-DETECTION] Selected periods:', window.selectedPeriods);
+        }
+        
+        // Get selected periods information for saving to history
+        function getSelectedPeriodsInfo() {
+            if (!window.selectedPeriods || window.selectedPeriods.length === 0) {
+                return null;
+            }
+            
+            if (!window.detectedPeriods || window.detectedPeriods.length === 0) {
+                return null;
+            }
+            
+            // Collect info for each selected period
+            const periodsInfo = window.selectedPeriods.map(periodIndex => {
+                const period = window.detectedPeriods[periodIndex];
+                if (!period) return null;
+                
+                return {
+                    index: periodIndex,
+                    start_date: period.start_date,
+                    end_date: period.end_date,
+                    avg_price: period.avg_price,
+                    days: period.days
+                };
+            }).filter(p => p !== null);
+            
+            if (periodsInfo.length === 0) {
+                return null;
+            }
+            
+            return {
+                selected_periods: periodsInfo,
+                total_periods: window.detectedPeriods.length,
+                scan_timestamp: new Date().toISOString()
+            };
         }
         
         // Download selected periods (each period = separate file)

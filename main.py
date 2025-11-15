@@ -33660,86 +33660,7 @@ async def save_price_snapshots(request: Request):
 
 # ============================================================
 # AUTOMATED SEARCH HISTORY ENDPOINTS
-# ============================================================
-
-@app.post("/api/automated-search/save")
-async def save_automated_search_history(request: Request):
-    """Save automated search results to PostgreSQL"""
-    try:
-        data = await request.json()
-        
-        location = data.get('location', '')
-        search_type = data.get('searchType', 'automated')  # 'automated' or 'current'
-        prices_data = data.get('prices', {})  # { "B1": { "31": 25.50, "60": 23.00 }, ... }
-        dias = data.get('dias', [])
-        price_count = data.get('priceCount', 0)
-        supplier_data = data.get('supplierData', {})  # allCarsByDay - dados individuais dos suppliers
-        pickup_date = data.get('pickupDate', '')  # Date of search (not current date)
-        
-        logging.info(f"📥 Received save request: Location={location}, Type={search_type}, PickupDate={pickup_date}, Dias={dias}, PriceCount={price_count}, Groups={list(prices_data.keys())}")
-        
-        if not prices_data:
-            logging.warning("⚠️ No prices data provided in save request")
-            return JSONResponse({"ok": False, "error": "No prices data provided"}, status_code=400)
-        
-        with _db_lock:
-            conn = _db_connect()
-            try:
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
-                
-                # Generate month_key based on pickup_date (search date), not current date
-                from datetime import datetime
-                if pickup_date:
-                    try:
-                        search_date = datetime.strptime(pickup_date, '%Y-%m-%d')
-                        month_key = f"{search_date.year}-{str(search_date.month).zfill(2)}"
-                    except:
-                        # Fallback to current date if parsing fails
-                        now = datetime.now()
-                        month_key = f"{now.year}-{str(now.month).zfill(2)}"
-                else:
-                    # If no pickup_date provided, use current date
-                    now = datetime.now()
-                    month_key = f"{now.year}-{str(now.month).zfill(2)}"
-                
-                # Save search
-                import json
-                prices_json = json.dumps(prices_data)
-                dias_json = json.dumps(dias)
-                supplier_data_json = json.dumps(supplier_data) if supplier_data else None
-                user_email = request.session.get('user_email', 'unknown')
-                
-                if is_postgres:
-                    # Try new schema with supplier_data and pickup_date
-                    try:
-                        with conn.cursor() as cur:
-                            cur.execute("""
-                                INSERT INTO automated_search_history 
-                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
-                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, %s)
-                                RETURNING id
-                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
-                            search_id = cur.fetchone()[0]
-                        conn.commit()
-                    except Exception as e:
-                        # Column doesn't exist - rollback and use old schema
-                        conn.rollback()
-                        logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
-                        try:
-                            # NEW cursor after rollback
-                            with conn.cursor() as cur:
-                                cur.execute("""
-                                    INSERT INTO automated_search_history 
-                                    (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
-                                    RETURNING id
-                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
-                                search_id = cur.fetchone()[0]
-                            conn.commit()
-                        except Exception as e2:
-                            # Fallback to original schema
-                            conn.rollback()
-                            logging.warning(f"supplier_data column also not found, using minimal schema: {e2}")
+# ===========================================================
                             # NEW cursor after second rollback
                             with conn.cursor() as cur:
                                 cur.execute("""
@@ -33826,11 +33747,11 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 
                 if is_postgres:
                     with conn.cursor() as cur:
-                        # Try to get all searches with supplier_data (new schema)
+                        # Try to get all searches with supplier_data and period_info (newest schema)
                         try:
                             query = f"""
                                 SELECT id, location, search_type, search_date, month_key, 
-                                       prices_data, dias, price_count, supplier_data
+                                       prices_data, dias, price_count, supplier_data, period_info
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
@@ -33841,9 +33762,10 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             rows = cur.fetchall()
                             logging.info(f"📊 [HISTORY-FILTER] Found {len(rows)} total rows from database")
                             has_supplier_data = True
+                            has_period_info = True
                         except Exception as e:
                             # Column doesn't exist - rollback transaction and use old schema
-                            logging.warning(f"supplier_data column not found, using old schema: {e}")
+                            logging.warning(f"period_info or supplier_data column not found, using old schema: {e}")
                             conn.rollback()
                             query = f"""
                                 SELECT id, location, search_type, search_date, month_key, 
@@ -33856,6 +33778,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             cur.execute(query, params)
                             rows = cur.fetchall()
                             has_supplier_data = False
+                            has_period_info = False
                 else:
                     placeholders = ','.join(['?' for _ in month_keys])
                     try:
@@ -33889,11 +33812,15 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 logging.info(f"📊 [HISTORY-FILTER] Processing {len(rows)} rows...")
                 
                 for row in rows:
-                    if has_supplier_data:
+                    if has_period_info:
+                        search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data, period_info = row
+                    elif has_supplier_data:
                         search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
+                        period_info = None
                     else:
                         search_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count = row
                         supplier_data = None
+                        period_info = None
                     
                     locations_found.add(row_location)
                     logging.info(f"📊 [HISTORY-FILTER] Row {search_id}: location='{row_location}', month={month_key}, type={search_type}")
@@ -33913,7 +33840,8 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         'prices': json.loads(prices_data) if isinstance(prices_data, str) else prices_data,
                         'dias': json.loads(dias) if isinstance(dias, str) else dias,
                         'priceCount': price_count,
-                        'supplierData': json.loads(supplier_data) if supplier_data and isinstance(supplier_data, str) else (supplier_data if supplier_data else {})
+                        'supplierData': json.loads(supplier_data) if supplier_data and isinstance(supplier_data, str) else (supplier_data if supplier_data else {}),
+                        'periodInfo': json.loads(period_info) if period_info and isinstance(period_info, str) else (period_info if period_info else None)
                     }
                     
                     history[month_key][search_type].append(entry)
@@ -34039,6 +33967,51 @@ async def add_pickup_date_column(request: Request):
                 
     except Exception as e:
         logging.error(f"❌ [MIGRATION] Error adding pickup_date column: {str(e)}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/automated-search/add-period-info-column")
+async def add_period_info_column(request: Request):
+    """Add period_info column to automated_search_history table"""
+    # No auth for migration - temporary
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Check if column exists
+                        cur.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name='automated_search_history' AND column_name='period_info'
+                        """)
+                        exists = cur.fetchone()
+                        
+                        if exists:
+                            logging.info("✅ [MIGRATION] Column period_info already exists (checked)")
+                            return JSONResponse({"ok": True, "message": "Column period_info already exists"})
+                    
+                    # Add column (will fail gracefully if already exists)
+                    try:
+                        cur.execute("ALTER TABLE automated_search_history ADD COLUMN period_info JSONB")
+                        conn.commit()
+                        logging.info("✅ [MIGRATION] Added period_info column to automated_search_history")
+                        return JSONResponse({"ok": True, "message": "Column period_info added successfully"})
+                    except Exception as add_error:
+                        if "already exists" in str(add_error).lower():
+                            logging.info("✅ [MIGRATION] Column period_info already exists (caught on ADD)")
+                            conn.rollback()
+                            return JSONResponse({"ok": True, "message": "Column period_info already exists"})
+                        else:
+                            raise
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ [MIGRATION] Error adding period_info column: {str(e)}", exc_info=True)
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/automated-search/delete-without-pickup-date")
