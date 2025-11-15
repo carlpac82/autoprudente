@@ -6,7 +6,7 @@
 // Cole este código no Console (F12) do browser na página Admin → WhatsApp
 
 const templateCheckIn = {
-    name: "checkin_aeroporto_faro",
+    name: "checkin_faro_airport",
     category: "UTILITY",
     content_pt: `Exmo. Cliente,
 
@@ -151,7 +151,7 @@ async function verificarTemplateCheckIn() {
     const data = await fetch('/api/whatsapp/templates')
         .then(r => r.json());
     
-    const checkInTemplates = data.templates.filter(t => t.name === 'checkin_aeroporto_faro');
+    const checkInTemplates = data.templates.filter(t => t.name === 'checkin_faro_airport');
     
     console.log('\n✈️ STATUS TEMPLATE CHECK-IN AEROPORTO:\n');
     
