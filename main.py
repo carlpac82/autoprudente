@@ -6498,29 +6498,20 @@ async def add_whatsapp_contact(request: Request):
                                 VALUES (%s, %s, %s, %s)
                                 RETURNING id
                             """, (name, phone, has_whatsapp, profile_picture_url))
-                            conn.commit()  # COMMIT IMEDIATAMENTE - ANTES de tentar ler!
-                            
                             result = cur.fetchone()
                             print(f"[WHATSAPP] 🔍 RETURNING result for contact: {result}")
+                            conn.commit()  # COMMIT IMEDIATAMENTE
                             
-                            if result and result[0] and result[0] > 0:
-                                contact_id = result[0]
-                                print(f"[WHATSAPP] ✅ Created new contact #{contact_id} via RETURNING")
+                            # SEMPRE usar fallback query (mais confiável)
+                            print(f"[WHATSAPP] 🔍 Querying contact by phone to get real ID...")
+                            cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s ORDER BY id DESC LIMIT 1", (phone,))
+                            fallback = cur.fetchone()
+                            if fallback and fallback[0]:
+                                contact_id = fallback[0]
+                                print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
                             else:
-                                # Fallback: query for the contact we just created (AFTER commit!)
-                                print(f"[WHATSAPP] ⚠️ RETURNING didn't work, querying manually...")
-                                cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s ORDER BY id DESC LIMIT 1", (phone,))
-                                fallback = cur.fetchone()
-                                if fallback and fallback[0]:
-                                    contact_id = fallback[0]
-                                    print(f"[WHATSAPP] ✅ Found contact via fallback query: #{contact_id}")
-                                else:
-                                    print(f"[WHATSAPP] ❌ CRITICAL: Contact not found even after insert!")
-                                    contact_id = None
-                    
-                    # Validar que contact_id não é None ou 0
-                    if not contact_id or contact_id == 0:
-                        raise ValueError(f"Invalid contact_id: {contact_id}")
+                                print(f"[WHATSAPP] ❌ CRITICAL: Contact not found even after insert!")
+                                raise ValueError(f"Failed to create contact - not found in database")
                 else:
                     # SQLite version
                     contact_row = conn.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = ?", (phone,)).fetchone()
@@ -6542,12 +6533,8 @@ async def add_whatsapp_contact(request: Request):
                         """, (name, phone, has_whatsapp, profile_picture_url))
                         contact_id = cursor.lastrowid
                         conn.commit()  # COMMIT IMEDIATAMENTE
-                        print(f"[WHATSAPP] ✅ Created new contact #{contact_id} (committed)")
+                        print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
                     
-                    # Validar que contact_id não é None ou 0
-                    if not contact_id or contact_id == 0:
-                        raise ValueError(f"Invalid contact_id: {contact_id}")
-                
                 # STEP 2: Create or update CONVERSATION linked to contact
                 print(f"[WHATSAPP] 📝 Creating conversation with contact_id={contact_id}, phone={phone}")
                 
