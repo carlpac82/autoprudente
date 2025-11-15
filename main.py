@@ -4308,10 +4308,15 @@ async def price_automation(request: Request):
     # Get current user
     current_user = _get_current_user_from_session(request)
     
-    return templates.TemplateResponse("price_automation.html", {
+    response = templates.TemplateResponse("price_automation.html", {
         "request": request,
         "current_user": current_user
     })
+    # Force no cache
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/price-automation/fill", response_class=HTMLResponse)
 async def price_automation_fill(request: Request):
