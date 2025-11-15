@@ -374,6 +374,7 @@
     <script>
         let currentConversation = null;
         let conversations = [];
+        let contacts = [];  // Global contacts list
         let messages = [];
         let selectedProfilePicture = null;
 
@@ -513,8 +514,8 @@
                 
                 if (data.success) {
                     // Store contacts globally
-                    const contactsList = data.contacts || [];
-                    renderContacts(contactsList);
+                    contacts = data.contacts || [];
+                    renderContacts(contacts);
                     console.log('[LOAD CONTACTS] Rendered!');
                 } else {
                     console.error('[LOAD CONTACTS] Error:', data.error);
@@ -575,6 +576,16 @@
         async function openContactConversation(contactId) {
             console.log('[OPEN CONTACT] Contact ID:', contactId);
             
+            // Find contact in global list
+            const contact = contacts.find(c => c.id === contactId);
+            if (!contact) {
+                console.error('[OPEN CONTACT] Contact not found:', contactId);
+                alert('Contacto não encontrado. Recarregue a página.');
+                return;
+            }
+            
+            console.log('[OPEN CONTACT] Contact found:', contact.name, contact.phone_number);
+            
             // Switch to conversations tab
             switchTab('conversations');
             
@@ -582,14 +593,45 @@
             await loadConversations();
             
             // Find conversation for this contact
-            const conversation = conversations.find(c => c.contact_id === contactId);
+            let conversation = conversations.find(c => c.contact_id === contactId);
             
             if (conversation) {
-                console.log('[OPEN CONTACT] Found conversation:', conversation.id);
+                console.log('[OPEN CONTACT] Found existing conversation:', conversation.id);
                 setTimeout(() => selectConversation(conversation.id), 100);
             } else {
-                console.log('[OPEN CONTACT] No conversation found for contact:', contactId);
-                alert('Este contacto ainda não tem conversas.\n\nPara iniciar uma conversa, envie uma mensagem através do WhatsApp Business API.');
+                // No conversation exists - CREATE ONE AUTOMATICALLY
+                console.log('[OPEN CONTACT] No conversation found, creating one...');
+                
+                try {
+                    const response = await fetch('/api/whatsapp/contacts/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: contact.name,
+                            phone: contact.phone_number
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.contact.conversation_id) {
+                        console.log('[OPEN CONTACT] Conversation created:', data.contact.conversation_id);
+                        
+                        // Reload conversations
+                        await loadConversations();
+                        
+                        // Open the new conversation
+                        setTimeout(() => selectConversation(data.contact.conversation_id), 100);
+                    } else {
+                        console.error('[OPEN CONTACT] Error creating conversation:', data.error);
+                        alert('Erro ao criar conversa: ' + (data.error || 'Desconhecido'));
+                    }
+                } catch (error) {
+                    console.error('[OPEN CONTACT] Exception creating conversation:', error);
+                    alert('Erro ao criar conversa. Tente novamente.');
+                }
             }
         }
 
