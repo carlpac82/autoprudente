@@ -5293,18 +5293,29 @@ async def admin_save_whatsapp_config(request: Request):
                                 expires_at TIMESTAMP
                             )
                         """)
+                        
+                        # Create contacts table (separate from conversations)
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+                                id SERIAL PRIMARY KEY,
+                                name TEXT NOT NULL,
+                                phone_number TEXT NOT NULL UNIQUE,
+                                has_whatsapp BOOLEAN,
+                                profile_picture_url TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
                         cur.execute("""
                             CREATE TABLE IF NOT EXISTS whatsapp_conversations (
                                 id SERIAL PRIMARY KEY,
-                                name TEXT NOT NULL,
+                                contact_id INTEGER REFERENCES whatsapp_contacts(id),
                                 phone_number TEXT NOT NULL UNIQUE,
                                 last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                 last_message_preview TEXT,
                                 unread_count INTEGER DEFAULT 0,
                                 status VARCHAR(20) DEFAULT 'open',
                                 assigned_to TEXT,
-                                has_whatsapp BOOLEAN,
-                                profile_picture_url TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
                         """)
