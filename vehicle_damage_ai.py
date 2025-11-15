@@ -37,7 +37,7 @@ def load_damage_detection_model():
         return _damage_detector
         
     except Exception as e:
-        logger.error(f"Failed to load AI model: {e}")
+        logger.debug(f"⚠️ AI model not available: {e}")
         return None
 
 

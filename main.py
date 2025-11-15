@@ -1430,6 +1430,14 @@ class PostgreSQLConnectionWrapper:
         except Exception as e:
             # Log the error with query and params summary (not full content)
             import logging
+            
+            # Silence "column already exists" errors (expected for schema migrations)
+            error_str = str(e).lower()
+            if "already exists" in error_str or "duplicate column" in error_str:
+                logging.debug(f"PostgreSQL schema check: {e}")
+                raise
+            
+            # For other errors, log as ERROR
             logging.error(f"PostgreSQL execute error: {e}")
             logging.error(f"Query: {query}")
             if params:
