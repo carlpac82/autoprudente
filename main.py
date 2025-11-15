@@ -34329,7 +34329,8 @@ async def initialize_ai_from_history(request: Request):
                         elif isinstance(days_data, list):
                             # Estrutura antiga: days_data = [...suppliers...]
                             # Assumir days=1 por default (não temos informação de dias)
-                            logging.warning(f"⚠️ [AI-INIT] Old structure detected for {grupo}/{location}, assuming 1 day")
+                            # Nota: Dados novos já vêm na estrutura correta (grupo → dias → suppliers)
+                            logging.info(f"📊 [AI-INIT] Legacy data format detected for group '{grupo}' in {location} (auto-migrated to 1 day)")
                             days = 1
                             if days not in data_by_grupo_days[grupo]:
                                 data_by_grupo_days[grupo][days] = {}

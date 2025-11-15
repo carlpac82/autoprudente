@@ -6910,6 +6910,43 @@
                 priceCount: priceCount
             });
             
+            // Transform supplierData to new structure (by group, then by day)
+            // Input: supplierData = {"1": [...cars...], "3": [...cars...]}
+            // Output: {"B1": {"1": [...suppliers...], "3": [...]}, "D": {...}}
+            const supplierDataByGroup = {};
+            
+            if (supplierData && Object.keys(supplierData).length > 0) {
+                for (const day in supplierData) {
+                    const cars = supplierData[day] || [];
+                    for (const car of cars) {
+                        const grupo = car.group || car.car?.car || 'Others';
+                        
+                        // Initialize group if doesn't exist
+                        if (!supplierDataByGroup[grupo]) {
+                            supplierDataByGroup[grupo] = {};
+                        }
+                        
+                        // Initialize day array if doesn't exist
+                        if (!supplierDataByGroup[grupo][day]) {
+                            supplierDataByGroup[grupo][day] = [];
+                        }
+                        
+                        // Add supplier data
+                        supplierDataByGroup[grupo][day].push({
+                            supplier: car.supplier || car.car?.supplier || 'Unknown',
+                            price: car.price || car.car?.price || 0,
+                            car_name: car.car_name || car.car?.car_name || ''
+                        });
+                    }
+                }
+                
+                console.log('[SAVE-FUNCTION] Transformed supplierData:', {
+                    originalDays: Object.keys(supplierData).length,
+                    groupsCreated: Object.keys(supplierDataByGroup).length,
+                    sample: Object.keys(supplierDataByGroup).slice(0, 2)
+                });
+            }
+            
             // Send to server (PostgreSQL)
             try {
                 const payload = {
@@ -6919,7 +6956,7 @@
                     prices: pricesData,
                     dias: dias,
                     priceCount: priceCount,
-                    supplierData: supplierData
+                    supplierData: supplierDataByGroup // Use transformed data
                 };
                 
                 // Include period info if available
