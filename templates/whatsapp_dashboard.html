@@ -628,13 +628,16 @@
             }
 
             area.innerHTML = messages.map(msg => `
-                <div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-2">
-                    <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} p-2 px-3">
+                <div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-2 group">
+                    <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} p-2 px-3 relative">
                         <p class="text-sm leading-relaxed">${escapeHtml(msg.text || msg.content || '')}</p>
                         <div class="flex items-center ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} gap-1 mt-1">
                             <span class="text-xs text-gray-500">${formatTime(msg.timestamp)}</span>
                             ${msg.direction === 'outbound' ? `<i class="fas fa-check${msg.status === 'read' ? '-double text-[#53bdeb]' : msg.status === 'delivered' ? '-double text-gray-500' : ' text-gray-400'}" style="font-size: 10px;"></i>` : ''}
                         </div>
+                        <button onclick="deleteMessage(${msg.id})" class="absolute -right-8 top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600" title="Eliminar mensagem">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -1002,7 +1005,7 @@
             document.getElementById('conversation-menu').classList.add('hidden');
             
             try {
-                const response = await fetch(`/api/whatsapp/conversations/${currentConversation.id}/archive`, {
+                const response = await fetch(`/api/whatsapp/conversations/${currentConversation}/archive`, {
                     method: 'POST'
                 });
                 const data = await response.json();
@@ -1040,7 +1043,7 @@
             document.getElementById('conversation-menu').classList.add('hidden');
             
             try {
-                const response = await fetch(`/api/whatsapp/contacts/${currentConversation.id}`, {
+                const response = await fetch(`/api/whatsapp/conversations/${currentConversation}`, {
                     method: 'DELETE'
                 });
                 const data = await response.json();
@@ -1252,6 +1255,96 @@
             } finally {
                 document.getElementById('upload-picture-btn').disabled = false;
                 document.getElementById('upload-picture-btn').innerHTML = 'Guardar';
+            }
+        }
+
+        // Delete Message
+        async function deleteMessage(messageId) {
+            if (!confirm('Tem a certeza que deseja eliminar esta mensagem?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/whatsapp/messages/${messageId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload messages
+                    await loadMessages(currentConversation);
+                } else {
+                    alert('Erro ao eliminar mensagem: ' + (data.error || 'Desconhecido'));
+                }
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                alert('Erro ao eliminar mensagem');
+            }
+        }
+
+        // Archive Conversation
+        async function archiveConversation(conversationId) {
+            if (!confirm('Tem a certeza que deseja arquivar esta conversa?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/whatsapp/conversations/${conversationId}/archive`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload conversations
+                    await loadConversations();
+                    // Clear current conversation if it was archived
+                    if (currentConversation === conversationId) {
+                        currentConversation = null;
+                        document.getElementById('messages-area').innerHTML = `
+                            <div class="flex items-center justify-center h-full text-gray-400">
+                                <p>Selecione uma conversa</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    alert('Erro ao arquivar conversa: ' + (data.error || 'Desconhecido'));
+                }
+            } catch (error) {
+                console.error('Error archiving conversation:', error);
+                alert('Erro ao arquivar conversa');
+            }
+        }
+
+        // Delete Conversation
+        async function deleteConversation(conversationId) {
+            if (!confirm('⚠️ ATENÇÃO: Esta ação é irreversível!\\n\\nTem a certeza que deseja eliminar permanentemente esta conversa e todas as suas mensagens?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/whatsapp/conversations/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload conversations
+                    await loadConversations();
+                    // Clear current conversation if it was deleted
+                    if (currentConversation === conversationId) {
+                        currentConversation = null;
+                        document.getElementById('messages-area').innerHTML = `
+                            <div class="flex items-center justify-center h-full text-gray-400">
+                                <p>Selecione uma conversa</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    alert('Erro ao eliminar conversa: ' + (data.error || 'Desconhecido'));
+                }
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+                alert('Erro ao eliminar conversa');
             }
         }
 

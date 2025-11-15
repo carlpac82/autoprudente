@@ -7668,6 +7668,73 @@ async def unarchive_conversation(request: Request, conversation_id: int):
         print(f"[WHATSAPP] ❌ Error unarchiving conversation: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# --- Delete Conversation ---
+@app.delete("/api/whatsapp/conversations/{conversation_id}")
+async def delete_conversation(request: Request, conversation_id: int):
+    """Delete a conversation and all its messages"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Delete all messages first
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM whatsapp_messages WHERE conversation_id = %s", (conversation_id,))
+                        cur.execute("DELETE FROM whatsapp_conversations WHERE id = %s", (conversation_id,))
+                    conn.commit()
+                else:
+                    conn.execute("DELETE FROM whatsapp_messages WHERE conversation_id = ?", (conversation_id,))
+                    conn.execute("DELETE FROM whatsapp_conversations WHERE id = ?", (conversation_id,))
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Conversation #{conversation_id} deleted")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Conversa eliminada com sucesso"
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error deleting conversation: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# --- Delete Message ---
+@app.delete("/api/whatsapp/messages/{message_id}")
+async def delete_message(request: Request, message_id: str):
+    """Delete a specific message"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM whatsapp_messages WHERE id = %s", (message_id,))
+                    conn.commit()
+                else:
+                    conn.execute("DELETE FROM whatsapp_messages WHERE id = ?", (message_id,))
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Message {message_id} deleted")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Mensagem eliminada com sucesso"
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error deleting message: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # --- Export Individual Conversation ---
 @app.get("/api/whatsapp/conversations/{conversation_id}/export")
 async def export_conversation(request: Request, conversation_id: int):
