@@ -977,12 +977,27 @@
         async function sendMediaMessage() {
             if (!currentConversation || !selectedFile) return;
             
+            // BUG FIX: currentConversation is just the ID, need to get the full object
+            const conversation = conversations.find(c => c.id === currentConversation);
+            if (!conversation) {
+                alert('ERRO: conversa não encontrada');
+                return;
+            }
+            
+            const phoneNumber = conversation.phone_number;
+            if (!phoneNumber) {
+                alert('ERRO: número de telefone não encontrado');
+                return;
+            }
+            
             const caption = document.getElementById('message-input').value.trim();
             const formData = new FormData();
             formData.append('file', selectedFile);
-            formData.append('phone_number', currentConversation.phone_number);
+            formData.append('phone_number', phoneNumber);
             formData.append('media_type', selectedFileType);
             if (caption) formData.append('caption', caption);
+            
+            console.log('[SEND MEDIA] Phone:', phoneNumber, 'Type:', selectedFileType, 'File:', selectedFile.name);
             
             try {
                 const response = await fetch('/api/whatsapp/send-media', {
