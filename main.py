@@ -5777,6 +5777,105 @@ async def whatsapp_webhook_verify(request: Request):
         traceback.print_exc()
         return PlainTextResponse(f"Error: {str(e)}", status_code=500)
 
+@app.post("/api/admin/whatsapp/cleanup-contact-ids")
+async def cleanup_whatsapp_contact_ids(request: Request):
+    """Fix conversations with invalid contact_id values (0 or orphaned)"""
+    require_auth(request)
+    try:
+        print("[WHATSAPP-CLEANUP] Starting contact_id cleanup...")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                if not is_postgres:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "This cleanup is only needed for PostgreSQL (foreign key constraints)"
+                    }, status_code=400)
+                
+                with conn.cursor() as cur:
+                    # Find conversations with contact_id = 0
+                    cur.execute("""
+                        SELECT id, phone_number, contact_id 
+                        FROM whatsapp_conversations 
+                        WHERE contact_id = 0
+                    """)
+                    
+                    bad_rows = cur.fetchall()
+                    bad_count = len(bad_rows)
+                    
+                    if bad_rows:
+                        print(f"[WHATSAPP-CLEANUP] Found {bad_count} conversations with contact_id = 0:")
+                        for row in bad_rows:
+                            print(f"   - Conversation #{row[0]}: phone={row[1]}, contact_id={row[2]}")
+                        
+                        # Fix them by setting to NULL
+                        cur.execute("""
+                            UPDATE whatsapp_conversations 
+                            SET contact_id = NULL 
+                            WHERE contact_id = 0
+                        """)
+                        
+                        fixed_zero = cur.rowcount
+                        conn.commit()
+                        print(f"[WHATSAPP-CLEANUP] Fixed {fixed_zero} conversations (set contact_id = 0 to NULL)")
+                    else:
+                        print("[WHATSAPP-CLEANUP] No conversations with contact_id = 0 found")
+                        fixed_zero = 0
+                    
+                    # Check for orphaned contact_id values
+                    cur.execute("""
+                        SELECT DISTINCT wc.contact_id
+                        FROM whatsapp_conversations wc
+                        LEFT JOIN whatsapp_contacts c ON wc.contact_id = c.id
+                        WHERE wc.contact_id IS NOT NULL 
+                        AND c.id IS NULL
+                    """)
+                    
+                    orphaned = cur.fetchall()
+                    orphaned_count = len(orphaned)
+                    
+                    if orphaned:
+                        print(f"[WHATSAPP-CLEANUP] Found {orphaned_count} conversations with orphaned contact_id values:")
+                        for row in orphaned:
+                            print(f"   - contact_id={row[0]} (contact doesn't exist)")
+                        
+                        # Fix them too
+                        cur.execute("""
+                            UPDATE whatsapp_conversations 
+                            SET contact_id = NULL 
+                            WHERE contact_id IS NOT NULL 
+                            AND contact_id NOT IN (SELECT id FROM whatsapp_contacts)
+                        """)
+                        
+                        fixed_orphaned = cur.rowcount
+                        conn.commit()
+                        print(f"[WHATSAPP-CLEANUP] Fixed {fixed_orphaned} orphaned contact_id values")
+                    else:
+                        print("[WHATSAPP-CLEANUP] No orphaned contact_id values found")
+                        fixed_orphaned = 0
+                
+                print("[WHATSAPP-CLEANUP] Cleanup completed successfully!")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Contact ID cleanup completed",
+                    "fixed_zero_values": fixed_zero,
+                    "fixed_orphaned_values": fixed_orphaned,
+                    "total_fixed": fixed_zero + fixed_orphaned
+                })
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        print(f"[WHATSAPP-CLEANUP] Error during cleanup: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/whatsapp/webhook")
 async def whatsapp_webhook_receive(request: Request):
     """WhatsApp webhook - receive incoming messages"""
@@ -6557,6 +6656,15 @@ async def add_whatsapp_contact(request: Request):
                         conn.commit()  # COMMIT IMEDIATAMENTE
                         print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
                     
+                # VALIDATION: Ensure contact_id is valid before creating conversation
+                if not contact_id or contact_id == 0:
+                    error_msg = (f"Failed to get valid contact_id (got: {contact_id}). "
+                                f"Phone: {phone}, Name: {name}. "
+                                f"This might indicate a database issue or that the contact insert failed. "
+                                f"Check logs above for contact creation errors.")
+                    print(f"[WHATSAPP] ❌ {error_msg}")
+                    raise ValueError(error_msg)
+                
                 # STEP 2: Create or update CONVERSATION linked to contact
                 print(f"[WHATSAPP] 📝 Creating conversation with contact_id={contact_id}, phone={phone}")
                 
