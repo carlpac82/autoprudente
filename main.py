@@ -17875,9 +17875,6 @@ async def save_user_settings(request: Request):
     """Salvar configurações do usuário (substituir localStorage)"""
     require_auth(request)
     
-    # 🔍 VERSION TAG para confirmar deploy correto
-    logging.info("🔍 VERSION: save_user_settings v2.1 - PostgreSQL NOW() fix")
-    
     try:
         data = await request.json()
         user_key = data.get("user_key", "default")
@@ -17898,8 +17895,6 @@ async def save_user_settings(request: Request):
                 
                 placeholder = "%s" if is_postgres else "?"
                 
-                logging.info(f"🔍 DB Type: {'PostgreSQL' if is_postgres else 'SQLite'} (conn_type={conn_type}, module={conn_module}), saving {len(settings)} keys")
-                
                 for key, value in settings.items():
                     # Serializar valor como JSON
                     value_json = json.dumps(value) if not isinstance(value, str) else value
@@ -17915,7 +17910,6 @@ async def save_user_settings(request: Request):
                                 setting_value = EXCLUDED.setting_value,
                                 updated_at = NOW()
                         """
-                        logging.info(f"🔍 PostgreSQL Query for key '{key}': {query.strip()[:80]}...")
                         try:
                             with conn.cursor() as cur:
                                 cur.execute(query, (user_key, key, value_json))
@@ -17932,7 +17926,6 @@ async def save_user_settings(request: Request):
                         conn.execute(query, (user_key, key, value_json))
                 
                 conn.commit()
-                logging.info(f"✅ User settings saved: {len(settings)} keys for {user_key}")
                 return JSONResponse({"ok": True})
             finally:
                 conn.close()
