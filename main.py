@@ -574,6 +574,10 @@ logging.basicConfig(
     format='%(levelname)s:     %(message)s'
 )
 
+# Silence HTTP request logs from uvicorn (reduce Render log noise)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
+
 try:
     from playwright.sync_api import sync_playwright  # type: ignore
     _HAS_PLAYWRIGHT = True
