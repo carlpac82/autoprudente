@@ -414,10 +414,33 @@
                                 <!-- Will be populated by JS -->
                             </select>
                         </div>
-                        <!-- Period Selector -->
+                        <!-- Period Chips (Auto-detected from Calendar Scan) -->
                         <div id="periodSelectorAuto" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Price Period</label>
-                            <select id="periodPickerAuto" class="px-3 py-2 border border-gray-300 rounded">
+                            <div class="mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Períodos Detetados (Mudanças de Tarifa)</label>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <button onclick="runPriceCalendarScan()" 
+                                            class="px-3 py-1.5 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-all text-sm flex items-center gap-1"
+                                            title="Detetar períodos de mudança de tarifa">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <span>Detetar Períodos</span>
+                                    </button>
+                                    <button onclick="toggleAllPeriods()" 
+                                            class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
+                                            title="Selecionar/Desselecionar Todos os Períodos">
+                                        <svg class="w-5 h-5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="periodChipsContainer" class="flex flex-wrap gap-2">
+                                    <div class="text-sm text-gray-500 italic">Execute "Detetar Períodos" para identificar mudanças de tarifa</div>
+                                </div>
+                            </div>
+                            <!-- Hidden select for compatibility -->
+                            <select id="periodPickerAuto" class="hidden">
                                 <option value="">Load Calendar Scan first...</option>
                             </select>
                         </div>
@@ -8751,10 +8774,12 @@ Continue?`);
         }
         
         function loadPricePeriodsFromHistory() {
+            const chipsContainer = document.getElementById('periodChipsContainer');
             const periodPicker = document.getElementById('periodPickerAuto');
             const history = JSON.parse(localStorage.getItem('calendarScansHistory') || '[]');
             
             if (history.length === 0) {
+                chipsContainer.innerHTML = '<div class="text-sm text-gray-500 italic">Execute "Detetar Períodos" para identificar mudanças de tarifa</div>';
                 periodPicker.innerHTML = '<option value="">Run Calendar Scan first to detect periods</option>';
                 return;
             }
@@ -8764,28 +8789,147 @@ Continue?`);
             const periods = latestScan.periods || [];
             
             if (periods.length === 0) {
+                chipsContainer.innerHTML = '<div class="text-sm text-gray-500 italic">Nenhum período detetado no último scan</div>';
                 periodPicker.innerHTML = '<option value="">No periods detected in last scan</option>';
                 return;
             }
             
-            // Create options from detected periods
+            // Initialize selected periods array if not exists
+            if (!window.selectedPeriods) {
+                window.selectedPeriods = [];
+            }
+            
+            // Store periods globally for later use
+            window.detectedPeriods = periods;
+            
+            // Clear chips container
+            chipsContainer.innerHTML = '';
+            
+            // Create CHIPS from detected periods
             let options = '<option value="">Select a detected pricing period...</option>';
             
             periods.forEach((period, index) => {
-                const startDate = new Date(period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const endDate = new Date(period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const priceLevel = period.avg_price > 30 ? 'High' : period.avg_price > 25 ? 'Mid' : 'Low';
+                const startDate = new Date(period.start);
+                const endDate = new Date(period.end);
                 
+                // Format dates for chip display (short format)
+                const startStr = startDate.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+                const endStr = endDate.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+                
+                // Price level indicator
+                const priceLevel = period.avg_price > 30 ? 'Alta' : period.avg_price > 25 ? 'Média' : 'Baixa';
+                const priceColor = period.avg_price > 30 ? 'text-red-600' : period.avg_price > 25 ? 'text-orange-600' : 'text-green-600';
+                
+                // Check if selected
+                const isSelected = window.selectedPeriods.includes(index);
+                
+                // Create chip
+                const chip = document.createElement('button');
+                chip.className = `px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                    isSelected 
+                        ? 'bg-[#8b5cf6] text-white border-[#8b5cf6]' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#8b5cf6]'
+                }`;
+                chip.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        <div class="font-semibold">${startStr} - ${endStr}</div>
+                        <div class="text-xs opacity-80">${period.duration_days}d • ${period.avg_price}€ • <span class="${isSelected ? 'text-white' : priceColor}">${priceLevel}</span></div>
+                    </div>
+                `;
+                chip.title = `Período ${index + 1}: ${period.duration_days} dias, preço médio ${period.avg_price}€ (${priceLevel} temporada)`;
+                chip.dataset.periodIndex = index;
+                chip.onclick = () => togglePeriodSelection(index);
+                
+                chipsContainer.appendChild(chip);
+                
+                // Also update select for compatibility
                 options += `<option value="${index}" data-start="${period.start}" data-end="${period.end}" data-price="${period.avg_price}">
-                    Period ${index + 1}: ${startDate} - ${endDate} (${period.duration_days}d @ ${period.avg_price}€ - ${priceLevel} Season)
+                    Period ${index + 1}: ${startStr} - ${endStr} (${period.duration_days}d @ ${period.avg_price}€ - ${priceLevel})
                 </option>`;
             });
             
             periodPicker.innerHTML = options;
             
-            // Show info about scan used
-            console.log(` Loaded ${periods.length} periods from Calendar Scan (${latestScan.date})`);
+            // Show notification
+            showNotification(`${periods.length} períodos detetados e prontos para seleção`, 'success');
+            
+            console.log(`📅 [PERIODS] Loaded ${periods.length} periods from Calendar Scan (${latestScan.date})`);
             console.log('Periods:', periods);
+        }
+        
+        // Toggle period selection
+        function togglePeriodSelection(periodIndex) {
+            const index = window.selectedPeriods.indexOf(periodIndex);
+            if (index > -1) {
+                window.selectedPeriods.splice(index, 1);
+            } else {
+                window.selectedPeriods.push(periodIndex);
+            }
+            
+            // Update chip visual
+            const chip = document.querySelector(`[data-period-index="${periodIndex}"]`);
+            if (chip) {
+                const isSelected = window.selectedPeriods.includes(periodIndex);
+                chip.className = `px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                    isSelected 
+                        ? 'bg-[#8b5cf6] text-white border-[#8b5cf6]' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#8b5cf6]'
+                }`;
+                
+                // Update price level color
+                const priceSpan = chip.querySelector('span');
+                if (priceSpan && !isSelected) {
+                    const period = window.detectedPeriods[periodIndex];
+                    const priceColor = period.avg_price > 30 ? 'text-red-600' : period.avg_price > 25 ? 'text-orange-600' : 'text-green-600';
+                    priceSpan.className = priceColor;
+                } else if (priceSpan) {
+                    priceSpan.className = 'text-white';
+                }
+            }
+            
+            console.log('📅 [PERIODS] Selected periods:', window.selectedPeriods);
+        }
+        
+        // Toggle all periods selection
+        function toggleAllPeriods() {
+            if (!window.detectedPeriods || window.detectedPeriods.length === 0) {
+                showNotification('Nenhum período detetado. Execute "Detetar Períodos" primeiro.', 'warning');
+                return;
+            }
+            
+            const allPeriodIndices = window.detectedPeriods.map((_, index) => index);
+            
+            if (window.selectedPeriods.length === allPeriodIndices.length) {
+                // Deselect all
+                window.selectedPeriods = [];
+            } else {
+                // Select all
+                window.selectedPeriods = [...allPeriodIndices];
+            }
+            
+            // Update all chips visuals
+            allPeriodIndices.forEach(periodIndex => {
+                const chip = document.querySelector(`[data-period-index="${periodIndex}"]`);
+                if (chip) {
+                    const isSelected = window.selectedPeriods.includes(periodIndex);
+                    chip.className = `px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                        isSelected 
+                            ? 'bg-[#8b5cf6] text-white border-[#8b5cf6]' 
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-[#8b5cf6]'
+                    }`;
+                    
+                    const priceSpan = chip.querySelector('span');
+                    if (priceSpan && !isSelected) {
+                        const period = window.detectedPeriods[periodIndex];
+                        const priceColor = period.avg_price > 30 ? 'text-red-600' : period.avg_price > 25 ? 'text-orange-600' : 'text-green-600';
+                        priceSpan.className = priceColor;
+                    } else if (priceSpan) {
+                        priceSpan.className = 'text-white';
+                    }
+                }
+            });
+            
+            console.log('📅 [PERIODS] Toggle all - Selected:', window.selectedPeriods);
         }
         
         function getDateRangeFromSelection() {
