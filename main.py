@@ -7656,6 +7656,14 @@ async def create_template(request: Request):
                             cur.execute("""
                                 INSERT INTO whatsapp_templates (name, category, language_code, content_pt, content_en, content_fr, content_de, status)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (name, language_code) 
+                                DO UPDATE SET 
+                                    category = EXCLUDED.category,
+                                    content_pt = EXCLUDED.content_pt,
+                                    content_en = EXCLUDED.content_en,
+                                    content_fr = EXCLUDED.content_fr,
+                                    content_de = EXCLUDED.content_de,
+                                    status = EXCLUDED.status
                                 RETURNING id
                             """, (name, category, lang_code, content_pt, content_en, content_fr, content_de, 'pending'))
                             template_ids.append(cur.fetchone()[0])
@@ -7663,6 +7671,14 @@ async def create_template(request: Request):
                         cursor = conn.execute("""
                             INSERT INTO whatsapp_templates (name, category, language_code, content_pt, content_en, content_fr, content_de, status)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT (name, language_code) 
+                            DO UPDATE SET 
+                                category = excluded.category,
+                                content_pt = excluded.content_pt,
+                                content_en = excluded.content_en,
+                                content_fr = excluded.content_fr,
+                                content_de = excluded.content_de,
+                                status = excluded.status
                         """, (name, category, lang_code, content_pt, content_en, content_fr, content_de, 'pending'))
                         template_ids.append(cursor.lastrowid)
                 
