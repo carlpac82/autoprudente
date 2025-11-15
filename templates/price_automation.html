@@ -8708,6 +8708,30 @@ Continue?`);
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 monthPicker.value = `${year}-${month}`;
             }
+            
+            // Add event listener to auto-select day chips when month changes
+            monthPicker.removeEventListener('change', onMonthPickerChange);
+            monthPicker.addEventListener('change', onMonthPickerChange);
+        }
+        
+        // Auto-select day chips when month is selected
+        async function onMonthPickerChange() {
+            const monthStr = document.getElementById('monthPickerAuto').value;
+            if (!monthStr) return;
+            
+            console.log('📅 [MONTH-PICKER] Month selected:', monthStr);
+            
+            // Auto-select default days for monthly search (like the default for automated prices)
+            // Default: 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28
+            window.selectedDaysAuto = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28];
+            
+            // Reinitialize day chips with new selection
+            initDayChipsAuto();
+            
+            // Show notification
+            showNotification(`Mês selecionado: ${monthStr}. Dias automaticamente selecionados conforme configuração padrão.`, 'info');
+            
+            console.log('📅 [MONTH-PICKER] Auto-selected days:', window.selectedDaysAuto);
         }
         
         function initializeYearPicker() {
@@ -8779,14 +8803,25 @@ Continue?`);
             } else if (dateType === 'month') {
                 const monthStr = document.getElementById('monthPickerAuto').value;
                 const [year, month] = monthStr.split('-').map(Number);
-                const firstDay = new Date(year, month - 1, 1);
+                
+                // Find FIRST MONDAY of the month (as user requested)
+                let firstMonday = new Date(year, month - 1, 1);
+                // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+                const dayOfWeek = firstMonday.getDay();
+                // Calculate days to add to get to Monday
+                // If Sunday (0), add 1. If Tuesday (2), add 6. If Monday (1), add 0.
+                const daysToMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : (8 - dayOfWeek));
+                firstMonday.setDate(firstMonday.getDate() + daysToMonday);
+                
                 const lastDay = new Date(year, month, 0);
+                
+                console.log(`📅 [MONTH-SEARCH] ${year}-${month}: First Monday is ${firstMonday.toISOString().split('T')[0]} (day ${firstMonday.getDate()})`);
                 
                 return {
                     type: 'month',
-                    startDate: firstDay.toISOString().split('T')[0],
+                    startDate: firstMonday.toISOString().split('T')[0],
                     endDate: lastDay.toISOString().split('T')[0],
-                    description: `Month: ${firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+                    description: `Month: ${firstMonday.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} (starting ${firstMonday.getDate()})`
                 };
             } else if (dateType === 'year') {
                 const year = parseInt(document.getElementById('yearPickerAuto').value);
