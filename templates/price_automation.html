@@ -403,13 +403,19 @@
                         </div>
                         <!-- Month Chips Selector -->
                         <div id="monthSelectorAuto" class="hidden">
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Ano</label>
+                                <select id="yearSelectorForMonths" onchange="generateMonthChipsForYear()" class="px-3 py-2 border border-gray-300 rounded w-full">
+                                    <!-- Will be populated by JS -->
+                                </select>
+                            </div>
                             <div class="mb-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Meses</label>
                                 <div class="flex items-center gap-2 mb-2">
                                     <button onclick="toggleAllMonthChips()" 
                                             class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
                                             title="Selecionar/Desselecionar Todos os Meses">
-                                        <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                     </button>
@@ -5924,6 +5930,11 @@
                 // Store available month data for later use
                 window.availableMonthsData = {};
                 
+                // Initialize downloaded months tracking
+                if (!window.downloadedMonths) {
+                    window.downloadedMonths = new Set();
+                }
+                
                 // Generate chips AND buttons for each month
                 monthKeys.forEach(monthKey => {
                     const [year, month] = monthKey.split('-');
@@ -5947,6 +5958,9 @@
                             automatedSearches,
                             currentSearches
                         };
+                        
+                        // Mark month as downloaded (has history data)
+                        window.downloadedMonths.add(monthKey);
                     }
                     
                     // Create BUTTON (full month name, to view history)
@@ -6698,6 +6712,19 @@
                 
                 if (result.ok) {
                     console.log(`Automated price history saved to PostgreSQL: ID=${result.searchId}, Month=${result.monthKey}, Prices=${priceCount}`);
+                    
+                    // Mark month as downloaded if we have monthKey
+                    if (result.monthKey) {
+                        if (!window.downloadedMonths) {
+                            window.downloadedMonths = new Set();
+                        }
+                        window.downloadedMonths.add(result.monthKey);
+                        console.log('📥 [MONTH-DOWNLOADED] Marked month as downloaded:', result.monthKey);
+                        
+                        // Update month chip color to blue
+                        updateMonthChipColor(result.monthKey);
+                    }
+                    
                     return priceCount;
                 } else {
                     console.error('Error saving to PostgreSQL:', result.error);
@@ -8548,11 +8575,34 @@ Continue?`);
             }
         }
         
-        // Generate month chips for selection (next 24 months)
-        function generateMonthChips() {
-            const container = document.getElementById('monthChipsSelector');
-            if (!container) return;
+        // Initialize year selector for months
+        function initializeYearSelectorForMonths() {
+            const yearSelector = document.getElementById('yearSelectorForMonths');
+            if (!yearSelector) return;
             
+            yearSelector.innerHTML = '';
+            
+            const currentYear = new Date().getFullYear();
+            // Show current year and next 2 years
+            for (let i = 0; i < 3; i++) {
+                const year = currentYear + i;
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (i === 0) option.selected = true;
+                yearSelector.appendChild(option);
+            }
+            
+            console.log('📅 [YEAR-SELECTOR] Initialized with years', currentYear, 'to', currentYear + 2);
+        }
+        
+        // Generate month chips for selected year
+        function generateMonthChipsForYear() {
+            const yearSelector = document.getElementById('yearSelectorForMonths');
+            const container = document.getElementById('monthChipsSelector');
+            if (!container || !yearSelector) return;
+            
+            const selectedYear = parseInt(yearSelector.value);
             container.innerHTML = '';
             
             // Initialize selected months array
@@ -8560,36 +8610,48 @@ Continue?`);
                 window.selectedMonthsForSearch = [];
             }
             
-            // Generate chips for next 24 months
-            const now = new Date();
-            const monthsToShow = 24;
+            // Initialize downloaded months tracking
+            if (!window.downloadedMonths) {
+                window.downloadedMonths = new Set();
+            }
             
-            for (let i = 0; i < monthsToShow; i++) {
-                const year = now.getFullYear() + Math.floor((now.getMonth() + i) / 12);
-                const month = (now.getMonth() + i) % 12;
-                const date = new Date(year, month, 1);
-                
-                const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-                const shortMonth = date.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
-                const fullMonth = date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-                
+            // Month names in Portuguese
+            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            
+            // Generate 12 month chips for the selected year
+            for (let month = 0; month < 12; month++) {
+                const monthKey = `${selectedYear}-${String(month + 1).padStart(2, '0')}`;
                 const isSelected = window.selectedMonthsForSearch.includes(monthKey);
+                const isDownloaded = window.downloadedMonths.has(monthKey);
                 
                 const chip = document.createElement('button');
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isSelected 
-                        ? 'bg-[#009cb6] text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`;
-                chip.textContent = shortMonth;
-                chip.title = fullMonth;
+                
+                // Color logic: Blue if downloaded, Yellow if selected but not downloaded, Gray if not selected
+                let colorClass;
+                if (isDownloaded) {
+                    colorClass = 'bg-[#009cb6] text-white';
+                } else if (isSelected) {
+                    colorClass = 'bg-[#f4ad0f] text-white';
+                } else {
+                    colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
+                }
+                
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
+                chip.textContent = monthNames[month];
+                chip.title = `${monthNames[month]} ${selectedYear}`;
                 chip.dataset.monthKey = monthKey;
                 chip.onclick = () => toggleMonthChipSelection(monthKey);
                 
                 container.appendChild(chip);
             }
             
-            console.log('📅 [MONTH-CHIPS] Generated chips for', monthsToShow, 'months');
+            console.log('📅 [MONTH-CHIPS] Generated chips for year', selectedYear);
+        }
+        
+        // Legacy function - now calls new implementation
+        function generateMonthChips() {
+            initializeYearSelectorForMonths();
+            generateMonthChipsForYear();
         }
         
         // Toggle month chip selection
@@ -8605,11 +8667,19 @@ Continue?`);
             const chip = document.querySelector(`#monthChipsSelector [data-month-key="${monthKey}"]`);
             if (chip) {
                 const isSelected = window.selectedMonthsForSearch.includes(monthKey);
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isSelected 
-                        ? 'bg-[#009cb6] text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`;
+                const isDownloaded = window.downloadedMonths && window.downloadedMonths.has(monthKey);
+                
+                // Color logic: Blue if downloaded, Yellow if selected but not downloaded, Gray if not selected
+                let colorClass;
+                if (isDownloaded) {
+                    colorClass = 'bg-[#009cb6] text-white';
+                } else if (isSelected) {
+                    colorClass = 'bg-[#f4ad0f] text-white';
+                } else {
+                    colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
+                }
+                
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
             }
             
             // Update hidden input with first selected month (for compatibility)
@@ -8618,6 +8688,28 @@ Continue?`);
             }
             
             console.log('📅 [MONTH-CHIPS] Selected months:', window.selectedMonthsForSearch);
+        }
+        
+        // Update a specific month chip color
+        function updateMonthChipColor(monthKey) {
+            const chip = document.querySelector(`#monthChipsSelector [data-month-key="${monthKey}"]`);
+            if (!chip) return;
+            
+            const isSelected = window.selectedMonthsForSearch && window.selectedMonthsForSearch.includes(monthKey);
+            const isDownloaded = window.downloadedMonths && window.downloadedMonths.has(monthKey);
+            
+            // Color logic: Blue if downloaded, Yellow if selected but not downloaded, Gray if not selected
+            let colorClass;
+            if (isDownloaded) {
+                colorClass = 'bg-[#009cb6] text-white';
+            } else if (isSelected) {
+                colorClass = 'bg-[#f4ad0f] text-white';
+            } else {
+                colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
+            }
+            
+            chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
+            console.log('🔵 [MONTH-CHIP-UPDATE] Updated chip color:', monthKey, 'to', isDownloaded ? 'BLUE' : isSelected ? 'YELLOW' : 'GRAY');
         }
         
         // Toggle all month chips
@@ -8640,11 +8732,19 @@ Continue?`);
             allChips.forEach(chip => {
                 const monthKey = chip.dataset.monthKey;
                 const isSelected = window.selectedMonthsForSearch.includes(monthKey);
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isSelected 
-                        ? 'bg-[#009cb6] text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`;
+                const isDownloaded = window.downloadedMonths && window.downloadedMonths.has(monthKey);
+                
+                // Color logic: Blue if downloaded, Yellow if selected but not downloaded, Gray if not selected
+                let colorClass;
+                if (isDownloaded) {
+                    colorClass = 'bg-[#009cb6] text-white';
+                } else if (isSelected) {
+                    colorClass = 'bg-[#f4ad0f] text-white';
+                } else {
+                    colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
+                }
+                
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
             });
             
             console.log('📅 [MONTH-CHIPS] Toggle all - Selected:', window.selectedMonthsForSearch.length, 'months');
