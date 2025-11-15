@@ -5938,7 +5938,14 @@ async def get_whatsapp_conversations(request: Request):
                     else:
                         rows = conn.execute(query, (status,)).fetchall()
                 else:
-                    query = "SELECT id, name, phone_number, last_message_at, last_message_preview, unread_count, status, assigned_to, has_whatsapp, profile_picture_url FROM whatsapp_conversations ORDER BY last_message_at DESC"
+                    # Only show conversations that have at least one message
+                    query = """
+                        SELECT DISTINCT c.id, c.name, c.phone_number, c.last_message_at, c.last_message_preview, 
+                               c.unread_count, c.status, c.assigned_to, c.has_whatsapp, c.profile_picture_url 
+                        FROM whatsapp_conversations c
+                        INNER JOIN whatsapp_messages m ON c.id = m.conversation_id
+                        ORDER BY c.last_message_at DESC
+                    """
                     if is_postgres:
                         with conn.cursor() as cur:
                             cur.execute(query)

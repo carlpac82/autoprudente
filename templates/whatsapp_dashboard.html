@@ -43,13 +43,13 @@
             position: relative;
         }
         .message-inbound {
-            background-color: white;
+            background-color: rgba(245, 158, 11, 0.2);
             border-radius: 0 7.5px 7.5px 7.5px;
             color: #303030;
             box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
         }
         .message-outbound {
-            background-color: var(--whatsapp-light-green);
+            background-color: rgba(0, 156, 182, 0.2);
             border-radius: 7.5px 0 7.5px 7.5px;
             color: #303030;
             box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
@@ -391,12 +391,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Ordenar por data da última mensagem (mais recente primeiro)
-                    conversations = data.conversations.sort((a, b) => {
-                        const dateA = new Date(a.last_message_at || 0);
-                        const dateB = new Date(b.last_message_at || 0);
-                        return dateB - dateA;
-                    });
+                    // Backend já ordena por mais recente primeiro
+                    conversations = data.conversations;
                     renderConversations();
                 }
             } catch (error) {
@@ -610,7 +606,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    messages = data.messages.reverse(); // Reverse to show oldest first
+                    // Mensagens já vêm ordenadas, mais antigas primeiro, recente em baixo
+                    messages = data.messages;
                     renderMessages();
                 }
             } catch (error) {
