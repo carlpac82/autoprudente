@@ -4149,6 +4149,7 @@ async def login_action(request: Request, username: str = Form(...), password: st
         return templates.TemplateResponse("login.html", {"request": request, "error": "Login failed. Please try again."})
 
 @app.post("/logout")
+@app.get("/logout")
 async def logout_action(request: Request):
     try:
         log_activity(request, "logout")
