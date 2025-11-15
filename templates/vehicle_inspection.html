@@ -699,22 +699,28 @@
         });
         
         function logout() {
-            if (confirm('Terminar sessão?')) {
-                console.log('[LOGOUT] User confirmed, creating form...');
+            if (confirm('Tem a certeza que deseja terminar a sessão?')) {
+                console.log('[LOGOUT] User confirmed, processing logout...');
                 
-                // Create a temporary form to submit POST request
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/logout';
-                form.style.display = 'none';
+                // Method 1: Try direct fetch POST (more reliable)
+                fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    credentials: 'same-origin',
+                    redirect: 'follow'
+                }).then(response => {
+                    console.log('[LOGOUT] Response received, redirecting...');
+                    // Force redirect to login page
+                    window.location.href = '/login';
+                }).catch(error => {
+                    console.error('[LOGOUT] Error:', error);
+                    // Even on error, try to redirect
+                    window.location.href = '/login';
+                });
                 
-                document.body.appendChild(form);
-                console.log('[LOGOUT] Form created, submitting...');
-                
-                // Submit form (this will follow redirect automatically)
-                form.submit();
-                
-                console.log('[LOGOUT] Form submitted!');
+                console.log('[LOGOUT] Logout initiated!');
             } else {
                 console.log('[LOGOUT] User cancelled');
             }
