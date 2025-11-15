@@ -6498,9 +6498,20 @@ async def add_whatsapp_contact(request: Request):
                                 RETURNING id
                             """, (name, phone, has_whatsapp, profile_picture_url))
                             result = cur.fetchone()
+                            print(f"[WHATSAPP] 🔍 RETURNING result for contact: {result}")
+                            
+                            if result and result[0]:
+                                contact_id = result[0]
+                                print(f"[WHATSAPP] ✅ Created new contact #{contact_id} (committed)")
+                            else:
+                                # Fallback: query for the contact we just created
+                                print(f"[WHATSAPP] ⚠️ RETURNING didn't work for contact, querying manually...")
+                                cur.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = %s ORDER BY id DESC LIMIT 1", (phone,))
+                                fallback = cur.fetchone()
+                                contact_id = fallback[0] if fallback else None
+                                print(f"[WHATSAPP] ✅ Found contact via fallback: #{contact_id}")
+                            
                             conn.commit()  # COMMIT IMEDIATAMENTE
-                            contact_id = result[0]
-                            print(f"[WHATSAPP] ✅ Created new contact #{contact_id} (committed)")
                     
                     # Validar que contact_id não é None ou 0
                     if not contact_id or contact_id == 0:
