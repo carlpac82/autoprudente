@@ -564,6 +564,10 @@ _admin_vehicles_cache = None
 _admin_vehicles_cache_time = 0
 ADMIN_VEHICLES_CACHE_TTL = 300  # 5 minutos
 
+# In-memory WhatsApp conversation cache (used by webhook handler)
+whatsapp_conversations: List[Dict[str, Any]] = []
+whatsapp_conversation_counter = 0
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -5830,7 +5834,7 @@ async def admin_test_whatsapp_connection(request: Request):
         return JSONResponse({"success": False, "error": str(e)})
 
 @app.post("/api/admin/whatsapp/set-profile-picture")
-async def set_whatsapp_profile_picture(request: Request):
+async def set_whatsapp_profile_picture(request: Request, file: UploadFile = File(None)):
     """Set WhatsApp Business profile picture"""
     try:
         require_admin(request)
@@ -5869,10 +5873,11 @@ async def set_whatsapp_profile_picture(request: Request):
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json"
                 }
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "profile_picture_handle": logo_url
-                }
+                payload = {"messaging_product": "whatsapp"}
+                if media_handle:
+                    payload["profile_picture_handle"] = media_handle
+                else:
+                    payload["profile_picture_url"] = logo_url
                 
                 print(f"[WHATSAPP-PROFILE] Setting profile picture: {logo_url}")
                 
@@ -6284,6 +6289,115 @@ async def bulk_delete_contacts(request: Request):
         import traceback
         traceback.print_exc()
         return JSONResponse({"ok": False, "success": False, "error": str(e)}, status_code=500)
+
+@app.put("/api/whatsapp/contacts/{contact_id}/picture")
+async def update_contact_picture(request: Request, contact_id: int):
+    """Update WhatsApp contact profile picture"""
+    require_auth(request)
+    try:
+        form = await request.form()
+        picture = form.get('picture')
+        picture_url = form.get('picture_url')  # Allow URL or file upload
+        
+        if not picture and not picture_url:
+            return JSONResponse({
+                "ok": False,
+                "error": "Imagem ou URL é obrigatório"
+            }, status_code=400)
+        
+        profile_picture_url = None
+        profile_picture_data = None
+        
+        # If URL provided, use it
+        if picture_url:
+            profile_picture_url = picture_url
+        
+        # If file uploaded, save it
+        elif picture:
+            import os
+            import uuid
+            
+            # Read image data
+            contents = await picture.read()
+            
+            # Validate image
+            if not contents:
+                return JSONResponse({
+                    "ok": False,
+                    "error": "Ficheiro vazio"
+                }, status_code=400)
+            
+            # Save to database as BLOB
+            profile_picture_data = contents
+            
+            # Also save to static folder
+            upload_dir = "static/whatsapp_profiles"
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename
+            ext = picture.filename.split('.')[-1] if '.' in picture.filename else 'jpg'
+            filename = f"contact_{contact_id}_{uuid.uuid4().hex[:8]}.{ext}"
+            filepath = os.path.join(upload_dir, filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(contents)
+            
+            profile_picture_url = f"/{filepath}"
+            print(f"[WHATSAPP] 💾 Saved profile picture: {filepath}")
+        
+        # Update database
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Check if contact exists
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, name FROM whatsapp_conversations WHERE id = %s", (contact_id,))
+                        contact_row = cur.fetchone()
+                else:
+                    contact_row = conn.execute("SELECT id, name FROM whatsapp_conversations WHERE id = ?", (contact_id,)).fetchone()
+                
+                if not contact_row:
+                    return JSONResponse({
+                        "ok": False,
+                        "error": "Contacto não encontrado"
+                    }, status_code=404)
+                
+                # Update profile picture
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE whatsapp_conversations 
+                            SET profile_picture_url = %s
+                            WHERE id = %s
+                        """, (profile_picture_url, contact_id))
+                    conn.commit()
+                else:
+                    conn.execute("""
+                        UPDATE whatsapp_conversations 
+                        SET profile_picture_url = ?
+                        WHERE id = ?
+                    """, (profile_picture_url, contact_id))
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Updated profile picture for contact #{contact_id}")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": "Foto de perfil atualizada com sucesso",
+                    "profile_picture_url": profile_picture_url
+                })
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error updating contact picture: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/whatsapp/contacts/export")
 async def export_whatsapp_contacts(request: Request, format: str = 'json'):
