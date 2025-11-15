@@ -615,15 +615,33 @@
                     });
                     
                     const data = await response.json();
+                    console.log('[OPEN CONTACT] API response:', data);
                     
-                    if (data.success && data.contact.conversation_id) {
-                        console.log('[OPEN CONTACT] Conversation created:', data.contact.conversation_id);
+                    if (data.success) {
+                        console.log('[OPEN CONTACT] Conversation created successfully');
                         
-                        // Reload conversations
+                        // Reload conversations (conversation foi criada no backend)
                         await loadConversations();
                         
-                        // Open the new conversation
-                        setTimeout(() => selectConversation(data.contact.conversation_id), 100);
+                        // Find the conversation for this contact (by contact_id)
+                        const newConversation = conversations.find(c => c.contact_id === contactId);
+                        
+                        if (newConversation) {
+                            console.log('[OPEN CONTACT] Found new conversation:', newConversation.id);
+                            setTimeout(() => selectConversation(newConversation.id), 100);
+                        } else {
+                            console.warn('[OPEN CONTACT] Conversation created but not found in list yet. Trying again...');
+                            // Try one more time after a delay
+                            setTimeout(async () => {
+                                await loadConversations();
+                                const retry = conversations.find(c => c.contact_id === contactId);
+                                if (retry) {
+                                    selectConversation(retry.id);
+                                } else {
+                                    alert('Conversa criada mas não aparece na lista. Recarregue a página.');
+                                }
+                            }, 500);
+                        }
                     } else {
                         console.error('[OPEN CONTACT] Error creating conversation:', data.error);
                         alert('Erro ao criar conversa: ' + (data.error || 'Desconhecido'));
