@@ -69,24 +69,26 @@ Mit freundlichen Grüßen
 Auto Prudente Rent a Car`
 };
 
-// Expandir para todos os idiomas
+// Expandir para todos os idiomas (1 idioma por template)
 const languageCodes = {
-    pt: 'pt_PT',
-    en: 'en',
-    fr: 'fr',
-    de: 'de'
+    pt_PT: 'content_pt',
+    en: 'content_en',
+    fr: 'content_fr',
+    de: 'content_de'
 };
 
 const templates = [];
-Object.entries(languageCodes).forEach(([lang, code]) => {
+Object.entries(languageCodes).forEach(([langCode, contentKey]) => {
     templates.push({
         name: templateCheckIn.name,
         category: templateCheckIn.category,
-        language_code: code,
-        content_pt: templateCheckIn.content_pt,
-        content_en: templateCheckIn.content_en,
-        content_fr: templateCheckIn.content_fr,
-        content_de: templateCheckIn.content_de
+        language_code: langCode,
+        [`content_${langCode.split('_')[0]}`]: templateCheckIn[contentKey],
+        // Enviar apenas o conteúdo do idioma específico
+        content_pt: langCode === 'pt_PT' ? templateCheckIn.content_pt : '',
+        content_en: langCode === 'en' ? templateCheckIn.content_en : '',
+        content_fr: langCode === 'fr' ? templateCheckIn.content_fr : '',
+        content_de: langCode === 'de' ? templateCheckIn.content_de : ''
     });
 });
 
