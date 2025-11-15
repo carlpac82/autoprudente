@@ -1481,7 +1481,14 @@
                 return;
             }
 
-            const phoneNumber = currentConversation.phone_number;
+            // Find conversation object to get phone_number
+            const conversation = conversations.find(c => c.id === currentConversation);
+            if (!conversation) {
+                alert('⚠️ Erro: conversa não encontrada');
+                return;
+            }
+
+            const phoneNumber = conversation.phone_number;
             if (!phoneNumber) {
                 alert('⚠️ Número de telefone não encontrado');
                 return;
@@ -1523,7 +1530,7 @@
             const confirmMessage = 
                 `✈️ Enviar Template Check-In Aeroporto?\n\n` +
                 `Idioma: ${languageEmojis[languageCode]}\n` +
-                `Para: ${currentConversation.name || phoneNumber}\n\n` +
+                `Para: ${conversation.name || phoneNumber}\n\n` +
                 `O template inclui:\n` +
                 `• Pedido de número de voo e email\n` +
                 `• Link para check-in online\n` +
