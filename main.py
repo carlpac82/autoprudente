@@ -7735,6 +7735,73 @@ async def delete_message(request: Request, message_id: str):
         print(f"[WHATSAPP] ❌ Error deleting message: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# --- Debug/Fix Messages ---
+@app.post("/api/admin/whatsapp/fix-messages")
+async def fix_whatsapp_messages_debug(request: Request):
+    """Debug and fix message data - remove sender names and verify directions"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Get all messages
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, message_text, direction, sender_name FROM whatsapp_messages ORDER BY timestamp DESC LIMIT 100")
+                        rows = cur.fetchall()
+                else:
+                    rows = conn.execute("SELECT id, message_text, direction, sender_name FROM whatsapp_messages ORDER BY timestamp DESC LIMIT 100").fetchall()
+                
+                fixed_count = 0
+                messages_info = []
+                
+                for row in rows:
+                    msg_id, msg_text, direction, sender_name = row
+                    
+                    # Check if needs fixing
+                    needs_fix = sender_name and "Auto Prudente" in str(sender_name)
+                    
+                    messages_info.append({
+                        "id": msg_id,
+                        "text_preview": (msg_text or "")[:50],
+                        "direction": direction,
+                        "sender_name": sender_name,
+                        "needs_fix": needs_fix
+                    })
+                    
+                    # Fix: remove sender_name for problematic messages
+                    if needs_fix:
+                        if is_postgres:
+                            with conn.cursor() as cur:
+                                cur.execute("UPDATE whatsapp_messages SET sender_name = NULL WHERE id = %s", (msg_id,))
+                        else:
+                            conn.execute("UPDATE whatsapp_messages SET sender_name = NULL WHERE id = ?", (msg_id,))
+                        fixed_count += 1
+                
+                if fixed_count > 0:
+                    conn.commit()
+                    print(f"[WHATSAPP] ✅ Fixed {fixed_count} messages")
+                
+                return JSONResponse({
+                    "success": True,
+                    "fixed_count": fixed_count,
+                    "total_checked": len(messages_info),
+                    "messages_sample": messages_info[:10]
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error fixing messages: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
 # --- Export Individual Conversation ---
 @app.get("/api/whatsapp/conversations/{conversation_id}/export")
 async def export_conversation(request: Request, conversation_id: int):

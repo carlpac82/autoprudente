@@ -393,7 +393,14 @@
                   Abra o WhatsApp → Conversa → Mais opções (⋮) → Mais → Exportar conversa → Sem multimédia
                 </p>
               </div>
-              <button onclick="importWhatsAppBackup()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-2">
+              <button onclick="fixWhatsappMessages()" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition w-full flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                🔧 Corrigir Mensagens (remove "Auto Prudente")
+              </button>
+              <button onclick="importWhatsappBackup()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#f59e0b] transition w-full flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                 </svg>
@@ -1129,6 +1136,38 @@
       } catch (error) {
         console.error('Error syncing Google contacts:', error);
         alert('❌ Erro ao sincronizar: ' + error.message);
+      }
+    }
+
+    async function fixWhatsappMessages() {
+      if (!confirm('🔧 Corrigir mensagens com "Auto Prudente Rent a Car"?\n\nIsto vai:\n✅ Remover sender_name problemático\n✅ Corrigir exibição das mensagens\n\nContinuar?')) {
+        return;
+      }
+      
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '🔄 A corrigir...';
+      
+      try {
+        const response = await fetch('/api/admin/whatsapp/fix-messages', {
+          method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✅ Correção concluída!\n\n` +
+                `📊 Total verificado: ${data.total_checked}\n` +
+                `🔧 Mensagens corrigidas: ${data.fixed_count}\n\n` +
+                `Recarregue o WhatsApp Dashboard para ver as alterações.`);
+        } else {
+          alert('❌ Erro: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error fixing messages:', error);
+        alert('❌ Erro ao corrigir mensagens: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔧 Corrigir Mensagens (remove "Auto Prudente")';
       }
     }
 
