@@ -1,4 +1,22 @@
-// Templates WhatsApp para Aluguer de Automóveis
+// ⚠️ ⚠️ ⚠️ ARQUIVO DESATUALIZADO - NÃO USAR! ⚠️ ⚠️ ⚠️
+//
+// Este arquivo misturava Templates WhatsApp com Quick Replies.
+// Agora estão separados em 2 arquivos:
+//
+// 1. TEMPLATES_WHATSAPP.js
+//    → 10 templates de negócio × 4 idiomas = 40 templates
+//    → PRECISAM aprovação WhatsApp (24h)
+//    → Para INICIAR conversas ou fora da janela 24h
+//
+// 2. QUICK_REPLIES_WHATSAPP.js
+//    → 15 respostas rápidas × 4 idiomas = 60 quick replies
+//    → NÃO precisam aprovação
+//    → Para usar DENTRO de conversas ativas
+//
+// USE OS NOVOS ARQUIVOS!
+// ════════════════════════════════════════════════════════════════════════════
+
+// Templates WhatsApp para Aluguer de Automóveis (ARQUIVO ANTIGO - NÃO USAR)
 // Cole este código no Console (F12) do browser após fazer login
 
 const templates = [
