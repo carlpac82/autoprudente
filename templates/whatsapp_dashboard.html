@@ -112,18 +112,6 @@
                 <div class="flex items-center gap-3">
                     <i class="fab fa-whatsapp text-3xl"></i>
                     <h1 class="text-2xl font-bold">WhatsApp Dashboard</h1>
-                    
-                    <!-- Stats Badges -->
-                    <div class="flex items-center gap-2 ml-4">
-                        <span id="templates-badge" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1" title="Templates criados">
-                            <i class="fas fa-file-alt"></i>
-                            <span id="templates-count">0</span>
-                        </span>
-                        <span id="quick-replies-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1" title="Quick Replies">
-                            <i class="fas fa-bolt"></i>
-                            <span id="quick-replies-count">0</span>
-                        </span>
-                    </div>
                 </div>
                 <div class="flex items-center gap-4">
                     <span id="connection-status" class="flex items-center gap-2">
@@ -266,13 +254,6 @@
 
                 <!-- Message Input -->
                 <div class="p-4 border-t bg-white">
-                    <div class="flex gap-2 mb-2">
-                        <button onclick="sendQuickReply('Bom dia! Como podemos ajudar?')" class="px-4 py-2 bg-gray-100 hover:bg-[#f0f9fb] text-gray-700 rounded-lg text-sm"><i class="far fa-comment-dots mr-1"></i> Bom dia</button>
-                        <button onclick="sendQuickReply('templates')" class="px-4 py-2 bg-gray-100 hover:bg-[#f0f9fb] text-gray-700 rounded-lg text-sm"><i class="far fa-file-alt mr-1"></i> Templates</button>
-                        <button onclick="showTemplates()" class="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
-                            <i class="fas fa-file-alt mr-1"></i>Templates
-                        </button>
-                    </div>
                     <div class="flex gap-2 items-end">
                         <!-- Emoji Picker Button -->
                         <div class="relative">
@@ -399,61 +380,9 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadConversations();
-            loadStats();
             // Poll for new messages every 5 seconds
             setInterval(loadConversations, 5000);
-            // Update stats every 30 seconds
-            setInterval(loadStats, 30000);
         });
-
-        /**
-         * Carrega estatísticas de templates e quick replies
-         */
-        async function loadStats() {
-            try {
-                // Load templates
-                const templatesRes = await fetch('/api/whatsapp/templates');
-                const templatesData = await templatesRes.json();
-                
-                if (templatesData.ok && templatesData.templates) {
-                    const templatesCount = templatesData.templates.length;
-                    document.getElementById('templates-count').textContent = templatesCount;
-                    
-                    // Update badge color based on status
-                    const approved = templatesData.templates.filter(t => t.status === 'APPROVED').length;
-                    const badge = document.getElementById('templates-badge');
-                    if (approved === templatesCount && templatesCount > 0) {
-                        badge.className = 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1';
-                        badge.title = `${templatesCount} templates (todos aprovados)`;
-                    } else if (templatesCount > 0) {
-                        badge.className = 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium flex items-center gap-1';
-                        badge.title = `${templatesCount} templates (${approved} aprovados, ${templatesCount - approved} pendentes)`;
-                    } else {
-                        badge.className = 'px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-1';
-                        badge.title = 'Nenhum template criado';
-                    }
-                }
-                
-                // Load quick replies
-                const quickRepliesRes = await fetch('/api/whatsapp/quick-replies');
-                const quickRepliesData = await quickRepliesRes.json();
-                
-                if (quickRepliesData.ok && quickRepliesData.replies) {
-                    const quickRepliesCount = quickRepliesData.replies.length;
-                    document.getElementById('quick-replies-count').textContent = quickRepliesCount;
-                    
-                    const qrBadge = document.getElementById('quick-replies-badge');
-                    if (quickRepliesCount > 0) {
-                        qrBadge.title = `${quickRepliesCount} quick replies (prontas para usar)`;
-                    } else {
-                        qrBadge.className = 'px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-1';
-                        qrBadge.title = 'Nenhuma quick reply criada';
-                    }
-                }
-            } catch (error) {
-                console.error('[STATS] Error loading stats:', error);
-            }
-        }
 
         async function loadConversations(status = null) {
             try {
