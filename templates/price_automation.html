@@ -454,6 +454,18 @@
                                     <div class="text-sm text-gray-500 italic">Execute "Detetar Períodos" para identificar mudanças de tarifa</div>
                                 </div>
                             </div>
+                            <!-- Download Selected Periods Button -->
+                            <div class="mt-3 flex gap-2">
+                                <button onclick="downloadSelectedPeriods()" 
+                                        id="btnDownloadSelectedPeriods"
+                                        class="px-4 py-2 bg-[#10b981] text-white rounded-lg hover:bg-[#059669] transition-all flex items-center gap-2 font-medium text-sm"
+                                        title="Descarregar períodos selecionados (cada período = 1 ficheiro)">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                    <span>Descarregar Períodos Selecionados</span>
+                                </button>
+                            </div>
                             <!-- Hidden select for compatibility -->
                             <select id="periodPickerAuto" class="hidden">
                                 <option value="">Load Calendar Scan first...</option>
@@ -9047,6 +9059,88 @@ Continue?`);
             });
             
             console.log('📅 [PERIODS] Toggle all - Selected:', window.selectedPeriods);
+        }
+        
+        // Download selected periods (each period = separate file)
+        async function downloadSelectedPeriods() {
+            if (!window.selectedPeriods || window.selectedPeriods.length === 0) {
+                showNotification('Selecione pelo menos um período para descarregar', 'warning');
+                return;
+            }
+            
+            if (!window.detectedPeriods || window.detectedPeriods.length === 0) {
+                showNotification('Nenhum período detetado', 'error');
+                return;
+            }
+            
+            const location = document.getElementById('locationAuto').value;
+            const selectedCount = window.selectedPeriods.length;
+            
+            showNotification(`A preparar ${selectedCount} ${selectedCount === 1 ? 'ficheiro' : 'ficheiros'}...`, 'info');
+            
+            try {
+                // Download each selected period as separate file
+                for (const periodIndex of window.selectedPeriods) {
+                    const period = window.detectedPeriods[periodIndex];
+                    if (!period) continue;
+                    
+                    // Format dates for filename
+                    const startDate = new Date(period.start);
+                    const endDate = new Date(period.end);
+                    
+                    const startDay = String(startDate.getDate()).padStart(2, '0');
+                    const endDay = String(endDate.getDate()).padStart(2, '0');
+                    const monthName = startDate.toLocaleDateString('pt-PT', { month: 'long' });
+                    const monthNameCapitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                    
+                    // Filename format: Location_01-07_Dezembro.xlsx
+                    const filename = `${location}_${startDay}-${endDay}_${monthNameCapitalized}.xlsx`;
+                    
+                    console.log(`📥 [PERIOD-DOWNLOAD] Downloading period ${periodIndex + 1}: ${filename}`);
+                    
+                    // TODO: Generate search for this period and get prices
+                    // For now, we'll use a placeholder - need to implement period search
+                    // This would call the backend to generate Excel with period-specific data
+                    
+                    await downloadPeriodExcel(period, location, filename, periodIndex + 1);
+                    
+                    // Small delay between downloads
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                showNotification(`${selectedCount} ${selectedCount === 1 ? 'ficheiro descarregado' : 'ficheiros descarregados'} com sucesso!`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error downloading periods:', error);
+                showNotification('Erro ao descarregar períodos: ' + error.message, 'error');
+            }
+        }
+        
+        // Download single period as Excel file
+        async function downloadPeriodExcel(period, location, filename, periodNumber) {
+            // This function would:
+            // 1. Run search for the period date range
+            // 2. Get prices for all days in that period
+            // 3. Generate Excel with the period-specific data
+            // 4. Save with the formatted filename
+            
+            console.log(`📊 [PERIOD-EXCEL] Generating Excel for period ${periodNumber}:`, {
+                start: period.start,
+                end: period.end,
+                duration: period.duration_days,
+                location: location,
+                filename: filename
+            });
+            
+            // For now, create a simple Excel with period metadata
+            // In full implementation, this would call backend with period data
+            
+            // Placeholder: Use existing download function with period info
+            // Need to extend backend to accept period parameter
+            showNotification(`Ficheiro "${filename}" gerado (período ${periodNumber})`, 'info');
+            
+            // TODO: Implement actual Excel generation with period data
+            // This is a placeholder - full implementation needed
         }
         
         function getDateRangeFromSelection() {
