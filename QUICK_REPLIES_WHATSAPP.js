@@ -114,25 +114,15 @@ const quickRepliesBase = [
     }
 ];
 
-// Expandir para todos os idiomas
-const languageCodes = {
-    pt: 'pt_PT',
-    en: 'en',
-    fr: 'fr',
-    de: 'de'
-};
-
-const quickReplies = [];
-quickRepliesBase.forEach(reply => {
-    Object.entries(languageCodes).forEach(([lang, code]) => {
-        const content = reply[`content_${lang}`];
-        quickReplies.push({
-            shortcut: `${reply.shortcut}_${lang}`,
-            message: content,
-            language: code
-        });
-    });
-});
+// Preparar quick replies (todos os idiomas de uma vez)
+const quickReplies = quickRepliesBase.map(reply => ({
+    shortcut: reply.shortcut,
+    category: 'GENERAL',
+    content_pt: reply.content_pt,
+    content_en: reply.content_en,
+    content_fr: reply.content_fr,
+    content_de: reply.content_de
+}));
 
 // ════════════════════════════════════════════════════════════════════════════
 // FUNÇÕES
@@ -182,6 +172,7 @@ async function criarQuickReplies() {
     
     console.log('\n✅ Quick Replies NÃO precisam aprovação!');
     console.log('💡 Já estão prontas para usar no chat!');
+    console.log('🌍 Cada quick reply tem os 4 idiomas (PT, EN, FR, DE)');
 }
 
 async function listarQuickReplies() {
@@ -191,21 +182,16 @@ async function listarQuickReplies() {
     console.log('\n📋 QUICK REPLIES EXISTENTES:\n');
     
     if (data.replies && data.replies.length > 0) {
-        const porIdioma = {};
-        data.replies.forEach(r => {
-            if (!porIdioma[r.language]) porIdioma[r.language] = [];
-            porIdioma[r.language].push(r);
+        data.replies.forEach((r, i) => {
+            console.log(`${(i+1).toString().padStart(2)}. /${r.shortcut}`);
+            console.log(`   🇵🇹 ${r.content_pt}`);
+            console.log(`   🇬🇧 ${r.content_en}`);
+            console.log(`   🇫🇷 ${r.content_fr}`);
+            console.log(`   🇩🇪 ${r.content_de}`);
+            console.log('');
         });
         
-        Object.entries(porIdioma).forEach(([lang, replies]) => {
-            console.log(`\n🌍 ${lang.toUpperCase()} (${replies.length} respostas):`);
-            replies.forEach(r => {
-                console.log(`   • /${r.shortcut}`);
-                console.log(`     ${r.message}`);
-            });
-        });
-        
-        console.log(`\n📊 Total: ${data.replies.length} quick replies`);
+        console.log(`📊 Total: ${data.replies.length} quick replies (cada uma com 4 idiomas)`);
     } else {
         console.log('⚠️ Nenhuma quick reply encontrada.');
     }
@@ -246,10 +232,10 @@ console.log('%c╔════════════════════�
 console.log('%c║           QUICK REPLIES - RESPOSTAS RÁPIDAS               ║', 'color: #128C7E; font-weight: bold');
 console.log('%c║           NÃO precisam aprovação do WhatsApp              ║', 'color: #128C7E; font-weight: bold');
 console.log('%c╚════════════════════════════════════════════════════════════╝', 'color: #128C7E; font-weight: bold');
-console.log('\n📋 15 Respostas × 4 idiomas = 60 quick replies total:');
+console.log('\n📋 15 Quick Replies (cada uma com 4 idiomas):');
 console.log('\n💬 QUICK REPLIES:');
-quickRepliesBase.forEach((r, i) => console.log(`   ${(i+1).toString().padStart(2)}. ${r.shortcut}`));
-console.log('\n🌍 IDIOMAS: Português (pt_PT), Inglês (en), Francês (fr), Alemão (de)');
+quickRepliesBase.forEach((r, i) => console.log(`   ${(i+1).toString().padStart(2)}. /${r.shortcut}`));
+console.log('\n🌍 Cada quick reply tem: Português, Inglês, Francês, Alemão');
 console.log('\n🚀 Para criar todas as quick replies:');
 console.log('%c   criarQuickReplies()', 'color: yellow; font-weight: bold; font-size: 14px');
 console.log('\n💡 Para listar quick replies existentes:');
