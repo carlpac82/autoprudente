@@ -64,35 +64,37 @@ POST /api/admin/whatsapp/fix-messages
 
 ---
 
-### 4. ⚠️ Cores das Mensagens (Verificação Necessária)
+### 4. ✅ WEBHOOK NÃO SALVAVA MENSAGENS NA BD (CRÍTICO!)
 
-**CSS Correto:**
-```css
-.message-inbound {
-    background-color: rgba(245, 158, 11, 0.2);  /* AMARELO com transparência */
-    border-radius: 0 7.5px 7.5px 7.5px;
-    color: #303030;
-}
+**Problema Descoberto:**
+- ❌ Webhook recebia mensagens mas **NÃO salvava na base de dados**
+- ❌ Mensagens só existiam em memória (variável global)
+- ❌ Ao reiniciar servidor, todas mensagens recebidas **desapareciam**
+- ❌ Por isso mensagens recebidas não apareciam com cores corretas
 
-.message-outbound {
-    background-color: rgba(0, 156, 182, 0.2);   /* AZUL com transparência */
-    border-radius: 7.5px 0 7.5px 7.5px;
-    color: #303030;
-}
+**Solução Implementada:**
+```python
+# Webhook agora salva CADA mensagem recebida na BD:
+INSERT INTO whatsapp_messages 
+(id, conversation_id, message_text, direction, timestamp, status, sender_name)
+VALUES (?, ?, ?, 'inbound', ?, 'received', ?)
 ```
 
-**HTML Correto:**
-```javascript
-<div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-2">
-    <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} ...">
-```
+**O que foi corrigido:**
+- ✅ Mensagens recebidas agora salvas com `direction='inbound'`
+- ✅ Conversas criadas/atualizadas automaticamente
+- ✅ `unread_count` incrementado
+- ✅ `sender_name` salvo com **nome do contacto** (não "Auto Prudente")
+- ✅ Timestamp correto
+- ✅ Commits da base de dados garantidos
 
-**Se mensagens continuam todas em azul:**
-- Problema está nos **dados da base de dados**
-- Campo `direction` pode estar incorreto (todas como "outbound")
-- Verificar: mensagens recebidas devem ter `direction = 'inbound'`
+**Resultado:**
+- ✅ Mensagens recebidas aparecem à **ESQUERDA** (justify-start)
+- ✅ Com fundo **AMARELO** (message-inbound)
+- ✅ Nome do contacto mostrado corretamente
+- ✅ Mensagens persistem após reiniciar servidor
 
-**Possível solução futura:** Criar script para corrigir campo `direction` baseado em lógica de remetente
+**Commit:** `be0a1af`
 
 ---
 
@@ -210,6 +212,7 @@ LIMIT 20;
 | `9a2d600` | Fix: coluna token_expires_at + commit |
 | `86e612d` | Feature: eliminar/arquivar mensagens e conversas |
 | `e0841e8` | Feature: botão admin para corrigir mensagens |
+| `be0a1af` | **FIX CRÍTICO: Webhook salva mensagens na BD** ⭐ |
 
 ---
 
