@@ -6566,6 +6566,7 @@ async def add_whatsapp_contact(request: Request):
             conn = _db_connect()
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
+                print(f"[WHATSAPP] Database type detected: {'PostgreSQL' if is_postgres else 'SQLite'} (class: {conn.__class__})")
                 
                 contact_id = None
                 conversation_id = None
@@ -6653,7 +6654,21 @@ async def add_whatsapp_contact(request: Request):
                             VALUES (?, ?, ?, ?)
                         """, (name, phone, has_whatsapp, profile_picture_url))
                         contact_id = cursor.lastrowid
-                        conn.commit()  # COMMIT IMEDIATAMENTE
+                        print(f"[WHATSAPP] 🔍 SQLite lastrowid: {contact_id} (cursor: {cursor}, rowcount: {cursor.rowcount})")
+                        
+                        # If lastrowid is 0 or None, try fallback query
+                        if not contact_id or contact_id == 0:
+                            print(f"[WHATSAPP] ⚠️ lastrowid is invalid, using fallback query...")
+                            conn.commit()  # Commit first
+                            fallback = conn.execute("SELECT id FROM whatsapp_contacts WHERE phone_number = ? ORDER BY id DESC LIMIT 1", (phone,)).fetchone()
+                            if fallback:
+                                contact_id = fallback[0]
+                                print(f"[WHATSAPP] ✅ Got contact_id via fallback: #{contact_id}")
+                            else:
+                                print(f"[WHATSAPP] ❌ CRITICAL: Contact not found even after INSERT!")
+                        else:
+                            conn.commit()  # COMMIT IMEDIATAMENTE
+                        
                         print(f"[WHATSAPP] ✅ Created new contact #{contact_id}")
                     
                 # VALIDATION: Ensure contact_id is valid before creating conversation
