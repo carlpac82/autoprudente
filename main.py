@@ -7781,6 +7781,53 @@ async def delete_message(request: Request, message_id: str):
         print(f"[WHATSAPP] ❌ Error deleting message: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# --- Delete All WhatsApp Contacts ---
+@app.delete("/api/admin/whatsapp/contacts/all")
+async def delete_all_whatsapp_contacts(request: Request):
+    """Delete ALL WhatsApp conversations and messages from database - ADMIN ONLY"""
+    try:
+        require_admin(request)
+    except HTTPException:
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=403)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                
+                # Delete all messages first (foreign key constraint)
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM whatsapp_messages")
+                        messages_deleted = cur.rowcount
+                        cur.execute("DELETE FROM whatsapp_conversations")
+                        conversations_deleted = cur.rowcount
+                    conn.commit()
+                else:
+                    cursor = conn.execute("DELETE FROM whatsapp_messages")
+                    messages_deleted = cursor.rowcount
+                    cursor = conn.execute("DELETE FROM whatsapp_conversations")
+                    conversations_deleted = cursor.rowcount
+                    conn.commit()
+                
+                print(f"[WHATSAPP] ✅ Deleted ALL: {conversations_deleted} conversations, {messages_deleted} messages")
+                
+                return JSONResponse({
+                    "ok": True,
+                    "success": True,
+                    "message": f"Todos os contactos eliminados",
+                    "conversations_deleted": conversations_deleted,
+                    "messages_deleted": messages_deleted
+                })
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"[WHATSAPP] ❌ Error deleting all contacts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 # --- Debug/Fix Messages ---
 @app.post("/api/admin/whatsapp/fix-messages")
 async def fix_whatsapp_messages_debug(request: Request):

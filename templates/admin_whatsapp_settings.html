@@ -451,6 +451,24 @@
               </div>
             </div>
           </div>
+
+          <!-- Danger Zone -->
+          <div class="border-2 border-red-300 rounded-lg p-4 bg-red-50">
+            <h4 class="font-medium mb-3 text-red-700 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              Zona de Perigo
+            </h4>
+            <p class="text-sm text-red-600 mb-4">⚠️ <strong>ATENÇÃO:</strong> Ações irreversíveis que eliminam dados permanentemente</p>
+            <button onclick="deleteAllWhatsappContacts()" class="w-full px-4 py-3 bg-red-600 text-white rounded hover:bg-red-700 transition flex items-center justify-center gap-2 font-semibold">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              🗑️ ELIMINAR TODOS OS CONTACTOS WHATSAPP
+            </button>
+            <p class="text-xs text-red-600 mt-2">Isto vai eliminar TODAS as conversas e mensagens WhatsApp da base de dados. Não há como recuperar!</p>
+          </div>
         </div>
       </div>
     </div>
@@ -1168,6 +1186,49 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = '🔧 Corrigir Mensagens (remove "Auto Prudente")';
+      }
+    }
+
+    async function deleteAllWhatsappContacts() {
+      if (!confirm('🚨 ATENÇÃO! 🚨\n\nVai ELIMINAR TODOS OS CONTACTOS e MENSAGENS do WhatsApp!\n\nEsta ação é IRREVERSÍVEL!\n\nTem ABSOLUTA CERTEZA?')) {
+        return;
+      }
+      
+      if (!confirm('⚠️ ÚLTIMA CONFIRMAÇÃO ⚠️\n\nDigite OK no próximo prompt para confirmar.\n\nTODOS os dados WhatsApp serão PERDIDOS PERMANENTEMENTE!')) {
+        return;
+      }
+      
+      const confirmation = prompt('Digite "ELIMINAR TUDO" para confirmar:');
+      if (confirmation !== 'ELIMINAR TUDO') {
+        alert('❌ Cancelado. Nada foi eliminado.');
+        return;
+      }
+      
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '🔄 A eliminar...';
+      
+      try {
+        const response = await fetch('/api/admin/whatsapp/contacts/all', {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`✅ ELIMINAÇÃO CONCLUÍDA!\n\n` +
+                `🗑️ Conversas eliminadas: ${data.conversations_deleted}\n` +
+                `🗑️ Mensagens eliminadas: ${data.messages_deleted}\n\n` +
+                `Base de dados WhatsApp limpa!`);
+          loadContactStats();
+        } else {
+          alert('❌ Erro: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error deleting all contacts:', error);
+        alert('❌ Erro ao eliminar: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🗑️ ELIMINAR TODOS OS CONTACTOS WHATSAPP';
       }
     }
 

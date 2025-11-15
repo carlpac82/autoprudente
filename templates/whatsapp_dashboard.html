@@ -165,13 +165,13 @@
                                 class="flex-1 px-3 py-1 text-sm rounded filter-btn active bg-[#009cb6] text-white">
                             Todas
                         </button>
-                        <button onclick="filterConversations('open')" 
+                        <button onclick="filterConversations('unread')" 
                                 class="flex-1 px-3 py-1 text-sm rounded filter-btn bg-white text-gray-700 border">
-                            Abertas
+                            Não Lidas
                         </button>
-                        <button onclick="filterConversations('pending')" 
+                        <button onclick="filterConversations('archived')" 
                                 class="flex-1 px-3 py-1 text-sm rounded filter-btn bg-white text-gray-700 border">
-                            Pendentes
+                            Arquivadas
                         </button>
                     </div>
                 </div>
@@ -875,8 +875,19 @@
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active', 'bg-[#009cb6]', 'text-white'));
             event.target.classList.add('active', 'bg-[#009cb6]', 'text-white');
             
-            // Load conversations with filter
-            loadConversations(status === 'all' ? null : status);
+            // Filter logic
+            if (status === 'all') {
+                // Show all conversations (excluding archived)
+                loadConversations(null);
+            } else if (status === 'unread') {
+                // Filter unread conversations client-side
+                const allConvs = conversations.filter(c => c.unread_count > 0 && !c.archived);
+                conversations = allConvs;
+                renderConversations();
+            } else if (status === 'archived') {
+                // Load archived conversations
+                loadConversations('archived');
+            }
         }
 
         function formatTime(timestamp) {
@@ -1114,9 +1125,15 @@
 
                 if (data.success) {
                     closeAddContactModal();
-                    // Reload conversations
-                    loadConversations();
-                    alert('Contacto adicionado com sucesso!');
+                    alert('✅ Contacto adicionado com sucesso!');
+                    
+                    // Reload appropriate tab
+                    const contactsListVisible = !document.getElementById('contacts-list').classList.contains('hidden');
+                    if (contactsListVisible) {
+                        loadContacts();
+                    } else {
+                        loadConversations();
+                    }
                 } else {
                     alert('Erro ao adicionar contacto: ' + (data.error || 'Desconhecido'));
                 }
