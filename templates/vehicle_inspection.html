@@ -705,14 +705,14 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
-                        }
+                        },
+                        credentials: 'same-origin'
                     });
                     
-                    if (response.ok || response.redirected) {
-                        window.location.href = '/login';
-                    } else {
-                        alert('Erro ao terminar sessão');
-                    }
+                    console.log('Logout response:', response.status, response.ok);
+                    
+                    // Sempre redirecionar, independentemente da resposta
+                    window.location.href = '/login';
                 } catch (error) {
                     console.error('Logout error:', error);
                     // Fallback: redirecionar mesmo assim
