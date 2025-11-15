@@ -402,10 +402,25 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                             <input type="date" id="pickupDateAuto" class="px-3 py-2 border border-gray-300 rounded">
                         </div>
-                        <!-- Month Selector -->
+                        <!-- Month Chips Selector -->
                         <div id="monthSelectorAuto" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
-                            <input type="month" id="monthPickerAuto" class="px-3 py-2 border border-gray-300 rounded">
+                            <div class="mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Meses</label>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <button onclick="toggleAllMonthChips()" 
+                                            class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
+                                            title="Selecionar/Desselecionar Todos os Meses">
+                                        <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </button>
+                                    <div id="monthChipsSelector" class="flex flex-wrap gap-2">
+                                        <!-- Month chips will be generated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Hidden input for compatibility -->
+                            <input type="month" id="monthPickerAuto" class="hidden">
                         </div>
                         <!-- Year Selector -->
                         <div id="yearSelectorAuto" class="hidden">
@@ -8712,7 +8727,7 @@ Continue?`);
                 document.getElementById('specificDateAuto').classList.remove('hidden');
             } else if (dateType === 'month') {
                 document.getElementById('monthSelectorAuto').classList.remove('hidden');
-                initializeMonthPicker();
+                generateMonthChips(); // Generate month chips instead of input
             } else if (dateType === 'year') {
                 document.getElementById('yearSelectorAuto').classList.remove('hidden');
                 initializeYearPicker();
@@ -8720,6 +8735,108 @@ Continue?`);
                 document.getElementById('periodSelectorAuto').classList.remove('hidden');
                 loadPricePeriodsFromHistory();
             }
+        }
+        
+        // Generate month chips for selection (next 24 months)
+        function generateMonthChips() {
+            const container = document.getElementById('monthChipsSelector');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Initialize selected months array
+            if (!window.selectedMonthsForSearch) {
+                window.selectedMonthsForSearch = [];
+            }
+            
+            // Generate chips for next 24 months
+            const now = new Date();
+            const monthsToShow = 24;
+            
+            for (let i = 0; i < monthsToShow; i++) {
+                const year = now.getFullYear() + Math.floor((now.getMonth() + i) / 12);
+                const month = (now.getMonth() + i) % 12;
+                const date = new Date(year, month, 1);
+                
+                const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+                const shortMonth = date.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
+                const fullMonth = date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+                
+                const isSelected = window.selectedMonthsForSearch.includes(monthKey);
+                
+                const chip = document.createElement('button');
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isSelected 
+                        ? 'bg-[#009cb6] text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`;
+                chip.textContent = shortMonth;
+                chip.title = fullMonth;
+                chip.dataset.monthKey = monthKey;
+                chip.onclick = () => toggleMonthChipSelection(monthKey);
+                
+                container.appendChild(chip);
+            }
+            
+            console.log('📅 [MONTH-CHIPS] Generated chips for', monthsToShow, 'months');
+        }
+        
+        // Toggle month chip selection
+        function toggleMonthChipSelection(monthKey) {
+            const index = window.selectedMonthsForSearch.indexOf(monthKey);
+            if (index > -1) {
+                window.selectedMonthsForSearch.splice(index, 1);
+            } else {
+                window.selectedMonthsForSearch.push(monthKey);
+            }
+            
+            // Update chip visual
+            const chip = document.querySelector(`#monthChipsSelector [data-month-key="${monthKey}"]`);
+            if (chip) {
+                const isSelected = window.selectedMonthsForSearch.includes(monthKey);
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isSelected 
+                        ? 'bg-[#009cb6] text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`;
+            }
+            
+            // Update hidden input with first selected month (for compatibility)
+            if (window.selectedMonthsForSearch.length > 0) {
+                document.getElementById('monthPickerAuto').value = window.selectedMonthsForSearch[0];
+            }
+            
+            console.log('📅 [MONTH-CHIPS] Selected months:', window.selectedMonthsForSearch);
+        }
+        
+        // Toggle all month chips
+        function toggleAllMonthChips() {
+            const container = document.getElementById('monthChipsSelector');
+            if (!container) return;
+            
+            const allChips = container.querySelectorAll('[data-month-key]');
+            const allMonthKeys = Array.from(allChips).map(chip => chip.dataset.monthKey);
+            
+            if (window.selectedMonthsForSearch.length === allMonthKeys.length) {
+                // Deselect all
+                window.selectedMonthsForSearch = [];
+            } else {
+                // Select all
+                window.selectedMonthsForSearch = [...allMonthKeys];
+            }
+            
+            // Update all chips visuals
+            allChips.forEach(chip => {
+                const monthKey = chip.dataset.monthKey;
+                const isSelected = window.selectedMonthsForSearch.includes(monthKey);
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isSelected 
+                        ? 'bg-[#009cb6] text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`;
+            });
+            
+            console.log('📅 [MONTH-CHIPS] Toggle all - Selected:', window.selectedMonthsForSearch.length, 'months');
         }
         
         function initializeMonthPicker() {
