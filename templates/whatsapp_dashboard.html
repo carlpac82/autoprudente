@@ -288,6 +288,105 @@
                             <i class="fas fa-plane-departure text-xl"></i>
                         </button>
                         
+                        <!-- Quick Replies Button -->
+                        <div class="relative">
+                            <button onclick="toggleQuickReplies()" 
+                                    class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition" 
+                                    title="Respostas Rápidas"
+                                    id="quick-replies-btn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </button>
+                            
+                            <!-- Quick Replies Dropdown -->
+                            <div id="quick-replies-dropdown" class="hidden absolute bottom-12 right-0 bg-white border rounded-lg shadow-lg z-50" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                                <div class="p-2 bg-gray-50 border-b">
+                                    <h3 class="text-sm font-semibold text-gray-700">Respostas Rápidas</h3>
+                                </div>
+                                <div class="divide-y">
+                                    <!-- Greeting messages -->
+                                    <button onclick="insertQuickReply('Bom dia! Como posso ajudar?')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Bom dia</div>
+                                        <div class="text-xs text-gray-500">Bom dia! Como posso ajudar?</div>
+                                    </button>
+                                    
+                                    <button onclick="insertQuickReply('Boa tarde! Em que posso ser útil?')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Boa tarde</div>
+                                        <div class="text-xs text-gray-500">Boa tarde! Em que posso ser útil?</div>
+                                    </button>
+                                    
+                                    <button onclick="insertQuickReply('Boa noite! Como posso ajudar?')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Boa noite</div>
+                                        <div class="text-xs text-gray-500">Boa noite! Como posso ajudar?</div>
+                                    </button>
+                                    
+                                    <!-- Thank you messages -->
+                                    <button onclick="insertQuickReply('Obrigado pelo seu contacto! Responderei brevemente.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Obrigado</div>
+                                        <div class="text-xs text-gray-500">Obrigado pelo seu contacto!</div>
+                                    </button>
+                                    
+                                    <!-- Confirmation messages -->
+                                    <button onclick="insertQuickReply('Confirmo a sua reserva. O veículo estará pronto na data indicada.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Confirmar reserva</div>
+                                        <div class="text-xs text-gray-500">Confirmo a sua reserva...</div>
+                                    </button>
+                                    
+                                    <button onclick="insertQuickReply('O seu veículo está pronto para levantamento. Pode passar quando desejar.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Carro pronto</div>
+                                        <div class="text-xs text-gray-500">O seu veículo está pronto...</div>
+                                    </button>
+                                    
+                                    <!-- Information requests -->
+                                    <button onclick="insertQuickReply('Para melhor o atender, preciso de alguns dados: datas de levantamento e devolução, e local preferido.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Pedir dados</div>
+                                        <div class="text-xs text-gray-500">Preciso de alguns dados...</div>
+                                    </button>
+                                    
+                                    <button onclick="insertQuickReply('Precisa de alguma informação adicional? Estou ao seu dispor.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Informações</div>
+                                        <div class="text-xs text-gray-500">Precisa de alguma informação?</div>
+                                    </button>
+                                    
+                                    <!-- Availability -->
+                                    <button onclick="insertQuickReply('Vou verificar a disponibilidade e retorno já com uma proposta.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Verificar disponibilidade</div>
+                                        <div class="text-xs text-gray-500">Vou verificar a disponibilidade...</div>
+                                    </button>
+                                    
+                                    <!-- Documents -->
+                                    <button onclick="insertQuickReply('Para a reserva, preciso de: carta de condução válida e cartão de crédito/débito.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Documentos necessários</div>
+                                        <div class="text-xs text-gray-500">Para a reserva, preciso de...</div>
+                                    </button>
+                                    
+                                    <!-- Closing -->
+                                    <button onclick="insertQuickReply('Qualquer dúvida, não hesite em contactar. Bom dia!')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Despedida</div>
+                                        <div class="text-xs text-gray-500">Qualquer dúvida, contacte...</div>
+                                    </button>
+                                    
+                                    <button onclick="insertQuickReply('Estamos ao seu dispor para qualquer esclarecimento.')" 
+                                            class="w-full text-left px-4 py-3 hover:bg-gray-50 transition">
+                                        <div class="text-sm font-medium text-gray-900">Ao dispor</div>
+                                        <div class="text-xs text-gray-500">Estamos ao seu dispor...</div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Message Input -->
                         <input type="text" id="message-input" 
                                placeholder="Digite sua mensagem..." 
@@ -1719,5 +1818,48 @@
             </form>
         </div>
     </div>
+    
+    <script>
+        // Quick Replies functionality
+        function toggleQuickReplies() {
+            const dropdown = document.getElementById('quick-replies-dropdown');
+            const isHidden = dropdown.classList.contains('hidden');
+            
+            // Close emoji picker if open
+            const emojiPicker = document.getElementById('emoji-picker');
+            if (emojiPicker && !emojiPicker.classList.contains('hidden')) {
+                emojiPicker.classList.add('hidden');
+            }
+            
+            // Toggle quick replies dropdown
+            if (isHidden) {
+                dropdown.classList.remove('hidden');
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        }
+        
+        function insertQuickReply(text) {
+            const input = document.getElementById('message-input');
+            input.value = text;
+            input.focus();
+            
+            // Close dropdown
+            const dropdown = document.getElementById('quick-replies-dropdown');
+            dropdown.classList.add('hidden');
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const quickRepliesBtn = document.getElementById('quick-replies-btn');
+            const quickRepliesDropdown = document.getElementById('quick-replies-dropdown');
+            
+            if (quickRepliesBtn && quickRepliesDropdown) {
+                if (!quickRepliesBtn.contains(event.target) && !quickRepliesDropdown.contains(event.target)) {
+                    quickRepliesDropdown.classList.add('hidden');
+                }
+            }
+        });
+    </script>
 </body>
 </html>
