@@ -941,7 +941,7 @@
             
             // Check for 24-hour window warning
             if (conversation.last_message_preview && conversation.last_message_preview.includes('⚠️ Janela de 24h expirou')) {
-                if (!confirm('⚠️ ATENÇÃO: Já passaram mais de 24 horas desde a última resposta do cliente.\n\n' +
+                if (!confirm('ATENÇÃO: Já passaram mais de 24 horas desde a última resposta do cliente.\n\n' +
                             'Mensagens normais NÃO serão entregues!\n\n' +
                             'Use um TEMPLATE APROVADO para re-engajar o cliente.\n\n' +
                             'Deseja continuar mesmo assim?')) {
@@ -997,13 +997,13 @@
                     clearFilePreview();
                     // Reload messages
                     await loadMessages(currentConversation);
-                    alert('✅ Ficheiro enviado com sucesso!');
+                    alert('Ficheiro enviado com sucesso');
                 } else {
-                    alert('❌ Erro ao enviar ficheiro: ' + (data.error || 'Erro desconhecido'));
+                    alert('ERRO ao enviar ficheiro: ' + (data.error || 'Erro desconhecido'));
                 }
             } catch (error) {
                 console.error('Error sending media:', error);
-                alert('❌ Erro ao enviar ficheiro');
+                alert('ERRO ao enviar ficheiro');
             }
         }
 
@@ -1058,13 +1058,13 @@
                 const response = await fetch('/api/admin/whatsapp/refresh-token', { method: 'POST' });
                 const data = await response.json();
                 if (data.success) {
-                    alert('✅ Token renovado com sucesso');
+                    alert('Token renovado com sucesso');
                 } else {
-                    alert('❌ ' + (data.error || 'Não foi possível renovar o token'));
+                    alert('ERRO: ' + (data.error || 'Não foi possível renovar o token'));
                 }
             } catch (err) {
                 console.error('Erro ao renovar token:', err);
-                alert('❌ Erro ao renovar token');
+                alert('ERRO ao renovar token');
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-60');
@@ -1104,13 +1104,13 @@
                     document.body.removeChild(link);
                     URL.revokeObjectURL(url);
                     
-                    alert('✅ Conversa exportada com sucesso!');
+                    alert('Conversa exportada com sucesso');
                 } else {
-                    alert('❌ Erro ao exportar: ' + data.error);
+                    alert('ERRO ao exportar: ' + data.error);
                 }
             } catch (error) {
                 console.error('Error exporting conversation:', error);
-                alert('❌ Erro ao exportar conversa');
+                alert('ERRO ao exportar conversa');
             }
         }
         
@@ -1129,7 +1129,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('✅ Conversa arquivada!');
+                    alert('Conversa arquivada com sucesso');
                     // Reload conversations
                     loadConversations();
                     currentConversation = null;
@@ -1142,11 +1142,11 @@
                         </div>
                     `;
                 } else {
-                    alert('❌ Erro ao arquivar: ' + data.error);
+                    alert('ERRO ao arquivar: ' + data.error);
                 }
             } catch (error) {
                 console.error('Error archiving conversation:', error);
-                alert('❌ Erro ao arquivar conversa');
+                alert('ERRO ao arquivar conversa');
             }
         }
         
@@ -1156,7 +1156,7 @@
                 return;
             }
             
-            if (!confirm('🗑️ Eliminar CONVERSA?\n\n✅ Apaga: mensagens e histórico\n✅ Mantém: contacto (pode criar nova conversa)\n\n⚠️ Esta ação não pode ser desfeita.')) return;
+            if (!confirm('Eliminar CONVERSA?\n\nApaga: mensagens e histórico\nMantém: contacto (pode criar nova conversa)\n\nATENÇÃO: Esta ação não pode ser desfeita.')) return;
             
             try {
                 const response = await fetch(`/api/whatsapp/conversations/${currentConversation}`, {
@@ -1165,7 +1165,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('✅ Conversa eliminada!');
+                    alert('Conversa eliminada com sucesso');
                     // Reload conversations
                     loadConversations();
                     currentConversation = null;
@@ -1178,11 +1178,11 @@
                         </div>
                     `;
                 } else {
-                    alert('❌ Erro ao eliminar: ' + data.error);
+                    alert('ERRO ao eliminar: ' + data.error);
                 }
             } catch (error) {
                 console.error('Error deleting conversation:', error);
-                alert('❌ Erro ao eliminar conversa');
+                alert('ERRO ao eliminar conversa');
             }
         }
 
@@ -1243,7 +1243,7 @@
                     
                     console.log('[ADD CONTACT] Lists reloaded!');
                     
-                    alert('✅ Contacto adicionado com sucesso!');
+                    alert('Contacto adicionado com sucesso');
                 } else {
                     alert('Erro ao adicionar contacto: ' + (data.error || 'Desconhecido'));
                 }
@@ -1256,7 +1256,7 @@
         async function deleteContact(contactId, event) {
             event.stopPropagation(); // Prevent opening conversation
             
-            if (!confirm('🗑️ Eliminar CONTACTO?\n\n❌ Apaga: contacto + TODAS as conversas + mensagens\n❌ Ação PERMANENTE\n\n⚠️ Para apagar apenas a conversa, use o botão lixo no chat.\n\nTem certeza?')) {
+            if (!confirm('Eliminar CONTACTO?\n\nApaga: contacto + TODAS as conversas + mensagens\nAção PERMANENTE\n\nPara apagar apenas a conversa, use o botão lixo no chat.\n\nTem certeza?')) {
                 return;
             }
             
@@ -1284,13 +1284,13 @@
                     // Reload lists
                     await loadConversations();
                     await loadContacts();
-                    alert('✅ Contacto eliminado com sucesso!');
+                    alert('Contacto eliminado com sucesso');
                 } else {
-                    alert('❌ Erro ao eliminar: ' + (data.error || 'Desconhecido'));
+                    alert('ERRO ao eliminar: ' + (data.error || 'Desconhecido'));
                 }
             } catch (error) {
                 console.error('Error deleting contact:', error);
-                alert('❌ Erro ao eliminar contacto');
+                alert('ERRO ao eliminar contacto');
             }
         }
 
@@ -1373,13 +1373,13 @@
                     await loadConversations();
                     
                     closeProfilePictureModal();
-                    alert('✅ Foto de perfil atualizada com sucesso!');
+                    alert('Foto de perfil atualizada com sucesso');
                 } else {
-                    alert('❌ Erro: ' + (data.error || 'Desconhecido'));
+                    alert('ERRO: ' + (data.error || 'Desconhecido'));
                 }
             } catch (error) {
                 console.error('Error uploading picture:', error);
-                alert('❌ Erro ao fazer upload da foto');
+                alert('ERRO ao fazer upload da foto');
             } finally {
                 document.getElementById('upload-picture-btn').disabled = false;
                 document.getElementById('upload-picture-btn').innerHTML = 'Guardar';
@@ -1445,7 +1445,7 @@
 
         // Delete Conversation
         async function deleteConversation(conversationId) {
-            if (!confirm('⚠️ ATENÇÃO: Esta ação é irreversível!\\n\\nTem a certeza que deseja eliminar permanentemente esta conversa e todas as suas mensagens?')) {
+            if (!confirm('ATENÇÃO: Esta ação é irreversível!\\n\\nTem a certeza que deseja eliminar permanentemente esta conversa e todas as suas mensagens?')) {
                 return;
             }
             
@@ -1551,20 +1551,20 @@
          */
         async function sendCheckInTemplate() {
             if (!currentConversation) {
-                alert('⚠️ Selecione uma conversa primeiro');
+                alert('Selecione uma conversa primeiro');
                 return;
             }
 
             // Find conversation object to get phone_number
             const conversation = conversations.find(c => c.id === currentConversation);
             if (!conversation) {
-                alert('⚠️ Erro: conversa não encontrada');
+                alert('ERRO: conversa não encontrada');
                 return;
             }
 
             const phoneNumber = conversation.phone_number;
             if (!phoneNumber) {
-                alert('⚠️ Número de telefone não encontrado');
+                alert('Número de telefone não encontrado');
                 return;
             }
 
@@ -1587,11 +1587,11 @@
                     'de': 'Alemão'
                 };
                 alert(
-                    `❌ Template Check-In não está disponível em ${languageNames[languageCode] || languageCode}\n\n` +
+                    `Template Check-In não está disponível em ${languageNames[languageCode] || languageCode}\n\n` +
                     `Possíveis motivos:\n` +
-                    `• Template ainda não foi criado\n` +
-                    `• Template está pendente de aprovação do WhatsApp (aguarde até 24h)\n` +
-                    `• Template foi rejeitado\n\n` +
+                    `- Template ainda não foi criado\n` +
+                    `- Template está pendente de aprovação do WhatsApp (aguarde até 24h)\n` +
+                    `- Template foi rejeitado\n\n` +
                     `Verifique o status em Admin → WhatsApp → Templates`
                 );
                 return;
@@ -1643,17 +1643,17 @@
 
                 if (data.ok || data.success) {
                     console.log('✅ Template check-in enviado com sucesso!');
-                    alert('✅ Template Check-In enviado com sucesso!');
+                    alert('Template Check-In enviado com sucesso');
                     
                     // Recarregar mensagens para mostrar o template enviado
                     await loadMessages(currentConversation);
                 } else {
                     console.error('❌ Erro ao enviar template:', data.error);
-                    alert(`❌ Erro ao enviar template:\n${data.error || 'Erro desconhecido'}`);
+                    alert(`ERRO ao enviar template:\n${data.error || 'Erro desconhecido'}`);
                 }
             } catch (error) {
                 console.error('❌ Erro ao enviar template:', error);
-                alert(`❌ Erro ao enviar template:\n${error.message}`);
+                alert(`ERRO ao enviar template:\n${error.message}`);
             } finally {
                 // Restaurar botão
                 btn.disabled = false;
