@@ -5750,43 +5750,90 @@ async def whatsapp_webhook_receive(request: Request):
                             
                             print(f"[WHATSAPP-WEBHOOK] Message from {contact_name} ({from_phone}): {message_content}")
                             
-                            # Find or create conversation
-                            conversation = next((c for c in whatsapp_conversations if c['phone_number'] == from_phone), None)
-                            
-                            if not conversation:
-                                # Create new conversation
-                                whatsapp_conversation_counter += 1
-                                conversation = {
-                                    "id": whatsapp_conversation_counter,
-                                    "name": contact_name,
-                                    "phone_number": from_phone,
-                                    "last_message_at": datetime.now().isoformat(),
-                                    "last_message_preview": message_content[:50] + ('...' if len(message_content) > 50 else ''),
-                                    "unread_count": 1,
-                                    "status": "open",
-                                    "assigned_to": None,
-                                    "messages": []
-                                }
-                                whatsapp_conversations.append(conversation)
-                                print(f"[WHATSAPP-WEBHOOK] ✅ Created new conversation #{conversation['id']}")
-                            
-                            # Add message to conversation
-                            message_obj = {
-                                "id": message_id,
-                                "content": message_content,
-                                "direction": "inbound",
-                                "timestamp": datetime.fromtimestamp(int(timestamp)).isoformat(),
-                                "status": "received",
-                                "type": message_type
-                            }
-                            
-                            conversation['messages'].append(message_obj)
-                            conversation['last_message_at'] = message_obj['timestamp']
-                            conversation['last_message_preview'] = message_content[:50] + ('...' if len(message_content) > 50 else '')
-                            conversation['unread_count'] = conversation.get('unread_count', 0) + 1
-                            
-                            print(f"[WHATSAPP-WEBHOOK] ✅ Added message to conversation #{conversation['id']}")
-                            print(f"[WHATSAPP-WEBHOOK] Total conversations: {len(whatsapp_conversations)}")
+                            # Save to database
+                            with _db_lock:
+                                conn = _db_connect()
+                                try:
+                                    is_postgres = str(conn.__class__).find('psycopg') >= 0
+                                    
+                                    # Find or create conversation in database
+                                    if is_postgres:
+                                        with conn.cursor() as cur:
+                                            cur.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = %s", (from_phone,))
+                                            conv_row = cur.fetchone()
+                                    else:
+                                        conv_row = conn.execute("SELECT id FROM whatsapp_conversations WHERE phone_number = ?", (from_phone,)).fetchone()
+                                    
+                                    if conv_row:
+                                        conversation_id = conv_row[0]
+                                        print(f"[WHATSAPP-WEBHOOK] Found existing conversation #{conversation_id}")
+                                        
+                                        # Update conversation
+                                        if is_postgres:
+                                            with conn.cursor() as cur:
+                                                cur.execute("""
+                                                    UPDATE whatsapp_conversations 
+                                                    SET last_message_at = CURRENT_TIMESTAMP,
+                                                        last_message_preview = %s,
+                                                        unread_count = unread_count + 1
+                                                    WHERE id = %s
+                                                """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), conversation_id))
+                                            conn.commit()
+                                        else:
+                                            conn.execute("""
+                                                UPDATE whatsapp_conversations 
+                                                SET last_message_at = CURRENT_TIMESTAMP,
+                                                    last_message_preview = ?,
+                                                    unread_count = unread_count + 1
+                                                WHERE id = ?
+                                            """, (message_content[:50] + ('...' if len(message_content) > 50 else ''), conversation_id))
+                                            conn.commit()
+                                    else:
+                                        # Create new conversation
+                                        if is_postgres:
+                                            with conn.cursor() as cur:
+                                                cur.execute("""
+                                                    INSERT INTO whatsapp_conversations 
+                                                    (name, phone_number, last_message_at, last_message_preview, unread_count, status, has_whatsapp)
+                                                    VALUES (%s, %s, CURRENT_TIMESTAMP, %s, 1, 'open', TRUE)
+                                                    RETURNING id
+                                                """, (contact_name, from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
+                                                conversation_id = cur.fetchone()[0]
+                                            conn.commit()
+                                        else:
+                                            cursor = conn.execute("""
+                                                INSERT INTO whatsapp_conversations 
+                                                (name, phone_number, last_message_at, last_message_preview, unread_count, status, has_whatsapp)
+                                                VALUES (?, ?, datetime('now'), ?, 1, 'open', 1)
+                                            """, (contact_name, from_phone, message_content[:50] + ('...' if len(message_content) > 50 else '')))
+                                            conversation_id = cursor.lastrowid
+                                            conn.commit()
+                                        
+                                        print(f"[WHATSAPP-WEBHOOK] ✅ Created new conversation #{conversation_id}")
+                                    
+                                    # Insert message into database
+                                    message_timestamp = datetime.fromtimestamp(int(timestamp))
+                                    
+                                    if is_postgres:
+                                        with conn.cursor() as cur:
+                                            cur.execute("""
+                                                INSERT INTO whatsapp_messages 
+                                                (id, conversation_id, message_text, direction, timestamp, status, sender_name)
+                                                VALUES (%s, %s, %s, 'inbound', %s, 'received', %s)
+                                            """, (message_id, conversation_id, message_content, message_timestamp, contact_name))
+                                        conn.commit()
+                                    else:
+                                        conn.execute("""
+                                            INSERT INTO whatsapp_messages 
+                                            (id, conversation_id, message_text, direction, timestamp, status, sender_name)
+                                            VALUES (?, ?, ?, 'inbound', ?, 'received', ?)
+                                        """, (message_id, conversation_id, message_content, message_timestamp, contact_name))
+                                        conn.commit()
+                                    
+                                    print(f"[WHATSAPP-WEBHOOK] ✅ Saved message to database: conversation #{conversation_id}")
+                                    
+                                finally:
+                                    conn.close()
         
         # Always return 200 to acknowledge receipt
         return JSONResponse({"status": "received"}, status_code=200)
@@ -5900,7 +5947,6 @@ async def set_whatsapp_profile_picture(request: Request, file: UploadFile = File
         
         # Determine which image to use
         image_url = None
-        media_handle = None
         
         if file:
             # Custom file uploaded
