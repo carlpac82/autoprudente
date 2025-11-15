@@ -5860,6 +5860,61 @@ async def whatsapp_webhook_receive(request: Request):
                                     
                                 finally:
                                     conn.close()
+                    
+                    # Process status updates (delivery status, read receipts, errors)
+                    if change.get('value', {}).get('statuses'):
+                        for status in change['value']['statuses']:
+                            status_type = status.get('status')  # sent, delivered, read, failed
+                            message_id = status.get('id')
+                            recipient_id = status.get('recipient_id')
+                            timestamp = status.get('timestamp')
+                            
+                            # Handle failed messages (24-hour window error, etc)
+                            if status_type == 'failed':
+                                errors = status.get('errors', [])
+                                for error in errors:
+                                    error_code = error.get('code')
+                                    error_title = error.get('title')
+                                    error_message = error.get('message')
+                                    error_details = error.get('error_data', {}).get('details', '')
+                                    
+                                    print(f"[WHATSAPP-WEBHOOK] ❌ Message FAILED to {recipient_id}")
+                                    print(f"[WHATSAPP-WEBHOOK] Error {error_code}: {error_title}")
+                                    print(f"[WHATSAPP-WEBHOOK] Details: {error_details}")
+                                    
+                                    # Special handling for 24-hour window error
+                                    if error_code == 131047:
+                                        print(f"[WHATSAPP-WEBHOOK] 🕐 24-hour window expired for {recipient_id}")
+                                        print(f"[WHATSAPP-WEBHOOK] 💡 User must use approved template to re-engage")
+                                        
+                                        # Update conversation with warning flag
+                                        try:
+                                            with _db_lock:
+                                                conn = _db_connect()
+                                                try:
+                                                    is_postgres = str(conn.__class__).find('psycopg') >= 0
+                                                    
+                                                    if is_postgres:
+                                                        with conn.cursor() as cur:
+                                                            cur.execute("""
+                                                                UPDATE whatsapp_conversations 
+                                                                SET last_message_preview = %s
+                                                                WHERE phone_number = %s
+                                                            """, ('⚠️ Janela de 24h expirou. Use template aprovado.', recipient_id))
+                                                        conn.commit()
+                                                    else:
+                                                        conn.execute("""
+                                                            UPDATE whatsapp_conversations 
+                                                            SET last_message_preview = ?
+                                                            WHERE phone_number = ?
+                                                        """, ('⚠️ Janela de 24h expirou. Use template aprovado.', recipient_id))
+                                                        conn.commit()
+                                                    
+                                                    print(f"[WHATSAPP-WEBHOOK] ✅ Updated conversation with 24h warning")
+                                                finally:
+                                                    conn.close()
+                                        except Exception as e:
+                                            print(f"[WHATSAPP-WEBHOOK] Error updating conversation: {e}")
         
         # Always return 200 to acknowledge receipt
         return JSONResponse({"status": "received"}, status_code=200)

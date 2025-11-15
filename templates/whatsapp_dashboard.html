@@ -867,6 +867,16 @@
                 return;
             }
             
+            // Check for 24-hour window warning
+            if (conversation.last_message_preview && conversation.last_message_preview.includes('⚠️ Janela de 24h expirou')) {
+                if (!confirm('⚠️ ATENÇÃO: Já passaram mais de 24 horas desde a última resposta do cliente.\n\n' +
+                            'Mensagens normais NÃO serão entregues!\n\n' +
+                            'Use um TEMPLATE APROVADO para re-engajar o cliente.\n\n' +
+                            'Deseja continuar mesmo assim?')) {
+                    return;
+                }
+            }
+            
             try {
                 const response = await fetch('/api/whatsapp/send-message', {
                     method: 'POST',
