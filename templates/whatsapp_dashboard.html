@@ -11,28 +11,61 @@
             --brand-teal: #009cb6;
             --brand-yellow: #f59e0b;
             --brand-header: #7ec6e0;
+            --whatsapp-green: #25D366;
+            --whatsapp-light-green: #DCF8C6;
+            --whatsapp-gray: #ECECEC;
         }
         .chat-container {
             height: calc(100vh - 12rem);
         }
         .conversation-item:hover {
-            background-color: #f0f9fb;
+            background-color: #f5f6f6;
         }
         .conversation-item.active {
-            background-color: #e0f7fa;
-            border-left: 4px solid var(--brand-teal);
+            background-color: #ebebeb;
+        }
+        .conversation-item {
+            transition: background-color 0.15s ease;
+        }
+        .new-pill {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background-color: var(--brand-teal);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
         .message-bubble {
-            max-width: 70%;
+            max-width: 65%;
             word-wrap: break-word;
+            position: relative;
         }
         .message-inbound {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
+            background-color: white;
+            border-radius: 0 7.5px 7.5px 7.5px;
+            color: #303030;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
         }
         .message-outbound {
-            background-color: #e0f7fa;
-            border: 1px solid var(--brand-teal);
+            background-color: var(--whatsapp-light-green);
+            border-radius: 7.5px 0 7.5px 7.5px;
+            color: #303030;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
+        }
+        .unread-badge {
+            min-width: 20px;
+            height: 20px;
+            background-color: var(--whatsapp-green);
+            color: white;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
         }
         .tab-button {
             padding: 0.5rem 1rem;
@@ -65,7 +98,6 @@
         {% else %}
         const currentUserName = "Auto Prudente";
         {% endif %}
-        const companyName = "Auto Prudente Rent a Car";
     </script>
 </head>
 <body class="bg-gray-100">
@@ -82,6 +114,9 @@
                         <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                         <span class="text-sm">Conectado</span>
                     </span>
+                    <button id="refresh-whatsapp-token" onclick="refreshWhatsappToken(event)" class="bg-white text-[#009cb6] px-3 py-2 rounded-lg hover:bg-gray-100 transition flex items-center gap-1" title="Renovar token manualmente">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                     <button onclick="window.location.href='/'" class="bg-white text-[#009cb6] px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                         <i class="fas fa-home mr-2"></i>Voltar
                     </button>
@@ -296,7 +331,12 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    conversations = data.conversations;
+                    // Ordenar por data da última mensagem (mais recente primeiro)
+                    conversations = data.conversations.sort((a, b) => {
+                        const dateA = new Date(a.last_message_at || 0);
+                        const dateB = new Date(b.last_message_at || 0);
+                        return dateB - dateA;
+                    });
                     renderConversations();
                 }
             } catch (error) {
@@ -320,9 +360,9 @@
             }
 
             list.innerHTML = conversations.map(conv => `
-                <div class="conversation-item p-4 border-b cursor-pointer ${conv.id === currentConversation?.id ? 'active' : ''}"
+                <div class="conversation-item p-3 border-b border-gray-200 cursor-pointer ${conv.id === currentConversation?.id ? 'active' : ''}"
                      onclick="selectConversation(${conv.id})">
-                    <div class="flex items-start gap-3">
+                    <div class="flex items-center gap-3">
                         ${conv.profile_picture_url ? 
                             `<img src="${conv.profile_picture_url}" alt="${conv.name}" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                              <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0" style="display: none;">
@@ -333,17 +373,22 @@
                              </div>`
                         }
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-semibold truncate">${conv.name || conv.phone_number}${conv.has_whatsapp === false ? ' ⚠️' : ''}</h4>
-                                <span class="text-xs text-gray-500">${formatTime(conv.last_message_at)}</span>
+                            <div class="flex justify-between items-center mb-1">
+                                <h4 class="font-semibold text-gray-900 truncate">${conv.name || conv.phone_number}${conv.has_whatsapp === false ? ' ⚠️' : ''}</h4>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">${formatTime(conv.last_message_at)}</span>
+                                    ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
+                                </div>
                             </div>
-                            <p class="text-sm text-gray-600 truncate">${conv.last_message_preview || 'Nova conversa'}</p>
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm text-gray-600 truncate flex-1">${conv.last_message_preview || 'Nova conversa'}</p>
+                            </div>
+                            ${conv.status === 'pending' || conv.assigned_to || conv.has_whatsapp === true ? `
                             <div class="flex gap-2 mt-1">
-                                ${conv.unread_count > 0 ? `<span class="text-xs bg-[#009cb6] text-white px-2 py-0.5 rounded-full">${conv.unread_count}</span>` : ''}
                                 ${conv.status === 'pending' ? '<span class="text-xs bg-[#f59e0b] text-white px-2 py-0.5 rounded-full">Pendente</span>' : ''}
                                 ${conv.assigned_to ? `<span class="text-xs bg-[#7ec6e0] text-white px-2 py-0.5 rounded-full">${conv.assigned_to}</span>` : ''}
-                                ${conv.has_whatsapp === true ? '<span class="text-xs text-green-600" title="WhatsApp verificado">✓</span>' : ''}
                             </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -422,8 +467,8 @@
             }
 
             list.innerHTML = contacts.map(contact => `
-                <div class="p-4 border-b hover:bg-[#f0f9fb] group relative">
-                    <div class="flex items-start gap-3" onclick="openContactConversation(${contact.id})">
+                <div class="p-3 border-b border-gray-200 hover:bg-[#f5f6f6] group relative cursor-pointer transition-all">
+                    <div class="flex items-center gap-3" onclick="openContactConversation(${contact.id})">
                         ${contact.profile_picture_url ? 
                             `<img src="${contact.profile_picture_url}" alt="${contact.name}" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                              <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0" style="display: none;">
@@ -434,21 +479,19 @@
                              </div>`
                         }
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-semibold truncate">${contact.name || contact.phone_number}${contact.has_whatsapp === false ? ' ⚠️' : ''}</h4>
-                                <span class="text-xs text-gray-500">${formatTime(contact.last_message_at)}</span>
+                            <div class="flex justify-between items-center mb-1">
+                                <h4 class="font-semibold text-gray-900 truncate">${contact.name || contact.phone_number}${contact.has_whatsapp === false ? ' ⚠️' : ''}</h4>
+                                <div class="flex items-center gap-2">
+                                    ${contact.unread_count > 0 ? `<span class="unread-badge">${contact.unread_count}</span>` : ''}
+                                </div>
                             </div>
                             <p class="text-sm text-gray-600 truncate">
-                                <i class="fab fa-whatsapp mr-1"></i>${contact.phone_number}
+                                <i class="fab fa-whatsapp mr-1 text-[#25D366]"></i>${contact.phone_number}
                             </p>
-                            <div class="flex gap-2 mt-1">
-                                ${contact.unread_count > 0 ? `<span class="text-xs bg-[#009cb6] text-white px-2 py-0.5 rounded-full">${contact.unread_count} mensagens</span>` : ''}
-                                ${contact.has_whatsapp === true ? '<span class="text-xs text-green-600" title="WhatsApp verificado">✓</span>' : ''}
-                            </div>
                         </div>
                     </div>
                     <button onclick="deleteContact(${contact.id}, event)" 
-                            class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-red-500 hover:bg-red-50 rounded"
+                            class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-red-500 hover:bg-red-50 rounded"
                             title="Eliminar contacto">
                         <i class="far fa-trash-alt"></i>
                     </button>
@@ -520,12 +563,12 @@
             }
 
             area.innerHTML = messages.map(msg => `
-                <div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-3">
-                    <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} rounded-lg p-3 shadow">
-                        <p class="text-sm">${escapeHtml(msg.text || msg.content || '')}</p>
-                        <div class="flex items-center justify-between gap-2 mt-1">
+                <div class="flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} mb-2">
+                    <div class="message-bubble ${msg.direction === 'inbound' ? 'message-inbound' : 'message-outbound'} p-2 px-3">
+                        <p class="text-sm leading-relaxed">${escapeHtml(msg.text || msg.content || '')}</p>
+                        <div class="flex items-center ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} gap-1 mt-1">
                             <span class="text-xs text-gray-500">${formatTime(msg.timestamp)}</span>
-                            ${msg.direction === 'outbound' ? `<span class="text-xs text-gray-500"><i class="fas fa-check${msg.status === 'read' ? '-double text-blue-500' : msg.status === 'delivered' ? '-double' : ''}"></i></span>` : ''}
+                            ${msg.direction === 'outbound' ? `<i class="fas fa-check${msg.status === 'read' ? '-double text-[#53bdeb]' : msg.status === 'delivered' ? '-double text-gray-500' : ' text-gray-400'}" style="font-size: 10px;"></i>` : ''}
                         </div>
                     </div>
                 </div>
@@ -546,17 +589,13 @@
             
             if (!message) return;
 
-            // Add automatic signature
-            const signature = `\n\n${currentUserName}\n${companyName}`;
-            const messageWithSignature = message + signature;
-
             try {
                 const response = await fetch('/api/whatsapp/send-message', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         phone_number: currentConversation.phone_number,
-                        message: messageWithSignature
+                        message
                     })
                 });
 
@@ -701,17 +740,13 @@
             
             if (!message) return;
 
-            // Add automatic signature
-            const signature = `\n\n${currentUserName}\n${companyName}`;
-            const messageWithSignature = message + signature;
-
             try {
                 const response = await fetch('/api/whatsapp/send-message', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         phone_number: currentConversation.phone_number,
-                        message: messageWithSignature
+                        message
                     })
                 });
 
@@ -789,6 +824,32 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function refreshWhatsappToken(event) {
+            event.stopPropagation();
+            const btn = document.getElementById('refresh-whatsapp-token');
+            btn.disabled = true;
+            btn.classList.add('opacity-60');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+
+            try {
+                const response = await fetch('/api/admin/whatsapp/refresh-token', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Token renovado com sucesso');
+                } else {
+                    alert('❌ ' + (data.error || 'Não foi possível renovar o token'));
+                }
+            } catch (err) {
+                console.error('Erro ao renovar token:', err);
+                alert('❌ Erro ao renovar token');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-60');
+                btn.innerHTML = originalHTML;
+            }
         }
 
         function showQuickReplies() {
