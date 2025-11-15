@@ -699,15 +699,17 @@
         });
         
         function logout() {
-            console.log('[LOGOUT] Function called');
+            console.log('[LOGOUT] Function called - v2.0');
             
             if (confirm('Tem a certeza que deseja terminar a sessão?')) {
-                console.log('[LOGOUT] User confirmed - redirecting to /logout');
+                console.log('[LOGOUT] User confirmed - redirecting NOW');
                 
-                // Direct redirect - ALWAYS works in ALL browsers
-                window.location.href = '/logout';
+                // Direct redirect - ALWAYS works - IMMEDIATE
+                window.location.replace('/logout');
+                return false;
             } else {
                 console.log('[LOGOUT] User cancelled');
+                return false;
             }
         }
     </script>
