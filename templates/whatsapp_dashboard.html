@@ -219,31 +219,26 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="resolveConversation()" class="px-3 py-1 bg-[#009cb6] text-white rounded text-sm hover:bg-[#f59e0b]">
-                            <i class="far fa-check-circle mr-1"></i>Resolver
+                        <!-- Exportar -->
+                        <button onclick="exportCurrentConversation()" 
+                                class="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" 
+                                title="Exportar Conversa">
+                            <i class="fas fa-download text-sm"></i>
                         </button>
-                        <button onclick="assignToMe()" class="px-3 py-1 bg-[#009cb6] text-white rounded text-sm hover:bg-[#f59e0b]">
-                            <i class="far fa-user mr-1"></i>Atribuir a Mim
+                        
+                        <!-- Arquivar -->
+                        <button onclick="archiveCurrentConversation()" 
+                                class="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" 
+                                title="Arquivar Conversa">
+                            <i class="fas fa-archive text-sm"></i>
                         </button>
-                        <div class="relative">
-                            <button onclick="toggleConversationMenu()" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <div id="conversation-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                                <button onclick="exportCurrentConversation()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
-                                    <i class="fas fa-download text-blue-600"></i>
-                                    <span>Exportar Conversa</span>
-                                </button>
-                                <button onclick="archiveCurrentConversation()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
-                                    <i class="fas fa-archive text-gray-600"></i>
-                                    <span>Arquivar</span>
-                                </button>
-                                <button onclick="deleteCurrentConversation()" class="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600">
-                                    <i class="fas fa-trash"></i>
-                                    <span>Eliminar</span>
-                                </button>
-                            </div>
-                        </div>
+                        
+                        <!-- Eliminar -->
+                        <button onclick="deleteCurrentConversation()" 
+                                class="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors" 
+                                title="Eliminar Conversa">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -986,44 +981,12 @@
             alert('Funcionalidade de templates em desenvolvimento');
         }
 
-        function resolveConversation() {
-            if (!currentConversation) {
-                alert('Selecione uma conversa primeiro');
-                return;
-            }
-            alert('Funcionalidade em desenvolvimento');
-        }
-
-        function assignToMe() {
-            if (!currentConversation) {
-                alert('Selecione uma conversa primeiro');
-                return;
-            }
-            alert('Funcionalidade em desenvolvimento');
-        }
-        
-        // Conversation Menu Functions
-        function toggleConversationMenu() {
-            const menu = document.getElementById('conversation-menu');
-            menu.classList.toggle('hidden');
-        }
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('conversation-menu');
-            const button = e.target.closest('button[onclick="toggleConversationMenu()"]');
-            if (menu && !menu.contains(e.target) && !button) {
-                menu.classList.add('hidden');
-            }
-        });
         
         async function exportCurrentConversation() {
             if (!currentConversation) {
                 alert('Selecione uma conversa primeiro');
                 return;
             }
-            
-            document.getElementById('conversation-menu').classList.add('hidden');
             
             try {
                 const response = await fetch(`/api/whatsapp/conversations/${currentConversation}/export`);
@@ -1060,8 +1023,6 @@
             
             if (!confirm('Arquivar esta conversa?')) return;
             
-            document.getElementById('conversation-menu').classList.add('hidden');
-            
             try {
                 const response = await fetch(`/api/whatsapp/conversations/${currentConversation}/archive`, {
                     method: 'POST'
@@ -1097,8 +1058,6 @@
             }
             
             if (!confirm('Tem a certeza que deseja eliminar esta conversa? Esta ação não pode ser desfeita.')) return;
-            
-            document.getElementById('conversation-menu').classList.add('hidden');
             
             try {
                 const response = await fetch(`/api/whatsapp/conversations/${currentConversation}`, {
