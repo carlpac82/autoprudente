@@ -287,6 +287,14 @@
                         </button>
                         <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(event)">
                         
+                        <!-- Check-In Template Button -->
+                        <button onclick="sendCheckInTemplate()" 
+                                class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" 
+                                title="Enviar Template Check-In Aeroporto (deteta idioma automaticamente)"
+                                id="checkin-template-btn">
+                            <i class="fas fa-plane-departure text-xl"></i>
+                        </button>
+                        
                         <!-- Message Input -->
                         <input type="text" id="message-input" 
                                placeholder="Digite sua mensagem..." 
@@ -1401,6 +1409,170 @@
             } catch (error) {
                 console.error('Error deleting conversation:', error);
                 alert('Erro ao eliminar conversa');
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // CHECK-IN TEMPLATE - Detecção automática de idioma e envio
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /**
+         * Detecta o idioma baseado no código de país do número de telefone
+         * @param {string} phoneNumber - Número de telefone com código de país
+         * @returns {string} - Código de idioma (pt_PT, en, fr, de)
+         */
+        function detectLanguageFromPhone(phoneNumber) {
+            // Remove espaços, parênteses e traços
+            const cleanPhone = phoneNumber.replace(/[\s\(\)\-]/g, '');
+            
+            // Detectar código do país
+            if (cleanPhone.startsWith('+351')) {
+                return 'pt_PT'; // Portugal
+            } else if (cleanPhone.startsWith('+33')) {
+                return 'fr'; // França
+            } else if (cleanPhone.startsWith('+49')) {
+                return 'de'; // Alemanha
+            } else {
+                return 'en'; // Inglês (default para todos os outros)
+            }
+        }
+
+        /**
+         * Busca o template check-in aprovado no idioma correto
+         * @param {string} languageCode - Código do idioma
+         * @returns {Promise<Object|null>} - Template ou null se não encontrado
+         */
+        async function getCheckInTemplate(languageCode) {
+            try {
+                const response = await fetch('/api/whatsapp/templates');
+                const data = await response.json();
+                
+                if (data.ok && data.templates) {
+                    // Procurar template check-in no idioma correto e aprovado
+                    const template = data.templates.find(t => 
+                        t.name === 'checkin_aeroporto_faro' && 
+                        t.language_code === languageCode &&
+                        t.status === 'APPROVED'
+                    );
+                    
+                    if (template) {
+                        console.log(`✅ Template check-in encontrado: ${template.name} (${template.language_code})`);
+                        return template;
+                    } else {
+                        console.warn(`⚠️ Template check-in não encontrado ou não aprovado para idioma: ${languageCode}`);
+                        return null;
+                    }
+                } else {
+                    console.error('❌ Erro ao buscar templates:', data.error);
+                    return null;
+                }
+            } catch (error) {
+                console.error('❌ Erro ao buscar templates:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Envia o template check-in no idioma correto (detectado automaticamente)
+         */
+        async function sendCheckInTemplate() {
+            if (!currentConversation) {
+                alert('⚠️ Selecione uma conversa primeiro');
+                return;
+            }
+
+            const phoneNumber = currentConversation.phone_number;
+            if (!phoneNumber) {
+                alert('⚠️ Número de telefone não encontrado');
+                return;
+            }
+
+            // Detectar idioma
+            const languageCode = detectLanguageFromPhone(phoneNumber);
+            console.log(`🌍 Idioma detectado: ${languageCode} (telefone: ${phoneNumber})`);
+
+            // Buscar template aprovado
+            const template = await getCheckInTemplate(languageCode);
+            
+            if (!template) {
+                const languageNames = {
+                    'pt_PT': 'Português',
+                    'en': 'Inglês',
+                    'fr': 'Francês',
+                    'de': 'Alemão'
+                };
+                alert(
+                    `❌ Template Check-In não está disponível em ${languageNames[languageCode] || languageCode}\n\n` +
+                    `Possíveis motivos:\n` +
+                    `• Template ainda não foi criado\n` +
+                    `• Template está pendente de aprovação do WhatsApp (aguarde até 24h)\n` +
+                    `• Template foi rejeitado\n\n` +
+                    `Verifique o status em Admin → WhatsApp → Templates`
+                );
+                return;
+            }
+
+            // Confirmar envio
+            const languageEmojis = {
+                'pt_PT': '🇵🇹 Português',
+                'en': '🇬🇧 Inglês',
+                'fr': '🇫🇷 Francês',
+                'de': '🇩🇪 Alemão'
+            };
+
+            const confirmMessage = 
+                `✈️ Enviar Template Check-In Aeroporto?\n\n` +
+                `Idioma: ${languageEmojis[languageCode]}\n` +
+                `Para: ${currentConversation.name || phoneNumber}\n\n` +
+                `O template inclui:\n` +
+                `• Pedido de número de voo e email\n` +
+                `• Link para check-in online\n` +
+                `• Instruções do ponto de encontro`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Desabilitar botão temporariamente
+            const btn = document.getElementById('checkin-template-btn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xl"></i>';
+
+            try {
+                // Enviar template via API
+                const response = await fetch('/api/whatsapp/send-template', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        phone: phoneNumber,
+                        template_name: template.name,
+                        language_code: template.language_code
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.ok || data.success) {
+                    console.log('✅ Template check-in enviado com sucesso!');
+                    alert('✅ Template Check-In enviado com sucesso!');
+                    
+                    // Recarregar mensagens para mostrar o template enviado
+                    await loadMessages(currentConversation);
+                } else {
+                    console.error('❌ Erro ao enviar template:', data.error);
+                    alert(`❌ Erro ao enviar template:\n${data.error || 'Erro desconhecido'}`);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao enviar template:', error);
+                alert(`❌ Erro ao enviar template:\n${error.message}`);
+            } finally {
+                // Restaurar botão
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
             }
         }
 
