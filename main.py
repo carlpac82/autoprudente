@@ -33805,9 +33805,10 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
         month_keys = []
         now = datetime.now()
         for i in range(months):
-            # CHANGED: + instead of - to get future months
-            date = datetime(now.year, now.month, 1) + timedelta(days=i*30)
-            month_key = f"{date.year}-{str(date.month).zfill(2)}"
+            # Calculate month correctly by adding months, not days
+            year = now.year + (now.month + i - 1) // 12
+            month = (now.month + i - 1) % 12 + 1
+            month_key = f"{year}-{str(month).zfill(2)}"
             if month_key not in month_keys:
                 month_keys.append(month_key)
         
