@@ -7668,16 +7668,120 @@ async def create_template(request: Request):
                 
                 conn.commit()
                 
-                print(f"[WHATSAPP] ✅ Created template '{name}' in {len(languages)} languages")
+                print(f"[WHATSAPP] ✅ Created template '{name}' in {len(languages)} languages in database")
                 
-                return JSONResponse({
-                    "ok": True,
-                    "success": True,
-                    "message": f"Template '{name}' criado em {len(languages)} idiomas. Aguardando aprovação do WhatsApp.",
-                    "template_ids": template_ids
-                })
             finally:
                 conn.close()
+        
+        # Now submit templates to WhatsApp API for approval
+        print(f"[WHATSAPP] 📤 Submitting templates to WhatsApp API for approval...")
+        
+        # Get WhatsApp config
+        config_row = _get_whatsapp_config_row()
+        if not config_row or not config_row[0] or not config_row[2]:
+            return JSONResponse({
+                "ok": False,
+                "error": "WhatsApp não configurado. Configure o token e business_account_id primeiro."
+            }, status_code=400)
+        
+        access_token = config_row[0]
+        business_account_id = config_row[2]
+        
+        # Submit each language template to WhatsApp API
+        submitted_count = 0
+        errors = []
+        
+        for lang_code, lang_key in languages:
+            try:
+                # Get content for this language
+                content_map = {
+                    'pt': content_pt,
+                    'en': content_en,
+                    'fr': content_fr,
+                    'de': content_de
+                }
+                content = content_map.get(lang_key, '')
+                
+                if not content:
+                    continue
+                
+                # Prepare WhatsApp API payload
+                payload = {
+                    "name": name,
+                    "language": lang_code,
+                    "category": category,
+                    "components": [
+                        {
+                            "type": "BODY",
+                            "text": content
+                        }
+                    ]
+                }
+                
+                # Submit to WhatsApp API
+                url = f"https://graph.facebook.com/v17.0/{business_account_id}/message_templates"
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        whatsapp_template_id = result.get('id')
+                        
+                        # Update database with WhatsApp template ID
+                        with _db_lock:
+                            conn = _db_connect()
+                            try:
+                                is_postgres = str(conn.__class__).find('psycopg') >= 0
+                                
+                                if is_postgres:
+                                    with conn.cursor() as cur:
+                                        cur.execute("""
+                                            UPDATE whatsapp_templates 
+                                            SET whatsapp_template_id = %s, status = 'PENDING'
+                                            WHERE name = %s AND language_code = %s
+                                        """, (whatsapp_template_id, name, lang_code))
+                                else:
+                                    conn.execute("""
+                                        UPDATE whatsapp_templates 
+                                        SET whatsapp_template_id = ?, status = 'PENDING'
+                                        WHERE name = ? AND language_code = ?
+                                    """, (whatsapp_template_id, name, lang_code))
+                                
+                                conn.commit()
+                            finally:
+                                conn.close()
+                        
+                        print(f"[WHATSAPP] ✅ Submitted template '{name}' ({lang_code}) to WhatsApp API - ID: {whatsapp_template_id}")
+                        submitted_count += 1
+                    else:
+                        error_msg = response.text
+                        print(f"[WHATSAPP] ❌ Failed to submit template '{name}' ({lang_code}): {error_msg}")
+                        errors.append(f"{lang_code}: {error_msg}")
+                        
+            except Exception as e:
+                print(f"[WHATSAPP] ❌ Error submitting template '{name}' ({lang_code}): {str(e)}")
+                errors.append(f"{lang_code}: {str(e)}")
+        
+        if submitted_count > 0:
+            return JSONResponse({
+                "ok": True,
+                "success": True,
+                "message": f"Template '{name}' criado e enviado para aprovação em {submitted_count} idiomas. Aguarde até 24h para aprovação.",
+                "template_ids": template_ids,
+                "submitted_count": submitted_count,
+                "errors": errors if errors else None
+            })
+        else:
+            return JSONResponse({
+                "ok": False,
+                "error": f"Template criado mas falhou ao enviar para WhatsApp API. Erros: {', '.join(errors)}"
+            }, status_code=500)
     except Exception as e:
         print(f"[WHATSAPP] ❌ Error creating template: {str(e)}")
         import traceback
