@@ -1425,14 +1425,24 @@
             // Remove espaços, parênteses e traços
             const cleanPhone = phoneNumber.replace(/[\s\(\)\-]/g, '');
             
+            console.log(`[DETECT LANG] Original: ${phoneNumber}`);
+            console.log(`[DETECT LANG] Cleaned: ${cleanPhone}`);
+            
+            // Garantir que tem +
+            const phoneWithPlus = cleanPhone.startsWith('+') ? cleanPhone : '+' + cleanPhone;
+            
             // Detectar código do país
-            if (cleanPhone.startsWith('+351')) {
+            if (phoneWithPlus.startsWith('+351')) {
+                console.log('[DETECT LANG] Detected: pt_PT (Portugal)');
                 return 'pt_PT'; // Portugal
-            } else if (cleanPhone.startsWith('+33')) {
+            } else if (phoneWithPlus.startsWith('+33')) {
+                console.log('[DETECT LANG] Detected: fr (França)');
                 return 'fr'; // França
-            } else if (cleanPhone.startsWith('+49')) {
+            } else if (phoneWithPlus.startsWith('+49')) {
+                console.log('[DETECT LANG] Detected: de (Alemanha)');
                 return 'de'; // Alemanha
             } else {
+                console.log(`[DETECT LANG] Detected: en (default) - Phone: ${phoneWithPlus}`);
                 return 'en'; // Inglês (default para todos os outros)
             }
         }
@@ -1495,8 +1505,12 @@
             }
 
             // Detectar idioma
+            console.log('='.repeat(50));
+            console.log('🌍 DETECÇÃO DE IDIOMA');
             const languageCode = detectLanguageFromPhone(phoneNumber);
-            console.log(`🌍 Idioma detectado: ${languageCode} (telefone: ${phoneNumber})`);
+            console.log(`📱 Telefone: ${phoneNumber}`);
+            console.log(`🌍 Idioma: ${languageCode}`);
+            console.log('='.repeat(50));
 
             // Buscar template aprovado
             const template = await getCheckInTemplate(languageCode);
