@@ -420,7 +420,7 @@
             }
 
             list.innerHTML = conversations.map(conv => `
-                <div class="conversation-item p-3 border-b border-gray-200 cursor-pointer ${conv.id === currentConversation?.id ? 'active' : ''}"
+                <div class="conversation-item p-3 border-b border-gray-200 cursor-pointer ${conv.id === currentConversation ? 'active' : ''}"
                      onclick="selectConversation(${conv.id})">
                     <div class="flex items-center gap-3">
                         ${conv.profile_picture_url ? 
@@ -570,7 +570,7 @@
             const conversation = conversations.find(c => c.id === conversationId);
             if (!conversation) return;
 
-            currentConversation = conversation;
+            currentConversation = conversationId;
             
             // Update header
             document.getElementById('chat-contact-name').textContent = conversation.name || 'Cliente';
@@ -650,6 +650,42 @@
             area.scrollTop = area.scrollHeight;
         }
 
+        async function sendQuickReply(text) {
+            if (!currentConversation) {
+                alert('Selecione uma conversa primeiro');
+                return;
+            }
+
+            const conversation = conversations.find(c => c.id === currentConversation);
+            if (!conversation) {
+                alert('Erro: conversa não encontrada');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/whatsapp/send-message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        phone_number: conversation.phone_number,
+                        message: text
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload messages
+                    await loadMessages(currentConversation);
+                } else {
+                    alert('Erro ao enviar mensagem');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Erro ao enviar mensagem');
+            }
+        }
+
         async function sendMessage() {
             if (!currentConversation) {
                 alert('Selecione uma conversa primeiro');
@@ -676,7 +712,7 @@
                 if (data.success) {
                     input.value = '';
                     // Reload messages
-                    await loadMessages(currentConversation.id);
+                    await loadMessages(currentConversation);
                 } else {
                     alert('Erro ao enviar mensagem');
                 }
@@ -812,12 +848,19 @@
             
             if (!message) return;
 
+            // Find conversation to get phone_number
+            const conversation = conversations.find(c => c.id === currentConversation);
+            if (!conversation) {
+                alert('Erro: conversa não encontrada');
+                return;
+            }
+            
             try {
                 const response = await fetch('/api/whatsapp/send-message', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        phone_number: currentConversation.phone_number,
+                        phone_number: conversation.phone_number,
                         message
                     })
                 });
@@ -827,7 +870,7 @@
                 if (data.success) {
                     input.value = '';
                     // Reload messages
-                    await loadMessages(currentConversation.id);
+                    await loadMessages(currentConversation);
                 } else {
                     alert('Erro ao enviar mensagem');
                 }
@@ -859,7 +902,7 @@
                     document.getElementById('message-input').value = '';
                     clearFilePreview();
                     // Reload messages
-                    await loadMessages(currentConversation.id);
+                    await loadMessages(currentConversation);
                     alert('✅ Ficheiro enviado com sucesso!');
                 } else {
                     alert('❌ Erro ao enviar ficheiro: ' + (data.error || 'Erro desconhecido'));
@@ -983,7 +1026,7 @@
             document.getElementById('conversation-menu').classList.add('hidden');
             
             try {
-                const response = await fetch(`/api/whatsapp/conversations/${currentConversation.id}/export`);
+                const response = await fetch(`/api/whatsapp/conversations/${currentConversation}/export`);
                 const data = await response.json();
                 
                 if (data.ok) {
@@ -1159,7 +1202,7 @@
                 
                 if (data.success) {
                     // If current conversation is deleted, clear it
-                    if (currentConversation && currentConversation.id === contactId) {
+                    if (currentConversation && currentConversation === contactId) {
                         currentConversation = null;
                         document.getElementById('chat-area').innerHTML = `
                             <div class="flex items-center justify-center h-full text-gray-400">
@@ -1247,7 +1290,7 @@
                 document.getElementById('upload-picture-btn').disabled = true;
                 document.getElementById('upload-picture-btn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>A carregar...';
 
-                const response = await fetch(`/api/whatsapp/contacts/${currentConversation.id}/picture`, {
+                const response = await fetch(`/api/whatsapp/contacts/${currentConversation}/picture`, {
                     method: 'PUT',
                     body: formData
                 });
@@ -1258,9 +1301,6 @@
                     // Update avatar in header
                     const avatarContainer = document.getElementById('chat-avatar-container');
                     avatarContainer.innerHTML = `<img src="${data.profile_picture_url}" alt="Profile" class="w-10 h-10 rounded-full object-cover">`;
-                    
-                    // Update currentConversation
-                    currentConversation.profile_picture_url = data.profile_picture_url;
                     
                     // Reload conversations to update list
                     await loadConversations();
