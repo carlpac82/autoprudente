@@ -541,7 +541,7 @@
 
             list.innerHTML = contacts.map(contact => `
                 <div class="p-3 border-b border-gray-200 hover:bg-[#f5f6f6] group relative cursor-pointer transition-all">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3" onclick="openContactConversation(${contact.id})">
                         ${contact.profile_picture_url ? 
                             `<img src="${contact.profile_picture_url}" alt="${contact.name}" class="w-12 h-12 rounded-full flex-shrink-0 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                              <div class="w-12 h-12 avatar-circle rounded-full flex items-center justify-center flex-shrink-0" style="display: none;">
@@ -572,11 +572,25 @@
             `).join('');
         }
 
-        function openContactConversation(contactId) {
+        async function openContactConversation(contactId) {
+            console.log('[OPEN CONTACT] Contact ID:', contactId);
+            
             // Switch to conversations tab
             switchTab('conversations');
-            // Select the conversation
-            setTimeout(() => selectConversation(contactId), 100);
+            
+            // Wait for conversations to load
+            await loadConversations();
+            
+            // Find conversation for this contact
+            const conversation = conversations.find(c => c.contact_id === contactId);
+            
+            if (conversation) {
+                console.log('[OPEN CONTACT] Found conversation:', conversation.id);
+                setTimeout(() => selectConversation(conversation.id), 100);
+            } else {
+                console.log('[OPEN CONTACT] No conversation found for contact:', contactId);
+                alert('Este contacto ainda não tem conversas.\n\nPara iniciar uma conversa, envie uma mensagem através do WhatsApp Business API.');
+            }
         }
 
         async function selectConversation(conversationId) {
