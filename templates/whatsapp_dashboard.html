@@ -1170,12 +1170,15 @@
                     closeAddContactModal();
                     alert('✅ Contacto adicionado com sucesso!');
                     
+                    // Small delay to ensure DB commit completes
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
                     // Reload appropriate tab
                     const contactsListVisible = !document.getElementById('contacts-list').classList.contains('hidden');
                     if (contactsListVisible) {
-                        loadContacts();
+                        await loadContacts();
                     } else {
-                        loadConversations();
+                        await loadConversations();
                     }
                 } else {
                     alert('Erro ao adicionar contacto: ' + (data.error || 'Desconhecido'));
