@@ -6403,7 +6403,7 @@ async def add_whatsapp_contact(request: Request):
 
 @app.delete("/api/whatsapp/contacts/{contact_id}")
 async def delete_whatsapp_contact(request: Request, contact_id: int):
-    """Delete a WhatsApp contact/conversation"""
+    """Delete a WhatsApp contact AND all conversations/messages associated"""
     require_auth(request)
     try:
         with _db_lock:
@@ -6411,23 +6411,49 @@ async def delete_whatsapp_contact(request: Request, contact_id: int):
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                # Delete conversation (messages will be deleted automatically via CASCADE)
+                # IMPORTANTE: Este endpoint apaga o CONTACTO e TODAS as conversas/mensagens dele
+                # Para apagar apenas a conversa, use /api/whatsapp/conversations/{id}
+                
                 if is_postgres:
                     with conn.cursor() as cur:
-                        cur.execute("DELETE FROM whatsapp_conversations WHERE id = %s", (contact_id,))
-                        deleted = cur.rowcount
+                        # First, get phone_number from conversation (backward compatibility)
+                        cur.execute("SELECT phone_number FROM whatsapp_conversations WHERE id = %s", (contact_id,))
+                        row = cur.fetchone()
+                        
+                        if row:
+                            phone_number = row[0]
+                            # Delete ALL conversations for this phone number
+                            cur.execute("DELETE FROM whatsapp_messages WHERE conversation_id IN (SELECT id FROM whatsapp_conversations WHERE phone_number = %s)", (phone_number,))
+                            cur.execute("DELETE FROM whatsapp_conversations WHERE phone_number = %s", (phone_number,))
+                            # Try to delete from contacts table too (if it exists)
+                            cur.execute("DELETE FROM whatsapp_contacts WHERE phone_number = %s", (phone_number,))
+                            deleted = cur.rowcount
+                        else:
+                            deleted = 0
                     conn.commit()
                 else:
-                    cursor = conn.execute("DELETE FROM whatsapp_conversations WHERE id = ?", (contact_id,))
-                    deleted = cursor.rowcount
+                    # Get phone number
+                    cursor = conn.execute("SELECT phone_number FROM whatsapp_conversations WHERE id = ?", (contact_id,))
+                    row = cursor.fetchone()
+                    
+                    if row:
+                        phone_number = row[0]
+                        # Delete ALL conversations for this phone number
+                        conn.execute("DELETE FROM whatsapp_messages WHERE conversation_id IN (SELECT id FROM whatsapp_conversations WHERE phone_number = ?)", (phone_number,))
+                        conn.execute("DELETE FROM whatsapp_conversations WHERE phone_number = ?", (phone_number,))
+                        # Try to delete from contacts table too
+                        conn.execute("DELETE FROM whatsapp_contacts WHERE phone_number = ?", (phone_number,))
+                        deleted = 1
+                    else:
+                        deleted = 0
                     conn.commit()
                 
-                if deleted > 0:
-                    print(f"[WHATSAPP] ✅ Deleted contact #{contact_id}")
+                if deleted >= 0:  # Changed to >= 0 because we might not delete from contacts if it doesn't exist
+                    print(f"[WHATSAPP] ✅ Deleted ALL data for contact #{contact_id}")
                     return JSONResponse({
                         "ok": True,
                         "success": True,
-                        "message": "Contacto eliminado com sucesso"
+                        "message": "Contacto e todas as conversas eliminados com sucesso"
                     })
                 else:
                     return JSONResponse({
@@ -8171,7 +8197,7 @@ async def unarchive_conversation(request: Request, conversation_id: int):
 # --- Delete Conversation ---
 @app.delete("/api/whatsapp/conversations/{conversation_id}")
 async def delete_conversation(request: Request, conversation_id: int):
-    """Delete a conversation and all its messages"""
+    """Delete a conversation and all its messages (MANTÉM O CONTACTO)"""
     require_auth(request)
     try:
         with _db_lock:
@@ -8179,23 +8205,28 @@ async def delete_conversation(request: Request, conversation_id: int):
             try:
                 is_postgres = str(conn.__class__).find('psycopg') >= 0
                 
-                # Delete all messages first
+                # IMPORTANTE: Apagar apenas CONVERSA e MENSAGENS
+                # O CONTACTO permanece intacto em whatsapp_contacts
                 if is_postgres:
                     with conn.cursor() as cur:
+                        # Delete messages (CASCADE já faz isso automaticamente)
                         cur.execute("DELETE FROM whatsapp_messages WHERE conversation_id = %s", (conversation_id,))
+                        # Delete APENAS a conversa
                         cur.execute("DELETE FROM whatsapp_conversations WHERE id = %s", (conversation_id,))
                     conn.commit()
                 else:
+                    # Delete messages
                     conn.execute("DELETE FROM whatsapp_messages WHERE conversation_id = ?", (conversation_id,))
+                    # Delete APENAS a conversa
                     conn.execute("DELETE FROM whatsapp_conversations WHERE id = ?", (conversation_id,))
                     conn.commit()
                 
-                print(f"[WHATSAPP] ✅ Conversation #{conversation_id} deleted")
+                print(f"[WHATSAPP] ✅ Conversation #{conversation_id} deleted (contacto mantido)")
                 
                 return JSONResponse({
                     "ok": True,
                     "success": True,
-                    "message": "Conversa eliminada com sucesso"
+                    "message": "Conversa eliminada com sucesso (contacto mantido)"
                 })
             finally:
                 conn.close()

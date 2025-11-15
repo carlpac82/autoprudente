@@ -1092,7 +1092,7 @@
                 return;
             }
             
-            if (!confirm('Tem a certeza que deseja eliminar esta conversa? Esta ação não pode ser desfeita.')) return;
+            if (!confirm('🗑️ Eliminar CONVERSA?\n\n✅ Apaga: mensagens e histórico\n✅ Mantém: contacto (pode criar nova conversa)\n\n⚠️ Esta ação não pode ser desfeita.')) return;
             
             try {
                 const response = await fetch(`/api/whatsapp/conversations/${currentConversation}`, {
@@ -1192,7 +1192,7 @@
         async function deleteContact(contactId, event) {
             event.stopPropagation(); // Prevent opening conversation
             
-            if (!confirm('Tem certeza que deseja eliminar este contacto? Esta ação não pode ser desfeita.')) {
+            if (!confirm('🗑️ Eliminar CONTACTO?\n\n❌ Apaga: contacto + TODAS as conversas + mensagens\n❌ Ação PERMANENTE\n\n⚠️ Para apagar apenas a conversa, use o botão lixo no chat.\n\nTem certeza?')) {
                 return;
             }
             
