@@ -811,8 +811,33 @@
                         </button>
                     </div>
                     
+                    <!-- Month Selection Chips (like days) -->
+                    <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <button onclick="toggleAllMonths()" 
+                                    class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
+                                    title="Selecionar/Desselecionar Todos">
+                                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </button>
+                            <div id="historyMonthChips" class="flex flex-wrap gap-2">
+                                <!-- Chips de meses serão gerados aqui -->
+                            </div>
+                            <button onclick="downloadSelectedMonths()" 
+                                    id="btnDownloadSelectedMonths"
+                                    class="ml-auto px-4 py-2 bg-[#10b981] text-white rounded-lg hover:bg-[#059669] transition-all flex items-center gap-2 font-medium"
+                                    title="Descarregar meses selecionados">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                <span>Descarregar Selecionados</span>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="historyMonthsAutomated">
-                        <!-- Meses serão gerados dinamicamente -->
+                        <!-- Botões de meses (ver histórico individual) serão gerados aqui -->
                     </div>
                 </div>
                 
@@ -5903,6 +5928,12 @@
                 // Clear month buttons container
                 containerAutomated.innerHTML = '';
                 
+                // Clear month chips container
+                const chipsContainer = document.getElementById('historyMonthChips');
+                if (chipsContainer) {
+                    chipsContainer.innerHTML = '';
+                }
+                
                 // CRITICAL: Also clear the history table/cards container
                 const historyTableContainer = document.getElementById('historyTableContainer');
                 if (historyTableContainer) {
@@ -5913,7 +5944,15 @@
                     console.log('📅 [GENERATE-HISTORY] Cleared', versionCards.length, 'version cards from previous view');
                 }
                 
-                // Generate buttons for each month
+                // Initialize selected months array if not exists
+                if (!window.selectedMonthsHistory) {
+                    window.selectedMonthsHistory = [];
+                }
+                
+                // Store available month data for later use
+                window.availableMonthsData = {};
+                
+                // Generate chips AND buttons for each month
                 monthKeys.forEach(monthKey => {
                     const [year, month] = monthKey.split('-');
                     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
@@ -5928,6 +5967,36 @@
                     
                     const hasData = allSearches.length > 0;
                     
+                    // Store month data for download
+                    if (hasData) {
+                        window.availableMonthsData[monthKey] = {
+                            monthName,
+                            allSearches,
+                            automatedSearches,
+                            currentSearches
+                        };
+                    }
+                    
+                    // Create CHIP (short month name, for selection)
+                    if (chipsContainer && hasData) {
+                        const chip = document.createElement('button');
+                        const shortMonth = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                        const isSelected = window.selectedMonthsHistory.includes(monthKey);
+                        
+                        chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            isSelected 
+                                ? 'bg-[#009cb6] text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`;
+                        chip.textContent = shortMonth;
+                        chip.title = monthName;
+                        chip.dataset.monthKey = monthKey;
+                        chip.onclick = () => toggleMonthSelection(monthKey);
+                        
+                        chipsContainer.appendChild(chip);
+                    }
+                    
+                    // Create BUTTON (full month name, to view history)
                     const buttonAutomated = document.createElement('button');
                     buttonAutomated.className = `p-3 border rounded text-sm ${hasData ? 'bg-[#009cb6] text-white hover:bg-[#f4ad0f]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`;
                     buttonAutomated.textContent = monthName;
@@ -5953,6 +6022,150 @@
                 containerAutomated.innerHTML = '<div class="col-span-full text-center py-4 text-red-500">Error loading history</div>';
                 showNotification('Error loading search history', 'error');
             }
+        }
+        
+        // Toggle month selection (like day chips)
+        function toggleMonthSelection(monthKey) {
+            const index = window.selectedMonthsHistory.indexOf(monthKey);
+            if (index > -1) {
+                window.selectedMonthsHistory.splice(index, 1);
+            } else {
+                window.selectedMonthsHistory.push(monthKey);
+            }
+            
+            // Update chip visual
+            const chip = document.querySelector(`[data-month-key="${monthKey}"]`);
+            if (chip) {
+                const isSelected = window.selectedMonthsHistory.includes(monthKey);
+                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isSelected 
+                        ? 'bg-[#009cb6] text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`;
+            }
+            
+            console.log('📅 Selected months:', window.selectedMonthsHistory);
+        }
+        
+        // Toggle all months selection
+        function toggleAllMonths() {
+            const allMonthKeys = Object.keys(window.availableMonthsData || {});
+            
+            if (window.selectedMonthsHistory.length === allMonthKeys.length) {
+                // Deselect all
+                window.selectedMonthsHistory = [];
+            } else {
+                // Select all
+                window.selectedMonthsHistory = [...allMonthKeys];
+            }
+            
+            // Update all chips visuals
+            allMonthKeys.forEach(monthKey => {
+                const chip = document.querySelector(`[data-month-key="${monthKey}"]`);
+                if (chip) {
+                    const isSelected = window.selectedMonthsHistory.includes(monthKey);
+                    chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        isSelected 
+                            ? 'bg-[#009cb6] text-white' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`;
+                }
+            });
+            
+            console.log('📅 Toggle all - Selected months:', window.selectedMonthsHistory);
+        }
+        
+        // Download selected months
+        async function downloadSelectedMonths() {
+            if (!window.selectedMonthsHistory || window.selectedMonthsHistory.length === 0) {
+                showNotification('Selecione pelo menos um mês para descarregar', 'warning');
+                return;
+            }
+            
+            const selectedCount = window.selectedMonthsHistory.length;
+            showNotification(`A preparar download de ${selectedCount} ${selectedCount === 1 ? 'mês' : 'meses'}...`, 'info');
+            
+            try {
+                // Get current location filter
+                const locationFilter = currentHistoryLocation || 'Aeroporto de Faro';
+                
+                // Collect all data from selected months
+                const allPricesData = {};
+                const allDias = new Set();
+                
+                window.selectedMonthsHistory.sort().forEach(monthKey => {
+                    const monthData = window.availableMonthsData[monthKey];
+                    if (!monthData) return;
+                    
+                    // Get latest version (last search) for this month
+                    const latestSearch = monthData.allSearches[monthData.allSearches.length - 1];
+                    if (!latestSearch) return;
+                    
+                    const prices = latestSearch.prices || {};
+                    const dias = latestSearch.dias || [];
+                    
+                    // Merge prices into combined data
+                    Object.keys(prices).forEach(group => {
+                        if (!allPricesData[group]) {
+                            allPricesData[group] = {};
+                        }
+                        Object.keys(prices[group]).forEach(day => {
+                            allPricesData[group][day] = prices[group][day];
+                            allDias.add(parseInt(day));
+                        });
+                    });
+                });
+                
+                const diasArray = Array.from(allDias).sort((a, b) => a - b);
+                
+                console.log('📥 [DOWNLOAD-MONTHS] Combined data:', {
+                    months: window.selectedMonthsHistory,
+                    groups: Object.keys(allPricesData).length,
+                    dias: diasArray,
+                    location: locationFilter
+                });
+                
+                // Generate Excel with combined data
+                await generateExcelFromPrices(allPricesData, diasArray, locationFilter);
+                
+                showNotification(`Download de ${selectedCount} ${selectedCount === 1 ? 'mês' : 'meses'} concluído!`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error downloading selected months:', error);
+                showNotification('Erro ao descarregar meses selecionados', 'error');
+            }
+        }
+        
+        // Helper function to generate Excel from prices data
+        async function generateExcelFromPrices(pricesData, dias, location) {
+            // Reuse existing Excel generation logic
+            // This will call the same backend endpoint with the combined data
+            const response = await fetch('/api/price-automation/export-excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prices: pricesData,
+                    dias: dias,
+                    location: location,
+                    format: 'website'  // Default to website format
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to generate Excel');
+            }
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Combined_Prices_${location}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         }
 
         function showHistoryMonth(monthKey, monthName, type = 'current') {
