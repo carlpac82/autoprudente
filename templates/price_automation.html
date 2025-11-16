@@ -4416,6 +4416,12 @@
                         pickupDate = `${currentMonthOrDate}-04`; // Day 4 of the month
                         console.log(`📅 [MONTH ${monthIndex + 1}/${monthsToProcess.length}] Processing ${currentMonthOrDate} -> ${pickupDate}`);
                         progressText.textContent = ` Processing month ${monthIndex + 1} of ${monthsToProcess.length} (${currentMonthOrDate})...`;
+                        
+                        // Clear table before processing new month (for multi-month searches)
+                        if (monthIndex > 0) {
+                            console.log('🧹 [CLEAR-TABLE] Clearing table for new month...');
+                            clearPriceTable();
+                        }
                     } else {
                         pickupDate = currentMonthOrDate;
                         console.log(`🚀 Generating automated prices for ${currentLocation}, Date: ${pickupDate}`);
@@ -5554,6 +5560,25 @@
             
             // Marcar células sem regras como vermelhas
             markCellsWithoutRules();
+        }
+        
+        function clearPriceTable() {
+            // Clear all prices from the table (both Auto and Real columns)
+            const tbody = document.getElementById('pricesTableAuto');
+            if (!tbody) return;
+            
+            let clearedCount = 0;
+            
+            // Find all input fields in the table
+            const inputs = tbody.querySelectorAll('input[data-type]');
+            inputs.forEach(input => {
+                if (input.value && input.value.trim() !== '') {
+                    input.value = '';
+                    clearedCount++;
+                }
+            });
+            
+            console.log(`🧹 [CLEAR-TABLE] Cleared ${clearedCount} price values from table`);
         }
         
         function markCellsWithoutRules() {
