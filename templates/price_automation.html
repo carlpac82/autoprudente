@@ -2248,6 +2248,10 @@
         }
 
         function extractGroup(carName) {
+            // Handle empty, null, or undefined carName
+            if (!carName || typeof carName !== 'string') {
+                return '';
+            }
             const match = carName.match(/Group\s+([A-Z]\d?)/i);
             return match ? match[1] : '';
         }
