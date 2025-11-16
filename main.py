@@ -28462,6 +28462,19 @@ def _ensure_recent_searches_table():
                             logging.info("ℹ️ Column 'source' already exists in recent_searches")
                         else:
                             logging.error(f"⚠️ Failed to add 'source' column: {e}")
+
+                    # Ensure username column exists (migration from old 'user' column)
+                    try:
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
+                        conn.commit()
+                        logging.info("✅ Added 'username' column to recent_searches (PostgreSQL)")
+                    except Exception as e:
+                        conn.rollback()
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            logging.info("ℹ️ Column 'username' already exists in recent_searches")
+                        else:
+                            logging.error(f"⚠️ Failed to add 'username' column: {e}")
                 else:
                     # SQLite syntax
                     conn.execute("""
@@ -29000,6 +29013,21 @@ async def save_recent_searches(request: Request):
                             logging.info("ℹ️ Column 'source' already exists in recent_searches")
                         else:
                             logging.error(f"❌ Failed to add 'source' column: {e}")
+                            logging.error(f"   Error type: {type(e).__name__}")
+                        pass  # Continue even if migration fails
+                    
+                    # Ensure username column exists (migration from old 'user' column)
+                    try:
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
+                        conn.commit()
+                        logging.info("✅ Added 'username' column to recent_searches table")
+                    except Exception as e:
+                        conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            logging.info("ℹ️ Column 'username' already exists in recent_searches")
+                        else:
+                            logging.error(f"❌ Failed to add 'username' column: {e}")
                             logging.error(f"   Error type: {type(e).__name__}")
                         pass  # Continue even if migration fails
                 else:
