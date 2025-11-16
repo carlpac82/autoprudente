@@ -6849,11 +6849,13 @@
                             supplierDataByGroup[grupo][day] = [];
                         }
                         
-                        // Add supplier data
+                        // Add supplier data WITH GROUP FIELD (essential for filtering later!)
                         supplierDataByGroup[grupo][day].push({
+                            group: grupo, // ← ADD THIS! Essential for card filtering
                             supplier: car.supplier || car.car?.supplier || 'Unknown',
                             price: car.price || car.car?.price || 0,
-                            car_name: car.car_name || car.car?.car_name || ''
+                            car_name: car.car_name || car.car?.car_name || '',
+                            price_num: parseFloat((car.price || car.car?.price || '0').replace(/[^0-9.]/g, '')) // Add numeric price for sorting
                         });
                     }
                 }
