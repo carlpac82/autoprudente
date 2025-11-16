@@ -237,9 +237,17 @@
       <div id="templates" class="tab-content p-6">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-lg font-semibold">Templates de Mensagens</h3>
-          <button onclick="showCreateTemplateModal()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e]">
-            + Criar Template
-          </button>
+          <div class="flex gap-2 items-center">
+            <button onclick="syncTemplatesFromWhatsApp()" 
+                    id="sync-templates-btn"
+                    class="p-2 hover:bg-gray-100 rounded-lg transition" 
+                    title="Sincronizar status das templates com WhatsApp">
+              <i class="fas fa-sync text-xl" style="color: #009cb6;"></i>
+            </button>
+            <button onclick="showCreateTemplateModal()" class="px-4 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008a9e]">
+              + Criar Template
+            </button>
+          </div>
         </div>
 
         <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
@@ -817,6 +825,47 @@
       loadTemplates();
       loadQuickReplies();
     });
+    
+    // Sync templates from WhatsApp API (force refresh status)
+    async function syncTemplatesFromWhatsApp() {
+      const btn = document.getElementById('sync-templates-btn');
+      const icon = btn.querySelector('i');
+      
+      // Animate icon
+      icon.classList.add('fa-spin');
+      btn.disabled = true;
+      
+      try {
+        const response = await fetch('/api/whatsapp/templates/sync-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok || data.success) {
+          console.log('✅ Templates sincronizadas:', data);
+          
+          // Reload templates to show updated status
+          loadTemplates();
+          
+          // Show success notification
+          alert(`✅ Templates sincronizadas com sucesso!\n\n${data.synced || 0} templates atualizadas.`);
+        } else {
+          console.error('❌ Erro ao sincronizar templates:', data.error);
+          alert(`❌ Erro ao sincronizar templates:\n${data.error || 'Erro desconhecido'}`);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao sincronizar templates:', error);
+        alert(`❌ Erro ao sincronizar templates:\n${error.message}`);
+      } finally {
+        // Stop animation
+        icon.classList.remove('fa-spin');
+        btn.disabled = false;
+      }
+    }
     
     function loadTemplates() {
       fetch('/api/whatsapp/templates')
