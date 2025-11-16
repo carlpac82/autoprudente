@@ -4378,29 +4378,48 @@
             try {
                 // Get selected location and date
                 const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
-                let pickupDate = document.getElementById('pickupDateAuto')?.value;
-                
-                // If searching by month, generate date from first selected month
                 const dateType = document.getElementById('dateTypeAuto')?.value;
+                
+                // Determine which months to process
+                let monthsToProcess = [];
                 if (dateType === 'month' && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
-                    // Use first selected month (format: YYYY-MM)
-                    const firstMonth = window.selectedMonthsForSearch[0];
-                    pickupDate = `${firstMonth}-01`; // First day of month
-                    console.log(`📅 [MONTH-SEARCH] Using first selected month: ${firstMonth} -> ${pickupDate}`);
+                    // Process ALL selected months
+                    monthsToProcess = [...window.selectedMonthsForSearch];
+                    console.log(`📅 [MULTI-MONTH] Processing ${monthsToProcess.length} months:`, monthsToProcess);
+                } else {
+                    // Single date search - process once with the selected date
+                    const pickupDate = document.getElementById('pickupDateAuto')?.value;
+                    if (!pickupDate) {
+                        showNotification('Please select a pickup date first', 'warning');
+                        stopIcon.classList.add('hidden');
+                        generateIcon.classList.remove('hidden');
+                        btn.title = 'Generate automated prices';
+                        isGenerating = false;
+                        progressBar.classList.add('hidden');
+                        return;
+                    }
+                    monthsToProcess = [pickupDate]; // Single date treated as one "month"
                 }
                 
-                if (!pickupDate) {
-                    const errorMsg = dateType === 'month' ? 'Selecione pelo menos um mês para pesquisar' : 'Please select a pickup date first';
-                    showNotification(errorMsg, 'warning');
-                    stopIcon.classList.add('hidden');
-                    generateIcon.classList.remove('hidden');
-                    btn.title = 'Generate automated prices';
-                    isGenerating = false;
-                    progressBar.classList.add('hidden');
-                    return;
-                }
-                
-                console.log(`🚀 Generating automated prices for ${currentLocation}, Date: ${pickupDate}`);
+                // Loop through each month to process
+                for (let monthIndex = 0; monthIndex < monthsToProcess.length; monthIndex++) {
+                    // Check stop flag
+                    if (stopGenerateFlag) {
+                        console.log('⏹️ Generation stopped by user');
+                        break;
+                    }
+                    
+                    const currentMonthOrDate = monthsToProcess[monthIndex];
+                    let pickupDate;
+                    
+                    if (dateType === 'month') {
+                        pickupDate = `${currentMonthOrDate}-04`; // Day 4 of the month
+                        console.log(`📅 [MONTH ${monthIndex + 1}/${monthsToProcess.length}] Processing ${currentMonthOrDate} -> ${pickupDate}`);
+                        progressText.textContent = ` Processing month ${monthIndex + 1} of ${monthsToProcess.length} (${currentMonthOrDate})...`;
+                    } else {
+                        pickupDate = currentMonthOrDate;
+                        console.log(`🚀 Generating automated prices for ${currentLocation}, Date: ${pickupDate}`);
+                    }
                 
                 // STEP 1: Fetch prices from Carjet API and fill Real column + store ALL cars for Auto calculation
                 let realPricesGenerated = 0;
@@ -4802,12 +4821,21 @@
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
                     console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
                     
+                    // Save history for THIS specific month
                     const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
-                    console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
+                    console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history for month ${currentMonthOrDate}`);
                 } else {
                     console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated}, realPricesGenerated=${realPricesGenerated} (both must be > 0)`);
                 }
                 
+                // If processing multiple months, show progress
+                if (dateType === 'month' && monthsToProcess.length > 1) {
+                    progressText.textContent = ` Month ${monthIndex + 1}/${monthsToProcess.length} complete! ${monthIndex + 1 < monthsToProcess.length ? 'Processing next...' : 'All done!'}`;
+                }
+                
+                } // End of for loop (monthsToProcess)
+                
+                // Final UI updates (only after ALL months processed)
                 progressText.textContent = ' Generation complete!';
                 
                 // Apply current fill mode (Auto/AI) to table
