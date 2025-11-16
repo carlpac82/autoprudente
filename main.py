@@ -28444,7 +28444,7 @@ def _ensure_recent_searches_table():
                             days INTEGER NOT NULL,
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
-                            "user" TEXT,
+                            username TEXT,
                             source TEXT DEFAULT 'manual',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
@@ -28472,7 +28472,7 @@ def _ensure_recent_searches_table():
                             days INTEGER NOT NULL,
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
-                            user TEXT,
+                            username TEXT,
                             source TEXT DEFAULT 'manual',
                             created_at TEXT DEFAULT CURRENT_TIMESTAMP
                         )
@@ -28981,7 +28981,7 @@ async def save_recent_searches(request: Request):
                             days INTEGER NOT NULL,
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
-                            "user" TEXT,
+                            username TEXT,
                             source TEXT DEFAULT 'manual',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
@@ -29011,7 +29011,7 @@ async def save_recent_searches(request: Request):
                             days INTEGER NOT NULL,
                             results_data TEXT NOT NULL,
                             timestamp TEXT NOT NULL,
-                            user TEXT,
+                            username TEXT,
                             source TEXT DEFAULT 'manual',
                             created_at TEXT DEFAULT CURRENT_TIMESTAMP
                         )
@@ -29077,7 +29077,7 @@ async def save_recent_searches(request: Request):
                     
                     placeholders_str = ', '.join([placeholder] * 7)
                     conn.execute(f"""
-                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, {user_col}, source)
+                        INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, username, source)
                         VALUES ({placeholders_str})
                     """, (
                         search.get('location'),
@@ -29128,7 +29128,7 @@ async def load_recent_searches(request: Request):
                 except:
                     is_postgres = False
                 placeholder = "%s" if is_postgres else "?"
-                user_col = '"user"' if is_postgres else 'user'
+                user_col = 'username'
                 
                 # MODIFIED: Include both user's searches AND automated searches
                 cursor = conn.execute(f"""
@@ -32255,12 +32255,12 @@ def run_daily_report_search():
                                         if is_postgres:
                                             with conn.cursor() as cur:
                                                 cur.execute(
-                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, username, source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                                                     (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                                 )
                                         else:
                                             conn.execute(
-                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                                                'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, username, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
                                                 (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                             )
                                         conn.commit()
@@ -32376,12 +32376,12 @@ def run_weekly_report_search():
                                             if is_postgres:
                                                 with conn.cursor() as cur:
                                                     cur.execute(
-                                                        'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, "user", source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                                        'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, username, source) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                                                         (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                                     )
                                             else:
                                                 conn.execute(
-                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, user, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                                                    'INSERT INTO recent_searches (location, start_date, days, results_data, timestamp, username, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
                                                     (location, search_date, days, results_json, datetime.now().isoformat(), 'admin', 'automated')
                                                 )
                                             conn.commit()
