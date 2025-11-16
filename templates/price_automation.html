@@ -6680,17 +6680,20 @@
             // If no prices collected from object, try reading from table inputs (fallback for month searches)
             if (priceCount === 0) {
                 console.log('[SAVE-FUNCTION] No prices in automatedPricesByGroup, reading from table inputs...');
+                console.log(`[SAVE-FUNCTION] Looking for dias:`, dias);
                 const grupos = ['B1', 'B2', 'C', 'D', 'E1', 'E2', 'F'];
                 
                 for (const grupo of grupos) {
                     pricesData[grupo] = {};
                     for (const day of dias) {
                         // Try Auto column first, then Real column
-                        const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
-                        const inputReal = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
+                        const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                        const inputReal = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
                         
                         const autoValue = inputAuto?.value ? parseFloat(inputAuto.value) : 0;
                         const realValue = inputReal?.value ? parseFloat(inputReal.value) : 0;
+                        
+                        console.log(`[SAVE-FUNCTION] ${grupo}/${day}d: Auto=${autoValue}, Real=${realValue}, inputAuto=${!!inputAuto}, inputReal=${!!inputReal}`);
                         
                         // Use Auto if available, otherwise Real
                         const price = autoValue > 0 ? autoValue : realValue;
