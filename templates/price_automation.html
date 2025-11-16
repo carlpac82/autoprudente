@@ -8541,17 +8541,28 @@ Continue?`);
             }
         }
         
-        function deleteDownload(downloadId) {
-            if (!confirm(t('alerts.deleteFromHistory', 'Delete from history?'))) {
+        async function deleteDownloadFromHistory(downloadId) {
+            if (!confirm('Eliminar este ficheiro do histórico?')) {
                 return;
             }
             
-            let history = JSON.parse(localStorage.getItem('downloadsHistory') || '[]');
-            history = history.filter(d => d.id !== downloadId);
-            localStorage.setItem('downloadsHistory', JSON.stringify(history));
-            
-            loadDownloadsHistory();
-            showNotification('Download deleted from history', 'success');
+            try {
+                // Delete from server
+                const response = await fetch(`/api/downloads/history/delete/${downloadId}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                });
+                
+                if (response.ok) {
+                    showNotification('Download eliminado do histórico', 'success');
+                    loadDownloadsHistory(); // Reload list
+                } else {
+                    showNotification('Erro ao eliminar download', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to delete download:', error);
+                showNotification('Erro ao eliminar download', 'error');
+            }
         }
 
         // ===== DATE SELECTION FOR AUTOMATED PRICES =====

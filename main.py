@@ -17622,6 +17622,46 @@ async def save_download_history(request: Request):
         logging.error(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, 500)
 
+@app.delete("/api/downloads/history/delete/{download_id}")
+async def delete_download_history(request: Request, download_id: int):
+    """Eliminar download do histórico"""
+    require_auth(request)
+    try:
+        logging.info(f"🗑️ [DOWNLOAD-DELETE] Deleting download ID: {download_id}")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Detect PostgreSQL vs SQLite
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                placeholder = "%s" if is_postgres else "?"
+                
+                query = f"DELETE FROM downloads_history WHERE id = {placeholder}"
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(query, (download_id,))
+                        conn.commit()
+                        deleted_count = cur.rowcount
+                else:
+                    cursor = conn.execute(query, (download_id,))
+                    conn.commit()
+                    deleted_count = cursor.rowcount
+                
+                if deleted_count > 0:
+                    logging.info(f"🗑️ [DOWNLOAD-DELETE] ✅ Deleted download ID {download_id}")
+                    return JSONResponse({"ok": True})
+                else:
+                    logging.warning(f"🗑️ [DOWNLOAD-DELETE] ⚠️ Download ID {download_id} not found")
+                    return JSONResponse({"ok": False, "error": "Download not found"}, 404)
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"🗑️ [DOWNLOAD-DELETE] ❌ Error deleting download: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return JSONResponse({"ok": False, "error": str(e)}, 500)
+
 @app.get("/api/downloads/history/load")
 async def load_downloads_history(request: Request):
     """Carregar histórico de downloads (com filtro opcional por location)"""
@@ -17641,7 +17681,7 @@ async def load_downloads_history(request: Request):
                 if location:
                     # Filtrar por location
                     logging.info(f"📥 [DOWNLOADS-FILTER] Applying filter: location = '{location}'")
-                    query = f"SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history WHERE location = {placeholder} ORDER BY download_date DESC LIMIT 100"
+                    query = f"SELECT id, filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history WHERE location = {placeholder} ORDER BY download_date DESC LIMIT 100"
                     
                     if is_postgres:
                         with conn.cursor() as cur:
@@ -17653,7 +17693,7 @@ async def load_downloads_history(request: Request):
                 else:
                     # Todos os downloads
                     logging.info("📥 [DOWNLOADS-FILTER] Loading ALL downloads (no filter)")
-                    query = "SELECT filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100"
+                    query = "SELECT id, filename, format, location, downloaded_by, download_date, timestamp FROM downloads_history ORDER BY download_date DESC LIMIT 100"
                     
                     if is_postgres:
                         with conn.cursor() as cur:
@@ -17666,10 +17706,10 @@ async def load_downloads_history(request: Request):
                 logging.info(f"📥 [DOWNLOADS-FILTER] Found {len(rows)} downloads from database")
                 
                 # Log locations found
-                locations_found = set(r[2] for r in rows)
+                locations_found = set(r[3] for r in rows)
                 logging.info(f"📥 [DOWNLOADS-FILTER] Locations in results: {locations_found}")
                 
-                history = [{"filename": r[0], "format": r[1], "location": r[2], "downloaded_by": r[3], "download_date": r[4], "timestamp": r[5]} for r in rows]
+                history = [{"id": r[0], "filename": r[1], "format": r[2], "location": r[3], "downloaded_by": r[4], "download_date": r[5], "timestamp": r[6]} for r in rows]
                 return JSONResponse({"ok": True, "history": history})
             finally:
                 conn.close()
