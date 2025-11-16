@@ -4606,15 +4606,67 @@
                 const month = date.getMonth() + 1; // 1-12
                 
                 console.log(`📋 Loading strategies from automatedPriceRules for ${currentLocation}, month ${month}`);
+                console.log(`📅 [MONTH-DEBUG] pickupDate=${pickupDate}, extracted month=${month} (${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1]})`);
+                console.log(`📅 [MONTH-DEBUG] dateType=${dateType}, selectedMonths=${window.selectedMonthsForSearch}`);
                 console.log(`📂 Full automatedRules:`, automatedRules);
                 console.log(`📍 Rules for ${currentLocation}:`, automatedRules[currentLocation]);
                 
+                // Check if rules exist for this specific month
+                if (automatedRules[currentLocation]) {
+                    const locationRules = automatedRules[currentLocation];
+                    console.log(`📅 [RULES-CHECK] Groups in location:`, Object.keys(locationRules));
+                    for (const grupo of Object.keys(locationRules)) {
+                        const grupoRules = locationRules[grupo];
+                        if (grupoRules?.months) {
+                            console.log(`📅 [RULES-CHECK] ${grupo} has months:`, Object.keys(grupoRules.months).map(m => `${m} (${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]})`));
+                            if (grupoRules.months[month]) {
+                                console.log(`📅 [RULES-CHECK] ✅ ${grupo} HAS rules for month ${month}!`);
+                            } else {
+                                console.log(`📅 [RULES-CHECK] ❌ ${grupo} has NO rules for month ${month}`);
+                            }
+                        }
+                    }
+                }
+                
                 let autoPricesGenerated = 0;
+                
+                // Check if we have rules for the selected month, if not, try to find a fallback month
+                let effectiveMonth = month;
+                let usingFallback = false;
+                
+                if (automatedRules[currentLocation]) {
+                    // Check if ANY grupo has rules for the selected month
+                    const hasRulesForMonth = Object.values(automatedRules[currentLocation]).some(grupoRules => {
+                        return grupoRules?.months?.[month];
+                    });
+                    
+                    if (!hasRulesForMonth) {
+                        // No rules for selected month, try to find first available month with rules
+                        console.log(`⚠️ [FALLBACK] No rules found for month ${month}, searching for fallback...`);
+                        
+                        for (let m = 1; m <= 12; m++) {
+                            const hasRulesForFallback = Object.values(automatedRules[currentLocation]).some(grupoRules => {
+                                return grupoRules?.months?.[m];
+                            });
+                            if (hasRulesForFallback) {
+                                effectiveMonth = m;
+                                usingFallback = true;
+                                console.log(`✅ [FALLBACK] Using month ${effectiveMonth} rules as fallback for month ${month}`);
+                                showNotification(`Usando regras do mês ${effectiveMonth} (${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][effectiveMonth-1]}) como padrão`, 'info');
+                                break;
+                            }
+                        }
+                        
+                        if (!usingFallback) {
+                            console.warn(`⚠️ [FALLBACK] No rules found in any month!`);
+                        }
+                    }
+                }
                 
                 for (const grupo of grupos) {
                     for (const day of dias) {
-                        // Get strategies from NEW structure
-                        const dayConfig = automatedRules[currentLocation]?.[grupo]?.months?.[month]?.days?.[day];
+                        // Get strategies from NEW structure (using effectiveMonth)
+                        const dayConfig = automatedRules[currentLocation]?.[grupo]?.months?.[effectiveMonth]?.days?.[day];
                         const strategies = dayConfig?.strategies || [];
                         
                         if (day === 1) {
