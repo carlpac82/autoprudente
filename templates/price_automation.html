@@ -6788,14 +6788,14 @@
             // Get location and pickup date from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
             let pickupDate = '';
+            let dateType = document.getElementById('dateTypeAuto')?.value || 'specific'; // Define ALWAYS
             
             // PRIORITY 1: Use explicit pickupDate if provided (from multi-month loop)
             if (explicitPickupDate) {
                 pickupDate = explicitPickupDate;
-                console.log(`📅 [SAVE-EXPLICIT] Using explicit pickupDate: ${pickupDate}`);
+                console.log(`📅 [SAVE-EXPLICIT] Using explicit pickupDate: ${pickupDate}, dateType=${dateType}`);
             } else {
                 // PRIORITY 2: If searching by month, generate from first selected month
-                const dateType = document.getElementById('dateTypeAuto')?.value;
                 console.log(`📅 [SAVE-DEBUG] dateType=${dateType}, selectedMonths=${window.selectedMonthsForSearch}`);
                 
                 if (dateType === 'month' && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
