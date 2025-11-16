@@ -4745,15 +4745,15 @@
                 document.getElementById('priceComparisonCards').classList.add('hidden');
                 document.getElementById('priceTableContainer').classList.remove('hidden');
 
-                // Guardar histórico APENAS se existirem preços automatizados
-                console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}`);
-                if (autoPricesGenerated > 0) {
+                // Guardar histórico se existirem preços automatizados OU se existirem preços reais (permite salvar pesquisas por mês)
+                console.log(`[SAVE-HISTORY] Checking if should save: autoPricesGenerated=${autoPricesGenerated}, realPricesGenerated=${realPricesGenerated}`);
+                if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
                     console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
                     
                     const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
                     console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history`);
                 } else {
-                    console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated} (must be > 0)`);
+                    console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated}, realPricesGenerated=${realPricesGenerated} (both must be > 0)`);
                 }
                 
                 progressText.textContent = ' Generation complete!';
@@ -6600,31 +6600,56 @@
                 supplierDataDays: Object.keys(supplierData || {}).length
             });
             
-            if (!automatedPricesByGroup || Object.keys(automatedPricesByGroup).length === 0) {
-                console.warn('[SAVE-FUNCTION] No automated prices to save to history - empty object');
-                return 0;
-            }
-            
             // Prepare prices data
             const pricesData = {};
             let priceCount = 0;
             
-            for (const grupo in automatedPricesByGroup) {
-                pricesData[grupo] = {};
-                for (const day of dias) {
-                    const dayData = automatedPricesByGroup[grupo][day];
-                    if (dayData) {
-                        // Support both structures:
-                        // 1. Direct number: automatedPricesByGroup[grupo][day] = 25.50
-                        // 2. Object with .automated: automatedPricesByGroup[grupo][day] = { automated: 25.50 }
-                        const price = typeof dayData === 'number' ? dayData : dayData.automated;
+            // Try to collect from automatedPricesByGroup first
+            if (automatedPricesByGroup && Object.keys(automatedPricesByGroup).length > 0) {
+                for (const grupo in automatedPricesByGroup) {
+                    pricesData[grupo] = {};
+                    for (const day of dias) {
+                        const dayData = automatedPricesByGroup[grupo][day];
+                        if (dayData) {
+                            // Support both structures:
+                            // 1. Direct number: automatedPricesByGroup[grupo][day] = 25.50
+                            // 2. Object with .automated: automatedPricesByGroup[grupo][day] = { automated: 25.50 }
+                            const price = typeof dayData === 'number' ? dayData : dayData.automated;
+                            
+                            if (price && price > 0) {
+                                pricesData[grupo][day] = price;
+                                priceCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If no prices collected from object, try reading from table inputs (fallback for month searches)
+            if (priceCount === 0) {
+                console.log('[SAVE-FUNCTION] No prices in automatedPricesByGroup, reading from table inputs...');
+                const grupos = ['B1', 'B2', 'C', 'D', 'E1', 'E2', 'F'];
+                
+                for (const grupo of grupos) {
+                    pricesData[grupo] = {};
+                    for (const day of dias) {
+                        // Try Auto column first, then Real column
+                        const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                        const inputReal = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="real"]`);
                         
-                        if (price && price > 0) {
+                        const autoValue = inputAuto?.value ? parseFloat(inputAuto.value) : 0;
+                        const realValue = inputReal?.value ? parseFloat(inputReal.value) : 0;
+                        
+                        // Use Auto if available, otherwise Real
+                        const price = autoValue > 0 ? autoValue : realValue;
+                        
+                        if (price > 0) {
                             pricesData[grupo][day] = price;
                             priceCount++;
                         }
                     }
                 }
+                console.log(`[SAVE-FUNCTION] Collected ${priceCount} prices from table inputs`);
             }
             
             console.log('[SAVE-FUNCTION] Collected prices:', {
@@ -6634,18 +6659,32 @@
             });
             
             if (priceCount === 0) {
-                console.warn('[SAVE-FUNCTION] No automated prices found to save - priceCount=0');
+                console.warn('[SAVE-FUNCTION] No prices found to save - priceCount=0');
                 return 0;
             }
             
             // Get location and pickup date from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
-            const pickupDate = document.getElementById('pickupDateAuto')?.value || '';
+            let pickupDate = document.getElementById('pickupDateAuto')?.value || '';
+            
+            // If searching by month and pickupDate is empty, generate from first selected month
+            const dateType = document.getElementById('dateTypeAuto')?.value;
+            if (dateType === 'month' && !pickupDate && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
+                const firstMonth = window.selectedMonthsForSearch[0];
+                pickupDate = `${firstMonth}-01`; // First day of month
+                console.log(`📅 [SAVE-MONTH] Generated pickupDate from first selected month: ${firstMonth} -> ${pickupDate}`);
+            }
+            
+            if (!pickupDate) {
+                console.error('[SAVE-FUNCTION] No pickupDate available - cannot save to history');
+                return 0;
+            }
             
             console.log('[SAVE-FUNCTION] Sending to PostgreSQL:', {
                 location: location,
                 searchType: searchType,
                 pickupDate: pickupDate,
+                dateType: dateType,
                 pricesDataSample: Object.keys(pricesData).slice(0, 3),
                 dias: dias,
                 priceCount: priceCount
