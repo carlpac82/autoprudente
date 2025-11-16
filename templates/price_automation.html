@@ -8554,24 +8554,25 @@ Continue?`);
         function updateDateSelectionAuto() {
             const dateType = document.getElementById('dateTypeAuto').value;
             
+            console.log('📅 [DATE-SELECTION] Selected type:', dateType);
+            
             // Hide all selectors
             document.getElementById('specificDateAuto').classList.add('hidden');
             document.getElementById('monthSelectorAuto').classList.add('hidden');
             document.getElementById('yearSelectorAuto').classList.add('hidden');
-            document.getElementById('periodSelectorAuto').classList.add('hidden');
             
             // Show selected type
             if (dateType === 'specific') {
                 document.getElementById('specificDateAuto').classList.remove('hidden');
+                console.log('📅 [DATE-SELECTION] Showing specific date picker');
             } else if (dateType === 'month') {
                 document.getElementById('monthSelectorAuto').classList.remove('hidden');
-                generateMonthChips(); // Generate month chips instead of input
+                console.log('📅 [DATE-SELECTION] Showing month selector, generating chips...');
+                generateMonthChips(); // Generate year dropdown and month chips
             } else if (dateType === 'year') {
                 document.getElementById('yearSelectorAuto').classList.remove('hidden');
+                console.log('📅 [DATE-SELECTION] Showing year picker');
                 initializeYearPicker();
-            } else if (dateType === 'period') {
-                document.getElementById('periodSelectorAuto').classList.remove('hidden');
-                initializePeriodDetection();
             }
         }
         
@@ -8880,6 +8881,14 @@ Continue?`);
 
         loadCustomDias();
         document.getElementById('pickupDateAuto').valueAsDate = new Date();
+        
+        // Initialize date selection (show correct selector based on dropdown value)
+        console.log('[INIT] Initializing date selection...');
+        setTimeout(() => {
+            if (typeof updateDateSelectionAuto === 'function') {
+                updateDateSelectionAuto();
+            }
+        }, 100);
         
         // Abrir tab Automated Prices por padrão (isso já inicializa os chips)
         console.log('[INIT] Opening Automated Prices tab by default...');
