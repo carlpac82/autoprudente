@@ -6720,14 +6720,20 @@
             
             // Get location and pickup date from page
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
-            let pickupDate = document.getElementById('pickupDateAuto')?.value || '';
+            let pickupDate = '';
             
-            // If searching by month and pickupDate is empty, generate from first selected month
+            // If searching by month, ALWAYS generate from first selected month (ignore pickupDateAuto input)
             const dateType = document.getElementById('dateTypeAuto')?.value;
-            if (dateType === 'month' && !pickupDate && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
+            console.log(`📅 [SAVE-DEBUG] dateType=${dateType}, selectedMonths=${window.selectedMonthsForSearch}`);
+            
+            if (dateType === 'month' && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
                 const firstMonth = window.selectedMonthsForSearch[0];
-                pickupDate = `${firstMonth}-01`; // First day of month
+                pickupDate = `${firstMonth}-04`; // Use day 4 of the month (consistent with search)
                 console.log(`📅 [SAVE-MONTH] Generated pickupDate from first selected month: ${firstMonth} -> ${pickupDate}`);
+            } else {
+                // For specific date searches, use the input value
+                pickupDate = document.getElementById('pickupDateAuto')?.value || '';
+                console.log(`📅 [SAVE-DATE] Using pickupDateAuto input: ${pickupDate}`);
             }
             
             if (!pickupDate) {
