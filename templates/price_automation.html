@@ -394,7 +394,7 @@
                 </select>
                 
                 <!-- Specific Date (shown only when date type = specific) -->
-                <input type="date" id="pickupDateAuto" class="px-3 py-2 border border-gray-300 rounded">
+                <input type="date" id="pickupDateAuto" class="px-3 py-2 border border-gray-300 rounded" onchange="validatePickupDate()">
                 
                 <!-- Year selector for "By Year" mode (shown only when date type = year) -->
                 <select id="yearPickerAuto" class="px-3 py-2 border border-gray-300 rounded hidden">
@@ -8855,17 +8855,28 @@ Continue?`);
             // Month names in Portuguese
             const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
             
+            // Get current date for validation
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1; // 1-12
+            
             // Generate 12 month chips for the selected year - NO rounded borders like day chips
             for (let month = 0; month < 12; month++) {
                 const monthKey = `${selectedYear}-${String(month + 1).padStart(2, '0')}`;
                 const isSelected = window.selectedMonthsForSearch.includes(monthKey);
                 const isDownloaded = window.downloadedMonths.has(monthKey);
                 
+                // Check if month is in the past
+                const monthNum = month + 1;
+                const isPast = selectedYear < currentYear || (selectedYear === currentYear && monthNum < currentMonth);
+                
                 const chip = document.createElement('button');
                 
-                // Color logic: Blue if downloaded, Yellow if selected but not downloaded, Gray if not selected
+                // Color logic: Disabled gray if past, Blue if downloaded, Yellow if selected, Normal gray if not selected
                 let colorClass;
-                if (isDownloaded) {
+                if (isPast) {
+                    colorClass = 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50';
+                } else if (isDownloaded) {
                     colorClass = 'bg-[#009cb6] text-white';
                 } else if (isSelected) {
                     colorClass = 'bg-[#f4ad0f] text-white';
@@ -8876,9 +8887,10 @@ Continue?`);
                 // Square borders (NO rounded, NO outline) like day chips, smaller size to fit in one line
                 chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass} outline-none focus:outline-none border-0`;
                 chip.textContent = monthNames[month];
-                chip.title = `${monthNames[month]} ${selectedYear}`;
+                chip.title = isPast ? `${monthNames[month]} ${selectedYear} (passado - não disponível)` : `${monthNames[month]} ${selectedYear}`;
                 chip.dataset.monthKey = monthKey;
-                chip.onclick = () => toggleMonthChipSelection(monthKey);
+                chip.disabled = isPast; // Disable past months
+                chip.onclick = isPast ? null : () => toggleMonthChipSelection(monthKey);
                 
                 container.appendChild(chip);
             }
@@ -8894,6 +8906,19 @@ Continue?`);
         
         // Toggle month chip selection
         function toggleMonthChipSelection(monthKey) {
+            // Validate: Don't allow past months
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1; // 1-12
+            const [selectedYear, selectedMonth] = monthKey.split('-').map(Number);
+            
+            // Check if selected month is in the past
+            if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
+                console.warn(`⚠️ [MONTH-SELECT] Cannot select past month: ${monthKey}`);
+                showNotification(`Não pode selecionar um mês passado (${monthKey})`, 'warning');
+                return; // Don't allow selection
+            }
+            
             const index = window.selectedMonthsForSearch.indexOf(monthKey);
             if (index > -1) {
                 window.selectedMonthsForSearch.splice(index, 1);
@@ -9117,7 +9142,27 @@ Continue?`);
         }
 
         loadCustomDias();
-        document.getElementById('pickupDateAuto').valueAsDate = new Date();
+        
+        // Set date picker to today's date and set minimum date to today
+        const pickupDateInput = document.getElementById('pickupDateAuto');
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        pickupDateInput.valueAsDate = today;
+        pickupDateInput.min = todayStr; // HTML5 validation: prevent past dates
+        console.log('📅 [INIT] Date picker min set to:', todayStr);
+        
+        // Validate pickup date function
+        window.validatePickupDate = function() {
+            const selectedDate = document.getElementById('pickupDateAuto').value;
+            if (!selectedDate) return;
+            
+            const today = new Date().toISOString().split('T')[0];
+            if (selectedDate < today) {
+                console.warn('⚠️ [DATE-VALIDATION] Selected date is in the past:', selectedDate);
+                showNotification('Não pode selecionar uma data passada. Data alterada para hoje.', 'warning');
+                document.getElementById('pickupDateAuto').value = today;
+            }
+        };
         
         // Initialize date selection (show correct selector based on dropdown value)
         console.log('[INIT] Initializing date selection...');
