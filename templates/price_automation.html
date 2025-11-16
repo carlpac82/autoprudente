@@ -4824,6 +4824,19 @@
                     // Save history for THIS specific month
                     const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
                     console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history for month ${currentMonthOrDate}`);
+                    
+                    // For month searches, immediately update chip color to BLUE
+                    if (dateType === 'month') {
+                        // Mark month as downloaded
+                        if (!window.downloadedMonths) {
+                            window.downloadedMonths = new Set();
+                        }
+                        window.downloadedMonths.add(currentMonthOrDate);
+                        
+                        // Update chip color to BLUE immediately
+                        updateMonthChipColor(currentMonthOrDate);
+                        console.log(`🔵 [MONTH-CHIP] Updated chip to BLUE for ${currentMonthOrDate}`);
+                    }
                 } else {
                     console.warn(`[SAVE-HISTORY] SKIPPED: autoPricesGenerated=${autoPricesGenerated}, realPricesGenerated=${realPricesGenerated} (both must be > 0)`);
                 }
