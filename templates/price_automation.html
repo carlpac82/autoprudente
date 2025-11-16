@@ -4827,9 +4827,9 @@
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
                     console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
                     
-                    // Save history for THIS specific month
-                    const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay);
-                    console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history for month ${currentMonthOrDate}`);
+                    // Save history for THIS specific month - PASS pickupDate explicitly!
+                    const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay, pickupDate);
+                    console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history for month ${currentMonthOrDate} with pickupDate ${pickupDate}`);
                     
                     // For month searches, immediately update chip color to BLUE
                     if (dateType === 'month') {
@@ -6710,12 +6710,13 @@
             return priceCount;
         }
         
-        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated', supplierData = {}) {
+        async function saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType = 'automated', supplierData = {}, explicitPickupDate = null) {
             console.log('[SAVE-FUNCTION] saveAutomatedPriceHistory called with:', {
                 grupos: Object.keys(automatedPricesByGroup || {}).length,
                 dias: dias?.length,
                 searchType: searchType,
-                supplierDataDays: Object.keys(supplierData || {}).length
+                supplierDataDays: Object.keys(supplierData || {}).length,
+                explicitPickupDate: explicitPickupDate
             });
             
             // Prepare prices data
@@ -6788,18 +6789,24 @@
             const location = document.getElementById('locationAuto')?.value || 'Albufeira';
             let pickupDate = '';
             
-            // If searching by month, ALWAYS generate from first selected month (ignore pickupDateAuto input)
-            const dateType = document.getElementById('dateTypeAuto')?.value;
-            console.log(`📅 [SAVE-DEBUG] dateType=${dateType}, selectedMonths=${window.selectedMonthsForSearch}`);
-            
-            if (dateType === 'month' && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
-                const firstMonth = window.selectedMonthsForSearch[0];
-                pickupDate = `${firstMonth}-04`; // Use day 4 of the month (consistent with search)
-                console.log(`📅 [SAVE-MONTH] Generated pickupDate from first selected month: ${firstMonth} -> ${pickupDate}`);
+            // PRIORITY 1: Use explicit pickupDate if provided (from multi-month loop)
+            if (explicitPickupDate) {
+                pickupDate = explicitPickupDate;
+                console.log(`📅 [SAVE-EXPLICIT] Using explicit pickupDate: ${pickupDate}`);
             } else {
-                // For specific date searches, use the input value
-                pickupDate = document.getElementById('pickupDateAuto')?.value || '';
-                console.log(`📅 [SAVE-DATE] Using pickupDateAuto input: ${pickupDate}`);
+                // PRIORITY 2: If searching by month, generate from first selected month
+                const dateType = document.getElementById('dateTypeAuto')?.value;
+                console.log(`📅 [SAVE-DEBUG] dateType=${dateType}, selectedMonths=${window.selectedMonthsForSearch}`);
+                
+                if (dateType === 'month' && window.selectedMonthsForSearch && window.selectedMonthsForSearch.length > 0) {
+                    const firstMonth = window.selectedMonthsForSearch[0];
+                    pickupDate = `${firstMonth}-04`; // Use day 4 of the month (consistent with search)
+                    console.log(`📅 [SAVE-MONTH] Generated pickupDate from first selected month: ${firstMonth} -> ${pickupDate}`);
+                } else {
+                    // PRIORITY 3: For specific date searches, use the input value
+                    pickupDate = document.getElementById('pickupDateAuto')?.value || '';
+                    console.log(`📅 [SAVE-DATE] Using pickupDateAuto input: ${pickupDate}`);
+                }
             }
             
             if (!pickupDate) {
