@@ -388,11 +388,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            <span data-i18n="automation.dateSelection">Date Selection</span>
-                            <span id="selectedYearDisplay" class="ml-2 text-gray-500" style="display:none;"></span>
-                        </label>
-                        <select id="dateTypeAuto" onchange="updateDateSelectionAuto()" class="px-3 py-2 border border-gray-300 rounded">
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.dateSelection">Date Selection</label>
+                        <select id="dateTypeAuto" onchange="updateDateSelectionAuto()" class="px-3 py-2 border border-gray-300 rounded w-32">
                             <option value="specific" data-i18n="automation.specificDate">Specific Date</option>
                             <option value="month" data-i18n="automation.byMonth">By Month</option>
                             <option value="year" data-i18n="automation.byYear">By Year</option>
@@ -404,32 +401,6 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                             <input type="date" id="pickupDateAuto" class="px-3 py-2 border border-gray-300 rounded">
                         </div>
-                        <!-- Month Chips Selector -->
-                        <div id="monthSelectorAuto" class="hidden">
-                            <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Ano</label>
-                                <select id="yearSelectorForMonths" onchange="generateMonthChipsForYear()" class="px-3 py-2 border border-gray-300 rounded w-full">
-                                    <!-- Will be populated by JS -->
-                                </select>
-                            </div>
-                            <div class="mb-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Meses</label>
-                                <div class="flex items-center gap-1.5">
-                                    <button onclick="toggleAllMonthChips()" 
-                                            class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
-                                            title="Selecionar/Desselecionar Todos os Meses">
-                                        <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    </button>
-                                    <div id="monthChipsSelector" class="flex flex-wrap gap-1.5">
-                                        <!-- Month chips will be generated here -->
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Hidden input for compatibility -->
-                            <input type="month" id="monthPickerAuto" class="hidden">
-                        </div>
                         <!-- Year Selector -->
                         <div id="yearSelectorAuto" class="hidden">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Select Year</label>
@@ -439,6 +410,30 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Month Selector Row - shown when "By Month" is selected -->
+            <div id="monthSelectorAuto" class="hidden mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-gray-700 whitespace-nowrap">Por Mês:</span>
+                    <select id="yearSelectorForMonths" onchange="generateMonthChipsForYear()" class="px-3 py-2 border border-gray-300 rounded w-24">
+                        <!-- Will be populated by JS -->
+                    </select>
+                    <div class="flex items-center gap-1.5 flex-1">
+                        <button onclick="toggleAllMonthChips()" 
+                                class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
+                                title="Selecionar/Desselecionar Todos os Meses">
+                            <svg class="w-5 h-5 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                        <div id="monthChipsSelector" class="flex flex-wrap gap-1.5">
+                            <!-- Month chips will be generated here -->
+                        </div>
+                    </div>
+                </div>
+                <!-- Hidden input for compatibility -->
+                <input type="month" id="monthPickerAuto" class="hidden">
             </div>
             
             <div class="border-t pt-4">
@@ -8581,9 +8576,6 @@ Continue?`);
             document.getElementById('monthSelectorAuto').classList.add('hidden');
             document.getElementById('yearSelectorAuto').classList.add('hidden');
             
-            // Hide year display by default
-            const yearDisplay = document.getElementById('selectedYearDisplay');
-            yearDisplay.style.display = 'none';
             
             // Show selected type
             if (dateType === 'specific') {
@@ -8629,13 +8621,6 @@ Continue?`);
             
             const selectedYear = parseInt(yearSelector.value);
             container.innerHTML = '';
-            
-            // Update year display next to "Date Selection" label
-            const yearDisplay = document.getElementById('selectedYearDisplay');
-            if (yearDisplay) {
-                yearDisplay.textContent = `(${selectedYear})`;
-                yearDisplay.style.display = 'inline';
-            }
             
             // Initialize selected months array
             if (!window.selectedMonthsForSearch) {
