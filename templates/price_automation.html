@@ -8364,6 +8364,21 @@ Continue?`);
                     return;
                 }
                 
+                // Initialize downloaded months tracking
+                if (!window.downloadedMonths) {
+                    window.downloadedMonths = new Set();
+                }
+                
+                // Extract months from filenames and mark as downloaded
+                data.history.forEach(download => {
+                    const monthMatch = download.filename.match(/(\d{4})-(\d{2})/);
+                    if (monthMatch) {
+                        const monthKey = `${monthMatch[1]}-${monthMatch[2]}`;
+                        window.downloadedMonths.add(monthKey);
+                    }
+                });
+                console.log(`📅 [DOWNLOADS-HISTORY] Loaded ${window.downloadedMonths.size} downloaded months`);
+                
                 // Sort downloads - oldest first (mais antigo primeiro)
                 const sortedHistory = data.history.sort((a, b) => 
                     new Date(a.timestamp) - new Date(b.timestamp)
@@ -8488,6 +8503,23 @@ Continue?`);
             };
             
             try {
+                // Extract month from filename and mark as downloaded
+                // Filename format: Website_Albufeira_2025-11-12_1-31.csv or BROKERS-01-31-NOV.csv
+                const monthMatch = filename.match(/(\d{4})-(\d{2})/);
+                if (monthMatch) {
+                    const monthKey = `${monthMatch[1]}-${monthMatch[2]}`; // e.g., "2025-11"
+                    if (!window.downloadedMonths) {
+                        window.downloadedMonths = new Set();
+                    }
+                    window.downloadedMonths.add(monthKey);
+                    console.log(`📅 [DOWNLOAD] Marked month as downloaded: ${monthKey}`);
+                    
+                    // Regenerate month chips to show blue color
+                    if (typeof generateMonthChipsForYear === 'function') {
+                        generateMonthChipsForYear();
+                    }
+                }
+                
                 // Salvar no servidor (visível para todos os users)
                 const response = await fetch('/api/downloads/history/save', {
                     method: 'POST',
@@ -8664,8 +8696,8 @@ Continue?`);
                     colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
                 }
                 
-                // Square borders (NO rounded) like day chips, smaller size to fit in one line
-                chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass}`;
+                // Square borders (NO rounded, NO outline) like day chips, smaller size to fit in one line
+                chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass} outline-none focus:outline-none border-0`;
                 chip.textContent = monthNames[month];
                 chip.title = `${monthNames[month]} ${selectedYear}`;
                 chip.dataset.monthKey = monthKey;
@@ -8708,7 +8740,7 @@ Continue?`);
                     colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
                 }
                 
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
+                chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass} outline-none focus:outline-none border-0`;
             }
             
             // Update hidden input with first selected month (for compatibility)
@@ -8721,7 +8753,7 @@ Continue?`);
         
         // Update a specific month chip color
         function updateMonthChipColor(monthKey) {
-            const chip = document.querySelector(`#monthChipsSelector [data-month-key="${monthKey}"]`);
+            const chip = document.querySelector(`[data-month-key="${monthKey}"]`);
             if (!chip) return;
             
             const isSelected = window.selectedMonthsForSearch && window.selectedMonthsForSearch.includes(monthKey);
@@ -8737,7 +8769,7 @@ Continue?`);
                 colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
             }
             
-            chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
+            chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass} outline-none focus:outline-none border-0`;
             console.log('🔵 [MONTH-CHIP-UPDATE] Updated chip color:', monthKey, 'to', isDownloaded ? 'BLUE' : isSelected ? 'YELLOW' : 'GRAY');
         }
         
@@ -8773,7 +8805,7 @@ Continue?`);
                     colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
                 }
                 
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
+                chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass} outline-none focus:outline-none border-0`;
             });
             
             console.log('📅 [MONTH-CHIPS] Toggle all - Selected:', window.selectedMonthsForSearch.length, 'months');
