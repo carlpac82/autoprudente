@@ -388,7 +388,10 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="automation.dateSelection">Date Selection</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <span data-i18n="automation.dateSelection">Date Selection</span>
+                            <span id="selectedYearDisplay" class="ml-2 text-gray-500" style="display:none;"></span>
+                        </label>
                         <select id="dateTypeAuto" onchange="updateDateSelectionAuto()" class="px-3 py-2 border border-gray-300 rounded">
                             <option value="specific" data-i18n="automation.specificDate">Specific Date</option>
                             <option value="month" data-i18n="automation.byMonth">By Month</option>
@@ -401,7 +404,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                             <input type="date" id="pickupDateAuto" class="px-3 py-2 border border-gray-300 rounded">
                         </div>
-                        <!-- Month Chips Selector - Updated Nov 15 2025 23:50 -->
+                        <!-- Month Chips Selector -->
                         <div id="monthSelectorAuto" class="hidden">
                             <div class="mb-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Ano</label>
@@ -411,7 +414,7 @@
                             </div>
                             <div class="mb-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Meses</label>
-                                <div class="flex items-center gap-2 mb-2">
+                                <div class="flex items-center gap-1.5">
                                     <button onclick="toggleAllMonthChips()" 
                                             class="p-1.5 hover:bg-gray-100 rounded transition-colors" 
                                             title="Selecionar/Desselecionar Todos os Meses">
@@ -419,7 +422,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                     </button>
-                                    <div id="monthChipsSelector" class="flex flex-wrap gap-2">
+                                    <div id="monthChipsSelector" class="flex flex-wrap gap-1.5">
                                         <!-- Month chips will be generated here -->
                                     </div>
                                 </div>
@@ -8561,6 +8564,10 @@ Continue?`);
             document.getElementById('monthSelectorAuto').classList.add('hidden');
             document.getElementById('yearSelectorAuto').classList.add('hidden');
             
+            // Hide year display by default
+            const yearDisplay = document.getElementById('selectedYearDisplay');
+            yearDisplay.style.display = 'none';
+            
             // Show selected type
             if (dateType === 'specific') {
                 document.getElementById('specificDateAuto').classList.remove('hidden');
@@ -8606,6 +8613,13 @@ Continue?`);
             const selectedYear = parseInt(yearSelector.value);
             container.innerHTML = '';
             
+            // Update year display next to "Date Selection" label
+            const yearDisplay = document.getElementById('selectedYearDisplay');
+            if (yearDisplay) {
+                yearDisplay.textContent = `(${selectedYear})`;
+                yearDisplay.style.display = 'inline';
+            }
+            
             // Initialize selected months array
             if (!window.selectedMonthsForSearch) {
                 window.selectedMonthsForSearch = [];
@@ -8619,7 +8633,7 @@ Continue?`);
             // Month names in Portuguese
             const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
             
-            // Generate 12 month chips for the selected year
+            // Generate 12 month chips for the selected year - NO rounded borders like day chips
             for (let month = 0; month < 12; month++) {
                 const monthKey = `${selectedYear}-${String(month + 1).padStart(2, '0')}`;
                 const isSelected = window.selectedMonthsForSearch.includes(monthKey);
@@ -8637,7 +8651,8 @@ Continue?`);
                     colorClass = 'bg-gray-200 text-gray-700 hover:bg-[#f4ad0f] hover:text-white';
                 }
                 
-                chip.className = `px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${colorClass}`;
+                // Square borders like day chips, smaller size to fit in one line
+                chip.className = `px-2.5 py-1 text-xs font-semibold transition-all ${colorClass}`;
                 chip.textContent = monthNames[month];
                 chip.title = `${monthNames[month]} ${selectedYear}`;
                 chip.dataset.monthKey = monthKey;
