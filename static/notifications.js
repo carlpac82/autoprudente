@@ -7,31 +7,31 @@
 // Desativar popups vermelhos
 const DISABLE_ERROR_POPUPS = true;
 
-// Add CSS for notifications
+// Add CSS for notifications - Clean monocromatic design
 const notificationStyles = document.createElement('style');
 notificationStyles.textContent = `
     .app-notification {
         position: fixed;
         top: 24px;
         right: 24px;
-        min-width: 340px;
+        min-width: 360px;
         max-width: 480px;
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-        padding: 18px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+        padding: 16px 18px;
         display: flex;
-        align-items: flex-start;
-        gap: 14px;
+        align-items: center;
+        gap: 12px;
         z-index: 10000;
-        animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        border-left: 4px solid transparent;
+        animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(0, 0, 0, 0.06);
     }
     
-    .app-notification.success { border-left-color: #009cb6; }
-    .app-notification.warning { border-left-color: #f4ad0f; }
-    .app-notification.error { border-left-color: #ef4444; }
-    .app-notification.info { border-left-color: #009cb6; }
+    .app-notification.success { background: #f0fdf9; border-color: #009cb6; }
+    .app-notification.warning { background: #fffcf5; border-color: #f4ad0f; }
+    .app-notification.error { background: #fef2f2; border-color: #ef4444; }
+    .app-notification.info { background: #f0f9ff; border-color: #009cb6; }
     
     @keyframes slideIn {
         from { transform: translateX(400px); opacity: 0; }
@@ -49,9 +49,8 @@ notificationStyles.textContent = `
     
     .app-notification-icon {
         flex-shrink: 0;
-        width: 22px;
-        height: 22px;
-        margin-top: 2px;
+        width: 20px;
+        height: 20px;
     }
     
     .app-notification-icon.success { color: #009cb6; }
@@ -61,27 +60,28 @@ notificationStyles.textContent = `
     
     .app-notification-close {
         flex-shrink: 0;
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         color: #9ca3af;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: color 0.15s;
         border-radius: 4px;
         padding: 2px;
+        margin-left: 4px;
     }
     
     .app-notification-close:hover {
-        color: #4b5563;
-        background: rgba(0, 0, 0, 0.05);
+        color: #374151;
     }
     
     .app-notification-message {
         flex: 1;
-        font-size: 14px;
-        line-height: 1.5;
-        color: #1f2937;
+        font-size: 13.5px;
+        line-height: 1.4;
+        color: #374151;
         white-space: pre-line;
         font-weight: 500;
+        letter-spacing: -0.01em;
     }
 `;
 document.head.appendChild(notificationStyles);
@@ -107,23 +107,23 @@ function showNotification(message, type = 'info', duration = 5000) {
     const notification = document.createElement('div');
     notification.className = `app-notification ${type}`;
     
-    // Icon based on type (monocromatic)
+    // Simple monocromatic icons - clean minimal design
     let iconSVG = '';
     if (type === 'success') {
-        iconSVG = `<svg class="app-notification-icon success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        iconSVG = `<svg class="app-notification-icon success" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
         </svg>`;
     } else if (type === 'warning') {
-        iconSVG = `<svg class="app-notification-icon warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        iconSVG = `<svg class="app-notification-icon warning" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
         </svg>`;
     } else if (type === 'error') {
-        iconSVG = `<svg class="app-notification-icon error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        iconSVG = `<svg class="app-notification-icon error" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
         </svg>`;
     } else {
-        iconSVG = `<svg class="app-notification-icon info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        iconSVG = `<svg class="app-notification-icon info" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
         </svg>`;
     }
     

@@ -4723,17 +4723,17 @@
                 const missingStrategies = totalPossibleAuto - autoPricesGenerated;
                 
                 if (autoPricesGenerated > 0 && realPricesGenerated > 0) {
-                    message = `✅ Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)`;
+                    message = `Prices Generated\n${autoPricesGenerated} automated • ${realPricesGenerated} real prices`;
                     if (adjustedPrices > 0) {
-                        message += `\n• ${adjustedPrices} prices adjusted by dependency rules`;
+                        message += `\n${adjustedPrices} adjusted by rules`;
                     }
                     if (missingStrategies > 0) {
-                        message += `\n\n⚠️ ${missingStrategies} groups/days without strategies configured`;
+                        message += `\n${missingStrategies} without strategies`;
                     }
                 } else if (realPricesGenerated > 0) {
-                    message = `⚠️ Generated:\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)\n• 0 automated prices\n\n❌ NO STRATEGIES CONFIGURED!\n💡 Go to Admin Settings to configure price strategies`;
+                    message = `${realPricesGenerated} real prices generated\n0 automated prices\nNo strategies configured`;
                 } else {
-                    message = 'No prices generated from Carjet.\nPlease check your date and location.';
+                    message = 'No prices generated\nCheck your date and location';
                 }
                 
                 showNotification(message, realPricesGenerated > 0 ? 'success' : 'warning');
