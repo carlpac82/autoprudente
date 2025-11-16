@@ -18,20 +18,20 @@ notificationStyles.textContent = `
         max-width: 480px;
         background: white;
         border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
         padding: 16px 18px;
         display: flex;
         align-items: center;
         gap: 12px;
-        z-index: 10000;
+        z-index: 999999;
         animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-left: 4px solid transparent;
     }
     
-    .app-notification.success { background: #f0fdf9; border-color: #009cb6; }
-    .app-notification.warning { background: #fffcf5; border-color: #f4ad0f; }
-    .app-notification.error { background: #fef2f2; border-color: #ef4444; }
-    .app-notification.info { background: #f0f9ff; border-color: #009cb6; }
+    .app-notification.success { border-left-color: #009cb6; }
+    .app-notification.warning { border-left-color: #f4ad0f; }
+    .app-notification.error { border-left-color: #ef4444; }
+    .app-notification.info { border-left-color: #009cb6; }
     
     @keyframes slideIn {
         from { transform: translateX(400px); opacity: 0; }
