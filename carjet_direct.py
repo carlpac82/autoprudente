@@ -1059,28 +1059,45 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 if not photo:
                     print(f"[PARSE] ⚠️  Sem foto para: {car_name} (imgs: {len(img_tags)})")
                 
-                # Transmissão - Detectar pelo ícone icon-transm-auto
+                # Transmissão - Múltiplos métodos de detecção
                 transmission = ''
                 
-                # Procurar pelo ícone <i class="icon icon-transm-auto">
-                icon_tags = block.find_all('i', class_='icon')
-                for icon in icon_tags:
-                    icon_classes = icon.get('class', [])
-                    if 'icon-transm-auto' in icon_classes:
-                        transmission = 'Automatic'
-                        print(f"[PARSE] ✓ Automático detectado (icon-transm-auto): {car_name}")
-                        break
+                # MÉTODO 1: Verificar se "Auto" ou "Automático" está no NOME do carro
+                car_lower = car_name.lower()
+                # Padrões: " auto", "auto ", "auto.", " aut.", "automatic", "automático"
+                auto_patterns = [r'\bauto\b', r'\baut\.\b', r'automatic', r'automático', r'automatico']
+                if any(re.search(pattern, car_lower) for pattern in auto_patterns):
+                    transmission = 'Automatic'
+                    print(f"[PARSE] ✓ Automático detectado (nome): {car_name}")
                 
-                # Se não tem ícone de automático, verificar se é elétrico/híbrido (sempre automáticos)
+                # MÉTODO 2: Verificar alt da imagem (ex: "Nissan Micra Auto | Automático")
                 if not transmission:
-                    car_lower = car_name.lower()
+                    for img in img_tags:
+                        alt_text = (img.get('alt') or '').lower()
+                        if 'automático' in alt_text or 'automatic' in alt_text or '| auto' in alt_text:
+                            transmission = 'Automatic'
+                            print(f"[PARSE] ✓ Automático detectado (alt img): {car_name}")
+                            break
+                
+                # MÉTODO 3: Procurar pelo ícone <i class="icon icon-transm-auto">
+                if not transmission:
+                    icon_tags = block.find_all('i', class_='icon')
+                    for icon in icon_tags:
+                        icon_classes = icon.get('class', [])
+                        if 'icon-transm-auto' in icon_classes:
+                            transmission = 'Automatic'
+                            print(f"[PARSE] ✓ Automático detectado (icon-transm-auto): {car_name}")
+                            break
+                
+                # MÉTODO 4: Verificar se é elétrico/híbrido (sempre automáticos)
+                if not transmission:
                     if any(word in car_lower for word in ['electric', 'e-', 'hybrid', 'híbrido']):
                         transmission = 'Automatic'
                         print(f"[PARSE] ✓ Automático detectado (elétrico/híbrido): {car_name}")
                     else:
-                        # Se não tem icon-transm-auto nem é elétrico, é Manual
+                        # Se nenhum método detectou automático, é Manual
                         transmission = 'Manual'
-                        print(f"[PARSE] ✓ Manual detectado (sem icon-transm-auto): {car_name}")
+                        print(f"[PARSE] ✓ Manual detectado: {car_name}")
                 
                 # Detectar categoria
                 category = detect_category_from_car(car_name, transmission)
