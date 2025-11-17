@@ -3334,6 +3334,10 @@
                 });
             }
             
+            // Show Save button when price is edited
+            showSaveEditedButton();
+            console.log('[EDIT] Save button shown - price edited in visual mode');
+            
             // Update the table input field (RÁPIDO)
             const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
             if (inputAuto) {
