@@ -3780,8 +3780,15 @@
             }
             
             // PRIORITY 2: For individual cars (competitors, autoprudente), use SPECIFIC car name
-            const carName = (carItem.car || '').toLowerCase().trim();
+            let carName = (carItem.car || '').toLowerCase().trim();
             if (carName) {
+                // CRITICAL: Normalize car name to match VEHICLES format
+                carName = carName.replace(/\./g, '');  // Remove pontos: "aut." → "aut"
+                carName = carName.replace(/\s+/g, ' ');  // Normalizar espaços
+                carName = carName.replace(/\baut\b/g, 'auto');  // "aut" → "auto"
+                carName = carName.replace(/\bauto\s+auto\b/g, 'auto');  // Remove duplicado
+                carName = carName.trim();
+                
                 const encodedName = encodeURIComponent(carName);
                 // ADD CACHE BUSTING: timestamp query param prevents browser from using stale cached images
                 const vehiclePhotoUrl = `/api/vehicles/${encodedName}/photo?t=${photoTimestamp}`;
