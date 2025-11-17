@@ -1018,11 +1018,12 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                     if has_price and has_pr_euros and not has_day and not has_old:
                         text = span_tag.get_text(strip=True)
                         # Formato esperado: "1.010,29 €" ou "68,18 €" ou "68.18€"
-                        # Aceitar separador de milhares (. ou ,) e decimais
-                        match = re.search(r'([\d.,]+)\s*€', text)
-                        if match:
+                        # IMPORTANTE: Pode ter desconto com 2 preços: "-25%28,57 €21,43 €"
+                        # Queremos o ÚLTIMO preço (preço com desconto)
+                        all_matches = re.findall(r'([\d.,]+)\s*€', text)
+                        if all_matches:
                             try:
-                                price_str = match.group(1)
+                                price_str = all_matches[-1]  # Pegar o ÚLTIMO preço
                                 # Normalizar: remover pontos (milhares) e trocar vírgula por ponto
                                 # Exemplo: "1.010,29" → "1010.29"
                                 if ',' in price_str and '.' in price_str:
