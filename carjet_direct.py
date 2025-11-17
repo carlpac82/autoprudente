@@ -1081,13 +1081,32 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 
                 # MÉTODO 3: Procurar pelo ícone <i class="icon icon-transm-auto">
                 if not transmission:
+                    # Procurar em todos os <i> e <li> (ícone pode estar em ambos)
                     icon_tags = block.find_all('i', class_='icon')
+                    li_tags = block.find_all('li')
+                    
                     for icon in icon_tags:
                         icon_classes = icon.get('class', [])
                         if 'icon-transm-auto' in icon_classes:
                             transmission = 'Automatic'
-                            print(f"[PARSE] ✓ Automático detectado (icon-transm-auto): {car_name}")
+                            print(f"[PARSE] ✓ Automático detectado (icon-transm-auto em <i>): {car_name}")
                             break
+                    
+                    # Se não encontrou, procurar em <li> tags
+                    if not transmission:
+                        for li in li_tags:
+                            # Procurar <i> dentro do <li>
+                            i_tag = li.find('i', class_='icon-transm-auto')
+                            if i_tag:
+                                transmission = 'Automatic'
+                                print(f"[PARSE] ✓ Automático detectado (icon-transm-auto em <li>): {car_name}")
+                                break
+                            # Ou verificar se o texto do <li> contém "Automático"
+                            li_text = li.get_text().lower()
+                            if 'automático' in li_text or 'automatic' in li_text:
+                                transmission = 'Automatic'
+                                print(f"[PARSE] ✓ Automático detectado (texto <li>): {car_name}")
+                                break
                 
                 # MÉTODO 4: Verificar se é elétrico/híbrido (sempre automáticos)
                 if not transmission:
