@@ -10964,12 +10964,118 @@ async def track_by_params(request: Request):
                 print(f"[DIRECT] ⚠️ Scraping direto não retornou resultados", file=sys.stderr, flush=True)
                 
         except Exception as e:
-            print(f"[SELENIUM] ❌ Erro no scraping simples: {e}", file=sys.stderr, flush=True)
+            print(f"[DIRECT] ❌ Erro no scraping direto: {e}", file=sys.stderr, flush=True)
             import traceback
             traceback.print_exc()
         
-        # Se chegou aqui, tentar método antigo como fallback
-        print(f"[SELENIUM] Tentando método complexo como fallback...", file=sys.stderr, flush=True)
+        # FALLBACK 1: Tentar Playwright antes do Selenium (mais leve e estável no Render)
+        if USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
+            print(f"[PLAYWRIGHT] Tentando Playwright como fallback...", file=sys.stderr, flush=True)
+            try:
+                from playwright.async_api import async_playwright
+                import asyncio
+                
+                # Mapear location para código CarJet
+                location_codes = {
+                    'faro': 'FAO02',
+                    'aeroporto de faro': 'FAO02',
+                    'albufeira': 'ABF01',
+                }
+                loc_lower = location.lower()
+                pickup_code = 'FAO02'
+                for key, code in location_codes.items():
+                    if key in loc_lower:
+                        pickup_code = code
+                        break
+                
+                # Construir URL com parâmetros
+                pickup_date = start_dt.strftime('%d/%m/%Y %H:%M')
+                return_date = end_dt.strftime('%d/%m/%Y %H:%M')
+                
+                # URL do form
+                form_url = 'https://www.carjet.com/aluguel-carros/index.htm'
+                
+                print(f"[PLAYWRIGHT] Location: {location}, Code: {pickup_code}", file=sys.stderr, flush=True)
+                print(f"[PLAYWRIGHT] Dates: {pickup_date} - {return_date}", file=sys.stderr, flush=True)
+                
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(headless=True)
+                    context = await browser.new_context(
+                        user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        locale='pt-PT',
+                        timezone_id='Europe/Lisbon'
+                    )
+                    page = await context.new_page()
+                    
+                    # Ir para a página do form
+                    print(f"[PLAYWRIGHT] Navegando para {form_url}", file=sys.stderr, flush=True)
+                    await page.goto(form_url, wait_until='domcontentloaded', timeout=30000)
+                    await page.wait_for_timeout(2000)
+                    
+                    # Preencher formulário via JavaScript (mais rápido)
+                    print(f"[PLAYWRIGHT] Preenchendo formulário...", file=sys.stderr, flush=True)
+                    await page.evaluate(f"""
+                        document.getElementById('pickup').value = '{pickup_code}';
+                        document.getElementById('fechaRecogida').value = '{start_dt.strftime('%d/%m/%Y')}';
+                        document.getElementById('fechaDevolucion').value = '{end_dt.strftime('%d/%m/%Y')}';
+                        document.getElementById('fechaRecogidaSelHour').value = '15:00';
+                        document.getElementById('fechaDevolucionSelHour').value = '15:00';
+                    """)
+                    
+                    # Submeter form
+                    print(f"[PLAYWRIGHT] Submetendo formulário...", file=sys.stderr, flush=True)
+                    await page.evaluate("document.querySelector('form').submit()")
+                    
+                    # Aguardar navegação
+                    await page.wait_for_url('**/do/list/**', timeout=10000)
+                    await page.wait_for_timeout(3000)
+                    
+                    # Pegar HTML final
+                    html = await page.content()
+                    print(f"[PLAYWRIGHT] HTML recebido: {len(html)} bytes", file=sys.stderr, flush=True)
+                    
+                    await browser.close()
+                
+                # Parsear com a função existente
+                from carjet_direct import parse_carjet_html_complete
+                items = parse_carjet_html_complete(html)
+                print(f"[PLAYWRIGHT] {len(items)} carros parseados", file=sys.stderr, flush=True)
+                
+                if items:
+                    # Aplicar conversões
+                    items = convert_items_gbp_to_eur(items)
+                    items = apply_price_adjustments(items, 'https://www.carjet.com/do/list/pt')
+                    
+                    if items:
+                        print(f"[PLAYWRIGHT] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
+                        items = normalize_and_sort(items, supplier_priority=None)
+                        items_before_filter = len(items)
+                        items = filter_automatic_only(items)
+                        print(f"[PLAYWRIGHT FILTER] {items_before_filter} → {len(items)} carros", file=sys.stderr, flush=True)
+                        
+                        items = ensure_all_fields(items, {
+                            "location": location,
+                            "start_date": start_dt.date().isoformat(),
+                            "start_time": start_dt.strftime("%H:%M"),
+                            "end_date": end_dt.date().isoformat(),
+                            "end_time": end_dt.strftime("%H:%M"),
+                            "days": days,
+                        })
+                        
+                        return {
+                            "items": items,
+                            "location": location,
+                            "start_date": start_dt.date().isoformat(),
+                            "end_date": end_dt.date().isoformat(),
+                        }
+                
+            except Exception as e:
+                print(f"[PLAYWRIGHT] ❌ Erro: {e}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc()
+        
+        # FALLBACK 2: Selenium como último recurso
+        print(f"[SELENIUM] Tentando Selenium como último fallback...", file=sys.stderr, flush=True)
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options
