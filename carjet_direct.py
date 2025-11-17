@@ -112,6 +112,12 @@ def map_category_to_group_code(category: str) -> str:
         "mini automatic": "E1",
         "mini auto": "E1",
         "mini automático": "E1",
+        "mini 4 lugares auto": "E1",
+        "mini 4 portas auto": "E1",
+        "mini 4 seats auto": "E1",
+        "mini 5 lugares auto": "E1",
+        "mini 5 portas auto": "E1",
+        "mini 5 seats auto": "E1",
         
         # E2 - Economy Auto
         "economy automatic": "E2",
@@ -676,7 +682,31 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     car_normalized = re.sub(r'\baut\b', 'auto', car_normalized)  # "aut" → "auto" (ex: "Galaxy Aut" → "Galaxy Auto")
     car_normalized = re.sub(r'\bauto\s+auto\b', 'auto', car_normalized)  # Remove "auto auto" duplicado
     
-    # Para busca no VEHICLES, remover "auto" do nome (buscar base do carro)
+    # Se o carro é automático, PRIORIZAR busca com "auto" no nome
+    if auto:
+        # Tentar match direto com "auto"
+        if car_normalized in VEHICLES:
+            return VEHICLES[car_normalized]
+        
+        # Tentar variações com "auto"
+        auto_variations = [
+            car_normalized,
+            car_normalized.replace('volkswagen', 'vw'),
+            car_normalized.replace('vw', 'volkswagen'),
+            car_normalized.replace('citroën', 'citroen'),
+            car_normalized.replace('citroen', 'citroën'),
+        ]
+        
+        for variant in auto_variations:
+            if variant in VEHICLES:
+                return VEHICLES[variant]
+        
+        # Tentar busca parcial com "auto" - do mais específico ao menos específico
+        for key in sorted(VEHICLES.keys(), key=len, reverse=True):
+            if 'auto' in key and key.replace(' auto', '') in car_normalized:
+                return VEHICLES[key]
+    
+    # Buscar base do carro (sem "auto")
     car_for_lookup = car_normalized.replace(' auto', '').replace('auto ', '').strip()
     
     # Tentar match direto
