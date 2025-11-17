@@ -3334,9 +3334,16 @@
                 });
             }
             
-            // Show Save button when price is edited
-            showSaveEditedButton();
-            console.log('[EDIT] Save button shown - price edited in visual mode');
+            // Check if editing history or current search
+            if (window.editingHistoryData) {
+                // EDITING HISTORY: Show Save button to create new version
+                showSaveEditedButton();
+                console.log('[EDIT-HISTORY] Save button shown - editing historical version');
+            } else {
+                // CURRENT SEARCH: Auto-save immediately (no button needed)
+                console.log('[AUTO-SAVE] Saving current search price change...');
+                autoSaveCurrentSearch();
+            }
             
             // Update the table input field (RÁPIDO)
             const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
@@ -6747,6 +6754,54 @@
                 btnSave.classList.add('hidden');
                 btnSave.classList.remove('flex');
             }
+        }
+        
+        // Debounce timer for auto-save
+        let autoSaveTimeout = null;
+        
+        async function autoSaveCurrentSearch() {
+            // Debounce: wait 1 second after last edit before saving
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+            
+            autoSaveTimeout = setTimeout(async () => {
+                console.log('[AUTO-SAVE] Starting auto-save...');
+                
+                // Collect current prices from table
+                const automatedPricesByGroup = {};
+                let priceCount = 0;
+                
+                grupos.forEach(grupo => {
+                    automatedPricesByGroup[grupo] = {};
+                    dias.forEach(day => {
+                        const inputAuto = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                        
+                        if (inputAuto && inputAuto.value) {
+                            automatedPricesByGroup[grupo][day] = {
+                                automated: parseFloat(inputAuto.value)
+                            };
+                            priceCount++;
+                        }
+                    });
+                });
+                
+                if (priceCount === 0) {
+                    console.warn('[AUTO-SAVE] No prices to save');
+                    return;
+                }
+                
+                // Save with current timestamp and supplier data
+                const supplierData = window.currentSupplierData || {};
+                const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'current', supplierData);
+                
+                if (savedCount > 0) {
+                    console.log(`[AUTO-SAVE] ✅ Saved ${savedCount} prices automatically`);
+                    // Silent save - no notification needed
+                } else {
+                    console.error('[AUTO-SAVE] ❌ Failed to save');
+                }
+            }, 1000); // Wait 1 second after last edit
         }
         
         
