@@ -14343,20 +14343,18 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
 
 def filter_automatic_only(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    FILTRO DESATIVADO - Retorna TODOS os carros (manuais + automáticos).
+    Retorna TODOS os carros (manuais + automáticos).
     
-    Função mantida para compatibilidade mas agora retorna todos os items sem filtrar.
-    A categorização correta (B1, B2, E1, E2, etc) garante separação entre manuais e automáticos.
+    A categorização em grupos (B1, E1, E2, L1, L2, M2, etc) separa manuais de automáticos.
     
     Args:
         items: Lista de carros parseados do CarJet
     
     Returns:
-        Lista completa (sem filtragem)
+        Lista completa sem filtrar
     """
-    # DESATIVADO: Retornar TODOS os carros sem filtrar
     import sys
-    print(f"[FILTER] ⚠️ FILTRO DESATIVADO - Retornando TODOS os {len(items) if items else 0} carros (manuais + automáticos)", 
+    print(f"[FILTER] ✅ Retornando TODOS os {len(items) if items else 0} carros (categorização em grupos separa manuais de automáticos)", 
           file=sys.stderr, flush=True)
     return items if items else []
 

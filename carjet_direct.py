@@ -676,27 +676,42 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     car_normalized = re.sub(r'\baut\b', 'auto', car_normalized)  # "aut" → "auto" (ex: "Galaxy Aut" → "Galaxy Auto")
     car_normalized = re.sub(r'\bauto\s+auto\b', 'auto', car_normalized)  # Remove "auto auto" duplicado
     
+    # Para busca no VEHICLES, remover "auto" do nome (buscar base do carro)
+    car_for_lookup = car_normalized.replace(' auto', '').replace('auto ', '').strip()
+    
     # Tentar match direto
-    if car_normalized in VEHICLES:
-        return VEHICLES[car_normalized]
+    if car_for_lookup in VEHICLES:
+        base_category = VEHICLES[car_for_lookup]
+        # Se é automático, adicionar "Auto" à categoria
+        if auto and 'Auto' not in base_category:
+            return base_category + ' Auto'
+        return base_category
     
     # Tentar variações comuns
     variations = [
-        car_normalized,
-        car_normalized.replace('volkswagen', 'vw'),
-        car_normalized.replace('vw', 'volkswagen'),
-        car_normalized.replace('citroën', 'citroen'),
-        car_normalized.replace('citroen', 'citroën'),
+        car_for_lookup,
+        car_for_lookup.replace('volkswagen', 'vw'),
+        car_for_lookup.replace('vw', 'volkswagen'),
+        car_for_lookup.replace('citroën', 'citroen'),
+        car_for_lookup.replace('citroen', 'citroën'),
     ]
     
     for variant in variations:
         if variant in VEHICLES:
-            return VEHICLES[variant]
+            base_category = VEHICLES[variant]
+            # Se é automático, adicionar "Auto" à categoria
+            if auto and 'Auto' not in base_category:
+                return base_category + ' Auto'
+            return base_category
     
     # Tentar busca parcial (substring match) - do mais específico ao menos específico
     for key in sorted(VEHICLES.keys(), key=len, reverse=True):
-        if key in car_normalized:
-            return VEHICLES[key]
+        if key in car_for_lookup:
+            base_category = VEHICLES[key]
+            # Se é automático, adicionar "Auto" à categoria
+            if auto and 'Auto' not in base_category:
+                return base_category + ' Auto'
+            return base_category
     
     # 2. FALLBACK: Regras genéricas caso não encontre no VEHICLES
     # Casos específicos primeiro
