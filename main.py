@@ -11000,8 +11000,14 @@ async def track_by_params(request: Request):
                 
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(headless=True)
+                    
+                    # EMULAR iPhone 13 Pro (IGUAL AO SELENIUM!)
                     context = await browser.new_context(
-                        user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+                        viewport={'width': 390, 'height': 844},
+                        device_scale_factor=3.0,
+                        is_mobile=True,
+                        has_touch=True,
                         locale='pt-PT',
                         timezone_id='Europe/Lisbon'
                     )
@@ -11012,22 +11018,85 @@ async def track_by_params(request: Request):
                     await page.goto(form_url, wait_until='domcontentloaded', timeout=30000)
                     await page.wait_for_timeout(2000)
                     
-                    # Preencher formulário via JavaScript (mais rápido)
-                    print(f"[PLAYWRIGHT] Preenchendo formulário...", file=sys.stderr, flush=True)
-                    await page.evaluate(f"""
-                        document.getElementById('pickup').value = '{pickup_code}';
-                        document.getElementById('fechaRecogida').value = '{start_dt.strftime('%d/%m/%Y')}';
-                        document.getElementById('fechaDevolucion').value = '{end_dt.strftime('%d/%m/%Y')}';
-                        document.getElementById('fechaRecogidaSelHour').value = '15:00';
-                        document.getElementById('fechaDevolucionSelHour').value = '15:00';
-                    """)
+                    # Rejeitar cookies
+                    print(f"[PLAYWRIGHT] Rejeitando cookies...", file=sys.stderr, flush=True)
+                    try:
+                        await page.evaluate("""
+                            const btns = [...document.querySelectorAll('button, a')];
+                            for (let btn of btns) {
+                                const text = btn.textContent.toLowerCase();
+                                if (text.includes('rejeitar') || text.includes('recusar') || text.includes('reject')) {
+                                    btn.click();
+                                    break;
+                                }
+                            }
+                        """)
+                        await page.wait_for_timeout(500)
+                    except:
+                        pass
                     
-                    # Submeter form
-                    print(f"[PLAYWRIGHT] Submetendo formulário...", file=sys.stderr, flush=True)
+                    # PASSO 1: Escrever local e aguardar dropdown (IGUAL AO SELENIUM!)
+                    print(f"[PLAYWRIGHT] PASSO 1: Escrevendo local...", file=sys.stderr, flush=True)
+                    await page.fill('#pickup', 'Albufeira' if 'albufeira' in location.lower() else 'Faro')
+                    print(f"[PLAYWRIGHT] Local digitado", file=sys.stderr, flush=True)
+                    
+                    # PASSO 2: Aguardar e clicar no dropdown
+                    print(f"[PLAYWRIGHT] PASSO 2: Aguardando dropdown...", file=sys.stderr, flush=True)
+                    await page.wait_for_timeout(2000)
+                    
+                    try:
+                        await page.click('#recogida_lista li:first-child a', timeout=3000)
+                        print(f"[PLAYWRIGHT] Dropdown clicado", file=sys.stderr, flush=True)
+                    except:
+                        await page.evaluate("""
+                            const items = document.querySelectorAll('#recogida_lista li');
+                            for (let item of items) {
+                                if (item.offsetParent !== null) {
+                                    item.click();
+                                    break;
+                                }
+                            }
+                        """)
+                        print(f"[PLAYWRIGHT] Dropdown clicado (JS)", file=sys.stderr, flush=True)
+                    
+                    await page.wait_for_timeout(1000)
+                    
+                    # PASSO 3: Preencher datas e horas (DEPOIS do dropdown!)
+                    print(f"[PLAYWRIGHT] PASSO 3: Preenchendo datas e horas...", file=sys.stderr, flush=True)
+                    pickup_date_str = start_dt.strftime('%d/%m/%Y')
+                    return_date_str = end_dt.strftime('%d/%m/%Y')
+                    
+                    await page.evaluate("""
+                        (dates) => {
+                            function fill(sel, val) {
+                                const el = document.querySelector(sel);
+                                if (el) { 
+                                    el.value = val; 
+                                    el.dispatchEvent(new Event('input', {bubbles: true}));
+                                    el.dispatchEvent(new Event('change', {bubbles: true}));
+                                    el.dispatchEvent(new Event('blur', {bubbles: true}));
+                                    return true;
+                                }
+                                return false;
+                            }
+                            
+                            fill('input[id="fechaRecogida"]', dates.pickup);
+                            fill('input[id="fechaDevolucion"]', dates.return);
+                            fill('select[id="fechaRecogidaSelHour"]', '15:00');
+                            fill('select[id="fechaDevolucionSelHour"]', '15:00');
+                        }
+                    """, {'pickup': pickup_date_str, 'return': return_date_str})
+                    print(f"[PLAYWRIGHT] Datas preenchidas", file=sys.stderr, flush=True)
+                    
+                    await page.wait_for_timeout(500)
+                    
+                    # PASSO 4: Submeter form
+                    print(f"[PLAYWRIGHT] PASSO 4: Submetendo formulário...", file=sys.stderr, flush=True)
                     await page.evaluate("document.querySelector('form').submit()")
                     
                     # Aguardar navegação
-                    await page.wait_for_url('**/do/list/**', timeout=10000)
+                    print(f"[PLAYWRIGHT] Aguardando navegação...", file=sys.stderr, flush=True)
+                    await page.wait_for_url('**/do/list/**', timeout=15000)
                     await page.wait_for_timeout(3000)
                     
                     # Pegar HTML final
