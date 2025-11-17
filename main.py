@@ -10899,78 +10899,10 @@ async def track_by_params(request: Request):
                 print(f"[TEST MODE ERROR] {e}", file=sys.stderr, flush=True)
         
         # ═══════════════════════════════════════════════════════════════════════════
-        # MÉTODO 2: SELENIUM (PRINCIPAL - Mais confiável) ✅ RECOMENDADO
+        # MÉTODO PRINCIPAL: PLAYWRIGHT (CarJet usa JavaScript, urllib não funciona)
         # ═══════════════════════════════════════════════════════════════════════════
-        # Com todas as rotações implementadas:
-        # ✅ Rotação de horas - 14:30-17:00 (6 opções)
-        # ✅ Rotação de dispositivos - 4 devices mobile
-        # ✅ Rotação de timezones - 4 europeus
-        # ✅ Rotação de referrers - 5 opções
-        # ✅ Cache clearing - Desativado completamente
-        # ✅ Seletor universal testado - #recogida_lista li:first-child a
-        # ═══════════════════════════════════════════════════════════════════════════
-        print(f"[DIRECT] Iniciando scraping DIRETO (urllib, sem Selenium) para {location}", file=sys.stderr, flush=True)
-        try:
-            # Usar método direto (urllib) - MUITO MAIS RÁPIDO que Selenium
-            from carjet_direct import scrape_carjet_direct
-            import asyncio
-            
-            items = await asyncio.to_thread(
-                scrape_carjet_direct, location, start_dt, end_dt, quick=1
-            )
-            
-            if items:
-                print(f"[DIRECT] ✅ Scraping direto bem-sucedido!", file=sys.stderr, flush=True)
-                print(f"[DIRECT] {len(items)} carros extraídos", file=sys.stderr, flush=True)
-                
-                # Aplicar conversões e ajustes
-                items = convert_items_gbp_to_eur(items)
-                print(f"[DIRECT] {len(items)} após GBP→EUR", file=sys.stderr, flush=True)
-                items = apply_price_adjustments(items, 'https://www.carjet.com/do/list/pt')
-                print(f"[DIRECT] {len(items)} após ajustes", file=sys.stderr, flush=True)
-                
-                if items:
-                    print(f"[DIRECT] ✅ {len(items)} carros encontrados!", file=sys.stderr, flush=True)
-                    items = normalize_and_sort(items, supplier_priority=None)
-                    # FILTRAR APENAS AUTOMÁTICOS
-                    items_before_filter = len(items)
-                    items = filter_automatic_only(items)
-                    print(f"[FILTER] 🔧 Filtered: {items_before_filter} → {len(items)} (removed {items_before_filter - len(items)} manual cars)", file=sys.stderr, flush=True)
-                    
-                    # DEBUG: Verificar se campo photo está presente
-                    if items:
-                        photos_count = sum(1 for item in items if item.get('photo'))
-                        print(f"[DEBUG] 📸 Fotos encontradas: {photos_count}/{len(items)} carros ({(photos_count/len(items)*100):.1f}%)", file=sys.stderr, flush=True)
-                        if photos_count > 0:
-                            print(f"[DEBUG] 📸 Exemplo de foto: {items[0].get('photo', 'N/A')[:100]}", file=sys.stderr, flush=True)
-                    
-                    items = ensure_all_fields(items, {
-                        "location": location,
-                        "start_date": start_dt.date().isoformat(),
-                        "start_time": start_dt.strftime("%H:%M"),
-                        "end_date": end_dt.date().isoformat(),
-                        "end_time": end_dt.strftime("%H:%M"),
-                        "days": days,
-                    })
-                    
-                    # Retornar sucesso
-                    return {
-                        "items": items,
-                        "location": location,
-                        "start_date": start_dt.date().isoformat(),
-                        "end_date": end_dt.date().isoformat(),
-                    }
-            else:
-                print(f"[DIRECT] ⚠️ Scraping direto não retornou resultados", file=sys.stderr, flush=True)
-                
-        except Exception as e:
-            print(f"[DIRECT] ❌ Erro no scraping direto: {e}", file=sys.stderr, flush=True)
-            import traceback
-            traceback.print_exc()
-        
-        # FALLBACK 1: Tentar Playwright antes do Selenium (mais leve e estável no Render)
         if USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
-            print(f"[PLAYWRIGHT] Tentando Playwright como fallback...", file=sys.stderr, flush=True)
+            print(f"[PLAYWRIGHT] Iniciando scraping com Playwright (iPhone 13 Pro)...", file=sys.stderr, flush=True)
             try:
                 from playwright.async_api import async_playwright
                 import asyncio
