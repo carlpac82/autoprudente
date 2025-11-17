@@ -156,7 +156,7 @@
                     await fetch('/api/price-automation/settings/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ settings: autoSettings })
+                        body: settingsStr
                     });
                     console.log(`[DB-SYNC] ✓ Saved price automation settings to database`);
                 } catch (e) {
