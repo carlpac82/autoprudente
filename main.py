@@ -11029,7 +11029,15 @@ async def track_by_params(request: Request):
                     # Aguardar navegação
                     print(f"[PLAYWRIGHT] Aguardando navegação...", file=sys.stderr, flush=True)
                     await page.wait_for_url('**/do/list/**', timeout=45000)
-                    await page.wait_for_timeout(8000)
+                    
+                    # CRITICAL: Aguardar preços carregarem (JavaScript atualiza preços após página carregar)
+                    print(f"[PLAYWRIGHT] Aguardando preços carregarem...", file=sys.stderr, flush=True)
+                    try:
+                        await page.wait_for_selector('.price.pr-euros', timeout=15000)
+                        await page.wait_for_timeout(5000)  # Extra 5s após preços aparecerem
+                    except:
+                        print(f"[PLAYWRIGHT] ⚠️ Timeout aguardando preços, continuando...", file=sys.stderr, flush=True)
+                        await page.wait_for_timeout(8000)  # Fallback para 8s
                     
                     # Pegar HTML final
                     html = await page.content()

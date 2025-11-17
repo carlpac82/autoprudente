@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Rules</title>
+</head>
+<body>
+    <h1>Checking localStorage for rules...</h1>
+    <pre id="output"></pre>
+    
+    <script>
+        const output = [];
+        
+        // Check all possible keys
+        const keys = ['pricingStrategies', 'automatedPriceRules', 'priceAutomationSettings'];
+        
+        keys.forEach(key => {
+            const value = localStorage.getItem(key);
+            output.push(`\n${key}:`);
+            output.push(value ? JSON.stringify(JSON.parse(value), null, 2) : 'null');
+            output.push('\n' + '='.repeat(80));
+        });
+        
+        document.getElementById('output').textContent = output.join('\n');
+    </script>
+</body>
+</html>
