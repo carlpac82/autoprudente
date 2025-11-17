@@ -130,14 +130,21 @@
             if (rulesStr) {
                 try {
                     const rules = JSON.parse(rulesStr);
-                    await fetch('/api/price-automation/rules/save', {
+                    const response = await fetch('/api/price-automation/rules/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rules })
+                        body: rulesStr  // CRITICAL FIX: Send rules directly, not wrapped
                     });
-                    console.log(`[DB-SYNC] ✓ Saved automated price rules to database`);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log(`[DB-SYNC] ✅ Saved automated price rules to database:`, result);
+                    } else {
+                        const error = await response.json();
+                        console.error('[DB-SYNC] ❌ Rules save failed:', response.status, error);
+                    }
                 } catch (e) {
-                    console.warn('[DB-SYNC] Rules save failed:', e.message);
+                    console.error('[DB-SYNC] ❌ Rules save error:', e);
                 }
             }
             
