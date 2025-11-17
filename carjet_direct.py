@@ -1029,12 +1029,15 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                                 price_val = float(price_str)
                                 if 10 < price_val < 10000:
                                     price = f'{price_val:.2f} €'
+                                    print(f"[PARSE] Preço encontrado: {price}")
                                     break  # Encontrou o correto!
-                            except:
+                            except Exception as e:
+                                print(f"[PARSE] Erro ao converter preço '{price_str}': {e}")
                                 pass
                 
                 # 2ª PRIORIDADE: Se não encontrou .pr-euros, buscar .price genérico (mas pode ser libras!)
                 if price == '€0.00':
+                    print(f"[PARSE] ⚠️ Não encontrou .price.pr-euros, tentando fallback para: {supplier}")
                     for tag in block.find_all(['span', 'div'], class_=lambda x: x and 'price' in x if x else False):
                         text = tag.get_text(strip=True)
                         # Ignorar preços em libras (£) e preços por dia
@@ -1061,6 +1064,7 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                                 pass
                 
                 if price == '€0.00':
+                    print(f"[PARSE] ⚠️ Carro sem preço válido, pulando: {supplier}")
                     continue
                 
                 # Foto e nome do carro do atributo alt
