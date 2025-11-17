@@ -174,6 +174,14 @@ async def test_playwright_carjet():
                     print(f"   Categoria: {item.get('category', 'N/A')}")
                     print(f"   Grupo: {item.get('group', 'N/A')}")
                     print(f"   Transmissão: {item.get('transmission', 'N/A')}")
+                
+                # Análise de grupos
+                from collections import Counter
+                groups = [item.get('group', 'N/A') for item in items]
+                counter = Counter(groups)
+                print("\n📊 DISTRIBUIÇÃO POR GRUPOS:")
+                for group, count in sorted(counter.items()):
+                    print(f"  {group}: {count} carros")
             
             # Manter browser aberto por 5 segundos para ver
             print("\n⏸️ Mantendo browser aberto por 5 segundos...")
