@@ -10745,7 +10745,7 @@ async def track_by_params(request: Request):
                         
                         # Aguardar navegação para página de resultados
                         print(f"[PLAYWRIGHT] Aguardando navegação...", file=sys.stderr, flush=True)
-                        await page.wait_for_url('**/do/list/**', timeout=90000)
+                        await page.wait_for_url('**/do/list/**', timeout=45000)
                         
                         print(f"[PLAYWRIGHT] Aguardando carros carregarem...", file=sys.stderr, flush=True)
                         await page.wait_for_timeout(8000)
@@ -11028,8 +11028,8 @@ async def track_by_params(request: Request):
                     
                     # Aguardar navegação
                     print(f"[PLAYWRIGHT] Aguardando navegação...", file=sys.stderr, flush=True)
-                    await page.wait_for_url('**/do/list/**', timeout=15000)
-                    await page.wait_for_timeout(3000)
+                    await page.wait_for_url('**/do/list/**', timeout=45000)
+                    await page.wait_for_timeout(8000)
                     
                     # Pegar HTML final
                     html = await page.content()
