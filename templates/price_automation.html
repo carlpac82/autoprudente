@@ -4170,15 +4170,12 @@
                 allPrices.push({ type: 'automated', price: null, label: 'AP' });
             }
             
-            // SEMPRE adicionar chip AI (mesmo sem preço - para input manual)
+            // AI chip - SÓ adicionar quando tem sugestão
             const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
             const aiPrice = getAIPrice(grupo, day, currentLocation);
             if (aiPrice && aiPrice > 0) {
                 allPrices.push({ type: 'ai', price: aiPrice, label: 'AI' });
                 console.log(`🤖 AI Card added for ${grupo}/${day}d: ${aiPrice.toFixed(2)}€`);
-            } else {
-                // Chip AI vazio para permitir input manual
-                allPrices.push({ type: 'ai', price: null, label: 'AI' });
             }
             
             if (autoPrudentecar) {
