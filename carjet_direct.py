@@ -995,6 +995,13 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 # Preço - PRIORIZAR .price.pr-euros (preço total, NÃO por dia)
                 price = '€0.00'
                 
+                # DEBUG: Mostrar todos os spans com 'price' no HTML
+                price_spans = block.find_all('span', class_=lambda x: x and 'price' in ' '.join(x) if x else False)
+                if price_spans:
+                    print(f"[PARSE-DEBUG] {supplier} - Spans com 'price' encontrados:")
+                    for ps in price_spans[:5]:  # Primeiros 5
+                        print(f"  Classes: {ps.get('class')} | Texto: {ps.get_text(strip=True)}")
+                
                 # 1ª PRIORIDADE: Buscar .price.pr-euros MAS excluir .price-day-euros e .old-price
                 # Procurar por LISTA de classes para verificar todas
                 for span_tag in block.find_all('span'):
