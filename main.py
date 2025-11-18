@@ -11347,6 +11347,17 @@ async def track_by_params(request: Request):
                 print(f"[SELENIUM] Configurando Chrome com mobile UA...", file=sys.stderr, flush=True)
                 driver.set_page_load_timeout(20)  # Igual ao teste manual
                 
+                # LIMPAR CACHE E COOKIES (anti-detecção + fresh state)
+                print(f"[SELENIUM] Limpando cache e cookies...", file=sys.stderr, flush=True)
+                driver.delete_all_cookies()
+                try:
+                    # Limpar cache via Chrome DevTools Protocol
+                    driver.execute_cdp_cmd('Network.clearBrowserCache', {})
+                    driver.execute_cdp_cmd('Network.clearBrowserCookies', {})
+                    print(f"[SELENIUM] ✓ Cache e cookies limpos via CDP", file=sys.stderr, flush=True)
+                except Exception as e:
+                    print(f"[SELENIUM] ⚠️ CDP clear falhou (não crítico): {e}", file=sys.stderr, flush=True)
+                
                 # Definir referrer se não for direct
                 if selected_referrer:
                     print(f"[SELENIUM] Definindo referrer...", file=sys.stderr, flush=True)
