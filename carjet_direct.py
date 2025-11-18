@@ -234,7 +234,7 @@ VEHICLES = {
     'fiat panda': 'MINI 5 Lugares',
     'hyundai i10': 'MINI 5 Lugares',
     'mitsubishi spacestar': 'MINI 5 Lugares',
-    'toyota aygo x': 'MINI 5 Lugares',
+    'toyota aygo x': 'SUV',  # Versão crossover/SUV do Aygo
 
     # ========== E1: MINI Auto ==========
     'citroen c1 auto': 'MINI Auto',
@@ -249,9 +249,15 @@ VEHICLES = {
     'fiat panda auto': 'MINI Auto',  # FIX: Fiat Panda automático
     'kia picanto auto': 'MINI Auto',
     'mitsubishi spacestar auto': 'MINI Auto',
+    'mitsubishi spacer auto': 'MINI Auto',
+    'mitsubishi space auto': 'MINI Auto',
+    'mitsubishi spacer aut': 'MINI Auto',
+    'mitsubishi space aut': 'MINI Auto',
+    'mitsubishi spacr auto': 'MINI Auto',
+    'mitsubishi spacr aut': 'MINI Auto',
     'peugeot 108 auto': 'MINI Auto',
     'toyota aygo auto': 'MINI Auto',
-    'toyota aygo x auto': 'MINI Auto',
+    'toyota aygo x auto': 'SUV Auto',  # Versão crossover/SUV do Aygo
     'toyota yaris auto': 'MINI Auto',
     'volkswagen up auto': 'MINI Auto',
 
@@ -317,7 +323,6 @@ VEHICLES = {
     'volkswagen taigo': 'SUV',
     'volkswagen troc': 'SUV',
     'volkswagen t-roc': 'SUV',
-    'volkswagen troc cabrio': 'SUV',
 
     # ========== G: Cabrio ==========
     'bmw 4 series cabrio auto': 'Cabrio',
@@ -347,6 +352,10 @@ VEHICLES = {
     'vw eos auto': 'Cabrio',
     'vw eos cabrio': 'Cabrio',
     'vw eos cabrio auto': 'Cabrio',
+    'volkswagen troc cabrio': 'Cabrio',
+    'volkswagen t-roc cabrio': 'Cabrio',
+    'vw troc cabrio': 'Cabrio',
+    'vw t-roc cabrio': 'Cabrio',
 
     # ========== J1: Crossover (Manual) ==========
     'audi q2': 'Crossover',
@@ -658,10 +667,12 @@ VEHICLES = {
     'mercedes gla auto': 'Luxury',
     'mercedes glc': 'Luxury',
     'mercedes glc auto': 'Luxury',
-    'mercedes glc coupe': 'SUV Auto',
-    'mercedes glc coupe auto': 'SUV Auto',
-    'mercedes glc coupe hybrid': 'SUV Auto',
-    'mercedes glc coupe h': 'SUV Auto',
+    'mercedes glc coupe': 'Luxury',
+    'mercedes glc coupe auto': 'Luxury',
+    'mercedes glc coupe hybrid': 'Luxury',
+    'mercedes glc coupe h': 'Luxury',
+    'mercedes glc coup': 'Luxury',
+    'mercedes glc coup auto': 'Luxury',
 }
 
 
