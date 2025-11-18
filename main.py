@@ -552,6 +552,15 @@ except ImportError:
     logging.warning("⚠️  Could not import VEHICLES from carjet_direct")
     VEHICLES = {}
 
+# Import carjet_requests (novo método com sessão persistente)
+try:
+    from carjet_requests import scrape_carjet_requests
+    _HAS_CARJET_REQUESTS = True
+except ImportError:
+    logging.warning("⚠️  Could not import carjet_requests")
+    _HAS_CARJET_REQUESTS = False
+    scrape_carjet_requests = None
+
 # Import match helper
 try:
     from match_helper import match_vehicle_group_by_characteristics
@@ -12512,6 +12521,40 @@ def _fetch_transmission_from_detail_page(detail_url: str) -> str:
 
 
 def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
+    """
+    Parse prices from HTML
+    
+    Detecta se HTML vem do:
+    1. carjet_requests (novo método) - JSON embutido
+    2. Método antigo - HTML normal
+    """
+    
+    # DETECTAR se vem do carjet_requests (novo método)
+    if html and "<!--CARJET_REQUESTS_DATA-->" in html:
+        try:
+            import json
+            import sys
+            print("[PARSE] 🔵 Detectado dados do carjet_requests (método novo)", file=sys.stderr, flush=True)
+            
+            # Extrair JSON embutido
+            start_marker = "<!--CARJET_REQUESTS_DATA-->"
+            end_marker = "<!--END_DATA-->"
+            start_idx = html.find(start_marker) + len(start_marker)
+            end_idx = html.find(end_marker)
+            
+            json_data = html[start_idx:end_idx]
+            items = json.loads(json_data)
+            
+            print(f"[PARSE] ✅ {len(items)} carros parseados do JSON", file=sys.stderr, flush=True)
+            return items
+        
+        except Exception as e:
+            import sys
+            print(f"[PARSE] ⚠️ Erro ao extrair JSON: {e}, usando parse HTML normal", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+    
+    # Parse HTML normal (método antigo)
     soup = BeautifulSoup(html, "lxml")
     items: List[Dict[str, Any]] = []
     # Flattened page text to infer context-specific categories (e.g., automatic families)
@@ -14257,6 +14300,50 @@ def url_from_row(row, base_url: str) -> str:
 
 
 def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", currency: str = "EUR") -> str:
+    """
+    Scraping direto do CarJet com fallback
+    
+    MÉTODO PRINCIPAL: carjet_requests (sessão persistente com polling)
+    FALLBACK: Método antigo urllib (se requests falhar)
+    
+    Returns:
+        HTML string com resultados ou "" se falhar
+    """
+    
+    # =============================================================================
+    # MÉTODO 1 (PRINCIPAL): carjet_requests com sessão persistente
+    # =============================================================================
+    if _HAS_CARJET_REQUESTS:
+        try:
+            import sys
+            print("[DIRECT] 🔵 Tentando método 1: requests com sessão persistente", file=sys.stderr, flush=True)
+            
+            # Usar scrape_carjet_requests que retorna lista de carros
+            results = scrape_carjet_requests(location_name, start_dt, end_dt)
+            
+            if results and len(results) > 0:
+                print(f"[DIRECT] ✅ Método 1 funcionou: {len(results)} carros encontrados", file=sys.stderr, flush=True)
+                
+                # Converter resultados para HTML fake para compatibilidade
+                # (o código existente espera HTML string)
+                # Mas primeiro vamos tentar retornar os dados diretamente
+                # NOTA: Como o código espera HTML, vamos serializar como JSON no HTML
+                import json
+                fake_html = f"<!--CARJET_REQUESTS_DATA-->{json.dumps(results)}<!--END_DATA-->"
+                return fake_html
+            else:
+                print(f"[DIRECT] ⚠️ Método 1 retornou 0 resultados, tentando fallback...", file=sys.stderr, flush=True)
+        
+        except Exception as e:
+            print(f"[DIRECT] ⚠️ Método 1 falhou: {e}, tentando fallback...", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+    
+    # =============================================================================
+    # MÉTODO 2 (FALLBACK): urllib antigo
+    # =============================================================================
+    print("[DIRECT] 🟡 Usando método 2 (fallback): urllib antigo", file=sys.stderr, flush=True)
+    
     try:
         sess = requests.Session()
         ua = {

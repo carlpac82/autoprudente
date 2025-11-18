@@ -77,6 +77,13 @@ SUPPLIER_MAP = {
     'GUA': 'Guerin',
     'ADA': 'Ada',
     'IDE': 'Ideamerge',
+    # Novos suppliers detectados
+    'DTG': 'Dollar',
+    'DTG1': 'Dollar',
+    'SXT': 'Sixt',
+    'SXT_B': 'Sixt',
+    'GMO1': 'Greenmotion',
+    'EU2': 'Europcar',
 }
 
 
@@ -870,27 +877,52 @@ def scrape_carjet_direct(location: str, start_dt: datetime, end_dt: datetime, qu
             print(f"[DIRECT] ⚠️ HTML muito grande sem redirect - possível bloqueio")
             print(f"[DIRECT] Primeiros 500 chars: {html[:500]}")
         
-        # Seguir redirect se necessário
+        # Seguir redirect se necessário - COM POLLING (múltiplas tentativas)
         if 'Waiting Prices' in html or 'window.location.replace' in html:
             redirect_url = extract_redirect_url(html)
             if redirect_url:
-                wait_time = 2 if quick else 4
-                print(f"[DIRECT] Aguardando {wait_time}s...")
-                time.sleep(wait_time)
-                
                 full_url = f'https://www.carjet.com{redirect_url}'
                 print(f"[DIRECT] Redirect → {full_url[:80]}...")
                 
-                # Headers para o redirect GET - AGORA com cookies para forçar EUR
+                # Headers para o redirect GET - com cookies para forçar EUR
                 headers_with_cookies = dict(headers)
                 headers_with_cookies['Cookie'] = 'monedaForzada=EUR; moneda=EUR; currency=EUR; country=PT; idioma=PT; lang=pt'
                 
-                req2 = urllib.request.Request(full_url, headers=headers_with_cookies, method='GET')
+                # POLLING: Tentar múltiplas vezes até carros aparecerem
+                max_attempts = 6
+                delays = [3, 4, 5, 6, 7, 8]  # Delays progressivos (total: 33s)
                 
-                with urllib.request.urlopen(req2, timeout=30) as response2:
-                    html = response2.read().decode('utf-8')
-                
-                print(f"[DIRECT] HTML final: {len(html)} bytes")
+                for attempt in range(max_attempts):
+                    delay = delays[attempt] if attempt < len(delays) else 8
+                    print(f"[DIRECT] Tentativa {attempt + 1}/{max_attempts} - aguardando {delay}s...")
+                    time.sleep(delay)
+                    
+                    req2 = urllib.request.Request(full_url, headers=headers_with_cookies, method='GET')
+                    
+                    with urllib.request.urlopen(req2, timeout=30) as response2:
+                        html = response2.read().decode('utf-8')
+                    
+                    print(f"[DIRECT] HTML recebido: {len(html)} bytes")
+                    
+                    # Verificar se ainda é página de loading
+                    is_loading_page = (
+                        'A carregar...' in html or
+                        'Procurando' in html or
+                        'Searching' in html or
+                        len(html) < 50000  # Página de loading é pequena (11KB)
+                    )
+                    
+                    if is_loading_page:
+                        print(f"[DIRECT] ⏳ Ainda a carregar... (tentativa {attempt + 1}/{max_attempts})")
+                        if attempt < max_attempts - 1:
+                            continue  # Tentar novamente
+                        else:
+                            print(f"[DIRECT] ⚠️ Timeout após {max_attempts} tentativas")
+                            return []  # Desistir
+                    else:
+                        # HTML grande = resultados prontos!
+                        print(f"[DIRECT] ✅ Resultados prontos! (tentativa {attempt + 1})")
+                        break  # Sair do loop
         
         items = parse_carjet_html_complete(html)
         print(f"[DIRECT API] ✅ {len(items)} carros extraídos")
@@ -929,14 +961,17 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                         car_name = text
                         
                         # LIMPEZA COMPLETA do nome do carro
-                        # 1. Remover "ou similar" / "or similar" e tudo depois
-                        car_name = re.sub(r'\s+(ou\s*similar|or\s*similar).*$', '', car_name, flags=re.IGNORECASE)
+                        # 1. Remover "ou similar" / "or similar" e tudo depois (pode estar grudado!)
+                        car_name = re.sub(r'(ou\s*similar|or\s*similar).*$', '', car_name, flags=re.IGNORECASE)
                         
-                        # 2. Remover categorias após pipe | (Pequeno, Médio, Grande, etc)
+                        # 2. Remover categorias após pipe |
                         car_name = re.sub(r'\s*\|\s*.*$', '', car_name)
                         
-                        # 3. Remover categorias de tamanho em qualquer lugar
-                        car_name = re.sub(r'\s+(pequeno|médio|medio|grande|compacto|economico|econômico|familiar|luxo|premium|standard)\s*$', '', car_name, flags=re.IGNORECASE)
+                        # 3. Remover categorias de tamanho (Pequeno, Médio, Grande, SUVs, etc)
+                        car_name = re.sub(r'(pequeno|médio|medio|grande|compacto|economico|econômico|familiar|luxo|premium|standard|suvs|mini|comp|esta|vans|minivans|autoautomático)', '', car_name, flags=re.IGNORECASE)
+                        
+                        # 4. Remover palavras em inglês (Small, Medium, Large, etc)
+                        car_name = re.sub(r'(small|medium|large|compact|economy|luxury|premium|suv)', '', car_name, flags=re.IGNORECASE)
                         
                         # 4. PRESERVAR informações importantes:
                         # ✅ Auto / Automatic / Automático
