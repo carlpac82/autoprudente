@@ -259,7 +259,13 @@ VEHICLES = {
     'toyota aygo auto': 'MINI Auto',
     'toyota aygo x auto': 'SUV Auto',  # Versão crossover/SUV do Aygo
     'toyota yaris auto': 'MINI Auto',
+    'toyota yaris hybrid': 'MINI Auto',
+    'toyota yaris  hybrid': 'MINI Auto',
     'volkswagen up auto': 'MINI Auto',
+    'fiat panda hybrid': 'MINI Auto',
+    'fiat panda hybrid auto': 'MINI Auto',
+    'fiat 500 electric': 'MINI Auto',
+    'fiat 500  electric': 'MINI Auto',
 
     # ========== D: ECONOMY ==========
     'citroen c3': 'ECONOMY',
@@ -283,7 +289,10 @@ VEHICLES = {
     'volkswagen golf': 'ECONOMY',
     'vw golf': 'ECONOMY',
     'volkswagen polo': 'ECONOMY',
+    'vw polo': 'ECONOMY',
     'mazda 3': 'ECONOMY',
+    'mitsubishi spacr': 'MINI 5 Lugares',
+    'ford fi': 'ECONOMY',
 
     # ========== E2: ECONOMY Auto ==========
     'citroen c3 auto': 'ECONOMY Auto',
@@ -307,8 +316,11 @@ VEHICLES = {
     'volkswagen golf auto': 'ECONOMY Auto',
     'vw golf auto': 'ECONOMY Auto',
     'volkswagen polo auto': 'ECONOMY Auto',
+    'vw polo auto': 'ECONOMY Auto',
     'mazda 3 auto': 'ECONOMY Auto',
     'mazda 3 automatic': 'ECONOMY Auto',
+    'toyota corolla hybrid': 'ECONOMY Auto',
+    'toyota corolla  hybrid': 'ECONOMY Auto',
 
     # ========== F: SUV ==========
     'dacia duster': 'SUV',
@@ -321,6 +333,7 @@ VEHICLES = {
     'seat arona': 'SUV',
     'toyota chr': 'SUV',
     'volkswagen taigo': 'SUV',
+    'vw taigo': 'SUV',
     'volkswagen troc': 'SUV',
     'volkswagen t-roc': 'SUV',
 
@@ -354,8 +367,14 @@ VEHICLES = {
     'vw eos cabrio auto': 'Cabrio',
     'volkswagen troc cabrio': 'Cabrio',
     'volkswagen t-roc cabrio': 'Cabrio',
+    'volkswagen t-roc cabrioautomático': 'Cabrio',
     'vw troc cabrio': 'Cabrio',
     'vw t-roc cabrio': 'Cabrio',
+    'vw beetle cabrio': 'Cabrio',
+    'vw beetle cabrio auto': 'Cabrio',
+    'mazda mx5 cabrio': 'Cabrio',
+    'fiat 500 cabrio hybrid': 'Cabrio',
+    'mercedes e class cabrioautomático': 'Cabrio',
 
     # ========== J1: Crossover (Manual) ==========
     'audi q2': 'Crossover',
@@ -487,8 +506,21 @@ VEHICLES = {
     'volkswagen tcross auto': 'SUV Auto',
     'volkswagen t-cross auto': 'SUV Auto',
     'volkswagen tiguan auto': 'SUV Auto',
+    'vw tiguan': 'SUV',
+    'vw tiguan auto': 'SUV Auto',
     'volkswagen troc auto': 'SUV Auto',
     'volkswagen t-roc auto': 'SUV Auto',
+    'nissan qashqaiautomático': 'SUV Auto',
+    'peugeot 2008 electric': 'SUV Auto',
+    'peugeot 2008  electric': 'SUV Auto',
+    'opel mokka electric': 'SUV Auto',
+    'opel mokka  electric': 'SUV Auto',
+    'citroen c4 electric': 'SUV Auto',
+    'citroen c4  electric': 'SUV Auto',
+    'kia niro hybrid': 'SUV Auto',
+    'kia niro  hybrid': 'SUV Auto',
+    'toyota rav4 4x4': 'SUV Auto',
+    'toyota rav4 4x4 auto': 'SUV Auto',
     'vw tcross auto': 'SUV Auto',
     'vw t-cross auto': 'SUV Auto',
 
@@ -507,7 +539,14 @@ VEHICLES = {
     'skoda fabia sw auto': 'Station Wagon Auto',
     'skoda octavia sw auto': 'Station Wagon Auto',
     'skoda scala auto': 'Station Wagon Auto',
+    'toyota corolla sw': 'Station Wagon Auto',
     'toyota corolla sw auto': 'Station Wagon Auto',
+    'toyota corolla sw hybrid': 'Station Wagon Auto',
+    'toyota corolla sw  hybrid': 'Station Wagon Auto',
+    'renault megane sw hybrid': 'Station Wagon Auto',
+    'renault megane sw  hybrid': 'Station Wagon Auto',
+    'kia ceed sw hybrid': 'Station Wagon Auto',
+    'kia ceed sw  hybrid': 'Station Wagon Auto',
     'volkswagen golf sw auto': 'Station Wagon Auto',
     'vw golf sw auto': 'Station Wagon Auto',
     'volkswagen passat sw auto': 'Station Wagon Auto',
@@ -544,6 +583,7 @@ VEHICLES = {
     'vw caddy': '7 Lugares',
     'vw sharan': '7 Lugares',
     'vw touran': '7 Lugares',
+    'vw multivan': '7 Lugares',
 
     # ========== M2: 7 Lugares Auto ==========
     'citroen c4 grand spacetourer auto': '7 Lugares Auto',
@@ -572,8 +612,13 @@ VEHICLES = {
     'volkswagen sharan auto': '7 Lugares Auto',
     'volkswagen touran auto': '7 Lugares Auto',
     'vw caddy auto': '7 Lugares Auto',
+    'vw multivan auto': '7 Lugares Auto',
+    'vw multivanautomático': '7 Lugares Auto',
     'vw sharan auto': '7 Lugares Auto',
     'vw touran auto': '7 Lugares Auto',
+    'peugeot 5008automático': '7 Lugares Auto',
+    'mercedes glb 7 seater': '7 Lugares Auto',
+    'mercedes glb 7 seaterautomático': '7 Lugares Auto',
 
     # ========== N: 9 Lugares ==========
     'citroen spacetourer': '9 Lugares',
@@ -659,6 +704,10 @@ VEHICLES = {
     'volvo xc60 auto': 'SUV Auto',
     'volvo xc90': 'Luxury',
     'volvo xc90 auto': 'Luxury',
+    'vw transporter': '9 Lugares',
+    'vw transporter auto': '9 Lugares',
+    'vw caravelle': '9 Lugares',
+    'vw caravelle auto': '9 Lugares',
     'bmw x1': 'Luxury',
     'bmw x1 auto': 'Luxury',
     'byd seal u': 'Luxury',
@@ -673,6 +722,14 @@ VEHICLES = {
     'mercedes glc coupe h': 'Luxury',
     'mercedes glc coup': 'Luxury',
     'mercedes glc coup auto': 'Luxury',
+    'mercedes glc coupe hybridautomático': 'Luxury',
+    'mercedes glc coupe  hybridautomático': 'Luxury',
+    'mercedes glaautomático': 'Luxury',
+    'mercedes a class hybrid': 'Luxury',
+    'mercedes a class  hybrid': 'Luxury',
+    'mercedes cla coupeautomático': 'Luxury',
+    'mercedes cle coupe': 'Luxury',
+    'mercedes e class swautomático': 'Luxury',
 }
 
 
