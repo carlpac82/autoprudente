@@ -11026,9 +11026,75 @@ async def track_by_params(request: Request):
                     print(f"[PLAYWRIGHT] PASSO 4: Submetendo formulário...", file=sys.stderr, flush=True)
                     await page.evaluate("document.querySelector('form').submit()")
                     
-                    # Aguardar navegação
+                    # Aguardar navegação com retry
                     print(f"[PLAYWRIGHT] Aguardando navegação...", file=sys.stderr, flush=True)
-                    await page.wait_for_url('**/do/list/**', timeout=45000)
+                    
+                    navigation_success = False
+                    max_retries = 2
+                    
+                    for attempt in range(max_retries):
+                        try:
+                            await page.wait_for_url('**/do/list/**', timeout=45000)
+                            navigation_success = True
+                            print(f"[PLAYWRIGHT] ✅ Navegação bem-sucedida (tentativa {attempt + 1})", file=sys.stderr, flush=True)
+                            break
+                        except Exception as nav_error:
+                            print(f"[PLAYWRIGHT] ⚠️ Tentativa {attempt + 1} falhou: {nav_error}", file=sys.stderr, flush=True)
+                            
+                            if attempt < max_retries - 1:
+                                # Tentar resubmeter o formulário
+                                print(f"[PLAYWRIGHT] 🔄 Resubmetendo formulário...", file=sys.stderr, flush=True)
+                                await page.goto('https://www.carjet.com/aluguel-carros/index.htm')
+                                await page.wait_for_timeout(3000)
+                                
+                                # Repetir preenchimento
+                                await page.fill('#pickup', 'Albufeira' if 'albufeira' in location.lower() else 'Faro')
+                                await page.wait_for_timeout(2000)
+                                
+                                try:
+                                    await page.click('#recogida_lista li:first-child a', timeout=3000)
+                                except:
+                                    await page.evaluate("""
+                                        const items = document.querySelectorAll('#recogida_lista li');
+                                        for (let item of items) {
+                                            if (item.offsetParent !== null) {
+                                                item.click();
+                                                break;
+                                            }
+                                        }
+                                    """)
+                                
+                                await page.wait_for_timeout(1000)
+                                await page.evaluate("""
+                                    (dates) => {
+                                        function fill(sel, val) {
+                                            const el = document.querySelector(sel);
+                                            if (el) { 
+                                                el.value = val; 
+                                                el.dispatchEvent(new Event('input', {bubbles: true}));
+                                                el.dispatchEvent(new Event('change', {bubbles: true}));
+                                                el.dispatchEvent(new Event('blur', {bubbles: true}));
+                                                return true;
+                                            }
+                                            return false;
+                                        }
+                                        
+                                        fill('input[id="fechaRecogida"]', dates.pickup);
+                                        fill('input[id="fechaDevolucion"]', dates.return);
+                                        fill('select[id="fechaRecogidaSelHour"]', '15:00');
+                                        fill('select[id="fechaDevolucionSelHour"]', '15:00');
+                                    }
+                                """, {'pickup': pickup_date_str, 'return': return_date_str})
+                                
+                                await page.wait_for_timeout(500)
+                                await page.evaluate("document.querySelector('form').submit()")
+                            else:
+                                # Última tentativa falhou
+                                print(f"[PLAYWRIGHT] ❌ Todas as tentativas falharam", file=sys.stderr, flush=True)
+                                raise nav_error
+                    
+                    if not navigation_success:
+                        raise Exception("Navegação falhou após múltiplas tentativas")
                     
                     # CRITICAL: Aguardar JavaScript atualizar os preços
                     # O problema: .price.pr-euros já existe no HTML inicial com preço placeholder
@@ -11081,6 +11147,18 @@ async def track_by_params(request: Request):
                 traceback.print_exc()
         
         # FALLBACK 2: Selenium como último recurso
+        # DESATIVADO: Selenium não funciona no Render (faltam dependências do Chrome)
+        print(f"[SELENIUM] ⚠️ Selenium desativado no Render (não funciona)", file=sys.stderr, flush=True)
+        print(f"[SELENIUM] Chrome instance exited - faltam libs: libgbm, libnss3, libx11", file=sys.stderr, flush=True)
+        return {
+            "items": [],
+            "location": location,
+            "start_date": start_dt.date().isoformat(),
+            "end_date": end_dt.date().isoformat(),
+        }
+        
+        # Código Selenium comentado - mantido para referência
+        """
         print(f"[SELENIUM] Tentando Selenium como último fallback...", file=sys.stderr, flush=True)
         try:
             from selenium import webdriver
@@ -11597,6 +11675,8 @@ async def track_by_params(request: Request):
                 "end_time": end_dt.strftime("%H:%M"),
                 "days": days,
             })
+        """
+        # FIM DO CÓDIGO SELENIUM COMENTADO
         
         # Fallback se Playwright falhou (NÃO DEVE CHEGAR AQUI SE SELENIUM FALHOU!)
         if USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
