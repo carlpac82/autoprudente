@@ -155,15 +155,13 @@ def map_category_to_group_code(category: str) -> str:
         "sw": "J2",
         "touring": "J2",
         
-        # K1 - Crossover Auto
-        "crossover automatic": "K1",
-        "crossover auto": "K1",
-        
-        # L1 - SUV Auto
+        # L1 - SUV Auto (inclui Crossover Auto)
         "suv automatic": "L1",
         "suv auto": "L1",
         "jeep automatic": "L1",
         "jeep auto": "L1",
+        "crossover automatic": "L1",
+        "crossover auto": "L1",
         
         # L2 - Station Wagon Auto
         "station wagon automatic": "L2",
@@ -681,6 +679,15 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     trans = transmission.lower()
     auto = 'auto' in car or 'auto' in trans or 'automatic' in trans
     
+    # Helper: Adicionar "Auto" à categoria, convertendo Crossover → SUV
+    def add_auto_suffix(category: str) -> str:
+        if 'Auto' in category or 'auto' in category.lower():
+            return category
+        # Crossover Auto → SUV Auto (não existe K1, vai para L1)
+        if category == 'Crossover':
+            return 'SUV Auto'
+        return category + ' Auto'
+    
     # 1. PRIORIDADE: Consultar dicionário VEHICLES para match exato
     # Normalizar nome do carro para busca
     car_normalized = car
@@ -694,11 +701,7 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         # Tentar match direto com "auto"
         if car_normalized in VEHICLES:
             cat = VEHICLES[car_normalized]
-            # Se a categoria já tem "Auto", retornar direto
-            if 'Auto' in cat or 'auto' in cat.lower():
-                return cat
-            # Senão, adicionar "Auto"
-            return cat + ' Auto'
+            return add_auto_suffix(cat)
         
         # Tentar variações com "auto"
         auto_variations = [
@@ -712,11 +715,7 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         for variant in auto_variations:
             if variant in VEHICLES:
                 cat = VEHICLES[variant]
-                # Se a categoria já tem "Auto", retornar direto
-                if 'Auto' in cat or 'auto' in cat.lower():
-                    return cat
-                # Senão, adicionar "Auto"
-                return cat + ' Auto'
+                return add_auto_suffix(cat)
         
         # Tentar busca parcial com "auto" - do mais específico ao menos específico
         for key in sorted(VEHICLES.keys(), key=len, reverse=True):
@@ -730,8 +729,8 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     if car_for_lookup in VEHICLES:
         base_category = VEHICLES[car_for_lookup]
         # Se é automático, adicionar "Auto" à categoria
-        if auto and 'Auto' not in base_category:
-            return base_category + ' Auto'
+        if auto:
+            return add_auto_suffix(base_category)
         return base_category
     
     # Tentar variações comuns
@@ -747,8 +746,8 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         if variant in VEHICLES:
             base_category = VEHICLES[variant]
             # Se é automático, adicionar "Auto" à categoria
-            if auto and 'Auto' not in base_category:
-                return base_category + ' Auto'
+            if auto:
+                return add_auto_suffix(base_category)
             return base_category
     
     # Tentar busca parcial (substring match) - do mais específico ao menos específico
@@ -756,8 +755,8 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         if key in car_for_lookup:
             base_category = VEHICLES[key]
             # Se é automático, adicionar "Auto" à categoria
-            if auto and 'Auto' not in base_category:
-                return base_category + ' Auto'
+            if auto:
+                return add_auto_suffix(base_category)
             return base_category
     
     # 2. FALLBACK: Regras genéricas caso não encontre no VEHICLES
