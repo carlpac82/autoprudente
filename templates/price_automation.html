@@ -6197,10 +6197,10 @@
             console.log('📅 [GENERATE-HISTORY] locationFilter =', locationFilter);
             
             try {
-                // Fetch history from server with location filter (6 meses para performance)
+                // Fetch history from server with location filter
                 const url = locationFilter 
-                    ? `/api/automated-search/history?months=6&location=${encodeURIComponent(locationFilter)}`
-                    : '/api/automated-search/history?months=6';
+                    ? `/api/automated-search/history?months=24&location=${encodeURIComponent(locationFilter)}`
+                    : '/api/automated-search/history?months=24';
                 
                 console.log('📅 [GENERATE-HISTORY] Fetching URL:', url);
                 const response = await fetch(url);
