@@ -318,12 +318,26 @@ VEHICLES = {
     # ========== G: Cabrio ==========
     'bmw 4 series cabrio auto': 'Cabrio',
     'fiat 500 cabrio': 'Cabrio',
+    'fiat 500 cabrio auto': 'Cabrio',
     'mazda mx5 cabrio auto': 'Cabrio',
     'mercedes e class cabrio': 'Cabrio',
+    'mercedes e class cabrio auto': 'Cabrio',
     'mini cooper cabrio': 'Cabrio',
+    'mini cooper cabrio auto': 'Cabrio',
     'mini one cabrio': 'Cabrio',
+    'mini one cabrio auto': 'Cabrio',
     'peugeot 108 cabrio': 'Cabrio',
+    'peugeot 108 cabrio auto': 'Cabrio',
     'volkswagen beetle cabrio': 'Cabrio',
+    'volkswagen beetle cabrio auto': 'Cabrio',
+    'volkswagen eos': 'Cabrio',
+    'volkswagen eos auto': 'Cabrio',
+    'volkswagen eos cabrio': 'Cabrio',
+    'volkswagen eos cabrio auto': 'Cabrio',
+    'vw eos': 'Cabrio',
+    'vw eos auto': 'Cabrio',
+    'vw eos cabrio': 'Cabrio',
+    'vw eos cabrio auto': 'Cabrio',
 
     # ========== J1: Crossover (Manual) ==========
     'audi q2': 'Crossover',
@@ -686,6 +700,9 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         # Crossover Auto → SUV Auto (não existe K1, vai para L1)
         if category == 'Crossover':
             return 'SUV Auto'
+        # Cabrio sempre G (manual ou automático)
+        if category == 'Cabrio' or 'cabrio' in category.lower():
+            return 'Cabrio'
         return category + ' Auto'
     
     # 1. PRIORIDADE: Consultar dicionário VEHICLES para match exato
