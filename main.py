@@ -10908,9 +10908,61 @@ async def track_by_params(request: Request):
                 print(f"[TEST MODE ERROR] {e}", file=sys.stderr, flush=True)
         
         # ═══════════════════════════════════════════════════════════════════════════
-        # MÉTODO PRINCIPAL: PLAYWRIGHT (CarJet usa JavaScript, urllib não funciona)
+        # MÉTODO 1 (PRINCIPAL): try_direct_carjet (requests com sessão persistente)
         # ═══════════════════════════════════════════════════════════════════════════
-        if USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
+        print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}", file=sys.stderr, flush=True)
+        
+        # Tentar método direto primeiro (requests ou urllib)
+        if not items:
+            try:
+                print("[API] 🔵 Tentando método 1: try_direct_carjet (requests/urllib)", file=sys.stderr, flush=True)
+                html_direct = try_direct_carjet(location, start_dt, end_dt, lang=lang, currency=currency)
+                
+                if html_direct and len(html_direct) > 100:
+                    print(f"[API] ✅ try_direct_carjet retornou HTML: {len(html_direct)} bytes", file=sys.stderr, flush=True)
+                    
+                    # Parse HTML
+                    items = parse_prices(html_direct, f"https://www.carjet.com/do/list/{lang}")
+                    print(f"[API] Parsed {len(items)} items antes conversão", file=sys.stderr, flush=True)
+                    
+                    # Converter GBP para EUR
+                    items = convert_items_gbp_to_eur(items)
+                    print(f"[API] {len(items)} items após GBP→EUR", file=sys.stderr, flush=True)
+                    
+                    # Aplicar ajustes
+                    items = apply_price_adjustments(items, f"https://www.carjet.com/do/list/{lang}")
+                    print(f"[API] {len(items)} items após ajustes", file=sys.stderr, flush=True)
+                    
+                    if items:
+                        print(f"[API] ✅ {len(items)} carros encontrados via try_direct_carjet!", file=sys.stderr, flush=True)
+                        # APLICAR NORMALIZE_AND_SORT para adicionar campo 'group'
+                        items = normalize_and_sort(items, supplier_priority=None)
+                        # FILTRAR APENAS AUTOMÁTICOS
+                        items = filter_automatic_only(items)
+                        
+                        # Retornar resultados imediatamente
+                        return _no_store_json({
+                            "ok": True,
+                            "items": items,
+                            "location": location,
+                            "start_date": start_dt.date().isoformat(),
+                            "start_time": start_dt.strftime("%H:%M"),
+                            "end_date": end_dt.date().isoformat(),
+                            "end_time": end_dt.strftime("%H:%M"),
+                            "days": days,
+                        })
+                else:
+                    print(f"[API] ⚠️ try_direct_carjet não retornou HTML válido", file=sys.stderr, flush=True)
+                    
+            except Exception as e:
+                print(f"[API] ❌ try_direct_carjet falhou: {e}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+        
+        # ═══════════════════════════════════════════════════════════════════════════
+        # MÉTODO 2 (FALLBACK): PLAYWRIGHT (se try_direct_carjet falhar)
+        # ═══════════════════════════════════════════════════════════════════════════
+        if not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
             print(f"[PLAYWRIGHT] Iniciando scraping com Playwright (iPhone 13 Pro)...", file=sys.stderr, flush=True)
             try:
                 from playwright.async_api import async_playwright
