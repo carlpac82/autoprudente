@@ -194,10 +194,14 @@ def map_category_to_group_code(category: str) -> str:
         "9 seats": "N",
         "9 lugares": "N",
         
-        # X - Luxury
+        # X - Luxury (manual e automático)
         "luxury": "X",
+        "luxury auto": "X",
+        "luxury automatic": "X",
         "luxo": "X",
+        "luxo auto": "X",
         "premium": "X",
+        "premium auto": "X",
     }
     
     # Tentar match direto
@@ -324,8 +328,13 @@ VEHICLES = {
     'mercedes e class cabrio auto': 'Cabrio',
     'mini cooper cabrio': 'Cabrio',
     'mini cooper cabrio auto': 'Cabrio',
+    'cooper cabrio': 'Cabrio',
+    'cooper cabrio auto': 'Cabrio',
+    'cooper cabrio aut': 'Cabrio',
     'mini one cabrio': 'Cabrio',
     'mini one cabrio auto': 'Cabrio',
+    'one cabrio': 'Cabrio',
+    'one cabrio auto': 'Cabrio',
     'peugeot 108 cabrio': 'Cabrio',
     'peugeot 108 cabrio auto': 'Cabrio',
     'volkswagen beetle cabrio': 'Cabrio',
@@ -621,6 +630,9 @@ VEHICLES = {
     'mini cooper': 'Luxury',
     'mini countryman': 'Luxury',
     'mini countryman auto': 'Luxury',
+    'countryman': 'Luxury',
+    'countryman auto': 'Luxury',
+    'countryman aut': 'Luxury',
     'porsche cayenne': 'Luxury',
     'porsche cayenne auto': 'Luxury',
     'range rover evoque': 'Luxury',
@@ -703,6 +715,9 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         # Cabrio sempre G (manual ou automático)
         if category == 'Cabrio' or 'cabrio' in category.lower():
             return 'Cabrio'
+        # Luxury sempre X (manual ou automático) - mas adicionar "Auto" para clareza
+        if category == 'Luxury' or 'luxury' in category.lower():
+            return 'Luxury Auto'
         return category + ' Auto'
     
     # 1. PRIORIDADE: Consultar dicionário VEHICLES para match exato
