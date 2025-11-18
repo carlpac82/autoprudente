@@ -1447,22 +1447,22 @@ class PostgreSQLConnectionWrapper:
             # Silence "column already exists" errors (expected for schema migrations)
             error_str = str(e).lower()
             if "already exists" in error_str or "duplicate column" in error_str:
-                logging.debug(f"PostgreSQL schema check: {e}")
+                # Expected error during migrations - don't log or raise
+                pass
+            else:
+                # For other errors, log as ERROR and raise
+                logging.error(f"PostgreSQL execute error: {e}")
+                logging.error(f"Query: {query}")
+                if params:
+                    # Show only summary to avoid flooding logs with data
+                    param_summary = []
+                    for p in params:
+                        if isinstance(p, str) and len(p) > 100:
+                            param_summary.append(f"<string:{len(p)} chars>")
+                        else:
+                            param_summary.append(repr(p)[:50])
+                    logging.error(f"Params summary: {param_summary}")
                 raise
-            
-            # For other errors, log as ERROR
-            logging.error(f"PostgreSQL execute error: {e}")
-            logging.error(f"Query: {query}")
-            if params:
-                # Show only summary to avoid flooding logs with data
-                param_summary = []
-                for p in params:
-                    if isinstance(p, str) and len(p) > 100:
-                        param_summary.append(f"<string:{len(p)} chars>")
-                    else:
-                        param_summary.append(repr(p)[:50])
-                logging.error(f"Params summary: {param_summary}")
-            raise
         return self._cursor
     
     def cursor(self):
