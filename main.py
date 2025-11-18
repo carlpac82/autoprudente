@@ -11147,18 +11147,7 @@ async def track_by_params(request: Request):
                 traceback.print_exc()
         
         # FALLBACK 2: Selenium como último recurso
-        # DESATIVADO: Selenium não funciona no Render (faltam dependências do Chrome)
-        print(f"[SELENIUM] ⚠️ Selenium desativado no Render (não funciona)", file=sys.stderr, flush=True)
-        print(f"[SELENIUM] Chrome instance exited - faltam libs: libgbm, libnss3, libx11", file=sys.stderr, flush=True)
-        return {
-            "items": [],
-            "location": location,
-            "start_date": start_dt.date().isoformat(),
-            "end_date": end_dt.date().isoformat(),
-        }
-        
-        # Código Selenium comentado - mantido para referência
-        """
+        # Código Selenium ATIVO - com rotação multi-idioma e anti-deteção
         print(f"[SELENIUM] Tentando Selenium como último fallback...", file=sys.stderr, flush=True)
         try:
             from selenium import webdriver
@@ -11675,8 +11664,8 @@ async def track_by_params(request: Request):
                 "end_time": end_dt.strftime("%H:%M"),
                 "days": days,
             })
-        """
-        # FIM DO CÓDIGO SELENIUM COMENTADO
+        
+        # FIM DO CÓDIGO SELENIUM
         
         # Fallback se Playwright falhou (NÃO DEVE CHEGAR AQUI SE SELENIUM FALHOU!)
         if USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
