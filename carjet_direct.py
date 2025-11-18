@@ -693,7 +693,12 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
     if auto:
         # Tentar match direto com "auto"
         if car_normalized in VEHICLES:
-            return VEHICLES[car_normalized]
+            cat = VEHICLES[car_normalized]
+            # Se a categoria já tem "Auto", retornar direto
+            if 'Auto' in cat or 'auto' in cat.lower():
+                return cat
+            # Senão, adicionar "Auto"
+            return cat + ' Auto'
         
         # Tentar variações com "auto"
         auto_variations = [
@@ -706,7 +711,12 @@ def detect_category_from_car(car_name: str, transmission: str = '') -> str:
         
         for variant in auto_variations:
             if variant in VEHICLES:
-                return VEHICLES[variant]
+                cat = VEHICLES[variant]
+                # Se a categoria já tem "Auto", retornar direto
+                if 'Auto' in cat or 'auto' in cat.lower():
+                    return cat
+                # Senão, adicionar "Auto"
+                return cat + ' Auto'
         
         # Tentar busca parcial com "auto" - do mais específico ao menos específico
         for key in sorted(VEHICLES.keys(), key=len, reverse=True):
