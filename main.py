@@ -34242,6 +34242,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
+                                LIMIT 200
                             """
                             params = (month_keys, location) if location else (month_keys,)
                             logging.info(f"📊 [HISTORY-FILTER] PostgreSQL query params: month_keys={len(month_keys)} months, location='{location if location else 'ALL'}'")
@@ -34259,6 +34260,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
+                                LIMIT 200
                             """
                             params = (month_keys, location) if location else (month_keys,)
                             cur.execute(query, params)
@@ -34273,6 +34275,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             FROM automated_search_history
                             WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
+                            LIMIT 200
                         """
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
@@ -34286,6 +34289,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             FROM automated_search_history
                             WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
+                            LIMIT 200
                         """
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()

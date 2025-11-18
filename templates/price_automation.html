@@ -6197,10 +6197,10 @@
             console.log('📅 [GENERATE-HISTORY] locationFilter =', locationFilter);
             
             try {
-                // Fetch history from server with location filter
+                // Fetch history from server with location filter (6 meses para performance)
                 const url = locationFilter 
-                    ? `/api/automated-search/history?months=24&location=${encodeURIComponent(locationFilter)}`
-                    : '/api/automated-search/history?months=24';
+                    ? `/api/automated-search/history?months=6&location=${encodeURIComponent(locationFilter)}`
+                    : '/api/automated-search/history?months=6';
                 
                 console.log('📅 [GENERATE-HISTORY] Fetching URL:', url);
                 const response = await fetch(url);
@@ -6808,8 +6808,9 @@
         async function saveEditedHistoryAsNewVersion() {
             console.log('[HISTORY] Saving edited version...');
             
-            // Show loading notification
-            showNotification('A guardar edição...', 'info');
+            // Show loading notification with progress
+            const loadingMsg = showNotification('💾 A guardar edição...', 'info');
+            console.log('[SAVE-EDIT] Starting save of edited version...');
             
             // Collect current prices from table
             const automatedPricesByGroup = {};
@@ -6863,8 +6864,10 @@
                     input.classList.remove('bg-blue-50');
                 });
                 
-                // Refresh history to show new version
+                // Refresh history to show new version (PRIORITY: mostrar imediatamente)
+                console.log('[HISTORY] Refreshing history list after save...');
                 await generateHistoryMonths();
+                console.log('[HISTORY] History refreshed successfully');
                 
                 console.log('[HISTORY] Saved successfully with timestamp:', dateStr);
             } else {
