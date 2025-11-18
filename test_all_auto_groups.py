@@ -54,8 +54,7 @@ try:
     grupos_esperados = {
         'E1': 'MINI Auto',
         'E2': 'ECONOMY Auto',
-        'K1': 'Crossover Auto',
-        'L1': 'SUV Auto',
+        'L1': 'SUV Auto (inclui Crossover Auto)',
         'L2': 'Station Wagon Auto',
         'M2': '7 Lugares Auto'
     }
