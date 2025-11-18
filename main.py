@@ -28788,9 +28788,10 @@ def _ensure_recent_searches_table():
                         conn.rollback()  # MUST rollback on error
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                            # Column already exists - this is expected, not an error
+                            pass
                         else:
-                            logging.error(f"⚠️ Failed to add 'source' column: {e}")
+                            logging.warning(f"⚠️ Failed to add 'source' column: {e}")
 
                     # Ensure username column exists (migration from old 'user' column)
                     try:
@@ -28828,10 +28829,11 @@ def _ensure_recent_searches_table():
                     except Exception as e:
                         conn.rollback()  # MUST rollback on error
                         error_msg = str(e).lower()
-                        if 'duplicate column' in error_msg or 'already exists' in error_msg:
-                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            # Column already exists - this is expected, not an error
+                            pass
                         else:
-                            logging.error(f"⚠️ Failed to add 'source' column: {e}")
+                            logging.warning(f"⚠️ Failed to add 'source' column: {e}")
                 
                 # Create index for faster queries
                 try:
@@ -29335,30 +29337,23 @@ async def save_recent_searches(request: Request):
                         conn.commit()
                         logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
-                        # Check if error is because column already exists
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                            pass
                         else:
-                            logging.error(f"❌ Failed to add 'source' column: {e}")
-                            logging.error(f"   Error type: {type(e).__name__}")
-                        pass  # Continue even if migration fails
-                    
+                            logging.warning(f"Failed to add 'source' column to recent_searches: {e}")
+
                     # Ensure username column exists (migration from old 'user' column)
                     try:
                         conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
                         conn.commit()
                         logging.info("✅ Added 'username' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            logging.info("ℹ️ Column 'username' already exists in recent_searches")
+                            pass
                         else:
-                            logging.error(f"❌ Failed to add 'username' column: {e}")
-                            logging.error(f"   Error type: {type(e).__name__}")
-                        pass  # Continue even if migration fails
+                            logging.error(f"Failed to add 'username' column to recent_searches: {e}")
                 else:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS recent_searches (
@@ -29380,15 +29375,11 @@ async def save_recent_searches(request: Request):
                         conn.commit()
                         logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()  # CRITICAL for SQLite - must rollback on error
-                        # Check if error is because column already exists
                         error_msg = str(e).lower()
-                        if 'duplicate column' in error_msg or 'already exists' in error_msg:
-                            logging.info("ℹ️ Column 'source' already exists in recent_searches")
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            pass
                         else:
-                            logging.error(f"❌ Failed to add 'source' column: {e}")
-                            logging.error(f"   Error type: {type(e).__name__}")
-                        pass  # Continue even if migration fails
+                            logging.warning(f"Failed to add 'source' column to recent_searches: {e}")
                 
                 # Migrate automated reports settings from user_settings to price_automation_settings
                 try:
