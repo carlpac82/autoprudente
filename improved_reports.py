@@ -7,6 +7,62 @@
 """
 
 from datetime import datetime
+import os
+
+def get_base_url():
+    """Get base URL of the server (Render or local)"""
+    render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if render_host:
+        return f"https://{render_host}"  # Render uses HTTPS
+    else:
+        return "http://localhost:8000"  # Local development
+
+def fix_photo_url_for_email(photo_url, car_name=None):
+    """
+    Fix photo URLs for email compatibility
+    PRIORITY:
+    1. Use vehicle_images from database (via /api/vehicles/{name}/photo)
+    2. Fallback to CarJet CDN URLs (if no local photo)
+    3. Return None for invalid placeholders
+    
+    Args:
+        photo_url: Original photo URL from search results
+        car_name: Name of the car (used to lookup in vehicle_images)
+    
+    Returns:
+        Absolute URL to photo or None
+    """
+    # Filter invalid placeholders
+    invalid_patterns = ['loading-car.png', 'placeholder', 'no-image', 'noimage', 'loading-car']
+    if photo_url and any(pattern in photo_url.lower() for pattern in invalid_patterns):
+        photo_url = None  # Invalidate placeholder URLs
+    
+    # PRIORITY 1: Use vehicle_images from database
+    if car_name:
+        # Normalize car name for lookup
+        vehicle_key = car_name.lower().strip()
+        base_url = get_base_url()
+        
+        # Construct URL to internal photo endpoint
+        # This endpoint serves photos from vehicle_images table
+        internal_photo_url = f"{base_url}/api/vehicles/{vehicle_key}/photo"
+        
+        # Return internal URL - the endpoint will handle fallbacks internally
+        # (tries vehicle_images, then vehicle_photos, then variations)
+        return internal_photo_url
+    
+    # PRIORITY 2: Fallback to CarJet CDN (if we have a valid URL)
+    if photo_url:
+        # If already absolute URL, return as-is
+        if photo_url.startswith('http://') or photo_url.startswith('https://'):
+            return photo_url
+        
+        # Convert relative CDN URLs to absolute
+        if photo_url.startswith('/cdn/'):
+            return f'https://www.carjet.pt{photo_url}'
+    
+    # PRIORITY 3: No valid photo available
+    return None
 
 # Cores oficiais
 COLOR_PRIMARY = "#009cb6"      # Turquesa (Auto Prudente)
@@ -368,9 +424,13 @@ def generate_daily_report_html_by_location(search_data, location):
                 car_photo = car.get('photo', '')
                 car_name = car.get('car', 'Unknown')
                 
-                # Usar imagem REAL
-                if car_photo and car_photo.startswith('http'):
-                    car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 85px; max-height: 60px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
+                # Fix photo URL for email - PRIORITY: vehicle_images DB, then CarJet CDN
+                # Pass car_name to lookup in vehicle_images table
+                fixed_photo = fix_photo_url_for_email(car_photo, car_name=car_name)
+                
+                # Usar imagem REAL se disponível
+                if fixed_photo:
+                    car_visual = f'<img src="{fixed_photo}" alt="{car_name}" style="width: 85px; max-height: 60px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
                 else:
                     # Fallback: ícone SVG pequeno
                     car_visual = icon_car
@@ -626,8 +686,12 @@ def generate_weekly_report_html_by_location(search_data, location):
                     car_photo = car.get('photo', '')
                     car_name = car.get('car', 'Unknown')
                     
-                    if car_photo and car_photo.startswith('http'):
-                        car_visual = f'<img src="{car_photo}" alt="{car_name}" style="width: 85px; max-height: 60px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
+                    # Fix photo URL for email - PRIORITY: vehicle_images DB, then CarJet CDN
+                    # Pass car_name to lookup in vehicle_images table
+                    fixed_photo = fix_photo_url_for_email(car_photo, car_name=car_name)
+                    
+                    if fixed_photo:
+                        car_visual = f'<img src="{fixed_photo}" alt="{car_name}" style="width: 85px; max-height: 60px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">'
                     else:
                         car_visual = icon_car
                     

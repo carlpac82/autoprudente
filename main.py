@@ -29254,7 +29254,41 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ automated_prices_history.created_at: {e}")
                     
-                    # 7d. Ensure automated_prices_history has 'source' column
+                    # 7d. Ensure automated_prices_history has 'auto_price' column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_prices_history' AND column_name='auto_price'
+                                ) THEN
+                                    ALTER TABLE automated_prices_history ADD COLUMN auto_price DOUBLE PRECISION;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_prices_history.auto_price column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history.auto_price: {e}")
+                    
+                    # 7e. Ensure automated_prices_history has 'real_price' column
+                    try:
+                        conn.execute("""
+                            DO $$ 
+                            BEGIN
+                                IF NOT EXISTS (
+                                    SELECT 1 FROM information_schema.columns 
+                                    WHERE table_name='automated_prices_history' AND column_name='real_price'
+                                ) THEN
+                                    ALTER TABLE automated_prices_history ADD COLUMN real_price DOUBLE PRECISION;
+                                END IF;
+                            END $$;
+                        """)
+                        logging.info("✅ automated_prices_history.real_price column ensured")
+                    except Exception as e:
+                        logging.warning(f"⚠️ automated_prices_history.real_price: {e}")
+                    
+                    # 7f. Ensure automated_prices_history has 'source' column
                     try:
                         conn.execute("""
                             DO $$ 
@@ -29271,7 +29305,7 @@ def _ensure_missing_tables():
                     except Exception as e:
                         logging.warning(f"⚠️ automated_prices_history.source: {e}")
                     
-                    # 7e. Create index for automated_prices_history
+                    # 7g. Create index for automated_prices_history
                     try:
                         conn.execute("""
                             CREATE INDEX IF NOT EXISTS idx_auto_prices_history 
@@ -32925,11 +32959,13 @@ def save_automated_searches_to_history():
                     try:
                         # Aggregate prices by group and days
                         prices_by_group = {}  # { "B1": { "1": 25.50, "3": 23.00 }, ... }
+                        supplier_data_by_group = {}  # { "B1": { "1": [...cars...], "3": [...cars...] }, ... }
                         dias_set = set()
                         
                         for search in data['searches']:
                             days = search['days']
                             dias_set.add(days)
+                            day_key = str(days)
                             
                             for car in search['results']:
                                 grupo = car.get('grupo', car.get('group', 'Unknown'))
@@ -32941,15 +32977,31 @@ def save_automated_searches_to_history():
                                 except:
                                     continue
                                 
+                                # Initialize price aggregation
                                 if grupo not in prices_by_group:
                                     prices_by_group[grupo] = {}
                                 
                                 # Keep cheapest price for each group/days combination
-                                day_key = str(days)
                                 if day_key not in prices_by_group[grupo]:
                                     prices_by_group[grupo][day_key] = price
                                 else:
                                     prices_by_group[grupo][day_key] = min(prices_by_group[grupo][day_key], price)
+                                
+                                # Collect supplier data for visual cards
+                                if grupo not in supplier_data_by_group:
+                                    supplier_data_by_group[grupo] = {}
+                                if day_key not in supplier_data_by_group[grupo]:
+                                    supplier_data_by_group[grupo][day_key] = []
+                                
+                                # Add car to supplier data (for visual cards)
+                                supplier_data_by_group[grupo][day_key].append({
+                                    'group': grupo,
+                                    'car': car.get('car', car.get('car_name', 'Unknown')),
+                                    'supplier': car.get('supplier', 'Unknown'),
+                                    'price': price_str,
+                                    'price_num': price,
+                                    'photo': car.get('photo', '')
+                                })
                         
                         # Prepare data for saving
                         dias_list = sorted(list(dias_set))
@@ -32966,6 +33018,7 @@ def save_automated_searches_to_history():
                         # Save to automated_search_history
                         prices_json = json.dumps(prices_by_group)
                         dias_json = json.dumps(dias_list)
+                        supplier_data_json = json.dumps(supplier_data_by_group) if supplier_data_by_group else None
                         search_type = 'automated'
                         user_email = 'system_scheduler'
                         
@@ -32974,31 +33027,61 @@ def save_automated_searches_to_history():
                                 try:
                                     cur.execute("""
                                         INSERT INTO automated_search_history 
-                                        (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                                        VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                                        (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                                        VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
                                         RETURNING id
-                                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
                                     search_id = cur.fetchone()[0]
                                     conn.commit()
-                                    logging.info(f"✅ Saved {location} to history: ID={search_id}, Groups={len(prices_by_group)}, Dias={dias_list}, Prices={price_count}")
+                                    logging.info(f"✅ Saved {location} to history: ID={search_id}, Groups={len(prices_by_group)}, Dias={dias_list}, Prices={price_count}, Suppliers={len(supplier_data_by_group)}")
                                     saved_count += 1
                                 except Exception as e:
-                                    logging.error(f"❌ Error saving {location} to PostgreSQL: {e}")
+                                    # Try without supplier_data if column doesn't exist
+                                    logging.warning(f"⚠️ Retrying without supplier_data: {e}")
                                     conn.rollback()
+                                    try:
+                                        with conn.cursor() as cur:
+                                            cur.execute("""
+                                                INSERT INTO automated_search_history 
+                                                (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                                                RETURNING id
+                                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                            search_id = cur.fetchone()[0]
+                                        conn.commit()
+                                        logging.info(f"✅ Saved {location} to history (no supplier_data): ID={search_id}")
+                                        saved_count += 1
+                                    except Exception as e2:
+                                        logging.error(f"❌ Error saving {location} to PostgreSQL: {e2}")
+                                        conn.rollback()
                         else:
                             try:
                                 cursor = conn.execute("""
                                     INSERT INTO automated_search_history 
-                                    (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                    (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
                                 search_id = cursor.lastrowid
                                 conn.commit()
-                                logging.info(f"✅ Saved {location} to history: ID={search_id}, Groups={len(prices_by_group)}, Dias={dias_list}, Prices={price_count}")
+                                logging.info(f"✅ Saved {location} to history: ID={search_id}, Groups={len(prices_by_group)}, Dias={dias_list}, Prices={price_count}, Suppliers={len(supplier_data_by_group)}")
                                 saved_count += 1
                             except Exception as e:
-                                logging.error(f"❌ Error saving {location} to SQLite: {e}")
+                                # Try without supplier_data if column doesn't exist
+                                logging.warning(f"⚠️ Retrying without supplier_data: {e}")
                                 conn.rollback()
+                                try:
+                                    cursor = conn.execute("""
+                                        INSERT INTO automated_search_history 
+                                        (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                    search_id = cursor.lastrowid
+                                    conn.commit()
+                                    logging.info(f"✅ Saved {location} to history (no supplier_data): ID={search_id}")
+                                    saved_count += 1
+                                except Exception as e2:
+                                    logging.error(f"❌ Error saving {location} to SQLite: {e2}")
+                                    conn.rollback()
                         
                     except Exception as e:
                         logging.error(f"❌ Error processing {location}: {e}")
@@ -33578,14 +33661,16 @@ try:
     log_to_db("INFO", "✅ Daily report search scheduler configured (daily at 7 AM)", "main", "scheduler")
     
     # Daily report at 9 AM (default time)
-    scheduler.add_job(
-        send_automatic_daily_report,
-        CronTrigger(hour=9, minute=0),
-        id='daily_report',
-        name='Daily Automatic Report',
-        replace_existing=True
-    )
-    log_to_db("INFO", "✅ Daily report scheduler configured (daily at 9 AM)", "main", "scheduler")
+    # DESATIVADO - automated_scheduler.py já gere os reports dinamicamente
+    # scheduler.add_job(
+    #     send_automatic_daily_report,
+    #     CronTrigger(hour=9, minute=0),
+    #     id='daily_report',
+    #     name='Daily Automatic Report',
+    #     replace_existing=True
+    # )
+    # log_to_db("INFO", "✅ Daily report scheduler configured (daily at 9 AM)", "main", "scheduler")
+    log_to_db("INFO", "ℹ️ Daily report scheduling managed by automated_scheduler.py (dynamic config)", "main", "scheduler")
     
     # Weekly search on Monday at 7 AM (2h before report) - searches next 3 months
     scheduler.add_job(
