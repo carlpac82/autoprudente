@@ -28531,7 +28531,17 @@ async def export_automated_prices_excel(request: Request):
                         total_adjustment += abbycar_low_deposit_adjustment
                     
                     adjusted_price = float(price) * (1 + total_adjustment / 100)
-                    ws.cell(row_num, col_idx).value = adjusted_price
+                    
+                    # Round to 2 decimal places
+                    adjusted_price = round(adjusted_price, 2)
+                    
+                    # Set cell value
+                    cell = ws.cell(row_num, col_idx)
+                    cell.value = adjusted_price
+                    
+                    # Format cell to use comma as decimal separator (Portuguese format)
+                    # Format: #.##0,00 (2 decimal places with comma)
+                    cell.number_format = '#.##0,00'
                 else:
                     # Leave empty if: no price OR (Low Deposit group AND disabled)
                     ws.cell(row_num, col_idx).value = ''
