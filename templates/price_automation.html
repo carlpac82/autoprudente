@@ -6211,7 +6211,16 @@
                 }
                 
                 const history = data.history || {};
-                const monthKeys = data.monthKeys || [];
+                
+                // Generate month keys for the next 24 months (to show which ones have data)
+                const monthKeys = [];
+                const now = new Date();
+                for (let i = 0; i < 24; i++) {
+                    const year = now.getFullYear() + Math.floor((now.getMonth() + i) / 12);
+                    const month = ((now.getMonth() + i) % 12) + 1;
+                    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+                    monthKeys.push(monthKey);
+                }
                 
                 console.log('📅 [GENERATE-HISTORY] History loaded:', Object.keys(history).length, 'months with data');
                 console.log('📅 [GENERATE-HISTORY] Response data:', {historyKeys: Object.keys(history), monthKeys});
@@ -6247,7 +6256,7 @@
                     const automatedSearches = (history[monthKey] && history[monthKey].automated) || [];
                     const currentSearches = (history[monthKey] && history[monthKey].current) || [];
                     const allSearches = [...automatedSearches, ...currentSearches].sort((a, b) => 
-                        new Date(a.date) - new Date(b.date)
+                        new Date(a.searchDate) - new Date(b.searchDate)
                     );
                     
                     const hasData = allSearches.length > 0;

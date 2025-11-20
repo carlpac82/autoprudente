@@ -34675,6 +34675,8 @@ async def get_automated_search_history_light(request: Request, months: int = 24,
                         'id': row_id,
                         'location': row_location,
                         'searchDate': search_date,
+                        'date': search_date,  # Alias for frontend compatibility
+                        'search_type': search_type,  # Add search_type to each entry
                         'priceCount': price_count,
                         # Note: prices, dias, supplierData will be loaded on-demand
                     })
