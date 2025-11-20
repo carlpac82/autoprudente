@@ -34465,10 +34465,36 @@ async def cleanup_duplicate_searches(request: Request):
         with _db_lock:
             conn = _db_connect()
             try:
-                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                # Check if using PostgreSQL - multiple methods
+                is_postgres = False
+                
+                # Method 1: Check if it's a PostgreSQLConnectionWrapper (most reliable!)
+                if conn.__class__.__name__ == 'PostgreSQLConnectionWrapper':
+                    is_postgres = True
+                    logging.info("[CLEANUP] ✅ Detected PostgreSQL via PostgreSQLConnectionWrapper")
+                
+                # Method 2: Check if wrapped connection is psycopg2
+                elif hasattr(conn, '_conn') and conn._conn.__class__.__module__ == 'psycopg2.extensions':
+                    is_postgres = True
+                    logging.info("[CLEANUP] ✅ Detected PostgreSQL via wrapped connection")
+                
+                # Method 3: Direct psycopg2 connection
+                elif conn.__class__.__module__ == 'psycopg2.extensions':
+                    is_postgres = True
+                    logging.info("[CLEANUP] ✅ Detected PostgreSQL via module name")
+                
+                # Method 4: Check DATABASE_URL environment variable
+                if not is_postgres:
+                    import os
+                    db_url = os.getenv('DATABASE_URL', '')
+                    if db_url.startswith('postgres'):
+                        is_postgres = True
+                        logging.info(f"[CLEANUP] ✅ Detected PostgreSQL via DATABASE_URL")
+                
+                logging.info(f"[CLEANUP] Connection: {conn.__class__.__name__} ({conn.__class__.__module__}), PostgreSQL={is_postgres}")
                 
                 if not is_postgres:
-                    return JSONResponse({"ok": False, "error": "Cleanup only works with PostgreSQL"}, status_code=400)
+                    return JSONResponse({"ok": False, "error": f"Cleanup only works with PostgreSQL. Current: {conn.__class__.__module__}"}, status_code=400)
                 
                 with conn.cursor() as cur:
                     # Get statistics before cleanup
