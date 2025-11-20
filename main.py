@@ -34821,6 +34821,126 @@ async def debug_search_types(request: Request, month: str = None):
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/automated-search/analyze-november")
+async def analyze_november_searches(request: Request):
+    """Analyze November 2025 entries to find potentially misclassified searches"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Check if PostgreSQL
+                if conn.__class__.__name__ == 'PostgreSQLConnectionWrapper':
+                    is_postgres = True
+                elif hasattr(conn, '_conn'):
+                    is_postgres = True
+                else:
+                    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if not is_postgres:
+                    return JSONResponse({"ok": False, "error": "Only works with PostgreSQL"}, status_code=400)
+                
+                with conn.cursor() as cur:
+                    # Get all November 2025 entries with detailed info
+                    cur.execute("""
+                        SELECT 
+                            id,
+                            location,
+                            search_type,
+                            search_date,
+                            pickup_date,
+                            price_count,
+                            user_email,
+                            CAST(search_date AS DATE) as search_day,
+                            CAST(search_date AS TIME) as search_time
+                        FROM automated_search_history
+                        WHERE month_key = '2025-11'
+                        ORDER BY search_date DESC
+                    """)
+                    
+                    rows = cur.fetchall()
+                    
+                    # Group by day
+                    by_day = {}
+                    all_entries = []
+                    
+                    for row in rows:
+                        search_id, location, search_type, search_date, pickup_date, price_count, user_email, search_day, search_time = row
+                        
+                        day_key = str(search_day)
+                        if day_key not in by_day:
+                            by_day[day_key] = []
+                        
+                        entry = {
+                            'id': search_id,
+                            'location': location,
+                            'search_type': search_type,
+                            'search_date': str(search_date),
+                            'pickup_date': pickup_date,
+                            'price_count': price_count,
+                            'user_email': user_email,
+                            'search_day': day_key,
+                            'search_time': str(search_time)
+                        }
+                        
+                        by_day[day_key].append(entry)
+                        all_entries.append(entry)
+                    
+                    # Analyze patterns - find suspicious entries
+                    suspicious_days = []
+                    potential_issues = []
+                    
+                    for day in sorted(by_day.keys(), reverse=True):
+                        entries = by_day[day]
+                        auto_count = sum(1 for e in entries if e['search_type'] == 'automated')
+                        curr_count = sum(1 for e in entries if e['search_type'] == 'current')
+                        
+                        day_info = {
+                            'day': day,
+                            'total': len(entries),
+                            'automated': auto_count,
+                            'current': curr_count,
+                            'entries': entries
+                        }
+                        
+                        # Flag as suspicious if multiple entries but no 'current'
+                        if len(entries) > 1 and curr_count == 0:
+                            day_info['suspicious'] = True
+                            suspicious_days.append(day_info)
+                            # Add all entries from this day as potential issues
+                            for entry in entries:
+                                entry['reason'] = f"Multiple searches on {day} but all marked 'automated'"
+                                potential_issues.append(entry)
+                    
+                    # Summary statistics
+                    total_auto = sum(1 for e in all_entries if e['search_type'] == 'automated')
+                    total_curr = sum(1 for e in all_entries if e['search_type'] == 'current')
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "month": "2025-11",
+                        "summary": {
+                            "total_entries": len(all_entries),
+                            "automated": total_auto,
+                            "current": total_curr,
+                            "days_with_data": len(by_day),
+                            "suspicious_days": len(suspicious_days)
+                        },
+                        "by_day": by_day,
+                        "suspicious_days": suspicious_days,
+                        "potential_issues": potential_issues,
+                        "analysis": {
+                            "message": f"Found {len(potential_issues)} entries that might be misclassified",
+                            "recommendation": "Multiple searches on same day usually indicates manual searches, which should be 'current' not 'automated'"
+                        }
+                    })
+                        
+            finally:
+                conn.close()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/automated-search/debug-counts")
 async def debug_search_counts(request: Request):
     """Debug endpoint to count searches by month and location"""
