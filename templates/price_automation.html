@@ -6568,6 +6568,9 @@
             if (!historyData.prices || !historyData.dias) {
                 console.log('[HISTORY] 📦 Loading full data for version ID:', historyData.id);
                 
+                // Show loading overlay
+                showLoadingOverlay('A descarregar dados do histórico...');
+                
                 try {
                     const response = await fetch(`/api/automated-search/version/${historyData.id}`);
                     const data = await response.json();
@@ -6585,8 +6588,11 @@
                     });
                 } catch (err) {
                     console.error('[HISTORY] ❌ Failed to load version data:', err);
+                    hideLoadingOverlay();
                     alert('Erro ao carregar dados da versão. Por favor tente novamente.');
                     return;
+                } finally {
+                    hideLoadingOverlay();
                 }
             }
             
@@ -9526,6 +9532,34 @@ Continue?`);
                 showNotification('Erro ao inicializar cache AI', 'error');
             }
         }, 500);
+        
+        // Loading Overlay Functions
+        function showLoadingOverlay(message = 'A carregar dados...') {
+            let overlay = document.getElementById('loadingOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'loadingOverlay';
+                overlay.innerHTML = `
+                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white rounded-lg shadow-xl p-8 flex flex-col items-center">
+                            <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-[#009cb6] mb-4"></div>
+                            <p class="text-gray-700 font-medium text-lg" id="loadingMessage">${message}</p>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            } else {
+                document.getElementById('loadingMessage').textContent = message;
+                overlay.style.display = 'block';
+            }
+        }
+        
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>

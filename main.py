@@ -34749,9 +34749,21 @@ async def get_search_version(version_id: int):
                     return JSONResponse({"ok": False, "error": "Version not found"}, status_code=404)
                 
                 import json
+                
+                # Helper to parse JSON (handles both PostgreSQL dict and SQLite string)
+                def parse_json(data, default):
+                    if not data:
+                        return default
+                    if isinstance(data, (dict, list)):
+                        return data  # Already parsed (PostgreSQL JSONB)
+                    try:
+                        return json.loads(data)  # Parse string (SQLite)
+                    except:
+                        return default
+                
                 if has_supplier_data:
                     row_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
-                    supplier_data_parsed = json.loads(supplier_data) if supplier_data else {}
+                    supplier_data_parsed = parse_json(supplier_data, {})
                 else:
                     row_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count = row
                     supplier_data_parsed = {}
@@ -34762,8 +34774,8 @@ async def get_search_version(version_id: int):
                     'searchType': search_type,
                     'searchDate': search_date,
                     'monthKey': month_key,
-                    'prices': json.loads(prices_data) if prices_data else {},
-                    'dias': json.loads(dias) if dias else [],
+                    'prices': parse_json(prices_data, {}),
+                    'dias': parse_json(dias, []),
                     'priceCount': price_count,
                     'supplierData': supplier_data_parsed
                 }
