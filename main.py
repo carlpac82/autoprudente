@@ -34442,6 +34442,103 @@ async def save_automated_search_history(request: Request):
         logging.error(f"❌ Error saving automated search: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.post("/api/automated-search/cleanup-duplicates")
+async def cleanup_duplicate_searches(request: Request):
+    """Clean up duplicate automated search entries - keeps only most recent per day"""
+    try:
+        # Security: only allow for authenticated admin users
+        user_email = request.session.get('user_email', '')
+        if not user_email:
+            return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if not is_postgres:
+                    return JSONResponse({"ok": False, "error": "Cleanup only works with PostgreSQL"}, status_code=400)
+                
+                with conn.cursor() as cur:
+                    # Get statistics before cleanup
+                    cur.execute("SELECT COUNT(*) FROM automated_search_history")
+                    total_before = cur.fetchone()[0]
+                    
+                    # Find duplicates (same location, pickup_date, search_type on same day)
+                    # Use pickup_date if exists, otherwise use month_key
+                    try:
+                        cur.execute("""
+                            WITH duplicates AS (
+                                SELECT 
+                                    location,
+                                    search_type,
+                                    COALESCE(pickup_date, month_key) as search_key,
+                                    DATE(search_date) as search_day,
+                                    COUNT(*) as count,
+                                    ARRAY_AGG(id ORDER BY search_date DESC) as ids
+                                FROM automated_search_history
+                                GROUP BY location, search_type, COALESCE(pickup_date, month_key), DATE(search_date)
+                                HAVING COUNT(*) > 1
+                            ),
+                            ids_to_delete AS (
+                                SELECT UNNEST(ids[2:]) as id
+                                FROM duplicates
+                            )
+                            DELETE FROM automated_search_history
+                            WHERE id IN (SELECT id FROM ids_to_delete)
+                        """)
+                        deleted_count = cur.rowcount
+                        conn.commit()
+                    except Exception as e:
+                        # Fallback without pickup_date
+                        conn.rollback()
+                        logging.warning(f"[CLEANUP] pickup_date not found, using month_key only: {e}")
+                        cur.execute("""
+                            WITH duplicates AS (
+                                SELECT 
+                                    location,
+                                    search_type,
+                                    month_key as search_key,
+                                    DATE(search_date) as search_day,
+                                    COUNT(*) as count,
+                                    ARRAY_AGG(id ORDER BY search_date DESC) as ids
+                                FROM automated_search_history
+                                GROUP BY location, search_type, month_key, DATE(search_date)
+                                HAVING COUNT(*) > 1
+                            ),
+                            ids_to_delete AS (
+                                SELECT UNNEST(ids[2:]) as id
+                                FROM duplicates
+                            )
+                            DELETE FROM automated_search_history
+                            WHERE id IN (SELECT id FROM ids_to_delete)
+                        """)
+                        deleted_count = cur.rowcount
+                        conn.commit()
+                    
+                    # Get statistics after cleanup
+                    cur.execute("SELECT COUNT(*) FROM automated_search_history")
+                    total_after = cur.fetchone()[0]
+                    
+                    logging.info(f"✅ [CLEANUP] Removed {deleted_count} duplicate entries ({total_before} → {total_after})")
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "message": "Cleanup completed successfully",
+                        "before": total_before,
+                        "after": total_after,
+                        "deleted": deleted_count
+                    })
+                    
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ [CLEANUP] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/automated-search/history")
 async def get_automated_search_history(request: Request, months: int = 24, location: str = None):
     """Get automated search history for the last N months, optionally filtered by location"""
