@@ -34216,12 +34216,14 @@ async def save_automated_search_history(request: Request):
                                 VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, %s)
                                 RETURNING id
                             """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
-                            search_id = cur.fetchone()[0]
+                            result = cur.fetchone()
+                            search_id = result[0] if result else 0
+                            logging.info(f"[INSERT-DEBUG] PostgreSQL INSERT returned ID: {search_id}")
                         conn.commit()
                     except Exception as e:
                         # Column doesn't exist - rollback and use old schema
                         conn.rollback()
-                        logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
+                        logging.warning(f"[FALLBACK-1] pickup_date or supplier_data column not found on save, using old schema: {e}")
                         try:
                             # NEW cursor after rollback
                             with conn.cursor() as cur:
@@ -34231,12 +34233,14 @@ async def save_automated_search_history(request: Request):
                                     VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
                                     RETURNING id
                                 """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
-                                search_id = cur.fetchone()[0]
+                                result = cur.fetchone()
+                                search_id = result[0] if result else 0
+                                logging.info(f"[INSERT-DEBUG] Fallback 1 returned ID: {search_id}")
                             conn.commit()
                         except Exception as e2:
                             # Fallback to original schema
                             conn.rollback()
-                            logging.warning(f"supplier_data column also not found, using minimal schema: {e2}")
+                            logging.warning(f"[FALLBACK-2] supplier_data column also not found, using minimal schema: {e2}")
                             # NEW cursor after second rollback
                             with conn.cursor() as cur:
                                 cur.execute("""
@@ -34245,7 +34249,9 @@ async def save_automated_search_history(request: Request):
                                     VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
                                     RETURNING id
                                 """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
-                                search_id = cur.fetchone()[0]
+                                result = cur.fetchone()
+                                search_id = result[0] if result else 0
+                                logging.info(f"[INSERT-DEBUG] Fallback 2 returned ID: {search_id}")
                             conn.commit()
                 else:
                     try:
@@ -34442,6 +34448,103 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
     except Exception as e:
         logging.error(f"❌ Error loading search history: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/automated-search/debug-table-structure")
+async def debug_automated_search_table_structure(request: Request):
+    """Debug endpoint to check automated_search_history table structure"""
+    require_auth(request)
+    
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Get column info
+                        cur.execute("""
+                            SELECT column_name, data_type, column_default, is_nullable
+                            FROM information_schema.columns 
+                            WHERE table_name = 'automated_search_history'
+                            ORDER BY ordinal_position
+                        """)
+                        columns = cur.fetchall()
+                        
+                        # Check if table exists
+                        cur.execute("""
+                            SELECT EXISTS (
+                                SELECT FROM information_schema.tables 
+                                WHERE table_name = 'automated_search_history'
+                            )
+                        """)
+                        table_exists = cur.fetchone()[0]
+                        
+                        # Get index info
+                        cur.execute("""
+                            SELECT indexname, indexdef
+                            FROM pg_indexes
+                            WHERE tablename = 'automated_search_history'
+                        """)
+                        indexes = cur.fetchall()
+                        
+                        # Get row count
+                        cur.execute("SELECT COUNT(*) FROM automated_search_history")
+                        row_count = cur.fetchone()[0]
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "database_type": "PostgreSQL",
+                        "table_exists": table_exists,
+                        "row_count": row_count,
+                        "columns": [
+                            {
+                                "name": col[0],
+                                "type": col[1],
+                                "default": col[2],
+                                "nullable": col[3]
+                            } for col in columns
+                        ],
+                        "indexes": [
+                            {
+                                "name": idx[0],
+                                "definition": idx[1]
+                            } for idx in indexes
+                        ]
+                    })
+                else:
+                    # SQLite
+                    cursor = conn.execute("PRAGMA table_info(automated_search_history)")
+                    columns = cursor.fetchall()
+                    
+                    cursor = conn.execute("SELECT COUNT(*) FROM automated_search_history")
+                    row_count = cursor.fetchone()[0]
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "database_type": "SQLite",
+                        "row_count": row_count,
+                        "columns": [
+                            {
+                                "cid": col[0],
+                                "name": col[1],
+                                "type": col[2],
+                                "notnull": col[3],
+                                "default": col[4],
+                                "pk": col[5]
+                            } for col in columns
+                        ]
+                    })
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error checking table structure: {str(e)}")
+        import traceback
+        return JSONResponse({
+            "ok": False, 
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status_code=500)
 
 @app.delete("/api/automated-search/{search_id}")
 async def delete_automated_search(request: Request, search_id: int):
