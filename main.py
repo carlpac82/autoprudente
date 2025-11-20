@@ -34787,7 +34787,9 @@ async def get_search_version(version_id: int):
                 conn.close()
                 
     except Exception as e:
+        import traceback
         logging.error(f"❌ [VERSION-LOAD] Error loading version {version_id}: {str(e)}")
+        logging.error(f"❌ [VERSION-LOAD] Full traceback: {traceback.format_exc()}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/automated-search/history")
