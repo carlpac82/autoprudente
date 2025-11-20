@@ -3368,6 +3368,7 @@ def init_db():
                 """
             )
             safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_automated_search_month ON automated_search_history(month_key, search_type, search_date DESC)", "idx_automated_search_month")
+            safe_create_index(conn, "CREATE INDEX IF NOT EXISTS idx_automated_search_location ON automated_search_history(location, month_key)", "idx_automated_search_location")
             
             # Tabela para Car Groups (grupos de carros parametrizados)
             conn.execute(
@@ -34602,9 +34603,186 @@ async def cleanup_duplicate_searches(request: Request):
         traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/api/automated-search/history-light")
+async def get_automated_search_history_light(request: Request, months: int = 24, location: str = None):
+    """Get lightweight history list (metadata only, no heavy JSONB data)
+    
+    Returns only: id, location, search_date, search_type, price_count, month_key
+    Does NOT return: prices_data, supplier_data, dias
+    
+    This enables fast loading of 24 months of history without the performance cost.
+    Frontend will lazy-load full data when user clicks on a specific version.
+    """
+    try:
+        from datetime import datetime
+        
+        logging.info(f"📊 [HISTORY-LIGHT] Requested {months} months, location filter: '{location}'")
+        
+        # Generate month keys for FUTURE months
+        month_keys = []
+        now = datetime.now()
+        for i in range(months):
+            year = now.year + (now.month + i - 1) // 12
+            month = (now.month + i - 1) % 12 + 1
+            month_key = f"{year}-{str(month).zfill(2)}"
+            if month_key not in month_keys:
+                month_keys.append(month_key)
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                history = {}
+                
+                location_filter = ""
+                if location:
+                    location_filter = " AND location = %s" if is_postgres else " AND location = ?"
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        query = f"""
+                            SELECT id, location, search_type, search_date, month_key, price_count
+                            FROM automated_search_history
+                            WHERE month_key = ANY(%s){location_filter}
+                            ORDER BY search_date DESC
+                            LIMIT 1000
+                        """
+                        params = (month_keys, location) if location else (month_keys,)
+                        cur.execute(query, params)
+                        rows = cur.fetchall()
+                else:
+                    placeholders = ','.join(['?' for _ in month_keys])
+                    query = f"""
+                        SELECT id, location, search_type, search_date, month_key, price_count
+                        FROM automated_search_history
+                        WHERE month_key IN ({placeholders}){location_filter}
+                        ORDER BY search_date DESC
+                        LIMIT 1000
+                    """
+                    params = (*month_keys, location) if location else month_keys
+                    rows = conn.execute(query, params).fetchall()
+                
+                # Group by month_key and search_type
+                for row in rows:
+                    row_id, row_location, search_type, search_date, month_key, price_count = row
+                    
+                    if month_key not in history:
+                        history[month_key] = {}
+                    if search_type not in history[month_key]:
+                        history[month_key][search_type] = []
+                    
+                    history[month_key][search_type].append({
+                        'id': row_id,
+                        'location': row_location,
+                        'searchDate': search_date,
+                        'priceCount': price_count,
+                        # Note: prices, dias, supplierData will be loaded on-demand
+                    })
+                
+                logging.info(f"✅ [HISTORY-LIGHT] Returned {len(rows)} lightweight entries for {len(month_keys)} months")
+                return JSONResponse({"ok": True, "history": history})
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ [HISTORY-LIGHT] Error: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/automated-search/version/{version_id}")
+async def get_search_version(version_id: int):
+    """Get full data for a specific search version (lazy loading)
+    
+    Returns complete data: prices_data, supplier_data, dias
+    Called when user clicks to edit/view a specific version.
+    """
+    try:
+        logging.info(f"📦 [VERSION-LOAD] Loading full data for version ID: {version_id}")
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        try:
+                            cur.execute("""
+                                SELECT id, location, search_type, search_date, month_key, 
+                                       prices_data, dias, price_count, supplier_data
+                                FROM automated_search_history
+                                WHERE id = %s
+                            """, (version_id,))
+                            row = cur.fetchone()
+                            has_supplier_data = True
+                        except:
+                            conn.rollback()
+                            cur.execute("""
+                                SELECT id, location, search_type, search_date, month_key, 
+                                       prices_data, dias, price_count
+                                FROM automated_search_history
+                                WHERE id = %s
+                            """, (version_id,))
+                            row = cur.fetchone()
+                            has_supplier_data = False
+                else:
+                    try:
+                        row = conn.execute("""
+                            SELECT id, location, search_type, search_date, month_key, 
+                                   prices_data, dias, price_count, supplier_data
+                            FROM automated_search_history
+                            WHERE id = ?
+                        """, (version_id,)).fetchone()
+                        has_supplier_data = True
+                    except:
+                        row = conn.execute("""
+                            SELECT id, location, search_type, search_date, month_key, 
+                                   prices_data, dias, price_count
+                            FROM automated_search_history
+                            WHERE id = ?
+                        """, (version_id,)).fetchone()
+                        has_supplier_data = False
+                
+                if not row:
+                    return JSONResponse({"ok": False, "error": "Version not found"}, status_code=404)
+                
+                import json
+                if has_supplier_data:
+                    row_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
+                    supplier_data_parsed = json.loads(supplier_data) if supplier_data else {}
+                else:
+                    row_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count = row
+                    supplier_data_parsed = {}
+                
+                version_data = {
+                    'id': row_id,
+                    'location': row_location,
+                    'searchType': search_type,
+                    'searchDate': search_date,
+                    'monthKey': month_key,
+                    'prices': json.loads(prices_data) if prices_data else {},
+                    'dias': json.loads(dias) if dias else [],
+                    'priceCount': price_count,
+                    'supplierData': supplier_data_parsed
+                }
+                
+                logging.info(f"✅ [VERSION-LOAD] Loaded version {version_id}: {price_count} prices")
+                return JSONResponse({"ok": True, "version": version_data})
+                
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ [VERSION-LOAD] Error loading version {version_id}: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
 @app.get("/api/automated-search/history")
-async def get_automated_search_history(request: Request, months: int = 24, location: str = None):
-    """Get automated search history for the last N months, optionally filtered by location"""
+async def get_automated_search_history(request: Request, months: int = 6, location: str = None):
+    """Get automated search history for the last N months (LEGACY - full data)
+    
+    Note: This endpoint loads full prices_data and supplier_data.
+    Consider using /history-light + /version/{id} for better performance.
+    """
     try:
         from datetime import datetime, timedelta
         
@@ -34643,7 +34821,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
-                                LIMIT 1000
+                                LIMIT 500
                             """
                             params = (month_keys, location) if location else (month_keys,)
                             logging.info(f"📊 [HISTORY-FILTER] PostgreSQL query params: month_keys={len(month_keys)} months, location='{location if location else 'ALL'}'")
@@ -34661,7 +34839,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
-                                LIMIT 1000
+                                LIMIT 500
                             """
                             params = (month_keys, location) if location else (month_keys,)
                             cur.execute(query, params)
@@ -34676,7 +34854,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             FROM automated_search_history
                             WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
-                            LIMIT 1000
+                            LIMIT 500
                         """
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
@@ -34690,7 +34868,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             FROM automated_search_history
                             WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
-                            LIMIT 1000
+                            LIMIT 500
                         """
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
@@ -34699,7 +34877,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 # Group by month_key and search_type
                 import json
                 locations_found = set()
-                logging.info(f"📊 [HISTORY-FILTER] Processing {len(rows)} rows...")
+                logging.info(f"📊 [HISTORY-FILTER] Processing {len(rows)} rows for {len(month_keys)} months...")
                 
                 for row in rows:
                     if has_supplier_data:
@@ -34709,7 +34887,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                         supplier_data = None
                     
                     locations_found.add(row_location)
-                    logging.info(f"📊 [HISTORY-FILTER] Row {search_id}: location='{row_location}', month={month_key}, type={search_type}")
+                    # Removed per-row logging for performance (was logging 100s of times)
                     
                     if month_key not in history:
                         history[month_key] = {
@@ -34733,14 +34911,9 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                     
                     # NO LIMIT - Keep ALL versions (user requested to save all history)
                 
-                logging.info(f"📊 [HISTORY-FILTER] Locations found in results: {locations_found}")
-                logging.info(f"📊 [HISTORY-FILTER] Returning {len(history)} months with data")
-                
-                # Log summary by month
-                for month_key, month_data in history.items():
-                    auto_count = len(month_data['automated'])
-                    curr_count = len(month_data['current'])
-                    logging.info(f"📊 [HISTORY-FILTER] {month_key}: {auto_count} auto + {curr_count} current = {auto_count + curr_count} total")
+                # Summary logging (not per-row for performance)
+                total_entries = sum(len(m['automated']) + len(m['current']) for m in history.values())
+                logging.info(f"📊 [HISTORY] Locations: {list(locations_found)}, Months: {len(history)}, Total entries: {total_entries}")
                 
                 return JSONResponse({
                     "ok": True,

@@ -6,7 +6,7 @@
 (function() {
     'use strict';
 
-    const SYNC_INTERVAL = 30000; // Sync every 30 seconds
+    const SYNC_INTERVAL = 60000; // Sync every 60 seconds (reduced frequency)
     const KEYS_TO_SYNC = [
         // Branding & Appearance
         'brandingSettings',
@@ -38,11 +38,19 @@
 
     let syncInProgress = false;
     let lastSyncTime = 0;
+    let hasUnsyncedChanges = false; // Track if there are changes to sync
+    let lastDataSnapshot = {}; // Track last synced data
 
     // Sync all localStorage keys to database
-    async function syncToDatabase() {
+    async function syncToDatabase(force = false) {
         if (syncInProgress) {
             console.log('⏳ Sync already in progress, skipping...');
+            return;
+        }
+
+        // Skip if no unsynced changes (unless forced)
+        if (!force && !hasUnsyncedChanges) {
+            console.log('✨ No changes to sync');
             return;
         }
 
@@ -64,6 +72,7 @@
 
             if (!hasData) {
                 console.log('📭 No data to sync');
+                hasUnsyncedChanges = false;
                 syncInProgress = false;
                 return;
             }
@@ -79,6 +88,8 @@
 
             if (response.ok) {
                 lastSyncTime = now;
+                lastDataSnapshot = JSON.parse(JSON.stringify(dataToSync)); // Deep copy
+                hasUnsyncedChanges = false;
                 console.log('✅ Settings synced to database at', new Date().toLocaleTimeString());
             } else {
                 console.error('❌ Sync failed:', response.status);
@@ -131,14 +142,17 @@
         const originalSetItem = localStorage.setItem;
         
         localStorage.setItem = function(key, value) {
+            const oldValue = localStorage.getItem(key);
             originalSetItem.apply(this, arguments);
             
-            // If it's a key we care about, schedule a sync
-            if (KEYS_TO_SYNC.includes(key)) {
-                // Debounce: only sync if 5 seconds have passed since last sync
+            // If it's a key we care about and value actually changed
+            if (KEYS_TO_SYNC.includes(key) && oldValue !== value) {
+                hasUnsyncedChanges = true;
+                
+                // Debounce: only sync if 10 seconds have passed since last sync
                 const timeSinceLastSync = Date.now() - lastSyncTime;
-                if (timeSinceLastSync > 5000) {
-                    setTimeout(syncToDatabase, 1000); // Sync after 1 second
+                if (timeSinceLastSync > 10000) {
+                    setTimeout(syncToDatabase, 2000); // Sync after 2 seconds
                 }
             }
         };
@@ -160,9 +174,15 @@
         // Periodic sync
         setInterval(syncToDatabase, SYNC_INTERVAL);
         
-        // Sync before page unload
+        // Sync before page unload (only if there are changes)
         window.addEventListener('beforeunload', () => {
-            // Use sendBeacon for reliable sync on page close
+            // Only sync if there are unsynced changes
+            if (!hasUnsyncedChanges) {
+                console.log('✨ No changes on unload, skip sync');
+                return;
+            }
+            
+            // Use sendBeacon for reliable non-blocking sync on page close
             const dataToSync = {};
             KEYS_TO_SYNC.forEach(key => {
                 const value = localStorage.getItem(key);
@@ -170,7 +190,12 @@
             });
             
             if (Object.keys(dataToSync).length > 0) {
-                navigator.sendBeacon('/api/settings/sync', JSON.stringify(dataToSync));
+                // sendBeacon requires Blob with correct content-type
+                const blob = new Blob([JSON.stringify(dataToSync)], {
+                    type: 'application/json'
+                });
+                navigator.sendBeacon('/api/settings/sync', blob);
+                console.log('📤 Sent beacon sync on page unload');
             }
         });
     }

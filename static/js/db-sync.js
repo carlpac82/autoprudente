@@ -15,9 +15,12 @@
 (function() {
     'use strict';
     
-    const DB_SYNC_VERSION = '1.0.0';
-    const SYNC_INTERVAL = 30000; // 30 segundos
+    const DB_SYNC_VERSION = '1.1.0';
+    const SYNC_INTERVAL = 60000; // 60 segundos (otimizado para reduzir carga)
     const KEYS_TO_SYNC = ['customDias', 'priceAIData'];
+    
+    let lastSyncedData = {}; // Track last synced data to detect changes
+    let hasUnsyncedChanges = false;
     
     console.log(`[DB-SYNC ${DB_SYNC_VERSION}] Inicializando sincronização automática...`);
     
@@ -99,41 +102,53 @@
     // SAVE TO DATABASE
     // ==========================================
     
-    async function saveToDatabase() {
+    async function saveToDatabase(force = false) {
         try {
-            console.log('[DB-SYNC] Salvando dados na database...');
+            // Verificar se houve mudanças
+            const currentData = {
+                settings: {},
+                rules: localStorage.getItem('automatedPriceRules') || '',
+                autoSettings: localStorage.getItem('priceAutomationSettings') || ''
+            };
             
-            // Salvar User Settings
-            const settings = {};
             KEYS_TO_SYNC.forEach(key => {
                 const value = localStorage.getItem(key);
                 if (value) {
                     try {
-                        settings[key] = JSON.parse(value);
+                        currentData.settings[key] = JSON.parse(value);
                     } catch {
-                        settings[key] = value;
+                        currentData.settings[key] = value;
                     }
                 }
             });
             
-            if (Object.keys(settings).length > 0) {
+            // Comparar com último snapshot
+            const dataChanged = force || JSON.stringify(currentData) !== JSON.stringify(lastSyncedData);
+            
+            if (!dataChanged) {
+                console.log('[DB-SYNC] ✨ No changes detected, skipping save');
+                return;
+            }
+            
+            console.log('[DB-SYNC] Salvando dados na database...');
+            
+            // Salvar User Settings
+            if (Object.keys(currentData.settings).length > 0) {
                 await fetch('/api/user-settings/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_key: 'default', settings })
+                    body: JSON.stringify({ user_key: 'default', settings: currentData.settings })
                 });
-                console.log(`[DB-SYNC] ✓ Saved ${Object.keys(settings).length} settings to database`);
+                console.log(`[DB-SYNC] ✓ Saved ${Object.keys(currentData.settings).length} settings to database`);
             }
             
             // Salvar Automated Price Rules (se modificados)
-            const rulesStr = localStorage.getItem('automatedPriceRules');
-            if (rulesStr) {
+            if (currentData.rules) {
                 try {
-                    const rules = JSON.parse(rulesStr);
                     const response = await fetch('/api/price-automation/rules/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: rulesStr  // CRITICAL FIX: Send rules directly, not wrapped
+                        body: currentData.rules
                     });
                     
                     if (response.ok) {
@@ -149,20 +164,22 @@
             }
             
             // Salvar Price Automation Settings (se modificados)
-            const settingsStr = localStorage.getItem('priceAutomationSettings');
-            if (settingsStr) {
+            if (currentData.autoSettings) {
                 try {
-                    const autoSettings = JSON.parse(settingsStr);
                     await fetch('/api/price-automation/settings/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: settingsStr
+                        body: currentData.autoSettings
                     });
                     console.log(`[DB-SYNC] ✓ Saved price automation settings to database`);
                 } catch (e) {
                     console.warn('[DB-SYNC] Settings save failed:', e.message);
                 }
             }
+            
+            // Update last synced snapshot
+            lastSyncedData = JSON.parse(JSON.stringify(currentData));
+            hasUnsyncedChanges = false;
             
             console.log('[DB-SYNC] ✅ Dados salvos na database com sucesso!');
             
@@ -212,24 +229,47 @@
         await saveToDatabase();
     }, SYNC_INTERVAL);
     
-    // Salvar antes de sair da página
+    // Salvar antes de sair da página (NON-BLOCKING com sendBeacon)
     window.addEventListener('beforeunload', () => {
         console.log('[DB-SYNC] 💾 Saving before page unload...');
-        // Usar sendBeacon para garantir que envia mesmo ao sair
-        navigator.sendBeacon('/api/user-settings/save', JSON.stringify({
-            user_key: 'default',
-            settings: KEYS_TO_SYNC.reduce((acc, key) => {
-                const value = localStorage.getItem(key);
-                if (value) {
-                    try {
-                        acc[key] = JSON.parse(value);
-                    } catch {
-                        acc[key] = value;
-                    }
+        
+        // Only send if there might be changes
+        const rulesStr = localStorage.getItem('automatedPriceRules');
+        const settingsStr = localStorage.getItem('priceAutomationSettings');
+        
+        // Send user settings
+        const userSettings = {};
+        KEYS_TO_SYNC.forEach(key => {
+            const value = localStorage.getItem(key);
+            if (value) {
+                try {
+                    userSettings[key] = JSON.parse(value);
+                } catch {
+                    userSettings[key] = value;
                 }
-                return acc;
-            }, {})
-        }));
+            }
+        });
+        
+        if (Object.keys(userSettings).length > 0) {
+            const blob = new Blob([JSON.stringify({ user_key: 'default', settings: userSettings })], {
+                type: 'application/json'
+            });
+            navigator.sendBeacon('/api/user-settings/save', blob);
+        }
+        
+        // Send rules (non-blocking)
+        if (rulesStr) {
+            const blob = new Blob([rulesStr], { type: 'application/json' });
+            navigator.sendBeacon('/api/price-automation/rules/save', blob);
+        }
+        
+        // Send settings (non-blocking)
+        if (settingsStr) {
+            const blob = new Blob([settingsStr], { type: 'application/json' });
+            navigator.sendBeacon('/api/price-automation/settings/save', blob);
+        }
+        
+        console.log('[DB-SYNC] 📤 Sent beacon sync for rules, settings, and user data');
     });
     
     console.log('[DB-SYNC] ✅ Sincronização automática configurada!');

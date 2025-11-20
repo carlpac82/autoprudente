@@ -6197,10 +6197,10 @@
             console.log('📅 [GENERATE-HISTORY] locationFilter =', locationFilter);
             
             try {
-                // Fetch history from server with location filter
+                // Fetch lightweight history (24 months, metadata only - lazy loading)
                 const url = locationFilter 
-                    ? `/api/automated-search/history?months=24&location=${encodeURIComponent(locationFilter)}`
-                    : '/api/automated-search/history?months=24';
+                    ? `/api/automated-search/history-light?months=24&location=${encodeURIComponent(locationFilter)}`
+                    : '/api/automated-search/history-light?months=24';
                 
                 console.log('📅 [GENERATE-HISTORY] Fetching URL:', url);
                 const response = await fetch(url);
@@ -6552,8 +6552,35 @@
             }
         }
         
-        function editHistoryVersion(historyData) {
-            console.log('[HISTORY] Editing version:', historyData);
+        async function editHistoryVersion(historyData) {
+            console.log('[HISTORY] Editing version (lazy loading):', historyData);
+            
+            // If full data not loaded yet (only has metadata), fetch it now
+            if (!historyData.prices || !historyData.dias) {
+                console.log('[HISTORY] 📦 Loading full data for version ID:', historyData.id);
+                
+                try {
+                    const response = await fetch(`/api/automated-search/version/${historyData.id}`);
+                    const data = await response.json();
+                    
+                    if (!data.ok) {
+                        throw new Error(data.error || 'Failed to load version data');
+                    }
+                    
+                    // Replace with full data
+                    historyData = data.version;
+                    console.log('[HISTORY] ✅ Full data loaded:', {
+                        dias: historyData.dias?.length,
+                        grupos: Object.keys(historyData.prices || {}).length,
+                        supplierDays: Object.keys(historyData.supplierData || {}).length
+                    });
+                } catch (err) {
+                    console.error('[HISTORY] ❌ Failed to load version data:', err);
+                    alert('Erro ao carregar dados da versão. Por favor tente novamente.');
+                    return;
+                }
+            }
+            
             console.log('[HISTORY] 🔍 historyData keys:', Object.keys(historyData));
             console.log('[HISTORY] 🔍 historyData.supplierData exists?', !!historyData.supplierData);
             console.log('[HISTORY] 🔍 historyData.supplierData type:', typeof historyData.supplierData);
