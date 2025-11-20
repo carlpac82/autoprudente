@@ -34468,6 +34468,19 @@ async def debug_search_types_page(request: Request):
     except Exception as e:
         return HTMLResponse(content=f"<h1>Error loading debug UI: {str(e)}</h1>", status_code=500)
 
+@app.get("/fix-november", response_class=HTMLResponse)
+async def fix_november_page(request: Request):
+    """Fix November search types - automated to current"""
+    try:
+        # Read the HTML file
+        import os
+        html_path = os.path.join(os.path.dirname(__file__), "fix_november_ui.html")
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error loading fix UI: {str(e)}</h1>", status_code=500)
+
 @app.post("/api/automated-search/cleanup-duplicates")
 async def cleanup_duplicate_searches(request: Request):
     """Clean up duplicate automated search entries - keeps only most recent per day"""
@@ -34936,6 +34949,89 @@ async def analyze_november_searches(request: Request):
                         
             finally:
                 conn.close()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/automated-search/fix-search-types")
+async def fix_search_types(request: Request):
+    """Fix search_type from 'automated' to 'current' for misclassified entries
+    
+    Criteria for correction:
+    - Has pickup_date defined (manual searches always have pickup_date)
+    - user_email is 'unknown' (manual searches from before user tracking)
+    - OR specific IDs provided in request body
+    """
+    try:
+        data = await request.json()
+        entry_ids = data.get('ids', [])  # Optional: specific IDs to fix
+        auto_fix = data.get('auto_fix', False)  # Auto-detect based on criteria
+        month = data.get('month', '2025-11')  # Default to November 2025
+        
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Check if PostgreSQL
+                if conn.__class__.__name__ == 'PostgreSQLConnectionWrapper':
+                    is_postgres = True
+                elif hasattr(conn, '_conn'):
+                    is_postgres = True
+                else:
+                    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if not is_postgres:
+                    return JSONResponse({"ok": False, "error": "Only works with PostgreSQL"}, status_code=400)
+                
+                with conn.cursor() as cur:
+                    if auto_fix:
+                        # Auto-detect entries that should be 'current'
+                        # Criteria: has pickup_date AND user_email='unknown' AND search_type='automated'
+                        cur.execute("""
+                            SELECT id, location, search_date, pickup_date
+                            FROM automated_search_history
+                            WHERE month_key = %s
+                              AND search_type = 'automated'
+                              AND pickup_date IS NOT NULL
+                              AND pickup_date != ''
+                              AND user_email = 'unknown'
+                        """, (month,))
+                        
+                        rows = cur.fetchall()
+                        entry_ids = [row[0] for row in rows]
+                        
+                        logging.info(f"🔍 [FIX-SEARCH-TYPE] Auto-detected {len(entry_ids)} entries to fix in {month}")
+                    
+                    if not entry_ids:
+                        return JSONResponse({
+                            "ok": False,
+                            "error": "No entries to fix. Provide 'ids' array or set 'auto_fix': true"
+                        }, status_code=400)
+                    
+                    # Update search_type
+                    cur.execute("""
+                        UPDATE automated_search_history
+                        SET search_type = 'current'
+                        WHERE id = ANY(%s)
+                          AND search_type = 'automated'
+                    """, (entry_ids,))
+                    
+                    updated_count = cur.rowcount
+                    conn.commit()
+                    
+                    logging.info(f"✅ [FIX-SEARCH-TYPE] Updated {updated_count} entries from 'automated' to 'current'")
+                    logging.info(f"   IDs: {entry_ids}")
+                    
+                    return JSONResponse({
+                        "ok": True,
+                        "message": f"Fixed {updated_count} entries",
+                        "updated_count": updated_count,
+                        "fixed_ids": entry_ids
+                    })
+                    
+            finally:
+                conn.close()
+                
     except Exception as e:
         import traceback
         traceback.print_exc()

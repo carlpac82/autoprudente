@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix November Search Types</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border-left: 4px solid #f57c00;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .results pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .problem-description {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f57c00;
+        }
+        
+        .problem-description h3 {
+            color: #f57c00;
+            margin-bottom: 10px;
+        }
+        
+        .problem-description p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .problem-description ul {
+            margin-left: 20px;
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .criteria-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #1976d2;
+        }
+        
+        .criteria-box h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .criteria-box ul {
+            margin-left: 20px;
+            color: #555;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix November Search Types</h1>
+        <p class="subtitle">Corrige entradas marcadas incorretamente como "automated"</p>
+        
+        <div class="problem-description">
+            <h3>⚠️ Problema Identificado</h3>
+            <p><strong>Novembro 2025:</strong> 27 entradas, TODAS marcadas como "automated", mas algumas são pesquisas manuais.</p>
+            <p><strong>Dezembro 2025:</strong> 7 entradas (4 automated + 3 current) ✅ CORRETO</p>
+            <ul>
+                <li>✅ Pesquisas automáticas do scheduler (08:00-08:41)</li>
+                <li>❌ Pesquisas manuais (horários variados) marcadas como "automated"</li>
+            </ul>
+        </div>
+        
+        <div class="criteria-box">
+            <h4>📋 Critérios de Correção Automática</h4>
+            <ul>
+                <li><strong>pickup_date</strong> está definido (pesquisas manuais sempre têm data)</li>
+                <li><strong>user_email</strong> = "unknown" (antes do tracking de utilizadores)</li>
+                <li><strong>search_type</strong> = "automated" (precisa de correção)</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Ação:</strong> Mudar de "automated" → "current"</p>
+        </div>
+        
+        <div id="status" class="status info" style="display: none;"></div>
+        
+        <div style="margin-bottom: 20px;">
+            <button id="analyzeBtn" onclick="analyzeNovember()">
+                📊 1. Analisar Novembro
+            </button>
+            <button id="fixBtn" onclick="fixSearchTypes()" class="secondary" disabled>
+                🔧 2. Corrigir Automaticamente
+            </button>
+            <button onclick="verifyResults()" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                ✓ 3. Verificar Resultados
+            </button>
+        </div>
+        
+        <div id="results" class="results" style="display: none;"></div>
+    </div>
+    
+    <script>
+        let entriesToFix = 0;
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
+        }
+        
+        function showResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            resultsDiv.style.display = 'block';
+        }
+        
+        async function analyzeNovember() {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '⏳ A analisar...';
+            showStatus('A analisar entradas de Novembro...', 'info');
+            
+            try {
+                const response = await fetch('/api/automated-search/analyze-november');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    entriesToFix = data.potential_issues.length;
+                    showStatus(
+                        `✅ Análise completa! Encontradas ${entriesToFix} entradas que devem ser corrigidas.`,
+                        'success'
+                    );
+                    showResults(data);
+                    document.getElementById('fixBtn').disabled = false;
+                } else {
+                    showStatus('❌ Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Erro de ligação: ' + error.message, 'error');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '📊 1. Analisar Novembro';
+            }
+        }
+        
+        async function fixSearchTypes() {
+            if (!confirm(`Confirma a correção automática de ${entriesToFix} entradas?\n\nSerão mudadas de "automated" para "current".`)) {
+                return;
+            }
+            
+            const fixBtn = document.getElementById('fixBtn');
+            fixBtn.disabled = true;
+            fixBtn.textContent = '⏳ A corrigir...';
+            showStatus('A corrigir entradas...', 'info');
+            
+            try {
+                const response = await fetch('/api/automated-search/fix-search-types', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        auto_fix: true,
+                        month: '2025-11'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showStatus(
+                        `✅ SUCESSO! ${data.updated_count} entradas corrigidas de "automated" para "current".`,
+                        'success'
+                    );
+                    showResults(data);
+                } else {
+                    showStatus('❌ Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Erro de ligação: ' + error.message, 'error');
+            } finally {
+                fixBtn.disabled = false;
+                fixBtn.textContent = '🔧 2. Corrigir Automaticamente';
+            }
+        }
+        
+        async function verifyResults() {
+            showStatus('A verificar resultados...', 'info');
+            
+            try {
+                const response = await fetch('/api/automated-search/debug-search-types');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    const nov = data.summary['2025-11'];
+                    if (nov) {
+                        const autoCount = nov.automated || 0;
+                        const currCount = nov.current || 0;
+                        showStatus(
+                            `📊 Novembro 2025: ${autoCount} automated, ${currCount} current (Total: ${autoCount + currCount})`,
+                            autoCount > 0 && currCount > 0 ? 'success' : 'warning'
+                        );
+                    } else {
+                        showStatus('⚠️ Sem dados para Novembro 2025', 'warning');
+                    }
+                    showResults(data);
+                } else {
+                    showStatus('❌ Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Erro de ligação: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
