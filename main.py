@@ -34850,8 +34850,8 @@ async def analyze_november_searches(request: Request):
                             pickup_date,
                             price_count,
                             user_email,
-                            CAST(search_date AS DATE) as search_day,
-                            CAST(search_date AS TIME) as search_time
+                            DATE(search_date) as search_day,
+                            TO_CHAR(search_date, 'HH24:MI:SS') as search_time
                         FROM automated_search_history
                         WHERE month_key = '2025-11'
                         ORDER BY search_date DESC
