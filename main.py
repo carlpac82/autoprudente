@@ -34207,78 +34207,224 @@ async def save_automated_search_history(request: Request):
                 user_email = request.session.get('user_email', 'unknown')
                 
                 if is_postgres:
-                    # Try new schema with supplier_data and pickup_date
+                    # Use UPSERT: Update if exists (same location, pickup_date, search_type), insert if new
+                    # This prevents creating hundreds of duplicate versions when editing prices
                     try:
                         with conn.cursor() as cur:
+                            # Check if a search already exists for today with same parameters
+                            from datetime import datetime
+                            today = datetime.now().date()
+                            
                             cur.execute("""
-                                INSERT INTO automated_search_history 
-                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
-                                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, %s)
-                                RETURNING id
-                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
-                            result = cur.fetchone()
-                            search_id = result[0] if result else 0
-                            logging.info(f"[INSERT-DEBUG] PostgreSQL INSERT returned ID: {search_id}")
+                                SELECT id FROM automated_search_history
+                                WHERE location = %s 
+                                  AND search_type = %s
+                                  AND pickup_date = %s
+                                  AND DATE(search_date) = %s
+                                ORDER BY search_date DESC
+                                LIMIT 1
+                            """, (location, search_type, pickup_date, today))
+                            
+                            existing = cur.fetchone()
+                            
+                            if existing:
+                                # UPDATE existing search
+                                search_id = existing[0]
+                                cur.execute("""
+                                    UPDATE automated_search_history
+                                    SET prices_data = %s::jsonb,
+                                        supplier_data = %s::jsonb,
+                                        dias = %s,
+                                        price_count = %s,
+                                        search_date = CURRENT_TIMESTAMP
+                                    WHERE id = %s
+                                """, (prices_json, supplier_data_json, dias_json, price_count, search_id))
+                                logging.info(f"[UPSERT] Updated existing search ID: {search_id}")
+                            else:
+                                # INSERT new search
+                                cur.execute("""
+                                    INSERT INTO automated_search_history 
+                                    (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
+                                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, %s)
+                                    RETURNING id
+                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
+                                result = cur.fetchone()
+                                search_id = result[0] if result else 0
+                                logging.info(f"[UPSERT] Inserted new search ID: {search_id}")
                         conn.commit()
                     except Exception as e:
                         # Column doesn't exist - rollback and use old schema
                         conn.rollback()
                         logging.warning(f"[FALLBACK-1] pickup_date or supplier_data column not found on save, using old schema: {e}")
                         try:
-                            # NEW cursor after rollback
+                            # NEW cursor after rollback - UPSERT without pickup_date
                             with conn.cursor() as cur:
+                                from datetime import datetime
+                                today = datetime.now().date()
+                                
+                                # Check if search exists (without pickup_date)
                                 cur.execute("""
-                                    INSERT INTO automated_search_history 
-                                    (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
-                                    RETURNING id
-                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
-                                result = cur.fetchone()
-                                search_id = result[0] if result else 0
-                                logging.info(f"[INSERT-DEBUG] Fallback 1 returned ID: {search_id}")
+                                    SELECT id FROM automated_search_history
+                                    WHERE location = %s 
+                                      AND search_type = %s
+                                      AND month_key = %s
+                                      AND DATE(search_date) = %s
+                                    ORDER BY search_date DESC
+                                    LIMIT 1
+                                """, (location, search_type, month_key, today))
+                                
+                                existing = cur.fetchone()
+                                
+                                if existing:
+                                    # UPDATE
+                                    search_id = existing[0]
+                                    cur.execute("""
+                                        UPDATE automated_search_history
+                                        SET prices_data = %s::jsonb,
+                                            supplier_data = %s::jsonb,
+                                            dias = %s,
+                                            price_count = %s,
+                                            search_date = CURRENT_TIMESTAMP
+                                        WHERE id = %s
+                                    """, (prices_json, supplier_data_json, dias_json, price_count, search_id))
+                                    logging.info(f"[FALLBACK-1 UPSERT] Updated ID: {search_id}")
+                                else:
+                                    # INSERT
+                                    cur.execute("""
+                                        INSERT INTO automated_search_history 
+                                        (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
+                                        VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb)
+                                        RETURNING id
+                                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
+                                    result = cur.fetchone()
+                                    search_id = result[0] if result else 0
+                                    logging.info(f"[FALLBACK-1 UPSERT] Inserted ID: {search_id}")
                             conn.commit()
                         except Exception as e2:
                             # Fallback to original schema
                             conn.rollback()
                             logging.warning(f"[FALLBACK-2] supplier_data column also not found, using minimal schema: {e2}")
-                            # NEW cursor after second rollback
+                            # NEW cursor after second rollback - UPSERT minimal schema
                             with conn.cursor() as cur:
+                                from datetime import datetime
+                                today = datetime.now().date()
+                                
+                                # Check if search exists (minimal schema)
                                 cur.execute("""
-                                    INSERT INTO automated_search_history 
-                                    (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
-                                    RETURNING id
-                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
-                                result = cur.fetchone()
-                                search_id = result[0] if result else 0
-                                logging.info(f"[INSERT-DEBUG] Fallback 2 returned ID: {search_id}")
+                                    SELECT id FROM automated_search_history
+                                    WHERE location = %s 
+                                      AND search_type = %s
+                                      AND month_key = %s
+                                      AND DATE(search_date) = %s
+                                    ORDER BY search_date DESC
+                                    LIMIT 1
+                                """, (location, search_type, month_key, today))
+                                
+                                existing = cur.fetchone()
+                                
+                                if existing:
+                                    # UPDATE
+                                    search_id = existing[0]
+                                    cur.execute("""
+                                        UPDATE automated_search_history
+                                        SET prices_data = %s::jsonb,
+                                            dias = %s,
+                                            price_count = %s,
+                                            search_date = CURRENT_TIMESTAMP
+                                        WHERE id = %s
+                                    """, (prices_json, dias_json, price_count, search_id))
+                                    logging.info(f"[FALLBACK-2 UPSERT] Updated ID: {search_id}")
+                                else:
+                                    # INSERT
+                                    cur.execute("""
+                                        INSERT INTO automated_search_history 
+                                        (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                        VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s)
+                                        RETURNING id
+                                    """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                    result = cur.fetchone()
+                                    search_id = result[0] if result else 0
+                                    logging.info(f"[FALLBACK-2 UPSERT] Inserted ID: {search_id}")
                             conn.commit()
                 else:
+                    # SQLite UPSERT logic
                     try:
+                        from datetime import datetime
+                        today = datetime.now().date().isoformat()
+                        
+                        # Check if search exists
                         cursor = conn.execute("""
-                            INSERT INTO automated_search_history 
-                            (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
-                        search_id = cursor.lastrowid
+                            SELECT id FROM automated_search_history
+                            WHERE location = ? 
+                              AND search_type = ?
+                              AND pickup_date = ?
+                              AND DATE(search_date) = ?
+                            ORDER BY search_date DESC
+                            LIMIT 1
+                        """, (location, search_type, pickup_date, today))
+                        
+                        existing = cursor.fetchone()
+                        
+                        if existing:
+                            # UPDATE
+                            search_id = existing[0]
+                            conn.execute("""
+                                UPDATE automated_search_history
+                                SET prices_data = ?,
+                                    supplier_data = ?,
+                                    dias = ?,
+                                    price_count = ?,
+                                    search_date = CURRENT_TIMESTAMP
+                                WHERE id = ?
+                            """, (prices_json, supplier_data_json, dias_json, price_count, search_id))
+                            logging.info(f"[SQLITE UPSERT] Updated ID: {search_id}")
+                        else:
+                            # INSERT
+                            cursor = conn.execute("""
+                                INSERT INTO automated_search_history 
+                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data, pickup_date)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
+                            search_id = cursor.lastrowid
+                            logging.info(f"[SQLITE UPSERT] Inserted ID: {search_id}")
                     except Exception as e:
-                        logging.warning(f"pickup_date or supplier_data column not found on save, using old schema: {e}")
+                        logging.warning(f"[SQLITE FALLBACK] pickup_date or supplier_data column not found: {e}")
                         try:
-                            # Try with just supplier_data
+                            # Fallback without pickup_date
+                            from datetime import datetime
+                            today = datetime.now().date().isoformat()
+                            
                             cursor = conn.execute("""
-                                INSERT INTO automated_search_history 
-                                (location, search_type, month_key, prices_data, dias, price_count, user_email, supplier_data)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json))
-                            search_id = cursor.lastrowid
-                        except:
-                            # Fallback to original schema
-                            cursor = conn.execute("""
-                                INSERT INTO automated_search_history 
-                                (location, search_type, month_key, prices_data, dias, price_count, user_email)
-                                VALUES (?, ?, ?, ?, ?, ?, ?)
-                            """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
-                            search_id = cursor.lastrowid
+                                SELECT id FROM automated_search_history
+                                WHERE location = ? 
+                                  AND search_type = ?
+                                  AND month_key = ?
+                                  AND DATE(search_date) = ?
+                                ORDER BY search_date DESC
+                                LIMIT 1
+                            """, (location, search_type, month_key, today))
+                            
+                            existing = cursor.fetchone()
+                            
+                            if existing:
+                                search_id = existing[0]
+                                conn.execute("""
+                                    UPDATE automated_search_history
+                                    SET prices_data = ?, dias = ?, price_count = ?, search_date = CURRENT_TIMESTAMP
+                                    WHERE id = ?
+                                """, (prices_json, dias_json, price_count, search_id))
+                                logging.info(f"[SQLITE FALLBACK UPSERT] Updated ID: {search_id}")
+                            else:
+                                cursor = conn.execute("""
+                                    INSERT INTO automated_search_history 
+                                    (location, search_type, month_key, prices_data, dias, price_count, user_email)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email))
+                                search_id = cursor.lastrowid
+                                logging.info(f"[SQLITE FALLBACK UPSERT] Inserted ID: {search_id}")
+                        except Exception as e2:
+                            logging.error(f"[SQLITE ERROR] {e2}")
+                            search_id = 0
                     conn.commit()
                 
                 logging.info(f"✅ Automated search saved: ID={search_id}, Type={search_type}, Prices={price_count}, Month={month_key}")
