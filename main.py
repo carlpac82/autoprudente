@@ -34442,6 +34442,19 @@ async def save_automated_search_history(request: Request):
         logging.error(f"❌ Error saving automated search: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+@app.get("/cleanup-ui", response_class=HTMLResponse)
+async def cleanup_ui_page(request: Request):
+    """Cleanup UI page for removing duplicate searches"""
+    try:
+        # Read the HTML file
+        import os
+        html_path = os.path.join(os.path.dirname(__file__), "cleanup_ui.html")
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error loading cleanup UI: {str(e)}</h1>", status_code=500)
+
 @app.post("/api/automated-search/cleanup-duplicates")
 async def cleanup_duplicate_searches(request: Request):
     """Clean up duplicate automated search entries - keeps only most recent per day"""
