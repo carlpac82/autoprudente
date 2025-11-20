@@ -34580,7 +34580,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
-                                LIMIT 200
+                                LIMIT 1000
                             """
                             params = (month_keys, location) if location else (month_keys,)
                             logging.info(f"📊 [HISTORY-FILTER] PostgreSQL query params: month_keys={len(month_keys)} months, location='{location if location else 'ALL'}'")
@@ -34598,7 +34598,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                                 FROM automated_search_history
                                 WHERE month_key = ANY(%s){location_filter}
                                 ORDER BY search_date DESC
-                                LIMIT 200
+                                LIMIT 1000
                             """
                             params = (month_keys, location) if location else (month_keys,)
                             cur.execute(query, params)
@@ -34613,7 +34613,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             FROM automated_search_history
                             WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
-                            LIMIT 200
+                            LIMIT 1000
                         """
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
@@ -34627,7 +34627,7 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                             FROM automated_search_history
                             WHERE month_key IN ({placeholders}){location_filter}
                             ORDER BY search_date DESC
-                            LIMIT 200
+                            LIMIT 1000
                         """
                         params = (*month_keys, location) if location else month_keys
                         rows = conn.execute(query, params).fetchall()
@@ -34690,6 +34690,61 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 
     except Exception as e:
         logging.error(f"❌ Error loading search history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/automated-search/debug-counts")
+async def debug_search_counts(request: Request):
+    """Debug endpoint to count searches by month and location"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if is_postgres:
+                    with conn.cursor() as cur:
+                        # Count by month_key, location, search_type
+                        cur.execute("""
+                            SELECT 
+                                month_key,
+                                location,
+                                search_type,
+                                COUNT(*) as count,
+                                MIN(search_date) as first_search,
+                                MAX(search_date) as last_search
+                            FROM automated_search_history
+                            GROUP BY month_key, location, search_type
+                            ORDER BY month_key DESC, location, search_type
+                        """)
+                        
+                        counts = []
+                        for row in cur.fetchall():
+                            counts.append({
+                                "month": row[0],
+                                "location": row[1],
+                                "type": row[2],
+                                "count": row[3],
+                                "first": str(row[4]),
+                                "last": str(row[5])
+                            })
+                        
+                        # Total count
+                        cur.execute("SELECT COUNT(*) FROM automated_search_history")
+                        total = cur.fetchone()[0]
+                        
+                        return JSONResponse({
+                            "ok": True,
+                            "total": total,
+                            "byMonth": counts
+                        })
+                else:
+                    return JSONResponse({"ok": False, "error": "PostgreSQL only"}, status_code=400)
+                    
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        logging.error(f"❌ [DEBUG-COUNTS] Error: {str(e)}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/automated-search/debug-table-structure")
