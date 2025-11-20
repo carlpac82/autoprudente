@@ -28799,7 +28799,7 @@ def _ensure_recent_searches_table():
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
                             # Column already exists - this is expected, not an error
-                            pass
+                            logging.debug("Column 'source' already exists (expected)")
                         else:
                             logging.warning(f"⚠️ Failed to add 'source' column: {e}")
 
@@ -29381,18 +29381,20 @@ async def save_recent_searches(request: Request):
                         conn.commit()
                         logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
+                        conn.rollback()  # MUST rollback to clear failed transaction
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
                             pass
                         else:
-                            logging.warning(f"Failed to add 'source' column to recent_searches: {e}")
-
+                            logging.warning(f"⚠️ Failed to add 'source' column to recent_searches: {e}")
+                    
                     # Ensure username column exists (migration from old 'user' column)
                     try:
                         conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
                         conn.commit()
                         logging.info("✅ Added 'username' column to recent_searches table")
                     except Exception as e:
+                        conn.rollback()  # MUST rollback to clear failed transaction
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
                             pass
@@ -29419,6 +29421,7 @@ async def save_recent_searches(request: Request):
                         conn.commit()
                         logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
+                        conn.rollback()  # MUST rollback to clear failed transaction
                         error_msg = str(e).lower()
                         if 'already exists' in error_msg or 'duplicate column' in error_msg:
                             pass
