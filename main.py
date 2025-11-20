@@ -34239,7 +34239,7 @@ async def save_automated_search_history(request: Request):
                                         search_date = CURRENT_TIMESTAMP
                                     WHERE id = %s
                                 """, (prices_json, supplier_data_json, dias_json, price_count, search_id))
-                                logging.info(f"[UPSERT] Updated existing search ID: {search_id}")
+                                logging.info(f"✅ [UPSERT-UPDATE] ID={search_id}, Type={search_type}, Location={location}, Month={month_key}, PickupDate={pickup_date}")
                             else:
                                 # INSERT new search
                                 cur.execute("""
@@ -34250,7 +34250,7 @@ async def save_automated_search_history(request: Request):
                                 """, (location, search_type, month_key, prices_json, dias_json, price_count, user_email, supplier_data_json, pickup_date))
                                 result = cur.fetchone()
                                 search_id = result[0] if result else 0
-                                logging.info(f"[UPSERT] Inserted new search ID: {search_id}")
+                                logging.info(f"✅ [UPSERT-INSERT] ID={search_id}, Type={search_type}, Location={location}, Month={month_key}, PickupDate={pickup_date}")
                         conn.commit()
                     except Exception as e:
                         # Column doesn't exist - rollback and use old schema
@@ -34727,6 +34727,85 @@ async def get_automated_search_history(request: Request, months: int = 24, locat
                 
     except Exception as e:
         logging.error(f"❌ Error loading search history: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/automated-search/debug-search-types")
+async def debug_search_types(request: Request, month: str = None):
+    """Debug endpoint to see search_type details for a specific month"""
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                # Check if PostgreSQL
+                if conn.__class__.__name__ == 'PostgreSQLConnectionWrapper':
+                    is_postgres = True
+                elif hasattr(conn, '_conn'):
+                    is_postgres = True
+                else:
+                    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+                
+                if not is_postgres:
+                    return JSONResponse({"ok": False, "error": "Only works with PostgreSQL"}, status_code=400)
+                
+                with conn.cursor() as cur:
+                    if month:
+                        # Show detailed entries for a specific month
+                        cur.execute("""
+                            SELECT id, location, search_type, search_date, 
+                                   month_key, pickup_date, price_count
+                            FROM automated_search_history
+                            WHERE month_key = %s
+                            ORDER BY search_date DESC
+                        """, (month,))
+                    else:
+                        # Show summary by month
+                        cur.execute("""
+                            SELECT month_key, search_type, COUNT(*) as count
+                            FROM automated_search_history
+                            GROUP BY month_key, search_type
+                            ORDER BY month_key DESC, search_type
+                        """)
+                    
+                    rows = cur.fetchall()
+                    
+                    if month:
+                        # Return detailed entries
+                        entries = []
+                        for row in rows:
+                            entries.append({
+                                'id': row[0],
+                                'location': row[1],
+                                'search_type': row[2],
+                                'search_date': str(row[3]),
+                                'month_key': row[4],
+                                'pickup_date': row[5],
+                                'price_count': row[6]
+                            })
+                        return JSONResponse({
+                            "ok": True,
+                            "month": month,
+                            "total": len(entries),
+                            "entries": entries
+                        })
+                    else:
+                        # Return summary
+                        summary = {}
+                        for row in rows:
+                            month_key, search_type, count = row
+                            if month_key not in summary:
+                                summary[month_key] = {}
+                            summary[month_key][search_type] = count
+                        
+                        return JSONResponse({
+                            "ok": True,
+                            "summary": summary
+                        })
+                        
+            finally:
+                conn.close()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/automated-search/debug-counts")

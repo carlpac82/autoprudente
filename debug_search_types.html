@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Search Types</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .summary {
+            margin-top: 20px;
+        }
+        .month-block {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .month-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .type-count {
+            display: inline-block;
+            padding: 4px 12px;
+            margin-right: 10px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+        .type-auto {
+            background: #ffc107;
+            color: #333;
+        }
+        .type-current {
+            background: #17a2b8;
+            color: white;
+        }
+        .entries-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        .entries-table th {
+            background: #343a40;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        .entries-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .entries-table tr:hover {
+            background: #f8f9fa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .badge-auto {
+            background: #ffc107;
+            color: #333;
+        }
+        .badge-current {
+            background: #17a2b8;
+            color: white;
+        }
+        .status {
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Search Types</h1>
+        
+        <div class="controls">
+            <button onclick="loadSummary()">Ver Resumo por Mês</button>
+            <input type="text" id="monthInput" placeholder="ex: 2025-11" value="">
+            <button onclick="loadMonth()">Ver Detalhes do Mês</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function loadSummary() {
+            showStatus('Carregando resumo...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/automated-search/debug-search-types`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    displaySummary(data.summary);
+                    showStatus('✅ Resumo carregado com sucesso', 'success');
+                } else {
+                    showStatus('❌ Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Erro de conexão: ' + error.message, 'error');
+            }
+        }
+
+        async function loadMonth() {
+            const month = document.getElementById('monthInput').value.trim();
+            if (!month) {
+                showStatus('⚠️ Por favor insira um mês (ex: 2025-11)', 'error');
+                return;
+            }
+
+            showStatus(`Carregando detalhes de ${month}...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/automated-search/debug-search-types?month=${month}`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    displayEntries(data);
+                    showStatus(`✅ ${data.total} entradas encontradas para ${month}`, 'success');
+                } else {
+                    showStatus('❌ Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Erro de conexão: ' + error.message, 'error');
+            }
+        }
+
+        function displaySummary(summary) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (Object.keys(summary).length === 0) {
+                resultsDiv.innerHTML = '<p>Nenhum dado encontrado.</p>';
+                return;
+            }
+
+            let html = '<div class="summary"><h3>Resumo por Mês</h3>';
+            
+            for (const [month, types] of Object.entries(summary)) {
+                const autoCount = types.automated || 0;
+                const currentCount = types.current || 0;
+                const total = autoCount + currentCount;
+                
+                html += `
+                    <div class="month-block">
+                        <div class="month-title">${month} (${total} total)</div>
+                        <span class="type-count type-auto">AUTO: ${autoCount}</span>
+                        <span class="type-count type-current">CURRENT: ${currentCount}</span>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function displayEntries(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.entries.length === 0) {
+                resultsDiv.innerHTML = `<p>Nenhuma entrada encontrada para ${data.month}.</p>`;
+                return;
+            }
+
+            let html = `
+                <h3>Detalhes de ${data.month} (${data.total} entradas)</h3>
+                <table class="entries-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Location</th>
+                            <th>Type</th>
+                            <th>Search Date</th>
+                            <th>Pickup Date</th>
+                            <th>Prices</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (const entry of data.entries) {
+                const badgeClass = entry.search_type === 'automated' ? 'badge-auto' : 'badge-current';
+                html += `
+                    <tr>
+                        <td>${entry.id}</td>
+                        <td>${entry.location}</td>
+                        <td><span class="badge ${badgeClass}">${entry.search_type.toUpperCase()}</span></td>
+                        <td>${entry.search_date}</td>
+                        <td>${entry.pickup_date || '-'}</td>
+                        <td>${entry.price_count}</td>
+                    </tr>
+                `;
+            }
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status ' + type;
+            statusDiv.textContent = message;
+        }
+
+        // Auto-load summary on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSummary();
+        });
+    </script>
+</body>
+</html>
