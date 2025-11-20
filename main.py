@@ -34455,6 +34455,19 @@ async def cleanup_ui_page(request: Request):
     except Exception as e:
         return HTMLResponse(content=f"<h1>Error loading cleanup UI: {str(e)}</h1>", status_code=500)
 
+@app.get("/debug-search-types", response_class=HTMLResponse)
+async def debug_search_types_page(request: Request):
+    """Debug page to inspect search_type distribution by month"""
+    try:
+        # Read the HTML file
+        import os
+        html_path = os.path.join(os.path.dirname(__file__), "debug_search_types.html")
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error loading debug UI: {str(e)}</h1>", status_code=500)
+
 @app.post("/api/automated-search/cleanup-duplicates")
 async def cleanup_duplicate_searches(request: Request):
     """Clean up duplicate automated search entries - keeps only most recent per day"""
