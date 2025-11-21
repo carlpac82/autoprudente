@@ -20747,11 +20747,36 @@ async def get_vehicle_photo(vehicle_name: str):
                         }
                     )
                 else:
-                    # Retornar imagem placeholder SVG
-                    svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" width="60" height="40">
-                        <rect width="60" height="40" fill="#e5e7eb"/>
-                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#999" font-size="12">🚗</text>
-                    </svg>'''
+                    # Retornar imagem placeholder SVG com silhueta de carro
+                    svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <style>
+      .car-placeholder {
+        fill: #e0e0e0;
+      }
+    </style>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#f5f5f5"/>
+  
+  <!-- Car silhouette -->
+  <g class="car-placeholder">
+    <!-- Car body -->
+    <path d="M 140 240 C 120 220, 100 200, 100 180 L 160 160 L 200 140 L 280 140 L 320 140 L 360 160 L 420 180 C 420 200, 400 220, 380 240 L 380 300 C 400 300, 410 310, 410 330 C 410 350, 400 360, 380 360 L 140 360 C 120 360, 110 350, 110 330 C 110 310, 120 300, 140 300 L 140 240 Z"/>
+    
+    <!-- Front wheel -->
+    <circle cx="170" cy="330" r="40" fill="#f5f5f5"/>
+    <circle cx="170" cy="330" r="25" fill="#e0e0e0"/>
+    
+    <!-- Rear wheel -->
+    <circle cx="350" cy="330" r="40" fill="#f5f5f5"/>
+    <circle cx="350" cy="330" r="25" fill="#e0e0e0"/>
+    
+    <!-- Windows -->
+    <path d="M 180 170 L 220 155 L 260 155 L 280 170 L 280 200 L 180 200 Z" fill="#f5f5f5" opacity="0.5"/>
+    <path d="M 290 170 L 310 155 L 350 155 L 370 170 L 370 200 L 290 200 Z" fill="#f5f5f5" opacity="0.5"/>
+  </g>
+</svg>'''
                     return Response(
                         content=svg_placeholder,
                         media_type="image/svg+xml"
@@ -20762,14 +20787,83 @@ async def get_vehicle_photo(vehicle_name: str):
         import traceback
         print(f"Erro ao buscar foto: {traceback.format_exc()}")
         # Retornar placeholder em caso de erro
-        svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" width="60" height="40">
-            <rect width="60" height="40" fill="#e5e7eb"/>
-            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#999" font-size="12">🚗</text>
-        </svg>'''
+        svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <style>
+      .car-placeholder {
+        fill: #e0e0e0;
+      }
+    </style>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#f5f5f5"/>
+  
+  <!-- Car silhouette -->
+  <g class="car-placeholder">
+    <!-- Car body -->
+    <path d="M 140 240 C 120 220, 100 200, 100 180 L 160 160 L 200 140 L 280 140 L 320 140 L 360 160 L 420 180 C 420 200, 400 220, 380 240 L 380 300 C 400 300, 410 310, 410 330 C 410 350, 400 360, 380 360 L 140 360 C 120 360, 110 350, 110 330 C 110 310, 120 300, 140 300 L 140 240 Z"/>
+    
+    <!-- Front wheel -->
+    <circle cx="170" cy="330" r="40" fill="#f5f5f5"/>
+    <circle cx="170" cy="330" r="25" fill="#e0e0e0"/>
+    
+    <!-- Rear wheel -->
+    <circle cx="350" cy="330" r="40" fill="#f5f5f5"/>
+    <circle cx="350" cy="330" r="25" fill="#e0e0e0"/>
+    
+    <!-- Windows -->
+    <path d="M 180 170 L 220 155 L 260 155 L 280 170 L 280 200 L 180 200 Z" fill="#f5f5f5" opacity="0.5"/>
+    <path d="M 290 170 L 310 155 L 350 155 L 370 170 L 370 200 L 290 200 Z" fill="#f5f5f5" opacity="0.5"/>
+  </g>
+</svg>'''
         return Response(
             content=svg_placeholder,
             media_type="image/svg+xml"
         )
+
+@app.get("/api/vehicles/placeholder.svg")
+async def get_vehicle_placeholder():
+    """Retorna imagem placeholder para veículos sem foto"""
+    from fastapi.responses import Response
+    
+    # SVG placeholder melhorado com silhueta de carro
+    svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <style>
+      .car-placeholder {
+        fill: #e0e0e0;
+      }
+    </style>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#f5f5f5"/>
+  
+  <!-- Car silhouette -->
+  <g class="car-placeholder">
+    <!-- Car body -->
+    <path d="M 140 240 C 120 220, 100 200, 100 180 L 160 160 L 200 140 L 280 140 L 320 140 L 360 160 L 420 180 C 420 200, 400 220, 380 240 L 380 300 C 400 300, 410 310, 410 330 C 410 350, 400 360, 380 360 L 140 360 C 120 360, 110 350, 110 330 C 110 310, 120 300, 140 300 L 140 240 Z"/>
+    
+    <!-- Front wheel -->
+    <circle cx="170" cy="330" r="40" fill="#f5f5f5"/>
+    <circle cx="170" cy="330" r="25" fill="#e0e0e0"/>
+    
+    <!-- Rear wheel -->
+    <circle cx="350" cy="330" r="40" fill="#f5f5f5"/>
+    <circle cx="350" cy="330" r="25" fill="#e0e0e0"/>
+    
+    <!-- Windows -->
+    <path d="M 180 170 L 220 155 L 260 155 L 280 170 L 280 200 L 180 200 Z" fill="#f5f5f5" opacity="0.5"/>
+    <path d="M 290 170 L 310 155 L 350 155 L 370 170 L 370 200 L 290 200 Z" fill="#f5f5f5" opacity="0.5"/>
+  </g>
+</svg>'''
+    
+    return Response(
+        content=svg_placeholder,
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "public, max-age=86400"
+        }
+    )
 
 @app.get("/api/vehicles/{vehicle_name}/photo/metadata")
 async def get_vehicle_photo_metadata(vehicle_name: str, request: Request):
