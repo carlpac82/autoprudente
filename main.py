@@ -16600,9 +16600,10 @@ async def save_vehicle(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                # Detectar tipo de BD
-                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                # Detectar tipo de BD - método mais robusto
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions' or 'psycopg2' in str(type(con))
                 param_placeholder = "%s" if is_postgres else "?"
+                logging.info(f"[VEHICLE-SAVE] DB type: {con.__class__.__module__}, is_postgres={is_postgres}")
                 
                 # Verificar se já existe
                 if is_postgres:
@@ -20168,9 +20169,10 @@ async def save_vehicle_name_override(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                is_postgres = con.__class__.__module__ == 'psycopg2.extensions'
+                is_postgres = con.__class__.__module__ == 'psycopg2.extensions' or 'psycopg2' in str(type(con))
                 now_func = "NOW()" if is_postgres else "datetime('now')"
                 param_placeholder = "%s" if is_postgres else "?"
+                logging.info(f"[NAME-OVERRIDE] DB type: {con.__class__.__module__}, is_postgres={is_postgres}")
                 
                 if is_postgres:
                     with con.cursor() as cur:
