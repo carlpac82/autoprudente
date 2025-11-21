@@ -4975,6 +4975,11 @@
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
                     console.log(`[SAVE-HISTORY] CALLING saveAutomatedPriceHistory with supplier data...`);
                     
+                    // ⚠️ CRITICAL: Store allCarsByDay for future edits
+                    // This allows auto-save and manual saves to preserve visual card data
+                    window.currentSupplierData = allCarsByDay;
+                    console.log(`[SAVE-HISTORY] 💾 Stored currentSupplierData with ${Object.keys(allCarsByDay).length} days`);
+                    
                     // Save history for THIS specific month - PASS pickupDate explicitly!
                     const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'automated', allCarsByDay, pickupDate);
                     console.log(`[SAVE-HISTORY] COMPLETED: Saved ${savedCount} automated prices to history for month ${currentMonthOrDate} with pickupDate ${pickupDate}`);
@@ -6876,11 +6881,19 @@
                 }
                 
                 // Save with current timestamp and supplier data
-                const supplierData = window.currentSupplierData || {};
+                // ⚠️ CRITICAL: Preserve original supplierData to avoid overwriting with empty object
+                // Priority: 1) preserved from edit, 2) current search, 3) empty
+                const supplierData = window.originalSupplierDataForEdit || window.currentSupplierData || {};
+                
+                console.log('[AUTO-SAVE] Using supplierData:', {
+                    source: window.originalSupplierDataForEdit ? 'preserved from edit' : (window.currentSupplierData ? 'current search' : 'empty'),
+                    keys: Object.keys(supplierData).length
+                });
+                
                 const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'current', supplierData);
                 
                 if (savedCount > 0) {
-                    console.log(`[AUTO-SAVE] ✅ Saved ${savedCount} prices automatically`);
+                    console.log(`[AUTO-SAVE] ✅ Saved ${savedCount} prices automatically with ${Object.keys(supplierData).length} supplier data keys`);
                     // Silent save - no notification needed
                 } else {
                     console.error('[AUTO-SAVE] ❌ Failed to save');
