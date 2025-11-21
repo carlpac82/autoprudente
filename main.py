@@ -1499,9 +1499,34 @@ def _db_connect():
     else:
         return sqlite3.connect(str(DB_PATH))
 
-def _convert_query_for_db(query, conn):
+def _is_postgresql_connection(conn):
+    """
+    Detecta se a conexão é PostgreSQL de forma robusta.
+    Usa múltiplos métodos para garantir detecção correta.
+    """
+    # Método 1: Verificar DATABASE_URL (Render.com define isto automaticamente)
+    import os
+    database_url = os.environ.get('DATABASE_URL', '')
+    if database_url.startswith('postgresql://') or database_url.startswith('postgres://'):
+        return True
+    
+    # Método 2: Verificar módulo da conexão
+    if conn.__class__.__module__ == 'psycopg2.extensions':
+        return True
+    
+    # Método 3: Verificar tipo da conexão como string
+    if 'psycopg2' in str(type(conn)):
+        return True
+    
+    # Método 4: Verificar se tem método cursor (PostgreSQL)
+    if hasattr(conn, 'cursor') and callable(getattr(conn, 'cursor')):
+        return True
+    
+    return False
+
+def _convert_query_for_db(query, conn, params=None):
     """Convert SQLite query to PostgreSQL if needed"""
-    is_postgres = conn.__class__.__module__ == 'psycopg2.extensions'
+    is_postgres = _is_postgresql_connection(conn)
     if is_postgres:
         # Convert datetime('now') to NOW()
         query = query.replace("datetime('now')", "NOW()")
@@ -16600,10 +16625,10 @@ async def save_vehicle(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                # Detectar tipo de BD - método mais robusto
-                is_postgres = con.__class__.__module__ == 'psycopg2.extensions' or 'psycopg2' in str(type(con))
+                # Detectar tipo de BD usando helper robusta
+                is_postgres = _is_postgresql_connection(con)
                 param_placeholder = "%s" if is_postgres else "?"
-                logging.info(f"[VEHICLE-SAVE] DB type: {con.__class__.__module__}, is_postgres={is_postgres}")
+                logging.info(f"[VEHICLE-SAVE] DB type: {con.__class__.__module__}, is_postgres={is_postgres}, DATABASE_URL exists: {bool(os.environ.get('DATABASE_URL'))}")
                 
                 # Verificar se já existe
                 if is_postgres:
@@ -20169,10 +20194,10 @@ async def save_vehicle_name_override(request: Request):
         with _db_lock:
             con = _db_connect()
             try:
-                is_postgres = con.__class__.__module__ == 'psycopg2.extensions' or 'psycopg2' in str(type(con))
+                is_postgres = _is_postgresql_connection(con)
                 now_func = "NOW()" if is_postgres else "datetime('now')"
                 param_placeholder = "%s" if is_postgres else "?"
-                logging.info(f"[NAME-OVERRIDE] DB type: {con.__class__.__module__}, is_postgres={is_postgres}")
+                logging.info(f"[NAME-OVERRIDE] DB type: {con.__class__.__module__}, is_postgres={is_postgres}, DATABASE_URL exists: {bool(os.environ.get('DATABASE_URL'))}")
                 
                 if is_postgres:
                     with con.cursor() as cur:
