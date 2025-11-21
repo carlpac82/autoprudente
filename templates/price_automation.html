@@ -4502,6 +4502,13 @@
             // Reset stop flag and set generating state
             stopGenerateFlag = false;
             isGenerating = true;
+            
+            // 🔄 CRITICAL: Clear preserved data from previous edits
+            // This ensures a NEW search doesn't reuse old search parameters
+            window.originalSupplierDataForEdit = null;
+            window.originalSearchType = null;
+            window.originalPickupDate = null;
+            console.log('[NEW-SEARCH] 🆕 Cleared preserved data - starting fresh search');
 
             const btn = document.getElementById('btnGenerateAuto');
             const generateIcon = btn.querySelector('.generate-icon');
@@ -6609,10 +6616,16 @@
             window.editingHistoryData = historyData;
             window.currentHistoryTimestamp = historyData.timestamp || new Date().toISOString();
             
-            // ⚠️ CRITICAL: Preserve original supplierData for re-saving
-            // This prevents losing visual card data when editing and saving again
+            // ⚠️ CRITICAL: Preserve original supplierData, searchType, and pickupDate for re-saving
+            // This prevents losing visual card data AND ensures updates go to same version
             window.originalSupplierDataForEdit = historyData.supplierData || {};
-            console.log('[HISTORY] 💾 Preserved original supplierData:', Object.keys(window.originalSupplierDataForEdit).length, 'keys');
+            window.originalSearchType = historyData.search_type || 'automated';
+            window.originalPickupDate = historyData.pickup_date || null;
+            console.log('[HISTORY] 💾 Preserved original data:', {
+                supplierDataKeys: Object.keys(window.originalSupplierDataForEdit).length,
+                searchType: window.originalSearchType,
+                pickupDate: window.originalPickupDate
+            });
             
             // Switch to automated prices tab
             switchTab('automated');
@@ -6881,16 +6894,20 @@
                 }
                 
                 // Save with current timestamp and supplier data
-                // ⚠️ CRITICAL: Preserve original supplierData to avoid overwriting with empty object
+                // ⚠️ CRITICAL: Preserve original supplierData, searchType, pickupDate to avoid duplicates
                 // Priority: 1) preserved from edit, 2) current search, 3) empty
                 const supplierData = window.originalSupplierDataForEdit || window.currentSupplierData || {};
+                const searchType = window.originalSearchType || 'automated'; // Use original type!
+                const pickupDate = window.originalPickupDate || null;
                 
-                console.log('[AUTO-SAVE] Using supplierData:', {
-                    source: window.originalSupplierDataForEdit ? 'preserved from edit' : (window.currentSupplierData ? 'current search' : 'empty'),
-                    keys: Object.keys(supplierData).length
+                console.log('[AUTO-SAVE] Using preserved data:', {
+                    supplierDataSource: window.originalSupplierDataForEdit ? 'from edit' : (window.currentSupplierData ? 'current' : 'empty'),
+                    supplierDataKeys: Object.keys(supplierData).length,
+                    searchType: searchType,
+                    pickupDate: pickupDate
                 });
                 
-                const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'current', supplierData);
+                const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, searchType, supplierData, pickupDate);
                 
                 if (savedCount > 0) {
                     console.log(`[AUTO-SAVE] ✅ Saved ${savedCount} prices automatically with ${Object.keys(supplierData).length} supplier data keys`);

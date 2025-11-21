@@ -34274,19 +34274,19 @@ async def save_automated_search_history(request: Request):
                     # This prevents creating hundreds of duplicate versions when editing prices
                     try:
                         with conn.cursor() as cur:
-                            # Check if a search already exists for today with same parameters
+                            # Check if a search already exists with same parameters
+                            # FIXED: Removed DATE(search_date) check to allow updating old searches
+                            # Now only checks: location, search_type, pickup_date
                             from datetime import datetime
-                            today = datetime.now().date()
                             
                             cur.execute("""
                                 SELECT id FROM automated_search_history
                                 WHERE location = %s 
                                   AND search_type = %s
                                   AND pickup_date = %s
-                                  AND DATE(search_date) = %s
                                 ORDER BY search_date DESC
                                 LIMIT 1
-                            """, (location, search_type, pickup_date, today))
+                            """, (location, search_type, pickup_date))
                             
                             existing = cur.fetchone()
                             
