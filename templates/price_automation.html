@@ -6600,9 +6600,14 @@
             console.log('[HISTORY] 🔍 historyData.supplierData exists?', !!historyData.supplierData);
             console.log('[HISTORY] 🔍 historyData.supplierData type:', typeof historyData.supplierData);
             
-            // Store original data for reference (incluindo timestamp)
+            // Store original data for reference (incluindo timestamp E supplierData)
             window.editingHistoryData = historyData;
             window.currentHistoryTimestamp = historyData.timestamp || new Date().toISOString();
+            
+            // ⚠️ CRITICAL: Preserve original supplierData for re-saving
+            // This prevents losing visual card data when editing and saving again
+            window.originalSupplierDataForEdit = historyData.supplierData || {};
+            console.log('[HISTORY] 💾 Preserved original supplierData:', Object.keys(window.originalSupplierDataForEdit).length, 'keys');
             
             // Switch to automated prices tab
             switchTab('automated');
@@ -6916,7 +6921,15 @@
             
             // Save as new version with current timestamp, including supplier data
             // Use 'current' for manual edits/searches, not 'automated' (which is for scheduler)
-            const supplierData = window.currentSupplierData || {};
+            // ⚠️ CRITICAL: Use preserved supplierData from original version (if editing)
+            // This prevents losing visual card data when re-saving edited versions
+            const supplierData = window.originalSupplierDataForEdit || window.currentSupplierData || {};
+            
+            console.log('[SAVE-EDIT] Using supplierData:', {
+                source: window.originalSupplierDataForEdit ? 'preserved from edit' : (window.currentSupplierData ? 'current search' : 'empty'),
+                keys: Object.keys(supplierData).length
+            });
+            
             const savedCount = await saveAutomatedPriceHistory(automatedPricesByGroup, dias, 'current', supplierData);
             
             if (savedCount > 0) {
@@ -6934,9 +6947,10 @@
                 // Hide Save button after successful save
                 hideSaveEditedButton();
                 
-                // Clear editing flag and timestamp
+                // Clear editing flag, timestamp, and preserved supplierData
                 window.editingHistoryData = null;
                 window.currentHistoryTimestamp = null;
+                window.originalSupplierDataForEdit = null;
                 
                 // Clear blue highlighting from cells
                 document.querySelectorAll('input.bg-blue-50').forEach(input => {
