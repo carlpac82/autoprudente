@@ -6620,10 +6620,47 @@
             
             // DEBUG: Ver estrutura COMPLETA do supplierData
             console.log('[HISTORY] 🔍 FULL supplierData structure:', JSON.stringify(supplierData, null, 2).substring(0, 2000));
+            console.log('[HISTORY] 🔍 supplierData type:', typeof supplierData);
+            console.log('[HISTORY] 🔍 supplierData is null?', supplierData === null);
+            console.log('[HISTORY] 🔍 supplierData is empty object?', supplierData && Object.keys(supplierData).length === 0);
+            
+            // If supplierData is in GROUP→DAY→CARS format, convert to DAY→CARS for visual cards
+            let supplierDataForCards = supplierData;
+            
+            if (supplierData && Object.keys(supplierData).length > 0) {
+                const firstKey = Object.keys(supplierData)[0];
+                const isGroupFormat = isNaN(parseInt(firstKey)); // If first key is not a number, it's a group
+                
+                if (isGroupFormat) {
+                    console.log('[HISTORY] 🔄 Converting GROUP→DAY→CARS to DAY→CARS format for visual cards');
+                    supplierDataForCards = {};
+                    
+                    // Convert: {B1: {7: [...], 14: [...]}} → {7: [...], 14: [...]}
+                    Object.keys(supplierData).forEach(grupo => {
+                        const daysData = supplierData[grupo];
+                        Object.keys(daysData).forEach(day => {
+                            const dayInt = parseInt(day);
+                            if (!supplierDataForCards[dayInt]) {
+                                supplierDataForCards[dayInt] = [];
+                            }
+                            const cars = daysData[day];
+                            if (Array.isArray(cars)) {
+                                supplierDataForCards[dayInt].push(...cars);
+                            }
+                        });
+                    });
+                    
+                    console.log('[HISTORY] ✅ Converted to DAY→CARS:', Object.keys(supplierDataForCards).length, 'days');
+                } else {
+                    console.log('[HISTORY] ✅ supplierData already in DAY→CARS format');
+                }
+            } else {
+                console.warn('[HISTORY] ⚠️ supplierData is EMPTY - visual cards will not show');
+            }
             
             // Update global dias and supplier data for visual cards
             window.dias = dias;
-            window.currentSupplierData = supplierData;
+            window.currentSupplierData = supplierDataForCards;
             
             // Sync selected days for Automated Prices with history days
             // This ensures that non-default days like 8, 9, 31, 60

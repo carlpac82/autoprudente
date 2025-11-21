@@ -34763,10 +34763,27 @@ async def get_search_version(version_id: int):
                 
                 if has_supplier_data:
                     row_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count, supplier_data = row
+                    
+                    # DEBUG: Log raw supplier_data
+                    logging.info(f"🔍 [VERSION-LOAD] Raw supplier_data type: {type(supplier_data)}")
+                    if supplier_data:
+                        if isinstance(supplier_data, str):
+                            logging.info(f"🔍 [VERSION-LOAD] supplier_data string length: {len(supplier_data)}")
+                            logging.info(f"🔍 [VERSION-LOAD] supplier_data preview: {supplier_data[:200] if len(supplier_data) > 200 else supplier_data}")
+                        elif isinstance(supplier_data, dict):
+                            logging.info(f"🔍 [VERSION-LOAD] supplier_data keys: {list(supplier_data.keys())[:10]}")
+                            logging.info(f"🔍 [VERSION-LOAD] supplier_data size: {len(supplier_data)} keys")
+                        else:
+                            logging.info(f"🔍 [VERSION-LOAD] supplier_data value: {supplier_data}")
+                    else:
+                        logging.warning(f"⚠️ [VERSION-LOAD] supplier_data is EMPTY/NULL in database for ID {version_id}")
+                    
                     supplier_data_parsed = parse_json(supplier_data, {})
+                    logging.info(f"🔍 [VERSION-LOAD] Parsed supplier_data: {len(supplier_data_parsed)} keys")
                 else:
                     row_id, row_location, search_type, search_date, month_key, prices_data, dias, price_count = row
                     supplier_data_parsed = {}
+                    logging.warning(f"⚠️ [VERSION-LOAD] No supplier_data column available for ID {version_id}")
                 
                 version_data = {
                     'id': row_id,
@@ -34780,7 +34797,7 @@ async def get_search_version(version_id: int):
                     'supplierData': supplier_data_parsed
                 }
                 
-                logging.info(f"✅ [VERSION-LOAD] Loaded version {version_id}: {price_count} prices")
+                logging.info(f"✅ [VERSION-LOAD] Loaded version {version_id}: {price_count} prices, supplierData keys: {len(supplier_data_parsed)}")
                 return JSONResponse({"ok": True, "version": version_data})
                 
             finally:
