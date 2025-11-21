@@ -34669,11 +34669,11 @@ async def cleanup_duplicate_searches(request: Request):
 async def get_automated_search_history_light(request: Request, months: int = 24, location: str = None):
     """Get lightweight history list (metadata only, no heavy JSONB data)
     
-    Returns only: id, location, search_date, search_type, price_count, month_key
-    Does NOT return: prices_data, supplier_data, dias
+    Returns: id, location, search_date, search_type, price_count, month_key, dias
+    Does NOT return: prices_data, supplier_data (lazy-loaded on demand)
     
     This enables fast loading of 24 months of history without the performance cost.
-    Frontend will lazy-load full data when user clicks on a specific version.
+    Frontend will lazy-load full prices/supplier data when user clicks on a specific version.
     """
     try:
         from datetime import datetime
@@ -34703,7 +34703,7 @@ async def get_automated_search_history_light(request: Request, months: int = 24,
                 if is_postgres:
                     with conn.cursor() as cur:
                         query = f"""
-                            SELECT id, location, search_type, search_date, month_key, price_count
+                            SELECT id, location, search_type, search_date, month_key, price_count, dias
                             FROM automated_search_history
                             WHERE month_key = ANY(%s){location_filter}
                             ORDER BY search_date DESC
@@ -34715,7 +34715,7 @@ async def get_automated_search_history_light(request: Request, months: int = 24,
                 else:
                     placeholders = ','.join(['?' for _ in month_keys])
                     query = f"""
-                        SELECT id, location, search_type, search_date, month_key, price_count
+                        SELECT id, location, search_type, search_date, month_key, price_count, dias
                         FROM automated_search_history
                         WHERE month_key IN ({placeholders}){location_filter}
                         ORDER BY search_date DESC
@@ -34726,7 +34726,16 @@ async def get_automated_search_history_light(request: Request, months: int = 24,
                 
                 # Group by month_key and search_type
                 for row in rows:
-                    row_id, row_location, search_type, search_date, month_key, price_count = row
+                    row_id, row_location, search_type, search_date, month_key, price_count, dias_json = row
+                    
+                    # Parse dias JSON
+                    import json
+                    dias_array = []
+                    if dias_json:
+                        try:
+                            dias_array = json.loads(dias_json) if isinstance(dias_json, str) else dias_json
+                        except:
+                            dias_array = []
                     
                     if month_key not in history:
                         history[month_key] = {}
@@ -34740,7 +34749,8 @@ async def get_automated_search_history_light(request: Request, months: int = 24,
                         'date': search_date,  # Alias for frontend compatibility
                         'search_type': search_type,  # Add search_type to each entry
                         'priceCount': price_count,
-                        # Note: prices, dias, supplierData will be loaded on-demand
+                        'dias': dias_array,  # Include dias array
+                        # Note: prices, supplierData will be loaded on-demand
                     })
                 
                 logging.info(f"✅ [HISTORY-LIGHT] Returned {len(rows)} lightweight entries for {len(month_keys)} months")
