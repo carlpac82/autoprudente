@@ -20759,14 +20759,22 @@ async def get_vehicle_photo(vehicle_name: str):
                 con.close()
     except Exception as e:
         import traceback
-        print(f"Erro ao buscar foto: {traceback.format_exc()}")
-        # Retornar placeholder em caso de erro - IMAGEM ORIGINAL DO UTILIZADOR
-        import base64
-        placeholder_base64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAAACXBIWXMAAAsTAAALEwEAmpwYAAAF8UlEQVR4nO2dW4hVVRzGf+M4Y2pqNl5KS7QyK4ogKqiHCqKbRVFBRBdKL0KvRfTSQw9REVF0o4dKCCqICqKwILpQZBdLKy0vy8zLqDVe0nS8jNPD/x/Onjln5uyZvc9Ze+3z/eAw55yz9t7r7P3ttb5vrb0hIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiImJqcQZwJnBmVkdgFnB2VnOAc4CzsjoDmJX9DvA34CDwF3AAOADsB/YBfwL7svr/fXdf1v5g1v5g9rujXVvbA1nf+4E/gH1Z++NZ+yNZ+6NZ+39k7Y9lfXfWd1fd38f7/rSPiIiIiB6yAPgYuAW4Gpibvb+h2gYsB14EPgc2Ar8CO4Dt1f/f0YHxHAY2VGPrHOPGaux9WR97sjGdbzwR0XUuAd4BbgYuA84HFlf1IrAUuBR4GXgd+Br4EVgL/Ab8nf1uNbAVWA98B3wFvAa8BDwE3AvcBtwCXJ/1fTVwTdb3zcDdwKPAC8AbwJfAT8Av2Tg2Zf1tzPrr9P1L1v+vWf+bs2ugbdprqx0REREB8B7wRLbYr6yq3XcXm3vVVn1+FfAk8AHwM+CDrKYBp/doPOdUY+sc4+as72cqpvYg8CnwMnA/cAtwI3A1cBmwDJj/rxoZWQ8sAa4EbgLuAx6sPnfuk/8n8HnWx6ds3s+XEREREQALgReBG4Czqv/fzeZGwY/VDcpPgfeAp4HbgRup7l5p/8Wes/m+G7S9pnp/q+o7Znv3GHAHcG/Vdme1uBfX7P+sbDwdYzuuuqv9GXgH+BD4GNgFnOr8/0VEREREhEfnbvcQm/cdndV+b9h8f7sKeIzNt/X+oe/c+TruZ1cDD7N5X+pUUERERETkgFuBd4HrqDZBgUuzxd45tjsP+Ceb9yW/qp7vGvzBPkO1Of1I9X5Hdew2yne9ztdX70VERERkQec++o8WawO1fey2dtzHfgI+Bt4CXgWeqx6BPgQ8Xj1yfbZqe7xq+1j1VPWp6l2/p6v3H6g+93P1ns9Vn/td9b7fVJ/d0OD7/gG8CbwKPJ+Np6P20dZzo/G8Ffc9EREQ56ht02XoqY7QGzHkQ5Q+a9iHbh2hd4TeUf+zn9+q/u5k9bcnqr/d8Z52rX4e/t7+/pj/+ePVGDrHdSL7+6PV3x6p/v5Q9bcHq789UP3t/upvd4/Gy7G/OzLka3u0Q3+3r/rb3V0a075qu3s03j11vq9z/R3tdn13qPrbHdV228dbV1/by+u//WVEREREZM1qYB2w0d9wmoLsrPruzRa/v7YBv7P5puCG6r3eE+ncE/tgVucbhtvY3D3a+e+OfqwqO8KvcxS3j88PV3UXm5/X2M/mn7kYPo8RERERbXMFm58/mcXm41s2/1r7n2y+abedze3dHWy+rbudzYNYHZupHe3Zu+i7x7inzb47R3i2Vrdzh9p+t4/v+GNs/ryHP+t+v37/na/vmez99s5ndrD5mYzebv3O5t/d2M7mETBtj+ks7/u+Vt8RERERMZUpKxl+3Wr9TLTtZMrL5LfHfV8K0NZMuRm/F3wS+AH4AXgdeBl4Fngc+C+wDvgOWJW17UwFP1rVw2y+T/kE8CSwkvLWPq+v2o9Xn/mxes//qr/Z2XYUvhG4s/q5l6v/rT1XdS7ra73vu4dNG+Bz4BvgS+AF4AngIeAB4P7q7+6r/u6+6rN3V2N4oBrDfdXf31t95u5qDHdVf3d79fm7qnaR2wP+oL+IiIiIabWgOzfh/Qu+c1S1c6S1c7R156hpx9gIuJXNXZfORrl/VDWkzZmq7Z4u9r0TeAf4CHgX+Bx4gfI2rT/S2v0HkRERERFTk1VsPmLv3dHUYDsY7Zz4a7vj6zLae6DufF+n7mDzTcjO8V0UEREREREREREREREREREREREREREREREREdGQfwBiC3fIlrqPjAAAAABJRU5ErkJggg=="
-        placeholder_bytes = base64.b64decode(placeholder_base64)
+        import logging
+        error_details = traceback.format_exc()
+        logging.error(f"❌ [PHOTO-ERROR] Vehicle: {vehicle_name}, Error: {str(e)}")
+        logging.error(f"❌ [PHOTO-ERROR] Traceback:\n{error_details}")
+        
+        # Retornar placeholder SVG simples em caso de erro (sempre funciona)
+        svg_placeholder = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <rect width="200" height="100" fill="#f0f0f0"/>
+  <circle cx="50" cy="70" r="15" fill="#d0d0d0"/>
+  <circle cx="150" cy="70" r="15" fill="#d0d0d0"/>
+  <rect x="30" y="30" width="140" height="35" rx="5" fill="#d0d0d0"/>
+  <text x="100" y="60" text-anchor="middle" font-size="12" fill="#808080">No Photo</text>
+</svg>'''
         return Response(
-            content=placeholder_bytes,
-            media_type="image/png"
+            content=svg_placeholder,
+            media_type="image/svg+xml"
         )
 
 @app.get("/api/vehicles/placeholder.svg")
