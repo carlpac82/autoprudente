@@ -34228,6 +34228,19 @@ async def save_automated_search_history(request: Request):
         pickup_date = data.get('pickupDate', '')  # Date of search (not current date)
         
         logging.info(f"📥 Received save request: Location={location}, Type={search_type}, PickupDate={pickup_date}, Dias={dias}, PriceCount={price_count}, Groups={list(prices_data.keys())}")
+        logging.info(f"🔍 [SAVE-DEBUG] supplierData type: {type(supplier_data)}, keys: {list(supplier_data.keys())[:10] if isinstance(supplier_data, dict) else 'N/A'}")
+        logging.info(f"🔍 [SAVE-DEBUG] supplierData size: {len(supplier_data) if supplier_data else 0} keys")
+        
+        if supplier_data and isinstance(supplier_data, dict) and len(supplier_data) > 0:
+            # Sample first group/day
+            first_group = list(supplier_data.keys())[0]
+            first_data = supplier_data[first_group]
+            if isinstance(first_data, dict) and len(first_data) > 0:
+                first_day = list(first_data.keys())[0]
+                first_cars = first_data[first_day]
+                logging.info(f"🔍 [SAVE-DEBUG] Sample: Group={first_group}, Day={first_day}, Cars={len(first_cars) if isinstance(first_cars, list) else 0}")
+        else:
+            logging.warning(f"⚠️ [SAVE-DEBUG] supplierData is EMPTY or NULL! This version will have no visual cards data.")
         
         if not prices_data:
             logging.warning("⚠️ No prices data provided in save request")
