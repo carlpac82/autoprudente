@@ -11109,79 +11109,69 @@ async def track_by_params(request: Request):
                     
                     await page.wait_for_timeout(500)
                     
-                    # PASSO 4: Submeter form
+                    # PASSO 4: Submeter form - CLICAR no botão em vez de submit()
                     print(f"[PLAYWRIGHT] PASSO 4: Submetendo formulário...", file=sys.stderr, flush=True)
-                    await page.evaluate("document.querySelector('form').submit()")
                     
-                    # Aguardar navegação com retry
-                    print(f"[PLAYWRIGHT] Aguardando navegação...", file=sys.stderr, flush=True)
+                    # Tentar encontrar botão de submit
+                    submit_clicked = False
+                    try:
+                        # Tentar vários seletores possíveis para o botão
+                        submit_selectors = [
+                            'button[type="submit"]',
+                            'input[type="submit"]',
+                            'form button',
+                            '#btnSearch',
+                            '.btn-search',
+                        ]
+                        
+                        for selector in submit_selectors:
+                            try:
+                                submit_button = await page.query_selector(selector)
+                                if submit_button:
+                                    print(f"[PLAYWRIGHT] Clicando no botão: {selector}", file=sys.stderr, flush=True)
+                                    
+                                    # Usar Promise.all para aguardar navegação durante o clique
+                                    async with page.expect_navigation(timeout=60000):
+                                        await submit_button.click()
+                                    
+                                    submit_clicked = True
+                                    print(f"[PLAYWRIGHT] ✅ Formulário submetido e navegação detectada", file=sys.stderr, flush=True)
+                                    break
+                            except Exception as e:
+                                continue
+                    except Exception as e:
+                        print(f"[PLAYWRIGHT] ⚠️ Erro ao clicar: {e}", file=sys.stderr, flush=True)
                     
-                    navigation_success = False
-                    max_retries = 2
-                    
-                    for attempt in range(max_retries):
+                    # Se não conseguiu clicar, tentar submit() como fallback
+                    if not submit_clicked:
+                        print(f"[PLAYWRIGHT] Usando submit() como fallback...", file=sys.stderr, flush=True)
+                        await page.evaluate("document.querySelector('form').submit()")
+                        
+                        # Aguardar navegação manualmente
                         try:
-                            await page.wait_for_url('**/do/list/**', timeout=45000)
-                            navigation_success = True
-                            print(f"[PLAYWRIGHT] ✅ Navegação bem-sucedida (tentativa {attempt + 1})", file=sys.stderr, flush=True)
-                            break
-                        except Exception as nav_error:
-                            print(f"[PLAYWRIGHT] ⚠️ Tentativa {attempt + 1} falhou: {nav_error}", file=sys.stderr, flush=True)
-                            
-                            if attempt < max_retries - 1:
-                                # Tentar resubmeter o formulário
-                                print(f"[PLAYWRIGHT] 🔄 Resubmetendo formulário...", file=sys.stderr, flush=True)
-                                await page.goto('https://www.carjet.com/aluguel-carros/index.htm')
-                                await page.wait_for_timeout(3000)
-                                
-                                # Repetir preenchimento
-                                await page.fill('#pickup', 'Albufeira' if 'albufeira' in location.lower() else 'Faro')
-                                await page.wait_for_timeout(2000)
-                                
-                                try:
-                                    await page.click('#recogida_lista li:first-child a', timeout=3000)
-                                except:
-                                    await page.evaluate("""
-                                        const items = document.querySelectorAll('#recogida_lista li');
-                                        for (let item of items) {
-                                            if (item.offsetParent !== null) {
-                                                item.click();
-                                                break;
-                                            }
-                                        }
-                                    """)
-                                
-                                await page.wait_for_timeout(1000)
-                                await page.evaluate("""
-                                    (dates) => {
-                                        function fill(sel, val) {
-                                            const el = document.querySelector(sel);
-                                            if (el) { 
-                                                el.value = val; 
-                                                el.dispatchEvent(new Event('input', {bubbles: true}));
-                                                el.dispatchEvent(new Event('change', {bubbles: true}));
-                                                el.dispatchEvent(new Event('blur', {bubbles: true}));
-                                                return true;
-                                            }
-                                            return false;
-                                        }
-                                        
-                                        fill('input[id="fechaRecogida"]', dates.pickup);
-                                        fill('input[id="fechaDevolucion"]', dates.return);
-                                        fill('select[id="fechaRecogidaSelHour"]', '15:00');
-                                        fill('select[id="fechaDevolucionSelHour"]', '15:00');
-                                    }
-                                """, {'pickup': pickup_date_str, 'return': return_date_str})
-                                
-                                await page.wait_for_timeout(500)
-                                await page.evaluate("document.querySelector('form').submit()")
-                            else:
-                                # Última tentativa falhou
-                                print(f"[PLAYWRIGHT] ❌ Todas as tentativas falharam", file=sys.stderr, flush=True)
-                                raise nav_error
+                            await page.wait_for_load_state('networkidle', timeout=60000)
+                            print(f"[PLAYWRIGHT] ✅ Página carregada (networkidle)", file=sys.stderr, flush=True)
+                        except:
+                            # Fallback para 'load'
+                            try:
+                                await page.wait_for_load_state('load', timeout=60000)
+                                print(f"[PLAYWRIGHT] ✅ Página carregada (load)", file=sys.stderr, flush=True)
+                            except Exception as e:
+                                print(f"[PLAYWRIGHT] ⚠️ Timeout aguardando navegação: {e}", file=sys.stderr, flush=True)
                     
-                    if not navigation_success:
-                        raise Exception("Navegação falhou após múltiplas tentativas")
+                    # Verificar URL atual
+                    current_url = page.url
+                    print(f"[PLAYWRIGHT] URL atual: {current_url}", file=sys.stderr, flush=True)
+                    
+                    # Verificar se navegou para página de resultados
+                    if '/do/list/' not in current_url:
+                        print(f"[PLAYWRIGHT] ⚠️ Não navegou para /do/list/, tentando aguardar...", file=sys.stderr, flush=True)
+                        try:
+                            await page.wait_for_url('**/do/list/**', timeout=30000)
+                            print(f"[PLAYWRIGHT] ✅ Navegação detectada: {page.url}", file=sys.stderr, flush=True)
+                        except:
+                            print(f"[PLAYWRIGHT] ❌ Timeout aguardando /do/list/", file=sys.stderr, flush=True)
+                            # Continuar mesmo assim - pode ser que o HTML já tenha os dados
                     
                     # CRITICAL: Aguardar JavaScript atualizar os preços
                     # O problema: .price.pr-euros já existe no HTML inicial com preço placeholder
@@ -11318,10 +11308,29 @@ async def track_by_params(request: Request):
             print(f"[SELENIUM] Referrer: {selected_referrer if selected_referrer else 'Direct'}", file=sys.stderr, flush=True)
             
             chrome_options = Options()
-            # chrome_options.add_argument('--headless')  # ❌ DESATIVADO - Igual ao teste manual!
+            
+            # Detectar sistema operacional para configurar headless
+            import platform
+            system = platform.system()
+            
+            # Headless apenas em Linux (Render/Docker)
+            if system == 'Linux':
+                chrome_options.add_argument('--headless=new')  # Novo modo headless (mais estável)
+                chrome_options.add_argument('--disable-gpu')
+                chrome_options.add_argument('--disable-software-rasterizer')
+                print(f"[SELENIUM] Modo headless ativado (Linux)", file=sys.stderr, flush=True)
+            else:
+                print(f"[SELENIUM] Modo visual (não-headless) em {system}", file=sys.stderr, flush=True)
+            
+            # Flags essenciais para Docker/Linux
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-extensions')
+            chrome_options.add_argument('--disable-setuid-sandbox')
             chrome_options.add_argument(f'user-agent={selected_device["ua"]}')
+            
+            # Window size (necessário em headless)
+            chrome_options.add_argument(f'--window-size={selected_device["width"]},{selected_device["height"]}')
             
             # EMULAÇÃO MOBILE COMPLETA com device específico
             mobile_emulation = {
@@ -11345,30 +11354,71 @@ async def track_by_params(request: Request):
             #     "intl.accept_languages": selected_lang,
             # })
             
-            # Detectar sistema operacional e definir caminho do Chrome
-            import platform
-            system = platform.system()
+            # Definir caminho do Chrome baseado no sistema
             if system == 'Darwin':  # macOS
-                chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-            elif system == 'Linux':  # Linux (Render)
-                # No Linux com Docker, o Chrome está em /usr/bin/google-chrome-stable
-                if os.path.exists('/usr/bin/google-chrome-stable'):
-                    chrome_options.binary_location = '/usr/bin/google-chrome-stable'
-                # Não definir binary_location deixa o Selenium encontrar automaticamente
+                if os.path.exists("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"):
+                    chrome_options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+                    print(f"[SELENIUM] Chrome encontrado em: {chrome_options.binary_location}", file=sys.stderr, flush=True)
+            elif system == 'Linux':  # Linux (Render/Docker)
+                # Tentar múltiplos caminhos possíveis no Linux
+                linux_chrome_paths = [
+                    '/usr/bin/google-chrome-stable',
+                    '/usr/bin/google-chrome',
+                    '/usr/bin/chromium-browser',
+                    '/usr/bin/chromium',
+                ]
+                for path in linux_chrome_paths:
+                    if os.path.exists(path):
+                        chrome_options.binary_location = path
+                        print(f"[SELENIUM] Chrome encontrado em: {path}", file=sys.stderr, flush=True)
+                        break
+                else:
+                    print(f"[SELENIUM] Chrome não encontrado em caminhos padrão, deixando Selenium autodetectar", file=sys.stderr, flush=True)
             
-            # Iniciar driver - tentar com Chrome instalado primeiro
+            # Iniciar driver com múltiplas tentativas
+            driver = None
+            last_error = None
+            
+            # Tentativa 1: Chrome do sistema
             try:
-                # Tentar usar Chrome do sistema (melhor para Mac ARM)
+                print(f"[SELENIUM] Tentativa 1: Chrome do sistema...", file=sys.stderr, flush=True)
                 driver = webdriver.Chrome(options=chrome_options)
                 print(f"[SELENIUM] ✅ Chrome iniciado com sucesso!", file=sys.stderr, flush=True)
             except Exception as e:
-                print(f"[SELENIUM] ⚠️ Erro ao iniciar Chrome: {e}", file=sys.stderr, flush=True)
-                print(f"[SELENIUM] Tentando com ChromeDriverManager...", file=sys.stderr, flush=True)
-                # Fallback para ChromeDriverManager
-                driver = webdriver.Chrome(
-                    service=Service(ChromeDriverManager().install()),
-                    options=chrome_options
-                )
+                last_error = str(e)
+                print(f"[SELENIUM] ⚠️ Tentativa 1 falhou: {e}", file=sys.stderr, flush=True)
+                
+                # Tentativa 2: ChromeDriverManager
+                try:
+                    print(f"[SELENIUM] Tentativa 2: ChromeDriverManager...", file=sys.stderr, flush=True)
+                    driver = webdriver.Chrome(
+                        service=Service(ChromeDriverManager().install()),
+                        options=chrome_options
+                    )
+                    print(f"[SELENIUM] ✅ Chrome iniciado via ChromeDriverManager!", file=sys.stderr, flush=True)
+                except Exception as e2:
+                    last_error = str(e2)
+                    print(f"[SELENIUM] ❌ Tentativa 2 falhou: {e2}", file=sys.stderr, flush=True)
+                    
+                    # Tentativa 3: Sem binary_location (autodetecção)
+                    try:
+                        print(f"[SELENIUM] Tentativa 3: Autodetecção (sem binary_location)...", file=sys.stderr, flush=True)
+                        chrome_options_clean = Options()
+                        # Copiar todos os argumentos mas sem binary_location
+                        for arg in chrome_options.arguments:
+                            chrome_options_clean.add_argument(arg)
+                        for key, value in chrome_options.experimental_options.items():
+                            chrome_options_clean.add_experimental_option(key, value)
+                        
+                        driver = webdriver.Chrome(options=chrome_options_clean)
+                        print(f"[SELENIUM] ✅ Chrome iniciado via autodetecção!", file=sys.stderr, flush=True)
+                    except Exception as e3:
+                        last_error = str(e3)
+                        print(f"[SELENIUM] ❌ Tentativa 3 falhou: {e3}", file=sys.stderr, flush=True)
+            
+            # Se nenhuma tentativa funcionou, lançar erro
+            if driver is None:
+                raise Exception(f"Não foi possível iniciar Chrome após 3 tentativas. Último erro: {last_error}")
             
             # FUNÇÃO HELPER: Autodetectar e REJEITAR cookies (mais simples!)
             def reject_cookies_if_present(step_name=""):

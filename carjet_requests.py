@@ -27,10 +27,39 @@ except ImportError:
 
 
 def extract_redirect_url(html: str) -> str:
-    """Extrai URL de redirect do JavaScript"""
-    pattern = r"window\.location\.replace\('([^']+)'\)"
-    match = re.search(pattern, html)
-    return match.group(1) if match else None
+    """Extrai URL de redirect do JavaScript com múltiplos métodos"""
+    import sys
+    
+    # Método 1: window.location.replace com aspas simples
+    pattern1 = r"window\.location\.replace\('([^']+)'\)"
+    match = re.search(pattern1, html)
+    if match:
+        print(f"[REQUESTS] ✅ URL extraída (método 1): {match.group(1)}", file=sys.stderr, flush=True)
+        return match.group(1)
+    
+    # Método 2: window.location.replace com aspas duplas
+    pattern2 = r'window\.location\.replace\("([^"]+)"\)'
+    match = re.search(pattern2, html)
+    if match:
+        print(f"[REQUESTS] ✅ URL extraída (método 2): {match.group(1)}", file=sys.stderr, flush=True)
+        return match.group(1)
+    
+    # Método 3: window.location.href
+    pattern3 = r"window\.location\.href\s*=\s*['\"]([^'\"]+)['\"]"
+    match = re.search(pattern3, html)
+    if match:
+        print(f"[REQUESTS] ✅ URL extraída (método 3): {match.group(1)}", file=sys.stderr, flush=True)
+        return match.group(1)
+    
+    # Método 4: Procurar por /do/list/ na URL (fallback)
+    pattern4 = r'["\'](/do/list/[^"\'\ ]+)["\']'
+    match = re.search(pattern4, html)
+    if match:
+        print(f"[REQUESTS] ✅ URL extraída (método 4 fallback): {match.group(1)}", file=sys.stderr, flush=True)
+        return match.group(1)
+    
+    print(f"[REQUESTS] ❌ Nenhum redirect encontrado no HTML", file=sys.stderr, flush=True)
+    return None
 
 
 def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) -> List[Dict[str, Any]]:
@@ -119,6 +148,14 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         
         if not redirect_url:
             print("[REQUESTS] ⚠️ Não encontrou URL de redirect")
+            # Salvar HTML para debug
+            import sys
+            try:
+                with open('carjet_no_redirect_debug.html', 'w', encoding='utf-8') as f:
+                    f.write(resp_post.text)
+                print("[REQUESTS] 💾 HTML salvo em: carjet_no_redirect_debug.html", file=sys.stderr, flush=True)
+            except:
+                pass
             return []
         
         full_redirect_url = f'https://www.carjet.com{redirect_url}'
