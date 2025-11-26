@@ -3897,7 +3897,7 @@ def cleanup_expired_cache():
 
 IDLE_TIMEOUT_SECONDS = 30 * 60  # 30 minutes
 
-@app.get("/healthz")
+@app.api_route("/healthz", methods=["GET", "HEAD"])
 async def healthz():
     return JSONResponse({"ok": True})
 
