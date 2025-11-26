@@ -82,8 +82,19 @@ SUPPLIER_MAP = {
     'DTG1': 'Dollar',
     'SXT': 'Sixt',
     'SXT_B': 'Sixt',
+    'GMO': 'Greenmotion',
     'GMO1': 'Greenmotion',
+    'CLA': 'Greenmotion',  # CLA RENT é Green Motion
     'EU2': 'Europcar',
+    # Suppliers detectados nos resultados
+    'OMRNT': 'OMRNT',
+    'OMR': 'OMRNT',
+    'INSPIRE': 'Inspire',
+    'INS': 'Inspire',
+    'BRAVACAR': 'Bravacar',
+    'BRA': 'Bravacar',
+    'KLASS': 'Klass',
+    'KLA': 'Klass',
 }
 
 
