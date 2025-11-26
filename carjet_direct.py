@@ -1103,7 +1103,9 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                 data_prv = block.get('data-prv', '').strip()
                 if data_prv:
                     supplier = normalize_supplier(data_prv)
-                    print(f"[PARSE] Supplier de data-prv: {data_prv} → {supplier}")
+                    # Debug apenas se não parecer um path
+                    if not supplier.startswith('/'):
+                        print(f"[PARSE] Supplier de data-prv: {data_prv} → {supplier}")
                 
                 # PRIORIDADE 2: procurar por logo ou texto (fallback)
                 # Sempre buscar img_tags para uso posterior (fotos)
@@ -1118,8 +1120,10 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
 
                         # Logos normalmente têm /logo no path
                         if '/logo' in src.lower() or 'logo_' in src.lower():
-                            supplier = normalize_supplier(src)
-                            if supplier != 'CarJet':
+                            normalized = normalize_supplier(src)
+                            # Só aceitar se não parecer um path (ex: não começa com /)
+                            if normalized != 'CarJet' and not normalized.startswith('/'):
+                                supplier = normalized
                                 break
 
                         # Verificar alt text
@@ -1179,7 +1183,8 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                                 # else: já está em formato correto (1010.29)
                                 
                                 price_val = float(price_str)
-                                if 10 < price_val < 10000:
+                                # Aceitar preços de 1€ a 10000€ (antes era 10€ mínimo)
+                                if 1 < price_val < 10000:
                                     price = f'{price_val:.2f} €'
                                     print(f"[PARSE] Preço encontrado: {price}")
                                     break  # Encontrou o correto!
@@ -1209,7 +1214,8 @@ def parse_carjet_html_complete(html: str) -> List[Dict[str, Any]]:
                                     price_str = price_str.replace(',', '.')
                                 
                                 price_val = float(price_str)
-                                if 10 < price_val < 10000:
+                                # Aceitar preços de 1€ a 10000€
+                                if 1 < price_val < 10000:
                                     price = f'{price_val:.2f} €'
                                     break
                             except:
