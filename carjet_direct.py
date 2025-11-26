@@ -93,8 +93,8 @@ SUPPLIER_MAP = {
     'INS': 'Inspire',
     'BRAVACAR': 'Bravacar',
     'BRA': 'Bravacar',
-    'KLASS': 'Klass',
-    'KLA': 'Klass',
+    'KLASS': 'Kass Wagen',
+    'KLA': 'Kass Wagen',
 }
 
 
