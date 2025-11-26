@@ -51,12 +51,25 @@ def extract_redirect_url(html: str) -> str:
         print(f"[REQUESTS] ✅ URL extraída (método 3): {match.group(1)}", file=sys.stderr, flush=True)
         return match.group(1)
     
-    # Método 4: Procurar por /do/list/ na URL (fallback)
-    pattern4 = r'["\'](/do/list/[^"\'\ ]+)["\']'
+    # Método 4: Procurar por /do/list/ na URL (fallback - mais permissivo)
+    pattern4 = r'["\']?(/do/list/[^\s"\'<>]+)["\']?'
     match = re.search(pattern4, html)
     if match:
-        print(f"[REQUESTS] ✅ URL extraída (método 4 fallback): {match.group(1)}", file=sys.stderr, flush=True)
-        return match.group(1)
+        url = match.group(1)
+        # Validar se a URL parece completa (deve ter mais de 20 caracteres)
+        if len(url) > 20 and ('s=' in url or 'b=' in url or len(url) > 30):
+            print(f"[REQUESTS] ✅ URL extraída (método 4 fallback): {url}", file=sys.stderr, flush=True)
+            return url
+        else:
+            print(f"[REQUESTS] ⚠️ URL método 4 parece incompleta (ignorando): {url}", file=sys.stderr, flush=True)
+    
+    # Método 5: Procurar especificamente por padrão com s= e b=
+    pattern5 = r'/do/list/\w+\?[^"\'<>\s]*[sb]=[^"\'<>\s]+'
+    match = re.search(pattern5, html)
+    if match:
+        url = match.group(0)
+        print(f"[REQUESTS] ✅ URL extraída (método 5 - com parâmetros): {url}", file=sys.stderr, flush=True)
+        return url
     
     print(f"[REQUESTS] ❌ Nenhum redirect encontrado no HTML", file=sys.stderr, flush=True)
     return None
@@ -66,6 +79,7 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
     """
     Scraping do CarJet usando requests com sessão persistente
     """
+    import sys
     try:
         # Mapeamento de localizações
         location_codes = {
@@ -143,13 +157,20 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         
         print(f"[REQUESTS] POST: {resp_post.status_code} - HTML: {len(resp_post.text)} bytes")
         
+        # DEBUG: Mostrar primeiras linhas para diagnóstico
+        lines = resp_post.text.split('\n')
+        print(f"[REQUESTS] DEBUG - Primeiras 10 linhas do POST response:", file=sys.stderr, flush=True)
+        for i, line in enumerate(lines[:10], 1):
+            preview = line.strip()[:100]
+            if preview:
+                print(f"  {i}: {preview}", file=sys.stderr, flush=True)
+        
         # PASSO 3: Extrair URL de redirect
         redirect_url = extract_redirect_url(resp_post.text)
         
         if not redirect_url:
             print("[REQUESTS] ⚠️ Não encontrou URL de redirect")
             # Salvar HTML para debug
-            import sys
             try:
                 with open('carjet_no_redirect_debug.html', 'w', encoding='utf-8') as f:
                     f.write(resp_post.text)
@@ -176,31 +197,47 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
             resp_results = session.get(full_redirect_url, timeout=15)
             html = resp_results.text
             
-            print(f"[REQUESTS] HTML recebido: {len(html)} bytes")
+            print(f"[REQUESTS] HTML recebido: {len(html)} bytes", file=sys.stderr, flush=True)
             
             # Verificar se ainda é página de loading
-            is_loading = (
-                'A carregar...' in html or
-                'Procurando' in html or
-                'Searching' in html or
-                'Waiting' in html or
-                len(html) < 50000
+            # IMPORTANTE: Não usar len(html) porque a página de loading pode ser grande (200KB+)
+            # Em vez disso, verificar se há CARROS no HTML
+            loading_indicators = [
+                'A carregar...',
+                'Procurando',
+                'Searching',
+                'Waiting',
+                'Please wait',
+                'Aguarde',
+                'Cargando',
+            ]
+            
+            has_loading_text = any(indicator in html for indicator in loading_indicators)
+            
+            # Verificar se há elementos de carros no HTML (melhor indicador)
+            has_car_cards = (
+                'class="carCardWeb"' in html or
+                'class="resultado-oferta"' in html or
+                'class="price pr-euros"' in html or
+                '<div class="car-card' in html
             )
             
+            is_loading = has_loading_text or not has_car_cards
+            
             if is_loading:
-                print(f"[REQUESTS] ⏳ Ainda a processar... (HTML: {len(html)} bytes)")
+                print(f"[REQUESTS] ⏳ Ainda a processar... (loading={has_loading_text}, cards={has_car_cards})", file=sys.stderr, flush=True)
                 if attempt < max_attempts - 1:
                     continue
                 else:
-                    print(f"[REQUESTS] ⚠️ Timeout após {max_attempts} tentativas")
+                    print(f"[REQUESTS] ⚠️ Timeout após {max_attempts} tentativas", file=sys.stderr, flush=True)
                     # Salvar HTML para debug
                     with open('carjet_timeout_debug.html', 'w', encoding='utf-8') as f:
                         f.write(html)
-                    print("[REQUESTS] HTML salvo em: carjet_timeout_debug.html")
+                    print("[REQUESTS] HTML salvo em: carjet_timeout_debug.html", file=sys.stderr, flush=True)
                     return []
             else:
-                # HTML grande = resultados prontos!
-                print(f"[REQUESTS] ✅ Resultados prontos! (tentativa {attempt + 1})")
+                # HTML com carros = resultados prontos!
+                print(f"[REQUESTS] ✅ Resultados prontos! (tentativa {attempt + 1}, cards encontrados)", file=sys.stderr, flush=True)
                 html_results = html
                 break
         
