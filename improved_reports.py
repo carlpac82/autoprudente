@@ -8,6 +8,133 @@
 
 from datetime import datetime
 import os
+import re
+
+# Mapeamento de códigos de suppliers para nomes reais (extraído do CarJet)
+SUPPLIER_CODE_MAP = {
+    # TODOS os 51 suppliers do CarJet (extraídos do atributo title)
+    'ABB': 'Abbycar',
+    'ABB1': 'Abbycar',
+    'ACE': 'Ace Rent a Car',
+    'ADA': 'Ada',
+    'AIR': 'Airauto',
+    'ALM': 'Alamo',
+    'AMI': 'Amigoautos',
+    'AMI1': 'Amigoautos',
+    'ATR': 'Autorent',
+    'AUP': 'Auto Prudente',
+    'AUU': 'Auto Union',
+    'AVX': 'Avis',
+    'BGX': 'Budget',
+    'BSD': 'Best Deal',
+    'CAE': 'Cael',
+    'CEN': 'Centauro',
+    'D4F': 'Drive4fun',
+    'DOH': 'Drive on Holidays',
+    'DTG': 'Dollar',
+    'DTG1': 'Rent a Car',
+    'DVM': 'Drive4move',
+    'ECR': 'Europcar',
+    'ENT': 'Enterprise',
+    'EPI': 'Epi',
+    'EU2': 'Goldcar',
+    'EUK': 'Goldcar Keyn Go',
+    'EUR': 'Goldcar',
+    'FFX': 'Firefly',
+    'FLZ': 'Flizzr by Sixt',
+    'GMO': 'Green Motion',
+    'GMO1': 'Green Motion',
+    'GUE': 'Guerin',
+    'HER': 'Hertz',
+    'ICT': 'Interrent',
+    'KED': 'Keddy by Europcar',
+    'KLA': 'Klass Wagen',
+    'LOC': 'Million',
+    'MVY': 'Movyng',
+    'NAT': 'National',
+    'OKR': 'OK Mobility',
+    'OKR1': 'OK Mobility',
+    'PAR': 'Paa',
+    'REC': 'Record',
+    'RNA': 'Rentauto',
+    'SAD': 'Drivalia',
+    'SUR': 'Surprice',
+    'SVN': 'Sevens',
+    'SXT': 'Sixt',
+    'TAN': 'Tangerine',
+    'TAN1': 'Rent a Car',
+    'THR': 'Thrifty',
+    'YES': 'Yescar',
+    'YNO': 'Ynot',
+    # Aliases e variantes
+    'DGT': 'Dollar', 'DGT1': 'Rent a Car',
+    'GRE': 'Green Motion', 'GRM': 'Green Motion',
+    'YNOT': 'Ynot',
+    'CAL': 'Caleche', 'CAR': 'Carnect', 'CLA': 'Caldera',
+    'LOZ': 'Millioncarhire', 'LCR': 'Localcar', 'MIL': 'Millioncarhire',
+    'SEV': 'Sevenseas'
+}
+
+def display_supplier_name(supplier_raw):
+    """
+    Traduz código/URL de supplier para o nome real.
+    Suporta: códigos simples (AUU), URLs CDN (/cdn/img/.../logo_AUU.png)
+    
+    Args:
+        supplier_raw: Código do supplier ou URL do logo CDN
+        
+    Returns:
+        Nome legível do supplier
+    """
+    if not supplier_raw:
+        return 'Unknown'
+    
+    s = str(supplier_raw).strip()
+    if not s:
+        return 'Unknown'
+    
+    # Extrair código do path do logo (ex: /cdn/img/prv/flat/lrg/logo_AUU.png → AUU)
+    img_match = re.search(r'logo_([A-Z0-9]+)\.(png|jpg|avif|webp)', s, re.IGNORECASE)
+    if img_match:
+        code = img_match.group(1).upper()
+        if code in SUPPLIER_CODE_MAP:
+            return SUPPLIER_CODE_MAP[code]
+        # Se não encontrar, retorna o código formatado
+        return code
+    
+    # Se já é um código simples
+    upper = s.upper()
+    if upper in SUPPLIER_CODE_MAP:
+        return SUPPLIER_CODE_MAP[upper]
+    
+    # Verificar se contém algum código conhecido
+    for code, name in SUPPLIER_CODE_MAP.items():
+        if code in upper:
+            return name
+    
+    # Normalizar nomes conhecidos
+    lower = s.lower()
+    if 'autoprudente' in lower or 'auto prudente' in lower:
+        return 'Auto Prudente'
+    if 'europcar' in lower:
+        return 'Europcar'
+    if 'hertz' in lower:
+        return 'Hertz'
+    if 'sixt' in lower:
+        return 'Sixt'
+    if 'budget' in lower:
+        return 'Budget'
+    if 'centauro' in lower:
+        return 'Centauro'
+    if 'thrifty' in lower:
+        return 'Thrifty'
+    if 'surprice' in lower:
+        return 'Surprice'
+    if 'ok mobility' in lower or 'ok rent' in lower:
+        return 'OK Mobility'
+    
+    # Fallback: retorna o original
+    return s
 
 def get_base_url():
     """Get base URL of the server (Render or local)"""
@@ -357,8 +484,9 @@ def generate_daily_report_html_by_location(search_data, location):
             # Find Auto Prudente position
             ap_position = None
             for idx, car in enumerate(sorted_cars, 1):
-                supplier = (car.get('supplier', '') or '').lower()
-                if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                supplier_raw = (car.get('supplier', '') or '')
+                supplier_name = display_supplier_name(supplier_raw).lower()
+                if 'auto prudente' in supplier_name or 'autoprudente' in supplier_raw.lower() or supplier_raw.upper() == 'AUP':
                     ap_position = idx
                     break
             
@@ -416,9 +544,10 @@ def generate_daily_report_html_by_location(search_data, location):
             
             # Top 5 competitors
             for idx, car in enumerate(sorted_cars[:5], 1):
-                supplier = car.get('supplier', 'Unknown')
+                supplier_raw = car.get('supplier', 'Unknown')
+                supplier = display_supplier_name(supplier_raw)  # Traduzir código para nome real
                 price = float(car.get('price_num', 0))
-                is_ap = 'autoprudente' in supplier.lower()
+                is_ap = 'auto prudente' in supplier.lower() or 'autoprudente' in supplier_raw.lower()
                 
                 # Imagem REAL do carro (campo 'photo' do CarJet)
                 car_photo = car.get('photo', '')
@@ -621,8 +750,9 @@ def generate_weekly_report_html_by_location(search_data, location):
                 # Find AP position
                 ap_position = None
                 for idx, car in enumerate(sorted_cars, 1):
-                    supplier = (car.get('supplier', '') or '').lower()
-                    if 'autoprudente' in supplier or 'auto prudente' in supplier:
+                    supplier_raw = (car.get('supplier', '') or '')
+                    supplier_name = display_supplier_name(supplier_raw).lower()
+                    if 'auto prudente' in supplier_name or 'autoprudente' in supplier_raw.lower() or supplier_raw.upper() == 'AUP':
                         ap_position = idx
                         break
                 
@@ -679,9 +809,10 @@ def generate_weekly_report_html_by_location(search_data, location):
                 
                 # Top 5 competitors
                 for idx, car in enumerate(sorted_cars[:5], 1):
-                    supplier = car.get('supplier', 'Unknown')
+                    supplier_raw = car.get('supplier', 'Unknown')
+                    supplier = display_supplier_name(supplier_raw)  # Traduzir código para nome real
                     price = float(car.get('price_num', 0))
-                    is_ap = 'autoprudente' in supplier.lower()
+                    is_ap = 'auto prudente' in supplier.lower() or 'autoprudente' in supplier_raw.lower()
                     
                     car_photo = car.get('photo', '')
                     car_name = car.get('car', 'Unknown')
