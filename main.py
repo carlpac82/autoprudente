@@ -11117,6 +11117,8 @@ async def track_by_params(request: Request):
                     try:
                         # Tentar vários seletores possíveis para o botão
                         submit_selectors = [
+                            '#sendForm',  # ID correto do botão CarJet
+                            'button#sendForm',
                             'button[type="submit"]',
                             'input[type="submit"]',
                             'form button',
@@ -11379,99 +11381,99 @@ async def track_by_params(request: Request):
             driver = None
             last_error = None
             
-            # Tentativa 1: Chrome do sistema
+            # IMPORTANTE: Usar try/finally para GARANTIR que driver.quit() sempre executa
             try:
-                print(f"[SELENIUM] Tentativa 1: Chrome do sistema...", file=sys.stderr, flush=True)
-                driver = webdriver.Chrome(options=chrome_options)
-                print(f"[SELENIUM] ✅ Chrome iniciado com sucesso!", file=sys.stderr, flush=True)
-            except Exception as e:
-                last_error = str(e)
-                print(f"[SELENIUM] ⚠️ Tentativa 1 falhou: {e}", file=sys.stderr, flush=True)
-                
-                # Tentativa 2: ChromeDriverManager
+                # Tentativa 1: Chrome do sistema
                 try:
-                    print(f"[SELENIUM] Tentativa 2: ChromeDriverManager...", file=sys.stderr, flush=True)
-                    driver = webdriver.Chrome(
-                        service=Service(ChromeDriverManager().install()),
-                        options=chrome_options
-                    )
-                    print(f"[SELENIUM] ✅ Chrome iniciado via ChromeDriverManager!", file=sys.stderr, flush=True)
-                except Exception as e2:
-                    last_error = str(e2)
-                    print(f"[SELENIUM] ❌ Tentativa 2 falhou: {e2}", file=sys.stderr, flush=True)
-                    
-                    # Tentativa 3: Sem binary_location (autodetecção)
-                    try:
-                        print(f"[SELENIUM] Tentativa 3: Autodetecção (sem binary_location)...", file=sys.stderr, flush=True)
-                        chrome_options_clean = Options()
-                        # Copiar todos os argumentos mas sem binary_location
-                        for arg in chrome_options.arguments:
-                            chrome_options_clean.add_argument(arg)
-                        for key, value in chrome_options.experimental_options.items():
-                            chrome_options_clean.add_experimental_option(key, value)
-                        
-                        driver = webdriver.Chrome(options=chrome_options_clean)
-                        print(f"[SELENIUM] ✅ Chrome iniciado via autodetecção!", file=sys.stderr, flush=True)
-                    except Exception as e3:
-                        last_error = str(e3)
-                        print(f"[SELENIUM] ❌ Tentativa 3 falhou: {e3}", file=sys.stderr, flush=True)
-            
-            # Se nenhuma tentativa funcionou, lançar erro
-            if driver is None:
-                raise Exception(f"Não foi possível iniciar Chrome após 3 tentativas. Último erro: {last_error}")
-            
-            # FUNÇÃO HELPER: Autodetectar e REJEITAR cookies (mais simples!)
-            def reject_cookies_if_present(step_name=""):
-                """Detecta e REJEITA cookies automaticamente. Retorna True se encontrou cookies."""
-                try:
-                    result = driver.execute_script("""
-                        // Procurar e clicar no botão de REJEITAR cookies
-                        const buttons = document.querySelectorAll('button, a, [role="button"]');
-                        let found = false;
-                        for (let btn of buttons) {
-                            const text = btn.textContent.toLowerCase().trim();
-                            // Procurar por "rejeitar", "recusar", "reject", etc.
-                            if (text.includes('rejeitar') || text.includes('recusar') || 
-                                text.includes('reject') || text.includes('rechazar') ||
-                                text.includes('weiger') || text.includes('afwijzen') ||  // Holandês
-                                text.includes('não aceitar') || text.includes('decline')) {
-                                btn.click();
-                                console.log('✓ Cookies rejeitados:', btn.textContent);
-                                found = true;
-                                break;
-                            }
-                        }
-                        // Se não encontrou botão de rejeitar, tentar fechar/remover o banner
-                        if (!found) {
-                            document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=didomi], [class*=didomi], [id*=consent], [class*=consent]').forEach(el => {
-                                el.remove();
-                            });
-                        }
-                        document.body.style.overflow = 'auto';
-                        return found;
-                    """)
-                    if result:
-                        print(f"[SELENIUM] ✓ Cookies rejeitados {step_name}", file=sys.stderr, flush=True)
-                    else:
-                        print(f"[SELENIUM] ℹ️  Banner removido {step_name}", file=sys.stderr, flush=True)
-                    return result
+                    print(f"[SELENIUM] Tentativa 1: Chrome do sistema...", file=sys.stderr, flush=True)
+                    driver = webdriver.Chrome(options=chrome_options)
+                    print(f"[SELENIUM] ✅ Chrome iniciado com sucesso!", file=sys.stderr, flush=True)
                 except Exception as e:
-                    print(f"[SELENIUM] ⚠ Erro ao verificar cookies {step_name}: {e}", file=sys.stderr, flush=True)
-                    return False
+                    last_error = str(e)
+                    print(f"[SELENIUM] ⚠️ Tentativa 1 falhou: {e}", file=sys.stderr, flush=True)
+                    
+                    # Tentativa 2: ChromeDriverManager
+                    try:
+                        print(f"[SELENIUM] Tentativa 2: ChromeDriverManager...", file=sys.stderr, flush=True)
+                        driver = webdriver.Chrome(
+                            service=Service(ChromeDriverManager().install()),
+                            options=chrome_options
+                        )
+                        print(f"[SELENIUM] ✅ Chrome iniciado via ChromeDriverManager!", file=sys.stderr, flush=True)
+                    except Exception as e2:
+                        last_error = str(e2)
+                        print(f"[SELENIUM] ❌ Tentativa 2 falhou: {e2}", file=sys.stderr, flush=True)
+                        
+                        # Tentativa 3: Sem binary_location (autodetecção)
+                        try:
+                            print(f"[SELENIUM] Tentativa 3: Autodetecção (sem binary_location)...", file=sys.stderr, flush=True)
+                            chrome_options_clean = Options()
+                            # Copiar todos os argumentos mas sem binary_location
+                            for arg in chrome_options.arguments:
+                                chrome_options_clean.add_argument(arg)
+                            for key, value in chrome_options.experimental_options.items():
+                                chrome_options_clean.add_experimental_option(key, value)
+                            
+                            driver = webdriver.Chrome(options=chrome_options_clean)
+                            print(f"[SELENIUM] ✅ Chrome iniciado via autodetecção!", file=sys.stderr, flush=True)
+                        except Exception as e3:
+                            last_error = str(e3)
+                            print(f"[SELENIUM] ❌ Tentativa 3 falhou: {e3}", file=sys.stderr, flush=True)
             
-            # TIMEOUT GLOBAL: Se ficar preso mais de 60 segundos, abortar
-            import signal
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Selenium ficou preso por mais de 60 segundos!")
-            
-            # Configurar timeout (apenas em sistemas Unix)
-            try:
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(60)  # 60 segundos de timeout
-            except:
-                pass  # Windows não suporta SIGALRM
-            
-            try:
+                # Se nenhuma tentativa funcionou, lançar erro
+                if driver is None:
+                    raise Exception(f"Não foi possível iniciar Chrome após 3 tentativas. Último erro: {last_error}")
+                
+                # FUNÇÃO HELPER: Autodetectar e REJEITAR cookies (mais simples!)
+                def reject_cookies_if_present(step_name=""):
+                    """Detecta e REJEITA cookies automaticamente. Retorna True se encontrou cookies."""
+                    try:
+                        result = driver.execute_script("""
+                            // Procurar e clicar no botão de REJEITAR cookies
+                            const buttons = document.querySelectorAll('button, a, [role="button"]');
+                            let found = false;
+                            for (let btn of buttons) {
+                                const text = btn.textContent.toLowerCase().trim();
+                                // Procurar por "rejeitar", "recusar", "reject", etc.
+                                if (text.includes('rejeitar') || text.includes('recusar') || 
+                                    text.includes('reject') || text.includes('rechazar') ||
+                                    text.includes('weiger') || text.includes('afwijzen') ||  // Holandês
+                                    text.includes('não aceitar') || text.includes('decline')) {
+                                    btn.click();
+                                    console.log('✓ Cookies rejeitados:', btn.textContent);
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            // Se não encontrou botão de rejeitar, tentar fechar/remover o banner
+                            if (!found) {
+                                document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=didomi], [class*=didomi], [id*=consent], [class*=consent]').forEach(el => {
+                                    el.remove();
+                                });
+                            }
+                            document.body.style.overflow = 'auto';
+                            return found;
+                        """)
+                        if result:
+                            print(f"[SELENIUM] ✓ Cookies rejeitados {step_name}", file=sys.stderr, flush=True)
+                        else:
+                            print(f"[SELENIUM] ℹ️  Banner removido {step_name}", file=sys.stderr, flush=True)
+                        return result
+                    except Exception as e:
+                        print(f"[SELENIUM] ⚠ Erro ao verificar cookies {step_name}: {e}", file=sys.stderr, flush=True)
+                        return False
+                
+                # TIMEOUT GLOBAL: Se ficar preso mais de 60 segundos, abortar
+                import signal
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Selenium ficou preso por mais de 60 segundos!")
+                
+                # Configurar timeout (apenas em sistemas Unix)
+                try:
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(60)  # 60 segundos de timeout
+                except:
+                    pass  # Windows não suporta SIGALRM
                 # Esconder webdriver
                 driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
                     'source': '''
@@ -11615,13 +11617,21 @@ async def track_by_params(request: Request):
                 except Exception as e:
                     print(f"[SELENIUM] Erro ao preencher: {e}", file=sys.stderr, flush=True)
                 
-                # PASSO 4: Submit (IGUAL AO TESTE)
+                # PASSO 4: Submit - Clicar no botão em vez de form.submit()
                 print(f"[SELENIUM] PASSO 4: Submetendo...", file=sys.stderr, flush=True)
                 driver.execute_script("window.scrollBy(0, 300);")
                 time.sleep(0.5)
                 driver.execute_script("window.scrollTo(0, 0);")
                 time.sleep(0.5)
-                driver.execute_script("document.querySelector('form').submit();")
+                
+                # Tentar clicar no botão #sendForm (mais confiável que form.submit)
+                try:
+                    submit_btn = driver.find_element(By.ID, 'sendForm')
+                    submit_btn.click()
+                    print(f"[SELENIUM] ✓ Botão #sendForm clicado", file=sys.stderr, flush=True)
+                except Exception as e:
+                    print(f"[SELENIUM] ⚠️ Erro ao clicar no botão, usando JS: {e}", file=sys.stderr, flush=True)
+                    driver.execute_script("document.getElementById('sendForm').click();")
                 
                 print(f"[SELENIUM] Aguardando navegação inicial...", file=sys.stderr, flush=True)
                 time.sleep(3)
@@ -11792,26 +11802,41 @@ async def track_by_params(request: Request):
                     "end_time": end_dt.strftime("%H:%M"),
                     "days": days,
                 })
-        except Exception as e:
-            print(f"[SELENIUM ERROR] {e}", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[SELENIUM ERROR] {e}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+                # Cancelar alarm
+                try:
+                    signal.alarm(0)
+                except:
+                    pass
+                # RETORNAR vazio para não travar
+                return _no_store_json({
+                    "ok": True,
+                    "items": [],
+                    "location": location,
+                    "start_date": start_dt.date().isoformat(),
+                    "start_time": start_dt.strftime("%H:%M"),
+                    "end_date": end_dt.date().isoformat(),
+                    "end_time": end_dt.strftime("%H:%M"),
+                    "days": days,
+                })
+            finally:
+                # CRÍTICO: SEMPRE fechar driver, mesmo se houver erro
+                # Isso previne vazamento de memória (browsers Chrome órfãos consumindo RAM)
+                if driver is not None:
+                    try:
+                        print(f"[SELENIUM] 🧹 Limpeza: Fechando driver...", file=sys.stderr, flush=True)
+                        driver.quit()
+                        print(f"[SELENIUM] ✅ Driver fechado", file=sys.stderr, flush=True)
+                    except Exception as cleanup_error:
+                        print(f"[SELENIUM] ⚠️ Erro ao fechar driver: {cleanup_error}", file=sys.stderr, flush=True)
+        
+        except Exception as selenium_error:
+            print(f"[SELENIUM] Erro geral no bloco Selenium: {selenium_error}", file=sys.stderr, flush=True)
             import traceback
             traceback.print_exc(file=sys.stderr)
-            # Cancelar alarm
-            try:
-                signal.alarm(0)
-            except:
-                pass
-            # RETORNAR vazio para não travar
-            return _no_store_json({
-                "ok": True,
-                "items": [],
-                "location": location,
-                "start_date": start_dt.date().isoformat(),
-                "start_time": start_dt.strftime("%H:%M"),
-                "end_date": end_dt.date().isoformat(),
-                "end_time": end_dt.strftime("%H:%M"),
-                "days": days,
-            })
         
         # FIM DO CÓDIGO SELENIUM
         

@@ -512,6 +512,8 @@ async def _do_carjet_search(locations, days, pickup_date):
     
     all_results = {}
     
+    # IMPORTANTE: Fazer pesquisas SEQUENCIALMENTE (não paralelo) para evitar múltiplos browsers
+    # Isso reduz uso de RAM de ~1GB (3 browsers simultâneos) para ~200MB (1 browser por vez)
     async with aiohttp.ClientSession() as session:
         for location in locations:
             print(f"\n📍 Searching {location}...", flush=True)
@@ -519,6 +521,10 @@ async def _do_carjet_search(locations, days, pickup_date):
             
             for day in days:
                 print(f"   → {day} days...", flush=True)
+                
+                # Aguardar 2s entre pesquisas para garantir cleanup de memória
+                if location_results:  # Não aguardar na primeira iteração
+                    await asyncio.sleep(2)
                 
                 try:
                     payload = {
@@ -535,7 +541,8 @@ async def _do_carjet_search(locations, days, pickup_date):
                     # Add authentication header for internal scheduler requests
                     headers = {'X-Internal-Request': 'scheduler'}
                     
-                    async with session.post(api_url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=600)) as response:
+                    # Timeout reduzido de 600s para 180s (3min) para economizar memória
+                    async with session.post(api_url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=180)) as response:
                         print(f"      [HTTP] Status: {response.status}", flush=True)
                         
                         if response.status == 200:
