@@ -14288,13 +14288,17 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             try:
                 from carjet_direct import VEHICLES
                 car_name_lower = car_name.lower()
-                for veh_name, veh_cat in VEHICLES.items():
-                    if veh_name.lower() in car_name_lower or car_name_lower in veh_name.lower():
+                # IMPORTANTE: Ordenar por tamanho decrescente para dar prioridade a matches mais específicos
+                # Ex: "vw polo auto" (13 chars) deve ser encontrado antes de "vw polo" (7 chars)
+                sorted_vehicles = sorted(VEHICLES.items(), key=lambda x: len(x[0]), reverse=True)
+                for veh_name, veh_cat in sorted_vehicles:
+                    veh_name_lower = veh_name.lower()
+                    if veh_name_lower in car_name_lower or car_name_lower in veh_name_lower:
                         vehicles_match = veh_name
                         vehicles_category = veh_cat  # VEHICLES values são strings de categoria
                         vehicles_group = _map_category_to_group_code(veh_cat) if veh_cat else 'Unknown'
                         # Derivar transmissão do nome ou categoria
-                        if 'auto' in veh_name.lower() or 'Auto' in str(veh_cat):
+                        if 'auto' in veh_name_lower or 'Auto' in str(veh_cat):
                             vehicles_transmission = 'Automatic'
                         else:
                             vehicles_transmission = 'Manual'
