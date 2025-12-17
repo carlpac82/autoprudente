@@ -11639,21 +11639,38 @@ async def track_by_params(request: Request):
                 except Exception as e:
                     print(f"[SELENIUM] Erro ao preencher: {e}", file=sys.stderr, flush=True)
                 
-                # PASSO 4: Submit - Clicar no botão em vez de form.submit()
+                # PASSO 4: Submit via form.submit() (botão pode não existir)
                 print(f"[SELENIUM] PASSO 4: Submetendo...", file=sys.stderr, flush=True)
                 driver.execute_script("window.scrollBy(0, 300);")
                 time.sleep(0.5)
                 driver.execute_script("window.scrollTo(0, 0);")
                 time.sleep(0.5)
                 
-                # Tentar clicar no botão #sendForm (mais confiável que form.submit)
+                # Submit via JavaScript (mais confiável que procurar botão)
                 try:
-                    submit_btn = driver.find_element(By.ID, 'sendForm')
-                    submit_btn.click()
-                    print(f"[SELENIUM] ✓ Botão #sendForm clicado", file=sys.stderr, flush=True)
+                    # Tentar encontrar e submeter o form diretamente
+                    submit_result = driver.execute_script("""
+                        // Procurar form pelo name ou tag
+                        let form = document.querySelector('form[name="menu_tarifas"]') || 
+                                   document.querySelector('form#booking_form') ||
+                                   document.querySelector('form');
+                        
+                        if (form) {
+                            form.submit();
+                            return 'OK';
+                        }
+                        return 'NO_FORM';
+                    """)
+                    
+                    if submit_result == 'OK':
+                        print(f"[SELENIUM] ✅ Form submetido via JS", file=sys.stderr, flush=True)
+                    else:
+                        print(f"[SELENIUM] ❌ Form não encontrado", file=sys.stderr, flush=True)
+                        raise Exception("Form não encontrado")
+                        
                 except Exception as e:
-                    print(f"[SELENIUM] ⚠️ Erro ao clicar no botão, usando JS: {e}", file=sys.stderr, flush=True)
-                    driver.execute_script("document.getElementById('sendForm').click();")
+                    print(f"[SELENIUM] ❌ Erro ao submeter: {e}", file=sys.stderr, flush=True)
+                    raise
                 
                 print(f"[SELENIUM] Aguardando navegação inicial...", file=sys.stderr, flush=True)
                 time.sleep(2)
