@@ -555,7 +555,11 @@ except ImportError:
 # Import carjet_requests (novo método com sessão persistente)
 try:
     from carjet_requests import scrape_carjet_requests
-    _HAS_CARJET_REQUESTS = True
+    # Desabilitar requests se CarJet está bloqueando (war=28)
+    _DISABLE_REQUESTS = os.getenv("DISABLE_CARJET_REQUESTS", "0").strip() in ("1", "true", "yes")
+    _HAS_CARJET_REQUESTS = True and not _DISABLE_REQUESTS
+    if _DISABLE_REQUESTS:
+        logging.info("ℹ️  CarJet requests method disabled via DISABLE_CARJET_REQUESTS")
 except ImportError:
     logging.warning("⚠️  Could not import carjet_requests")
     _HAS_CARJET_REQUESTS = False
