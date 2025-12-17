@@ -157,7 +157,7 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         print(f"[REQUESTS] POST Data: {pickup_code}, {pickup_date} -> {return_date}", file=sys.stderr, flush=True)
         
         try:
-            resp_post = session.post(post_url, data=form_data, headers=post_headers, timeout=10, allow_redirects=False)
+            resp_post = session.post(post_url, data=form_data, headers=post_headers, timeout=10, allow_redirects=True)
             print(f"[REQUESTS] ✅ POST completado em <10s", file=sys.stderr, flush=True)
         except requests.exceptions.Timeout:
             print(f"[REQUESTS] ⏰ POST timeout após 10s - abortando", file=sys.stderr, flush=True)
@@ -166,18 +166,26 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
             print(f"[REQUESTS] ❌ POST erro: {post_err}", file=sys.stderr, flush=True)
             return []
         
-        print(f"[REQUESTS] POST: {resp_post.status_code} - HTML: {len(resp_post.text)} bytes")
+        print(f"[REQUESTS] POST: {resp_post.status_code} - URL: {resp_post.url}", file=sys.stderr, flush=True)
+        print(f"[REQUESTS] HTML: {len(resp_post.text)} bytes", file=sys.stderr, flush=True)
         
-        # DEBUG: Mostrar primeiras linhas para diagnóstico
-        lines = resp_post.text.split('\n')
-        print(f"[REQUESTS] DEBUG - Primeiras 10 linhas do POST response:", file=sys.stderr, flush=True)
-        for i, line in enumerate(lines[:10], 1):
-            preview = line.strip()[:100]
-            if preview:
-                print(f"  {i}: {preview}", file=sys.stderr, flush=True)
+        # Verificar se CarJet retornou erro (war= parameter)
+        if 'war=' in resp_post.url or 'error' in resp_post.url.lower():
+            print(f"[REQUESTS] ❌ CarJet retornou erro na URL: {resp_post.url}", file=sys.stderr, flush=True)
+            print(f"[REQUESTS] Possíveis causas: datas inválidas, localização incorreta, ou bloqueio", file=sys.stderr, flush=True)
+            return []
         
-        # PASSO 3: Extrair URL de redirect
-        redirect_url = extract_redirect_url(resp_post.text)
+        # Verificar se ficou na homepage (não navegou)
+        if '/index.htm' in resp_post.url and '/do/list/' not in resp_post.url:
+            print(f"[REQUESTS] ❌ Não navegou para página de resultados", file=sys.stderr, flush=True)
+            return []
+        
+        # PASSO 3: Extrair URL de redirect do HTML (se ainda não estiver em /do/list/)
+        if '/do/list/' not in resp_post.url:
+            redirect_url = extract_redirect_url(resp_post.text)
+        else:
+            # Já está na página de resultados!
+            redirect_url = resp_post.url.replace('https://www.carjet.com', '')
         
         if not redirect_url:
             print("[REQUESTS] ⚠️ Não encontrou URL de redirect")
