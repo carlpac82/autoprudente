@@ -14283,18 +14283,21 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             # 🔍 VERIFICAR VEHICLES (carjet_direct.py) - Comparar com transmissão detectada
             vehicles_match = None
             vehicles_transmission = None
-            vehicles_group = None
             try:
                 from carjet_direct import VEHICLES
                 car_name_lower = car_name.lower()
-                for veh_name, veh_category in VEHICLES.items():
+                for veh_name, veh_data in VEHICLES.items():
                     if veh_name.lower() in car_name_lower or car_name_lower in veh_name.lower():
                         vehicles_match = veh_name
-                        # VEHICLES values are category strings, not dicts
-                        vehicles_category = veh_category
-                        vehicles_transmission = None  # Not available in VEHICLES
-                        vehicles_group = _map_category_to_group_code(veh_category) if veh_category else 'Unknown'
+                        vehicles_transmission = veh_data.get('transmission', 'Unknown')
+                        vehicles_group = veh_data.get('group', 'Unknown')
                         
+                        # ALERTA: Se VEHICLES diz Manual mas detectamos Automatic (ou vice-versa)
+                        if vehicles_transmission and final_transmission:
+                            if vehicles_transmission != final_transmission:
+                                logging.warning(f"⚠️  [VEHICLES-CONFLICT] {car_name}:")
+                                logging.warning(f"      VEHICLES diz: {vehicles_transmission} (grupo {vehicles_group})")
+                                logging.warning(f"      DETECTADO: {final_transmission}")
                         break
             except Exception as e:
                 pass  # VEHICLES pode não existir
@@ -14315,7 +14318,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             
             logging.info(f"✅ [FINAL-RESULT] {car_name} → GRUPO '{group_code}' | {final_transmission} | {supplier} | {price_text}")
             if vehicles_match:
-                logging.info(f"      VEHICLES: '{vehicles_match}' → grupo {vehicles_group}")
+                logging.info(f"      VEHICLES: '{vehicles_match}' → grupo {veh_data.get('group')} | {vehicles_transmission}")
             # Capitalizar nome para display (Peugeot 2008 Auto, Renault Megane SW Auto)
             car_name_display = capitalize_car_name(car_name)
             items.append({
