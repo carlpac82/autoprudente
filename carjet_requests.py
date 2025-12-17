@@ -122,7 +122,7 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         time.sleep(2)
         
         # PASSO 2: Fazer POST do formulário
-        print("[REQUESTS] Passo 2: Submetendo formulário...")
+        print("[REQUESTS] Passo 2: Submetendo formulário...", file=sys.stderr, flush=True)
         
         pickup_date = start_dt.strftime('%d/%m/%Y %H:%M')
         return_date = end_dt.strftime('%d/%m/%Y %H:%M')
@@ -153,7 +153,18 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         }
         
         post_url = 'https://www.carjet.com/do/list/pt'
-        resp_post = session.post(post_url, data=form_data, headers=post_headers, timeout=15)
+        print(f"[REQUESTS] POST URL: {post_url}", file=sys.stderr, flush=True)
+        print(f"[REQUESTS] POST Data: {pickup_code}, {pickup_date} -> {return_date}", file=sys.stderr, flush=True)
+        
+        try:
+            resp_post = session.post(post_url, data=form_data, headers=post_headers, timeout=10, allow_redirects=False)
+            print(f"[REQUESTS] ✅ POST completado em <10s", file=sys.stderr, flush=True)
+        except requests.exceptions.Timeout:
+            print(f"[REQUESTS] ⏰ POST timeout após 10s - abortando", file=sys.stderr, flush=True)
+            return []
+        except Exception as post_err:
+            print(f"[REQUESTS] ❌ POST erro: {post_err}", file=sys.stderr, flush=True)
+            return []
         
         print(f"[REQUESTS] POST: {resp_post.status_code} - HTML: {len(resp_post.text)} bytes")
         
