@@ -2262,10 +2262,24 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             
             # Tentar match parcial (buscar chave que está contida no nome ou vice-versa)
             # Ordenar por tamanho decrescente para pegar matches mais específicos primeiro
+            # IMPORTANTE: Validar que variantes especiais (sw, cabrio, auto) correspondem
+            variant_keywords = ['sw', 'cabrio', 'cabriolet', 'electric', 'hybrid', '4x4']
+            
             for vehicle_key in sorted(VEHICLES.keys(), key=len, reverse=True):
                 # Match se o nome do carro contém a chave completa
                 # Ex: "toyota chr auto" contém "toyota chr"
                 if len(vehicle_key) >= 5 and vehicle_key in car_normalized:
+                    # VALIDAÇÃO: Se a key tem uma variante especial, o carro também deve ter
+                    # Ex: key='vw golf sw' só deve dar match se carro também tem 'sw'
+                    key_has_variant = any(v in vehicle_key for v in variant_keywords)
+                    if key_has_variant:
+                        # Verificar se TODAS as variantes na key também estão no nome do carro
+                        key_variants = [v for v in variant_keywords if v in vehicle_key]
+                        car_has_all_variants = all(v in car_normalized for v in key_variants)
+                        if not car_has_all_variants:
+                            # Key tem variante que carro não tem - skip este match
+                            continue
+                    
                     category_from_vehicles = VEHICLES[vehicle_key]
                     # ✅ MAPEAR DIRETAMENTE para código de grupo
                     grupo_code = _map_category_to_group_code(category_from_vehicles)
