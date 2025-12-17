@@ -11634,25 +11634,32 @@ async def track_by_params(request: Request):
                     driver.execute_script("document.getElementById('sendForm').click();")
                 
                 print(f"[SELENIUM] Aguardando navegação inicial...", file=sys.stderr, flush=True)
-                time.sleep(3)
+                time.sleep(2)
                 
                 # Aguardar até que a URL contenha /do/list/ (resultado final)
                 print(f"[SELENIUM] Aguardando página de resultados...", file=sys.stderr, flush=True)
-                max_wait = 40  # 40 segundos máximo
+                max_wait = 20  # 20 segundos máximo (reduzido de 40)
                 waited = 0
+                result_loaded = False
                 while waited < max_wait:
                     current_url = driver.current_url
                     if '/do/list/' in current_url and 's=' in current_url and 'b=' in current_url:
                         print(f"[SELENIUM] ✅ Página de resultados carregada após {waited}s", file=sys.stderr, flush=True)
+                        result_loaded = True
                         break
                     else:
                         print(f"[SELENIUM] Aguardando... URL atual: {current_url[:80]}... ({waited}s)", file=sys.stderr, flush=True)
-                        time.sleep(3)
-                        waited += 3
+                        time.sleep(2)
+                        waited += 2
+                
+                # Se timeout, logar e continuar mesmo assim
+                if not result_loaded:
+                    current_url = driver.current_url
+                    print(f"[SELENIUM] ⏰ Timeout após {max_wait}s. URL final: {current_url}", file=sys.stderr, flush=True)
                 
                 # Aguardar mais um pouco para garantir que o conteúdo carregou
                 print(f"[SELENIUM] Aguardando conteúdo carregar...", file=sys.stderr, flush=True)
-                time.sleep(5)
+                time.sleep(3)
                 
                 final_url = driver.current_url
                 
