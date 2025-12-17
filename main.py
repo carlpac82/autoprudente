@@ -14768,7 +14768,7 @@ def fetch_with_optional_proxy(url: str, headers: Dict[str, str]):
                 # Fallback to direct if proxy is unauthorized/forbidden
                 if _HTTPX_CLIENT:
                     return _HTTPX_CLIENT.get(url, headers=headers)
-                return requests.get(url, headers=headers, timeout=6)
+                return requests.get(url, headers=headers, timeout=30)
             return r
         except Exception:
             # Fallback to direct on any proxy error
@@ -14803,7 +14803,7 @@ async def async_fetch_with_optional_proxy(url: str, headers: Dict[str, str]):
             if _HTTPX_ASYNC:
                 return await _HTTPX_ASYNC.get(url, headers=h2)
             # fallback to sync in thread
-            return await asyncio.to_thread(requests.get, url, headers=h2, timeout=6)
+            return await asyncio.to_thread(requests.get, url, headers=h2, timeout=30)
     except Exception:
         pass
     if SCRAPER_SERVICE.lower() == "scrapeops" and SCRAPER_API_KEY:
@@ -14816,22 +14816,22 @@ async def async_fetch_with_optional_proxy(url: str, headers: Dict[str, str]):
             if SCRAPER_COUNTRY:
                 params["country"] = SCRAPER_COUNTRY
             # httpx doesn't proxy this conveniently; use requests in a thread
-            r = await asyncio.to_thread(requests.get, "https://proxy.scrapeops.io/v1/", params=params, headers=headers, timeout=6)
+            r = await asyncio.to_thread(requests.get, "https://proxy.scrapeops.io/v1/", params=params, headers=headers, timeout=30)
         except TypeError:
             # Fallback: direct fetch
             if _HTTPX_ASYNC:
                 return await _HTTPX_ASYNC.get(url, headers=headers)
-            return await asyncio.to_thread(requests.get, url, headers=headers, timeout=6)
+            return await asyncio.to_thread(requests.get, url, headers=headers, timeout=30)
         try:
             if r.status_code in (401, 403):
                 if _HTTPX_ASYNC:
                     return await _HTTPX_ASYNC.get(url, headers=headers)
-                return await asyncio.to_thread(requests.get, url, headers=headers, timeout=6)
+                return await asyncio.to_thread(requests.get, url, headers=headers, timeout=30)
             return r
         except Exception:
             if _HTTPX_ASYNC:
                 return await _HTTPX_ASYNC.get(url, headers=headers)
-            return await asyncio.to_thread(requests.get, url, headers=headers, timeout=6)
+            return await asyncio.to_thread(requests.get, url, headers=headers, timeout=30)
     if _HTTPX_ASYNC:
         return await _HTTPX_ASYNC.get(url, headers=headers)
     return await asyncio.to_thread(requests.get, url, headers=headers, timeout=20)
