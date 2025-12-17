@@ -14389,8 +14389,10 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             logging.info("=" * 80)
             print(f"[PARSE] Returning {len(items)} items from card parsing")
             return items
-    except Exception:
-        pass
+    except Exception as parse_err:
+        import traceback
+        print(f"[PARSE] ❌ Pass 2 EXCEPTION: {parse_err}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
 
     # Require an explicit currency marker to avoid capturing ratings/ages
     price_regex = re.compile(r"(?:€\s*\d{1,4}(?:[\.,]\d{3})*(?:[\.,]\d{2})?|\bEUR\s*\d{1,4}(?:[\.,]\d{3})*(?:[\.,]\d{2})?)", re.I)
