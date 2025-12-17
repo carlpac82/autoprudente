@@ -14617,13 +14617,38 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
         url = f"https://www.carjet.com/do/list/{lang}"
         resp = sess.post(url, data=data, headers=headers, timeout=25)
         if resp.status_code == 200 and resp.text:
+            import sys
+            print(f"[URLLIB] POST: {resp.status_code} - URL final: {resp.url}", file=sys.stderr, flush=True)
+            print(f"[URLLIB] HTML: {len(resp.text)} bytes", file=sys.stderr, flush=True)
+            
+            # Verificar se CarJet retornou erro war=
+            if 'war=' in resp.url:
+                print(f"[URLLIB] ❌ CarJet retornou erro: {resp.url}", file=sys.stderr, flush=True)
+                return ""
+            
             # Detect if we were redirected to a generic homepage (wrong locale)
             homepage_like = False
             try:
                 homepage_like = bool(re.search(r'hrental_pagetype"\s*:\s*"home"', resp.text) or re.search(r'data-steplist="home"', resp.text))
             except Exception:
                 homepage_like = False
+            
+            # Verificar se tem carros no HTML
+            has_cars = 'class="carCardWeb"' in resp.text or 'price pr-euros' in resp.text
+            print(f"[URLLIB] homepage_like={homepage_like}, has_cars={has_cars}", file=sys.stderr, flush=True)
+            
             if not homepage_like:
+                if has_cars:
+                    print(f"[URLLIB] ✅ HTML contém carros, retornando", file=sys.stderr, flush=True)
+                else:
+                    print(f"[URLLIB] ⚠️ HTML sem carros detectados", file=sys.stderr, flush=True)
+                    # Salvar para debug
+                    try:
+                        with open('urllib_no_cars_debug.html', 'w', encoding='utf-8') as f:
+                            f.write(resp.text)
+                        print(f"[URLLIB] 💾 HTML salvo: urllib_no_cars_debug.html", file=sys.stderr, flush=True)
+                    except:
+                        pass
                 return resp.text
             # Fallback path observed on results pages: modalFilter.asp then carList.asp
             try:
