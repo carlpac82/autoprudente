@@ -10995,7 +10995,11 @@ async def track_by_params(request: Request):
         # ═══════════════════════════════════════════════════════════════════════════
         # MÉTODO 2 (FALLBACK): PLAYWRIGHT (se try_direct_carjet falhar)
         # ═══════════════════════════════════════════════════════════════════════════
-        if not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT:
+        # Desabilitar Playwright também quando DISABLE_CARJET_REQUESTS=1 (ir direto para Selenium)
+        if _DISABLE_REQUESTS:
+            print("[API] ⏭️  Pulando Playwright (DISABLE_CARJET_REQUESTS=1) - indo direto para Selenium", file=sys.stderr, flush=True)
+        
+        if not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT and not _DISABLE_REQUESTS:
             print(f"[PLAYWRIGHT] Iniciando scraping com Playwright (iPhone 13 Pro)...", file=sys.stderr, flush=True)
             try:
                 from playwright.async_api import async_playwright
