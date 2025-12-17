@@ -2206,15 +2206,22 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             
             # ✅ PRIORIDADE MÁXIMA 3: Carros AUTO ANTES de match parcial
             # Garantir que "Mercedes V Class Auto" não é mapeado como "Mercedes V Class" (M1)
-            if re.search(r'\b(auto|automatic|automático|automatico)\b', car_clean_lower):
+            # IMPORTANTE: Verificar TAMBÉM a transmissão detectada (pelo ícone), não só o nome!
+            is_auto_detected = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+            has_auto_in_name = re.search(r'\b(auto|automatic|automático|automatico)\b', car_clean_lower)
+            
+            if has_auto_in_name or is_auto_detected:
                 # Verificar se existe match exato com versão AUTO no VEHICLES
                 # Tentar matches mais específicos primeiro (ordenar por tamanho decrescente)
                 for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
-                    if auto_key in car_clean_lower:
+                    # Match: key está no nome OU nome base está na key
+                    # Ex: "vw polo auto" match com nome "VW Polo" quando transmissão=Automatic
+                    auto_key_base = auto_key.replace(' auto', '').strip()
+                    if auto_key in car_clean_lower or (is_auto_detected and auto_key_base in car_clean_lower):
                         category_from_vehicles = VEHICLES[auto_key]
                         grupo_code = _map_category_to_group_code(category_from_vehicles)
                         if grupo_code:
-                            logging.info(f"✅ [AUTO-PRIORITY] {car_name} → {auto_key} → {category_from_vehicles} → {grupo_code}")
+                            logging.info(f"✅ [AUTO-PRIORITY] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
             # Remover sufixos comuns que impedem match
