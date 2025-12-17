@@ -10941,6 +10941,7 @@ async def track_by_params(request: Request):
         # MÉTODO 1 (PRINCIPAL): try_direct_carjet (requests com sessão persistente)
         # ═══════════════════════════════════════════════════════════════════════════
         print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}", file=sys.stderr, flush=True)
+        print(f"[DEBUG] _DISABLE_REQUESTS={_DISABLE_REQUESTS}, _HAS_CARJET_REQUESTS={_HAS_CARJET_REQUESTS}", file=sys.stderr, flush=True)
         
         # Tentar método direto primeiro (requests ou urllib) - APENAS se não estiver desabilitado
         if _DISABLE_REQUESTS:
