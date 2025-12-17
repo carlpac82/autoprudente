@@ -13219,8 +13219,20 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
 
     # Pass 2: try to parse explicit car cards/rows from the HTML (preferred over regex)
     try:
-        cards = soup.select("section.newcarlist article, .newcarlist article, article.car, li.result, li.car, .car-item, .result-row")
-        print(f"[PARSE] Found {len(cards)} cards to parse")
+        # NOVO SELETOR: CarJet usa .cl--carlist-item para cards de carros
+        cards = soup.select(".cl--carlist-item, section.newcarlist article, .newcarlist article, article.car, li.result, li.car, .car-item, .result-row")
+        print(f"[PARSE] Found {len(cards)} cards to parse", file=sys.stderr, flush=True)
+        
+        # DEBUG: Mostrar primeiro card para entender estrutura
+        if cards:
+            first_card = cards[0]
+            card_classes = first_card.get('class', [])
+            card_tag = first_card.name
+            print(f"[PARSE-DEBUG] First card: <{card_tag} class='{' '.join(card_classes)}'>", file=sys.stderr, flush=True)
+            # Mostrar primeiros 200 chars do HTML do card
+            card_html = str(first_card)[:200]
+            print(f"[PARSE-DEBUG] Card HTML preview: {card_html}...", file=sys.stderr, flush=True)
+        
         idx = 0
         cards_with_price = 0
         cards_with_name = 0
