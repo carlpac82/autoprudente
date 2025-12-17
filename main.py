@@ -14508,13 +14508,13 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
     Returns:
         HTML string com resultados ou "" se falhar
     """
+    import sys
     
     # =============================================================================
     # MÉTODO 1 (PRINCIPAL): carjet_requests com sessão persistente
     # =============================================================================
     if _HAS_CARJET_REQUESTS:
         try:
-            import sys
             print("[DIRECT] 🔵 Tentando método 1: requests com sessão persistente", file=sys.stderr, flush=True)
             
             # Usar scrape_carjet_requests que retorna lista de carros
