@@ -11568,45 +11568,31 @@ async def track_by_params(request: Request):
                     pickup_input.send_keys(carjet_location)
                     print(f"[SELENIUM] ✓ Local digitado", file=sys.stderr, flush=True)
                     
-                    # PASSO 2: Aguardar dropdown e clicar
+                    # PASSO 2: Aguardar dropdown e clicar (SIMPLIFICADO)
                     print(f"[SELENIUM] PASSO 2: Aguardando dropdown...", file=sys.stderr, flush=True)
-                    print(f"[SELENIUM] PASSO 2.1: sleep(2)...", file=sys.stderr, flush=True)
-                    time.sleep(2)  # Reduzido de 3 para 2
-                    print(f"[SELENIUM] PASSO 2.2: Verificando dropdown...", file=sys.stderr, flush=True)
+                    time.sleep(1.5)  # Reduzido para 1.5s
                     
-                    # Primeiro verificar se dropdown existe
-                    dropdown_count = driver.execute_script("return document.querySelectorAll('#recogida_lista li').length")
-                    print(f"[SELENIUM] PASSO 2.3: {dropdown_count} itens no dropdown", file=sys.stderr, flush=True)
-                    
+                    # Clicar no dropdown via JS diretamente (mais confiável)
                     try:
-                        dropdown_item = WebDriverWait(driver, 3).until(
-                            EC.element_to_be_clickable((By.CSS_SELECTOR, "#recogida_lista li:first-child a"))
-                        )
-                        print(f"[SELENIUM] PASSO 2.4: Dropdown encontrado, clicando...", file=sys.stderr, flush=True)
-                        dropdown_item.click()
-                        print(f"[SELENIUM] ✓ Dropdown clicado", file=sys.stderr, flush=True)
-                    except Exception as dropdown_err:
-                        print(f"[SELENIUM] PASSO 2.4: WebDriverWait falhou: {dropdown_err}", file=sys.stderr, flush=True)
-                        print(f"[SELENIUM] PASSO 2.5: Tentando via JS...", file=sys.stderr, flush=True)
+                        driver.set_script_timeout(5)  # Timeout de 5s para scripts
                         js_result = driver.execute_script("""
-                            const items = document.querySelectorAll('#recogida_lista li');
-                            console.log('Dropdown items:', items.length);
-                            for (let item of items) {
-                                if (item.offsetParent !== null) {
-                                    item.click();
-                                    return 'clicked';
+                            try {
+                                const items = document.querySelectorAll('#recogida_lista li');
+                                if (items.length > 0) {
+                                    items[0].querySelector('a')?.click() || items[0].click();
+                                    return 'clicked:' + items.length;
                                 }
+                                return 'no_items';
+                            } catch(e) {
+                                return 'error:' + e.message;
                             }
-                            // Se nenhum item visível, clicar no primeiro
-                            if (items.length > 0) {
-                                items[0].click();
-                                return 'clicked_first';
-                            }
-                            return 'no_items';
                         """)
-                        print(f"[SELENIUM] ✓ Dropdown via JS: {js_result}", file=sys.stderr, flush=True)
+                        print(f"[SELENIUM] ✓ Dropdown: {js_result}", file=sys.stderr, flush=True)
+                    except Exception as dropdown_err:
+                        print(f"[SELENIUM] ⚠️ Dropdown falhou: {dropdown_err}", file=sys.stderr, flush=True)
+                        # Continuar mesmo assim - o dropdown pode não ser necessário
                     
-                    time.sleep(1)
+                    time.sleep(0.5)
                     
                     # PASSO 3: Preencher datas e horas (DEPOIS do dropdown!)
                     print(f"[SELENIUM] PASSO 3: Preenchendo datas e horas...", file=sys.stderr, flush=True)
