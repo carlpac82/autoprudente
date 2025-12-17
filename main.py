@@ -12737,6 +12737,8 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
     1. carjet_requests (novo método) - JSON embutido
     2. Método antigo - HTML normal
     """
+    import sys
+    print(f"[PARSE] ▶️ parse_prices() called with {len(html) if html else 0} bytes", file=sys.stderr, flush=True)
     
     # DETECTAR se vem do carjet_requests (novo método)
     if html and "<!--CARJET_REQUESTS_DATA-->" in html:
@@ -13218,6 +13220,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         pass
 
     # Pass 2: try to parse explicit car cards/rows from the HTML (preferred over regex)
+    print(f"[PARSE] ▶️ Pass 2: Starting card parsing...", file=sys.stderr, flush=True)
     try:
         # NOVO SELETOR: CarJet usa .cl--carlist-item para cards de carros
         cards = soup.select(".cl--carlist-item, section.newcarlist article, .newcarlist article, article.car, li.result, li.car, .car-item, .result-row")
