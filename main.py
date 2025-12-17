@@ -11067,20 +11067,38 @@ async def track_by_params(request: Request):
                     print(f"[PLAYWRIGHT] PASSO 2: Aguardando dropdown...", file=sys.stderr, flush=True)
                     await page.wait_for_timeout(2000)
                     
+                    dropdown_clicked = False
                     try:
-                        await page.click('#recogida_lista li:first-child a', timeout=3000)
-                        print(f"[PLAYWRIGHT] Dropdown clicado", file=sys.stderr, flush=True)
-                    except:
-                        await page.evaluate("""
-                            const items = document.querySelectorAll('#recogida_lista li');
-                            for (let item of items) {
-                                if (item.offsetParent !== null) {
-                                    item.click();
-                                    break;
+                        # Verificar se dropdown existe
+                        dropdown_visible = await page.locator('#recogida_lista li:first-child a').is_visible(timeout=3000)
+                        if dropdown_visible:
+                            await page.click('#recogida_lista li:first-child a', timeout=3000)
+                            print(f"[PLAYWRIGHT] ✅ Dropdown clicado", file=sys.stderr, flush=True)
+                            dropdown_clicked = True
+                        else:
+                            print(f"[PLAYWRIGHT] ⚠️ Dropdown não visível", file=sys.stderr, flush=True)
+                    except Exception as dropdown_err:
+                        print(f"[PLAYWRIGHT] ⚠️ Dropdown click falhou: {dropdown_err}", file=sys.stderr, flush=True)
+                        try:
+                            # Fallback: tentar via JS
+                            await page.evaluate("""
+                                const items = document.querySelectorAll('#recogida_lista li');
+                                for (let item of items) {
+                                    if (item.offsetParent !== null) {
+                                        item.click();
+                                        return true;
+                                    }
                                 }
-                            }
-                        """)
-                        print(f"[PLAYWRIGHT] Dropdown clicado (JS)", file=sys.stderr, flush=True)
+                                return false;
+                            """)
+                            print(f"[PLAYWRIGHT] ✅ Dropdown clicado (JS fallback)", file=sys.stderr, flush=True)
+                            dropdown_clicked = True
+                        except Exception as js_err:
+                            print(f"[PLAYWRIGHT] ❌ Dropdown JS também falhou: {js_err}", file=sys.stderr, flush=True)
+                    
+                    if not dropdown_clicked:
+                        print(f"[PLAYWRIGHT] ❌ Não conseguiu clicar no dropdown, abortando", file=sys.stderr, flush=True)
+                        raise Exception("Dropdown não encontrado")
                     
                     await page.wait_for_timeout(1000)
                     
