@@ -10942,8 +10942,11 @@ async def track_by_params(request: Request):
         # ═══════════════════════════════════════════════════════════════════════════
         print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}", file=sys.stderr, flush=True)
         
-        # Tentar método direto primeiro (requests ou urllib)
-        if not items:
+        # Tentar método direto primeiro (requests ou urllib) - APENAS se não estiver desabilitado
+        if _DISABLE_REQUESTS:
+            print("[API] ⏭️  Pulando try_direct_carjet (DISABLE_CARJET_REQUESTS=1)", file=sys.stderr, flush=True)
+        
+        if not items and not _DISABLE_REQUESTS:
             try:
                 print("[API] 🔵 Tentando método 1: try_direct_carjet (requests/urllib)", file=sys.stderr, flush=True)
                 html_direct = try_direct_carjet(location, start_dt, end_dt, lang=lang, currency=currency)
