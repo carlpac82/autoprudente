@@ -171,8 +171,8 @@ def test_carjet_visual():
         
         # O CarJet mobile usa dropdowns: fechaRecogidaMyBookingMonthYear e fechaRecogidaMyBookingDay
         date_result = driver.execute_script("""
-            // Janeiro 2026 = 202601 (data FUTURA!)
-            const monthYearValue = '202601';
+            // Abril 2026 = 202604 (data FUTURA!)
+            const monthYearValue = '202604';
             const dayPickup = '15';
             const dayDropoff = '22';
             
@@ -207,8 +207,8 @@ def test_carjet_visual():
             // Também preencher campos hidden
             const fechaRec = document.querySelector('#fechaRecogida');
             const fechaDev = document.querySelector('#fechaDevolucion');
-            if (fechaRec) fechaRec.value = '15/01/2026';
-            if (fechaDev) fechaDev.value = '22/01/2026';
+            if (fechaRec) fechaRec.value = '15/04/2026';
+            if (fechaDev) fechaDev.value = '22/04/2026';
             
             return {
                 monthSelect1: monthSelect1?.value,
