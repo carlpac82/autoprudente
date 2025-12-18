@@ -597,7 +597,8 @@ except Exception:
     _HAS_PLAYWRIGHT = False
 
 # Environment variables
-USE_PLAYWRIGHT = str(os.getenv("USE_PLAYWRIGHT", "")).strip().lower() in ("1","true","yes","on")
+# DESATIVADO: Playwright não funciona no CarJet - ir direto ao Selenium
+USE_PLAYWRIGHT = False  # Forçar desativação
 _test_mode_val = os.getenv("TEST_MODE_LOCAL", "0").strip()
 TEST_MODE_LOCAL = int(_test_mode_val) if _test_mode_val.isdigit() else (1 if _test_mode_val.lower() in ("true", "yes") else 0)
 TEST_FARO_URL = os.getenv("TEST_FARO_URL", "")
