@@ -14346,12 +14346,16 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                         else:
                             vehicles_transmission = 'Manual'
                         
-                        # ALERTA: Se VEHICLES diz Manual mas detectamos Automatic (ou vice-versa)
+                        # CORRECÇÃO: Se VEHICLES diz Manual mas detectamos Automatic, USAR VEHICLES!
+                        # VEHICLES é mais confiável porque é parametrizado manualmente
                         if vehicles_transmission and final_transmission:
                             if vehicles_transmission != final_transmission:
                                 logging.warning(f"⚠️  [VEHICLES-CONFLICT] {car_name}:")
                                 logging.warning(f"      VEHICLES diz: {vehicles_transmission} (grupo {vehicles_group})")
                                 logging.warning(f"      DETECTADO: {final_transmission}")
+                                logging.warning(f"      → USANDO VEHICLES (mais confiável)")
+                                # SOBRESCREVER com transmissão do VEHICLES
+                                final_transmission = vehicles_transmission
                         break
             except Exception as e:
                 pass  # VEHICLES pode não existir
