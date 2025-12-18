@@ -1387,6 +1387,12 @@ _db_lock = Lock()
 DEBUG_DIR = Path(os.environ.get("DEBUG_DIR", BASE_DIR / "static" / "debug"))
 DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 
+# Semaphore to limit concurrent scraping requests (prevents Render crashes)
+# Max 2 concurrent scraping operations to avoid memory exhaustion
+from threading import Semaphore
+_scraping_semaphore = Semaphore(2)
+_scraping_queue_timeout = 120  # Max seconds to wait for semaphore
+
 # --- Admin/Users: DB helpers ---
 class PostgreSQLConnectionWrapper:
     """Wrapper para adicionar método execute() à conexão PostgreSQL"""
@@ -14564,236 +14570,246 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
     MÉTODO PRINCIPAL: carjet_requests (sessão persistente com polling)
     FALLBACK: Método antigo urllib (se requests falhar)
     
+    Uses semaphore to limit concurrent scraping requests (prevents Render crashes)
+    
     Returns:
         HTML string com resultados ou "" se falhar
     """
     import sys
     
-    # =============================================================================
-    # MÉTODO 1 (PRINCIPAL): carjet_requests com sessão persistente
-    # =============================================================================
-    if _HAS_CARJET_REQUESTS:
-        try:
-            print("[DIRECT] 🔵 Tentando método 1: requests com sessão persistente", file=sys.stderr, flush=True)
-            
-            # Usar scrape_carjet_requests que retorna lista de carros
-            results = scrape_carjet_requests(location_name, start_dt, end_dt)
-            
-            if results and len(results) > 0:
-                print(f"[DIRECT] ✅ Método 1 funcionou: {len(results)} carros encontrados", file=sys.stderr, flush=True)
-                
-                # Converter resultados para HTML fake para compatibilidade
-                # (o código existente espera HTML string)
-                # Mas primeiro vamos tentar retornar os dados diretamente
-                # NOTA: Como o código espera HTML, vamos serializar como JSON no HTML
-                import json
-                fake_html = f"<!--CARJET_REQUESTS_DATA-->{json.dumps(results)}<!--END_DATA-->"
-                return fake_html
-            else:
-                print(f"[DIRECT] ⚠️ Método 1 retornou 0 resultados, tentando fallback...", file=sys.stderr, flush=True)
-        
-        except Exception as e:
-            print(f"[DIRECT] ⚠️ Método 1 falhou: {e}, tentando fallback...", file=sys.stderr, flush=True)
-            import traceback
-            traceback.print_exc(file=sys.stderr)
-    
-    # =============================================================================
-    # MÉTODO 2 (FALLBACK): urllib antigo
-    # =============================================================================
-    print("[DIRECT] 🟡 Usando método 2 (fallback): urllib antigo", file=sys.stderr, flush=True)
+    # Acquire semaphore to limit concurrent scraping (prevents memory exhaustion)
+    acquired = _scraping_semaphore.acquire(timeout=_scraping_queue_timeout)
+    if not acquired:
+        print(f"[DIRECT] ⚠️ Timeout aguardando semaphore ({_scraping_queue_timeout}s) - muitas requisições simultâneas", file=sys.stderr, flush=True)
+        return ""
     
     try:
-        sess = requests.Session()
-        ua = {
-            "User-Agent": "Mozilla/5.0 (compatible; PriceTracker/1.0)",
-            "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.6",
-            "X-Forwarded-For": "185.23.160.1",
-            "Referer": "https://www.carjet.com/do/list/pt",
-        }
-        lang = (lang or "pt").lower()
-        # Pre-seed cookies to bias locale
-        try:
-            sess.cookies.set("monedaForzada", currency)
-            sess.cookies.set("moneda", currency)
-            sess.cookies.set("currency", currency)
-            sess.cookies.set("idioma", lang.upper())
-            sess.cookies.set("lang", lang)
-            sess.cookies.set("country", "PT")
-        except Exception:
-            pass
-
-        # 1) GET locale homepage to mint session and try to capture s/b tokens
-        if lang == "pt":
-            home_path = "aluguel-carros/index.htm"
-        elif lang == "es":
-            home_path = "alquiler-coches/index.htm"
-        elif lang == "fr":
-            home_path = "location-voitures/index.htm"
-        elif lang == "de":
-            home_path = "mietwagen/index.htm"
-        elif lang == "it":
-            home_path = "autonoleggio/index.htm"
-        elif lang == "nl":
-            home_path = "autohuur/index.htm"
-        else:
-            home_path = "index.htm"
-        home_url = f"https://www.carjet.com/{home_path}"
-        home = sess.get(home_url, headers=ua, timeout=20)
-        s_token = None
-        b_token = None
-        try:
-            m = re.search(r"[?&]s=([A-Za-z0-9]+)", home.text)
-            if m:
-                s_token = m.group(1)
-            m = re.search(r"[?&]b=([A-Za-z0-9]+)", home.text)
-            if m:
-                b_token = m.group(1)
-        except Exception:
-            pass
-
-        # 2) Prefer submitting the actual homepage form with all hidden fields preserved
-        try:
-            soup = BeautifulSoup(home.text, "lxml")
-            form = soup.select_one("form[name='menu_tarifas'], form#booking_form")
-            if form:
-                action = form.get("action") or f"/do/list/{lang}"
-                post_url = action if action.startswith("http") else requests.compat.urljoin(home_url, action)
-                payload: Dict[str, Any] = {}
-                # include all inputs
-                for inp in form.select("input[name]"):
-                    name = inp.get("name")
-                    if not name:
-                        continue
-                    val = inp.get("value", "")
-                    payload[name] = val
-                # include selects
-                for sel in form.select("select[name]"):
-                    name = sel.get("name")
-                    if not name:
-                        continue
-                    # take selected option or first
-                    opt = sel.select_one("option[selected]") or sel.select_one("option")
-                    payload[name] = opt.get("value") if opt else ""
-
-                # override with our values
-                override = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
-                payload.update({k: v for k, v in override.items() if v is not None})
-                if s_token:
-                    payload["s"] = s_token
-                if b_token:
-                    payload["b"] = b_token
-
-                headers = {
-                    "User-Agent": ua["User-Agent"],
-                    "Origin": "https://www.carjet.com",
-                    "Referer": home_url,
-                }
-                resp = sess.post(post_url, data=payload, headers=headers, timeout=25)
-                if resp.status_code == 200 and resp.text:
-                    return resp.text
-        except Exception:
-            pass
-
-        # 3) Fallback: POST to /do/list/{lang} with our constructed payload
-        data = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
-        if s_token:
-            data["s"] = s_token
-        if b_token:
-            data["b"] = b_token
-
-        headers = {
-            "User-Agent": ua["User-Agent"],
-            "Origin": "https://www.carjet.com",
-            "Referer": home_url,
-            "Accept-Language": ua.get("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.6"),
-            "X-Forwarded-For": ua.get("X-Forwarded-For", "185.23.160.1"),
-        }
-        url = f"https://www.carjet.com/do/list/{lang}"
-        resp = sess.post(url, data=data, headers=headers, timeout=25)
-        if resp.status_code == 200 and resp.text:
-            import sys
-            print(f"[URLLIB] POST: {resp.status_code} - URL final: {resp.url}", file=sys.stderr, flush=True)
-            print(f"[URLLIB] HTML: {len(resp.text)} bytes", file=sys.stderr, flush=True)
-            
-            # Verificar se CarJet retornou erro war=
-            if 'war=' in resp.url:
-                print(f"[URLLIB] ❌ CarJet retornou erro: {resp.url}", file=sys.stderr, flush=True)
-                return ""
-            
-            # Detect if we were redirected to a generic homepage (wrong locale)
-            homepage_like = False
+        # =============================================================================
+        # MÉTODO 1 (PRINCIPAL): carjet_requests com sessão persistente
+        # =============================================================================
+        if _HAS_CARJET_REQUESTS:
             try:
-                homepage_like = bool(re.search(r'hrental_pagetype"\s*:\s*"home"', resp.text) or re.search(r'data-steplist="home"', resp.text))
-            except Exception:
-                homepage_like = False
-            
-            # Verificar se tem carros no HTML
-            has_cars = 'class="carCardWeb"' in resp.text or 'price pr-euros' in resp.text
-            print(f"[URLLIB] homepage_like={homepage_like}, has_cars={has_cars}", file=sys.stderr, flush=True)
-            
-            if not homepage_like:
-                if has_cars:
-                    print(f"[URLLIB] ✅ HTML contém carros, retornando", file=sys.stderr, flush=True)
+                print("[DIRECT] 🔵 Tentando método 1: requests com sessão persistente", file=sys.stderr, flush=True)
+                
+                # Usar scrape_carjet_requests que retorna lista de carros
+                results = scrape_carjet_requests(location_name, start_dt, end_dt)
+                
+                if results and len(results) > 0:
+                    print(f"[DIRECT] ✅ Método 1 funcionou: {len(results)} carros encontrados", file=sys.stderr, flush=True)
+                    
+                    # Converter resultados para HTML fake para compatibilidade
+                    # (o código existente espera HTML string)
+                    # Mas primeiro vamos tentar retornar os dados diretamente
+                    # NOTA: Como o código espera HTML, vamos serializar como JSON no HTML
+                    import json
+                    fake_html = f"<!--CARJET_REQUESTS_DATA-->{json.dumps(results)}<!--END_DATA-->"
+                    return fake_html
                 else:
-                    print(f"[URLLIB] ⚠️ HTML sem carros detectados", file=sys.stderr, flush=True)
-                    # Salvar para debug
-                    try:
-                        with open('urllib_no_cars_debug.html', 'w', encoding='utf-8') as f:
-                            f.write(resp.text)
-                        print(f"[URLLIB] 💾 HTML salvo: urllib_no_cars_debug.html", file=sys.stderr, flush=True)
-                    except:
-                        pass
-                return resp.text
-            # Fallback path observed on results pages: modalFilter.asp then carList.asp
+                    print(f"[DIRECT] ⚠️ Método 1 retornou 0 resultados, tentando fallback...", file=sys.stderr, flush=True)
+            
+            except Exception as e:
+                print(f"[DIRECT] ⚠️ Método 1 falhou: {e}, tentando fallback...", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+        
+        # =============================================================================
+        # MÉTODO 2 (FALLBACK): urllib antigo
+        # =============================================================================
+        print("[DIRECT] 🟡 Usando método 2 (fallback): urllib antigo", file=sys.stderr, flush=True)
+    
+        try:
+            sess = requests.Session()
+            ua = {
+                "User-Agent": "Mozilla/5.0 (compatible; PriceTracker/1.0)",
+                "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.6",
+                "X-Forwarded-For": "185.23.160.1",
+                "Referer": "https://www.carjet.com/do/list/pt",
+            }
+            lang = (lang or "pt").lower()
+            # Pre-seed cookies to bias locale
             try:
-                mf_url = f"https://www.carjet.com/modalFilter.asp"
-                # Minimal payload aligning with page
-                mf_payload = {
-                    "frmDestino": data.get("frmDestino") or data.get("dst_id") or data.get("pickupId") or "",
-                    "frmFechaRecogida": f"{start_dt.strftime('%d/%m/%Y')} {start_dt.strftime('%H:%M')}",
-                    "frmFechaDevolucion": f"{end_dt.strftime('%d/%m/%Y')} {end_dt.strftime('%H:%M')}",
-                    "idioma": lang.upper(),
-                    "frmMoneda": currency,
-                    "frmTipoVeh": "CAR",
-                }
-                _ = sess.post(mf_url, data=mf_payload, headers=headers, timeout=20)
-            except Exception:
-                pass
-            try:
-                # Keep session tokens if available
-                _q = f"idioma={lang.upper()}&case=2"
-                if s_token:
-                    _q += f"&s={s_token}"
-                if b_token:
-                    _q += f"&b={b_token}"
-                cl_url = f"https://www.carjet.com/carList.asp?{_q}"
-                rlist = sess.get(cl_url, headers=headers, timeout=25)
-                if rlist.status_code == 200 and rlist.text:
-                    return rlist.text
+                sess.cookies.set("monedaForzada", currency)
+                sess.cookies.set("moneda", currency)
+                sess.cookies.set("currency", currency)
+                sess.cookies.set("idioma", lang.upper())
+                sess.cookies.set("lang", lang)
+                sess.cookies.set("country", "PT")
             except Exception:
                 pass
 
-        # If not OK or homepage detected, retry with PT-Portugal homepage and forced params on POST URL
-        try:
-            # Visit PT-Portugal homepage spelling (aluguer vs aluguel)
-            home_url_ptpt = "https://www.carjet.com/aluguer-carros/index.htm"
-            _ = sess.get(home_url_ptpt, headers=ua, timeout=20)
-            headers2 = dict(headers)
-            post_url2 = f"https://www.carjet.com/do/list/{lang}?idioma=PT&moneda=EUR&currency=EUR"
-            resp2 = sess.post(post_url2, data=data, headers=headers2, timeout=25)
-            if resp2.status_code == 200 and resp2.text:
+            # 1) GET locale homepage to mint session and try to capture s/b tokens
+            if lang == "pt":
+                home_path = "aluguel-carros/index.htm"
+            elif lang == "es":
+                home_path = "alquiler-coches/index.htm"
+            elif lang == "fr":
+                home_path = "location-voitures/index.htm"
+            elif lang == "de":
+                home_path = "mietwagen/index.htm"
+            elif lang == "it":
+                home_path = "autonoleggio/index.htm"
+            elif lang == "nl":
+                home_path = "autohuur/index.htm"
+            else:
+                home_path = "index.htm"
+            home_url = f"https://www.carjet.com/{home_path}"
+            home = sess.get(home_url, headers=ua, timeout=20)
+            s_token = None
+            b_token = None
+            try:
+                m = re.search(r"[?&]s=([A-Za-z0-9]+)", home.text)
+                if m:
+                    s_token = m.group(1)
+                m = re.search(r"[?&]b=([A-Za-z0-9]+)", home.text)
+                if m:
+                    b_token = m.group(1)
+            except Exception:
+                pass
+
+            # 2) Prefer submitting the actual homepage form with all hidden fields preserved
+            try:
+                soup = BeautifulSoup(home.text, "lxml")
+                form = soup.select_one("form[name='menu_tarifas'], form#booking_form")
+                if form:
+                    action = form.get("action") or f"/do/list/{lang}"
+                    post_url = action if action.startswith("http") else requests.compat.urljoin(home_url, action)
+                    payload: Dict[str, Any] = {}
+                    # include all inputs
+                    for inp in form.select("input[name]"):
+                        name = inp.get("name")
+                        if not name:
+                            continue
+                        val = inp.get("value", "")
+                        payload[name] = val
+                    # include selects
+                    for sel in form.select("select[name]"):
+                        name = sel.get("name")
+                        if not name:
+                            continue
+                        # take selected option or first
+                        opt = sel.select_one("option[selected]") or sel.select_one("option")
+                        payload[name] = opt.get("value") if opt else ""
+
+                    # override with our values
+                    override = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
+                    payload.update({k: v for k, v in override.items() if v is not None})
+                    if s_token:
+                        payload["s"] = s_token
+                    if b_token:
+                        payload["b"] = b_token
+
+                    headers = {
+                        "User-Agent": ua["User-Agent"],
+                        "Origin": "https://www.carjet.com",
+                        "Referer": home_url,
+                    }
+                    resp = sess.post(post_url, data=payload, headers=headers, timeout=25)
+                    if resp.status_code == 200 and resp.text:
+                        return resp.text
+            except Exception:
+                pass
+
+            # 3) Fallback: POST to /do/list/{lang} with our constructed payload
+            data = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
+            if s_token:
+                data["s"] = s_token
+            if b_token:
+                data["b"] = b_token
+
+            headers = {
+                "User-Agent": ua["User-Agent"],
+                "Origin": "https://www.carjet.com",
+                "Referer": home_url,
+                "Accept-Language": ua.get("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.6"),
+                "X-Forwarded-For": ua.get("X-Forwarded-For", "185.23.160.1"),
+            }
+            url = f"https://www.carjet.com/do/list/{lang}"
+            resp = sess.post(url, data=data, headers=headers, timeout=25)
+            if resp.status_code == 200 and resp.text:
+                print(f"[URLLIB] POST: {resp.status_code} - URL final: {resp.url}", file=sys.stderr, flush=True)
+                print(f"[URLLIB] HTML: {len(resp.text)} bytes", file=sys.stderr, flush=True)
+                
+                # Verificar se CarJet retornou erro war=
+                if 'war=' in resp.url:
+                    print(f"[URLLIB] ❌ CarJet retornou erro: {resp.url}", file=sys.stderr, flush=True)
+                    return ""
+                
+                # Detect if we were redirected to a generic homepage (wrong locale)
+                homepage_like = False
                 try:
-                    if re.search(r'hrental_pagetype\"\s*:\s*\"home\"', resp2.text) or re.search(r'data-steplist=\"home\"', resp2.text):
-                        pass
-                    else:
-                        return resp2.text
+                    homepage_like = bool(re.search(r'hrental_pagetype"\s*:\s*"home"', resp.text) or re.search(r'data-steplist="home"', resp.text))
                 except Exception:
-                    return resp2.text
+                    homepage_like = False
+                
+                # Verificar se tem carros no HTML
+                has_cars = 'class="carCardWeb"' in resp.text or 'price pr-euros' in resp.text
+                print(f"[URLLIB] homepage_like={homepage_like}, has_cars={has_cars}", file=sys.stderr, flush=True)
+                
+                if not homepage_like:
+                    if has_cars:
+                        print(f"[URLLIB] ✅ HTML contém carros, retornando", file=sys.stderr, flush=True)
+                    else:
+                        print(f"[URLLIB] ⚠️ HTML sem carros detectados", file=sys.stderr, flush=True)
+                        # Salvar para debug
+                        try:
+                            with open('urllib_no_cars_debug.html', 'w', encoding='utf-8') as f:
+                                f.write(resp.text)
+                            print(f"[URLLIB] 💾 HTML salvo: urllib_no_cars_debug.html", file=sys.stderr, flush=True)
+                        except:
+                            pass
+                    return resp.text
+                # Fallback path observed on results pages: modalFilter.asp then carList.asp
+                try:
+                    mf_url = f"https://www.carjet.com/modalFilter.asp"
+                    # Minimal payload aligning with page
+                    mf_payload = {
+                        "frmDestino": data.get("frmDestino") or data.get("dst_id") or data.get("pickupId") or "",
+                        "frmFechaRecogida": f"{start_dt.strftime('%d/%m/%Y')} {start_dt.strftime('%H:%M')}",
+                        "frmFechaDevolucion": f"{end_dt.strftime('%d/%m/%Y')} {end_dt.strftime('%H:%M')}",
+                        "idioma": lang.upper(),
+                        "frmMoneda": currency,
+                        "frmTipoVeh": "CAR",
+                    }
+                    _ = sess.post(mf_url, data=mf_payload, headers=headers, timeout=20)
+                except Exception:
+                    pass
+                try:
+                    # Keep session tokens if available
+                    _q = f"idioma={lang.upper()}&case=2"
+                    if s_token:
+                        _q += f"&s={s_token}"
+                    if b_token:
+                        _q += f"&b={b_token}"
+                    cl_url = f"https://www.carjet.com/carList.asp?{_q}"
+                    rlist = sess.get(cl_url, headers=headers, timeout=25)
+                    if rlist.status_code == 200 and rlist.text:
+                        return rlist.text
+                except Exception:
+                    pass
+
+            # If not OK or homepage detected, retry with PT-Portugal homepage and forced params on POST URL
+            try:
+                # Visit PT-Portugal homepage spelling (aluguer vs aluguel)
+                home_url_ptpt = "https://www.carjet.com/aluguer-carros/index.htm"
+                _ = sess.get(home_url_ptpt, headers=ua, timeout=20)
+                headers2 = dict(headers)
+                post_url2 = f"https://www.carjet.com/do/list/{lang}?idioma=PT&moneda=EUR&currency=EUR"
+                resp2 = sess.post(post_url2, data=data, headers=headers2, timeout=25)
+                if resp2.status_code == 200 and resp2.text:
+                    try:
+                        if re.search(r'hrental_pagetype\"\s*:\s*\"home\"', resp2.text) or re.search(r'data-steplist=\"home\"', resp2.text):
+                            pass
+                        else:
+                            return resp2.text
+                    except Exception:
+                        return resp2.text
+            except Exception:
+                pass
         except Exception:
             pass
-    except Exception:
-        pass
-    return ""
+        return ""
+    finally:
+        _scraping_semaphore.release()
 
 
 def filter_automatic_only(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
