@@ -10965,16 +10965,14 @@ async def track_by_params(request: Request):
                 print(f"[TEST MODE ERROR] {e}", file=sys.stderr, flush=True)
         
         # ═══════════════════════════════════════════════════════════════════════════
-        # MÉTODO 1 (PRINCIPAL): try_direct_carjet (requests com sessão persistente)
+        # MÉTODO 1 (DESATIVADO): try_direct_carjet - NÃO FUNCIONA, CarJet bloqueia requests
+        # Selenium funciona, usar como método principal
         # ═══════════════════════════════════════════════════════════════════════════
         print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}", file=sys.stderr, flush=True)
-        print(f"[DEBUG] _DISABLE_REQUESTS={_DISABLE_REQUESTS}, _HAS_CARJET_REQUESTS={_HAS_CARJET_REQUESTS}", file=sys.stderr, flush=True)
         
-        # Tentar método direto primeiro (requests ou urllib) - APENAS se não estiver desabilitado
-        if _DISABLE_REQUESTS:
-            print("[API] ⏭️  Pulando try_direct_carjet (DISABLE_CARJET_REQUESTS=1)", file=sys.stderr, flush=True)
-        
-        if not items and not _DISABLE_REQUESTS:
+        # DESATIVADO - requests/urllib não funcionam com CarJet (bloqueados)
+        # Selenium é o método que funciona, será executado abaixo
+        if False and not items and not _DISABLE_REQUESTS:
             try:
                 print("[API] 🔵 Tentando método 1: try_direct_carjet (requests/urllib)", file=sys.stderr, flush=True)
                 html_direct = try_direct_carjet(location, start_dt, end_dt, lang=lang, currency=currency)
@@ -11284,9 +11282,10 @@ async def track_by_params(request: Request):
                 import traceback
                 traceback.print_exc()
         
-        # FALLBACK 2: Selenium como último recurso
-        # Código Selenium ATIVO - com rotação multi-idioma e anti-deteção
-        print(f"[SELENIUM] Tentando Selenium como último fallback...", file=sys.stderr, flush=True)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # MÉTODO PRINCIPAL: SELENIUM (único que funciona com CarJet)
+        # ═══════════════════════════════════════════════════════════════════════════
+        print(f"[SELENIUM] 🚀 Iniciando Selenium (método principal)...", file=sys.stderr, flush=True)
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options
