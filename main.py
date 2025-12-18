@@ -1754,6 +1754,11 @@ def clean_car_name(car_name: str) -> str:
     
     name = str(car_name).strip()
     
+    # ✅ CORRIGIR: "Multivanou similar" → "Multivan ou similar" (inserir espaço)
+    # O HTML do CarJet às vezes não tem espaço antes de "ou similar"
+    name = re.sub(r'(\w)(ou\s+similar)', r'\1 \2', name, flags=re.IGNORECASE)
+    name = re.sub(r'(\w)(or\s+similar)', r'\1 \2', name, flags=re.IGNORECASE)
+    
     # ✅ NORMALIZAR VW → Volkswagen (ANTES de tudo)
     # "VW Polo" → "Volkswagen Polo"
     # "vw golf auto" → "volkswagen golf auto"
@@ -1763,9 +1768,9 @@ def clean_car_name(car_name: str) -> str:
     name = re.sub(r'[Aa]uto[Aa]utom[aá]tico', 'Automático', name)
     name = re.sub(r'[Aa]uto[Aa]utomatic', 'Automatic', name)
     
-    # Remover "ou similar" e variantes
-    name = re.sub(r'\s*ou\s+similar(es)?.*$', '', name, flags=re.IGNORECASE)
-    name = re.sub(r'\s*or\s+similar.*$', '', name, flags=re.IGNORECASE)
+    # Remover "ou similar" e variantes (agora com espaço garantido)
+    name = re.sub(r'\s+ou\s+similar(es)?.*$', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'\s+or\s+similar.*$', '', name, flags=re.IGNORECASE)
     
     # Remover vírgulas e espaços extras (ex: "2008 , Electric" → "2008 Electric")
     name = re.sub(r'\s*,\s*', ' ', name)
