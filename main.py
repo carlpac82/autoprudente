@@ -13547,48 +13547,44 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     logging.info(f"      Ícone {idx+1}: <i class=\"{classes}\">")
             
             try:
-                # Procurar ícone de transmissão automática
-                trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
-                logging.info(f"   🔍 Busca 'icon-transm-auto': {'ENCONTRADO ✅' if trans_icon else 'NÃO encontrado'}")
+                # MÉTODO PRINCIPAL: Usar atributo value do <li> (mais confiável!)
+                # <li value="A"> = Automático, <li value="M"> = Manual
+                trans_li_auto = card.select_one("li[value='A']")
+                trans_li_manual = card.select_one("li[value='M']")
                 
-                if trans_icon:
+                if trans_li_auto:
                     card_transmission = "Automatic"
-                    logging.info(f"✅ [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
-                    # Verificar também o texto do elemento pai para confirmar
-                    parent_text = (trans_icon.parent.get_text(strip=True) if trans_icon.parent else "").lower()
-                    if 'automático' in parent_text or 'automatic' in parent_text:
-                        logging.info(f"   ✅ Confirmado por texto: '{parent_text}'")
-                else:
-                    # Verificar se tem ícone manual (icon-transm SEM auto)
-                    trans_icon_manual = card.select_one("i.icon-transm")
-                    logging.info(f"   🔍 Busca 'icon-transm' (sem auto): {'ENCONTRADO ✅' if trans_icon_manual else 'NÃO encontrado'}")
-                    
-                    if trans_icon_manual:
-                        # Verificar se NÃO tem classe 'icon-transm-auto'
-                        icon_classes = trans_icon_manual.get('class', [])
-                        if 'icon-transm-auto' not in icon_classes:
-                            card_transmission = "Manual"
-                            logging.info(f"✅ [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto encontrado)")
-                            # Verificar também o texto do elemento pai
-                            parent_text = (trans_icon_manual.parent.get_text(strip=True) if trans_icon_manual.parent else "").lower()
-                            if 'manual' in parent_text:
-                                logging.info(f"   ✅ Confirmado por texto: '{parent_text}'")
-                        else:
-                            logging.info(f"   ⚠️  Ícone tem AMBAS as classes (transm E transm-auto)")
+                    logging.info(f"✅ [LI-VALUE] {car_name} → AUTOMATIC (li value='A' encontrado)")
+                elif trans_li_manual:
+                    card_transmission = "Manual"
+                    logging.info(f"✅ [LI-VALUE] {car_name} → MANUAL (li value='M' encontrado)")
                 
-                # FALLBACK: Se não encontrou por ícone, procurar por texto no card
+                # FALLBACK 1: Se não encontrou por li value, tentar por ícone
+                if not card_transmission:
+                    trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
+                    if trans_icon:
+                        card_transmission = "Automatic"
+                        logging.info(f"✅ [ICON-TRANS] {car_name} → AUTOMATIC (icon-transm-auto encontrado)")
+                    else:
+                        trans_icon_manual = card.select_one("i.icon-transm")
+                        if trans_icon_manual:
+                            icon_classes = trans_icon_manual.get('class', [])
+                            if 'icon-transm-auto' not in icon_classes:
+                                card_transmission = "Manual"
+                                logging.info(f"✅ [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto)")
+                
+                # FALLBACK 2: Se não encontrou por ícone, procurar por texto
                 if not card_transmission:
                     card_text = card.get_text(' ', strip=True).lower()
                     if 'automático' in card_text or 'automatic' in card_text:
-                        # Verificar se não é "semi-automatic" ou similar
-                        if 'semi' not in card_text and 'semi-automatic' not in card_text:
+                        if 'semi' not in card_text:
                             card_transmission = "Automatic"
-                            logging.info(f"✅ [TEXT-TRANS] {car_name} → AUTOMATIC (texto 'automático' encontrado)")
+                            logging.info(f"✅ [TEXT-TRANS] {car_name} → AUTOMATIC (texto)")
                     elif 'manual' in card_text:
                         card_transmission = "Manual"
-                        logging.info(f"✅ [TEXT-TRANS] {car_name} → MANUAL (texto 'manual' encontrado)")
+                        logging.info(f"✅ [TEXT-TRANS] {car_name} → MANUAL (texto)")
             except Exception as e:
-                logging.error(f"❌ [ICON-TRANS] Erro ao detectar transmissão de '{car_name}': {e}", exc_info=True)
+                logging.error(f"❌ [TRANS-DETECT] Erro: {e}")
             
             # category
             cat_el = card.select_one(".category, .group, .vehicle-category, [class*='category'], [class*='group'], [class*='categoria'], [class*='grupo']")
