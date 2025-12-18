@@ -3143,17 +3143,11 @@ def init_db():
             
             # Add source column to automated_prices_history if it doesn't exist (migration)
             try:
-                conn.execute("ALTER TABLE automated_prices_history ADD COLUMN source TEXT DEFAULT 'manual'")
+                conn.execute("ALTER TABLE automated_prices_history ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'")
                 conn.commit()
-                logging.info("✅ Added 'source' column to automated_prices_history table")
             except Exception as e:
-                conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
-                error_msg = str(e).lower()
-                if 'duplicate column' in error_msg or 'already exists' in error_msg:
-                    logging.info("ℹ️ Column 'source' already exists in automated_prices_history")
-                else:
-                    logging.error(f"❌ Failed to add 'source' column to automated_prices_history: {e}")
-                pass
+                conn.rollback()
+                logging.debug(f"Migration source column automated_prices_history: {e}")
             
             # Tabela para logs do sistema (evitar perda em disco efêmero)
             conn.execute(
@@ -11542,7 +11536,7 @@ async def track_by_params(request: Request):
                 })
                 
                 print(f"[SELENIUM] Configurando Chrome com mobile UA...", file=sys.stderr, flush=True)
-                driver.set_page_load_timeout(20)  # Igual ao teste manual
+                driver.set_page_load_timeout(60)  # Aumentado de 20s para 60s para evitar timeout
                 
                 # LIMPAR CACHE E COOKIES (anti-detecção + fresh state)
                 print(f"[SELENIUM] Limpando cache e cookies...", file=sys.stderr, flush=True)
@@ -29062,31 +29056,21 @@ def _ensure_recent_searches_table():
                     """)
                     
                     # CRITICAL MIGRATION: Add source column if table already exists without it
+                    # Use IF NOT EXISTS to avoid errors (PostgreSQL 9.6+)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'")
                         conn.commit()
-                        logging.info("✅ Added 'source' column to recent_searches (PostgreSQL)")
                     except Exception as e:
-                        conn.rollback()  # MUST rollback on error
-                        error_msg = str(e).lower()
-                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            # Column already exists - this is expected, not an error
-                            logging.debug("Column 'source' already exists (expected)")
-                        else:
-                            logging.warning(f"⚠️ Failed to add 'source' column: {e}")
+                        conn.rollback()
+                        logging.debug(f"Migration source column: {e}")
 
                     # Ensure username column exists (migration from old 'user' column)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS username TEXT")
                         conn.commit()
-                        logging.info("✅ Added 'username' column to recent_searches (PostgreSQL)")
                     except Exception as e:
                         conn.rollback()
-                        error_msg = str(e).lower()
-                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            logging.info("ℹ️ Column 'username' already exists in recent_searches")
-                        else:
-                            logging.error(f"⚠️ Failed to add 'username' column: {e}")
+                        logging.debug(f"Migration username column: {e}")
                 else:
                     # SQLite syntax
                     conn.execute("""
@@ -29648,30 +29632,19 @@ async def save_recent_searches(request: Request):
                     """)
                     # Add source column if it doesn't exist (migration)
                     try:
-                        # Try to add column directly - will fail if already exists
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'")
                         conn.commit()
-                        logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()  # MUST rollback to clear failed transaction
-                        error_msg = str(e).lower()
-                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            pass
-                        else:
-                            logging.warning(f"⚠️ Failed to add 'source' column to recent_searches: {e}")
+                        conn.rollback()
+                        logging.debug(f"Migration source column: {e}")
                     
                     # Ensure username column exists (migration from old 'user' column)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS username TEXT")
                         conn.commit()
-                        logging.info("✅ Added 'username' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()  # MUST rollback to clear failed transaction
-                        error_msg = str(e).lower()
-                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
-                            pass
-                        else:
-                            logging.error(f"Failed to add 'username' column to recent_searches: {e}")
+                        conn.rollback()
+                        logging.debug(f"Migration username column: {e}")
                 else:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS recent_searches (
