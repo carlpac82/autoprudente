@@ -11027,7 +11027,9 @@ async def track_by_params(request: Request):
         if _DISABLE_REQUESTS:
             print("[API] ⏭️  Pulando Playwright (DISABLE_CARJET_REQUESTS=1) - indo direto para Selenium", file=sys.stderr, flush=True)
         
-        if not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT and not _DISABLE_REQUESTS:
+        # PLAYWRIGHT TEMPORARIAMENTE DESATIVADO - causa bloqueio no Render
+        # TODO: Corrigir execução async do Playwright
+        if False and not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT and not _DISABLE_REQUESTS:
             print(f"[PLAYWRIGHT] Iniciando scraping com Playwright (iPhone 13 Pro)...", file=sys.stderr, flush=True)
             try:
                 from playwright.async_api import async_playwright
@@ -11057,7 +11059,7 @@ async def track_by_params(request: Request):
                 print(f"[PLAYWRIGHT] Dates: {pickup_date} - {return_date}", file=sys.stderr, flush=True)
                 
                 async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
+                    browser = await p.chromium.launch(headless=True, timeout=30000)
                     
                     # EMULAR iPhone 13 Pro (IGUAL AO SELENIUM!)
                     context = await browser.new_context(
