@@ -1009,9 +1009,8 @@ def scrape_carjet_direct(location: str, start_dt: datetime, end_dt: datetime, qu
                 headers_with_cookies['Cookie'] = 'monedaForzada=EUR; moneda=EUR; currency=EUR; country=PT; idioma=PT; lang=pt'
                 
                 # POLLING: Tentar múltiplas vezes até carros aparecerem
-                # OTIMIZADO: Delays reduzidos de 33s para ~15s total
-                max_attempts = 4
-                delays = [2, 3, 4, 6]  # Delays progressivos (total: 15s)
+                max_attempts = 6
+                delays = [3, 4, 5, 6, 7, 8]  # Delays progressivos (total: 33s)
                 
                 for attempt in range(max_attempts):
                     delay = delays[attempt] if attempt < len(delays) else 8

@@ -1387,12 +1387,6 @@ _db_lock = Lock()
 DEBUG_DIR = Path(os.environ.get("DEBUG_DIR", BASE_DIR / "static" / "debug"))
 DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 
-# Semaphore to limit concurrent scraping requests (prevents Render crashes)
-# Max 2 concurrent scraping operations to avoid memory exhaustion
-from threading import Semaphore
-_scraping_semaphore = Semaphore(2)
-_scraping_queue_timeout = 120  # Max seconds to wait for semaphore
-
 # --- Admin/Users: DB helpers ---
 class PostgreSQLConnectionWrapper:
     """Wrapper para adicionar método execute() à conexão PostgreSQL"""
@@ -3143,11 +3137,17 @@ def init_db():
             
             # Add source column to automated_prices_history if it doesn't exist (migration)
             try:
-                conn.execute("ALTER TABLE automated_prices_history ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'")
+                conn.execute("ALTER TABLE automated_prices_history ADD COLUMN source TEXT DEFAULT 'manual'")
                 conn.commit()
+                logging.info("✅ Added 'source' column to automated_prices_history table")
             except Exception as e:
-                conn.rollback()
-                logging.debug(f"Migration source column automated_prices_history: {e}")
+                conn.rollback()  # CRITICAL for PostgreSQL - must rollback on error
+                error_msg = str(e).lower()
+                if 'duplicate column' in error_msg or 'already exists' in error_msg:
+                    logging.info("ℹ️ Column 'source' already exists in automated_prices_history")
+                else:
+                    logging.error(f"❌ Failed to add 'source' column to automated_prices_history: {e}")
+                pass
             
             # Tabela para logs do sistema (evitar perda em disco efêmero)
             conn.execute(
@@ -10959,14 +10959,16 @@ async def track_by_params(request: Request):
                 print(f"[TEST MODE ERROR] {e}", file=sys.stderr, flush=True)
         
         # ═══════════════════════════════════════════════════════════════════════════
-        # MÉTODO 1 (DESATIVADO): try_direct_carjet - NÃO FUNCIONA, CarJet bloqueia requests
-        # Selenium funciona, usar como método principal
+        # MÉTODO 1 (PRINCIPAL): try_direct_carjet (requests com sessão persistente)
         # ═══════════════════════════════════════════════════════════════════════════
         print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}", file=sys.stderr, flush=True)
+        print(f"[DEBUG] _DISABLE_REQUESTS={_DISABLE_REQUESTS}, _HAS_CARJET_REQUESTS={_HAS_CARJET_REQUESTS}", file=sys.stderr, flush=True)
         
-        # DESATIVADO - requests/urllib não funcionam com CarJet (bloqueados)
-        # Selenium é o método que funciona, será executado abaixo
-        if False and not items and not _DISABLE_REQUESTS:
+        # Tentar método direto primeiro (requests ou urllib) - APENAS se não estiver desabilitado
+        if _DISABLE_REQUESTS:
+            print("[API] ⏭️  Pulando try_direct_carjet (DISABLE_CARJET_REQUESTS=1)", file=sys.stderr, flush=True)
+        
+        if not items and not _DISABLE_REQUESTS:
             try:
                 print("[API] 🔵 Tentando método 1: try_direct_carjet (requests/urllib)", file=sys.stderr, flush=True)
                 html_direct = try_direct_carjet(location, start_dt, end_dt, lang=lang, currency=currency)
@@ -11019,9 +11021,7 @@ async def track_by_params(request: Request):
         if _DISABLE_REQUESTS:
             print("[API] ⏭️  Pulando Playwright (DISABLE_CARJET_REQUESTS=1) - indo direto para Selenium", file=sys.stderr, flush=True)
         
-        # PLAYWRIGHT TEMPORARIAMENTE DESATIVADO - causa bloqueio no Render
-        # TODO: Corrigir execução async do Playwright
-        if False and not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT and not _DISABLE_REQUESTS:
+        if not items and USE_PLAYWRIGHT and _HAS_PLAYWRIGHT and not _DISABLE_REQUESTS:
             print(f"[PLAYWRIGHT] Iniciando scraping com Playwright (iPhone 13 Pro)...", file=sys.stderr, flush=True)
             try:
                 from playwright.async_api import async_playwright
@@ -11051,7 +11051,7 @@ async def track_by_params(request: Request):
                 print(f"[PLAYWRIGHT] Dates: {pickup_date} - {return_date}", file=sys.stderr, flush=True)
                 
                 async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True, timeout=30000)
+                    browser = await p.chromium.launch(headless=True)
                     
                     # EMULAR iPhone 13 Pro (IGUAL AO SELENIUM!)
                     context = await browser.new_context(
@@ -11276,10 +11276,9 @@ async def track_by_params(request: Request):
                 import traceback
                 traceback.print_exc()
         
-        # ═══════════════════════════════════════════════════════════════════════════
-        # MÉTODO PRINCIPAL: SELENIUM (único que funciona com CarJet)
-        # ═══════════════════════════════════════════════════════════════════════════
-        print(f"[SELENIUM] 🚀 Iniciando Selenium (método principal)...", file=sys.stderr, flush=True)
+        # FALLBACK 2: Selenium como último recurso
+        # Código Selenium ATIVO - com rotação multi-idioma e anti-deteção
+        print(f"[SELENIUM] Tentando Selenium como último fallback...", file=sys.stderr, flush=True)
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options
@@ -11315,11 +11314,18 @@ async def track_by_params(request: Request):
             print(f"[SELENIUM] Local: {carjet_location}", file=sys.stderr, flush=True)
             
             # ============================================
-            # ROTAÇÃO DE DATAS - DESATIVADA (já feita no nível da API)
+            # ROTAÇÃO DE DATAS (0-4 dias aleatório)
             # ============================================
-            # A rotação de datas já é feita em DATE_ROTATION no início da função
-            # Fazer aqui novamente causava dupla rotação e erros war=28
-            print(f"[SELENIUM] Datas recebidas: {start_dt.date()} - {end_dt.date()}", file=sys.stderr, flush=True)
+            # random já importado globalmente
+            from datetime import timedelta as td
+            
+            # Adicionar offset aleatório de 0-4 dias às datas
+            date_offset = random.randint(0, 4)
+            start_dt = start_dt + td(days=date_offset)
+            end_dt = end_dt + td(days=date_offset)
+            
+            print(f"[SELENIUM] Offset de datas: +{date_offset} dias", file=sys.stderr, flush=True)
+            print(f"[SELENIUM] Datas ajustadas: {start_dt.date()} - {end_dt.date()}", file=sys.stderr, flush=True)
             
             # ============================================
             # ROTAÇÃO DE HORAS (14:30-17:00 aleatório)
@@ -11529,7 +11535,7 @@ async def track_by_params(request: Request):
                 })
                 
                 print(f"[SELENIUM] Configurando Chrome com mobile UA...", file=sys.stderr, flush=True)
-                driver.set_page_load_timeout(60)  # Aumentado de 20s para 60s para evitar timeout
+                driver.set_page_load_timeout(20)  # Igual ao teste manual
                 
                 # LIMPAR CACHE E COOKIES (anti-detecção + fresh state)
                 print(f"[SELENIUM] Limpando cache e cookies...", file=sys.stderr, flush=True)
@@ -11575,124 +11581,111 @@ async def track_by_params(request: Request):
                     # ========== ORDEM CORRETA DO TESTE: LOCAL → DROPDOWN → DATAS ==========
                     
                     # PASSO 1: Escrever local (IGUAL AO TESTE)
-                    print(f"[SELENIUM] PASSO 1: Escrevendo local '{carjet_location}'...", file=sys.stderr, flush=True)
+                    print(f"[SELENIUM] PASSO 1: Escrevendo local...", file=sys.stderr, flush=True)
                     pickup_input = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.ID, "pickup"))
                     )
-                    pickup_input.click()
-                    time.sleep(0.3)
                     pickup_input.clear()
-                    time.sleep(0.3)
+                    pickup_input.send_keys(carjet_location)
+                    print(f"[SELENIUM] ✓ Local digitado", file=sys.stderr, flush=True)
                     
-                    # Digitar letra por letra para acionar o autocomplete
-                    for char in carjet_location:
-                        pickup_input.send_keys(char)
-                        time.sleep(0.05)
+                    # PASSO 2: Aguardar dropdown e clicar (SIMPLIFICADO)
+                    print(f"[SELENIUM] PASSO 2: Aguardando dropdown...", file=sys.stderr, flush=True)
+                    time.sleep(1.5)  # Reduzido para 1.5s
                     
-                    print(f"[SELENIUM] ✓ Local digitado: {carjet_location}", file=sys.stderr, flush=True)
-                    
-                    # PASSO 2: ESPERAR e CLICAR no dropdown (OBRIGATÓRIO - sem isto dá war=11)
-                    print(f"[SELENIUM] PASSO 2: Aguardando dropdown aparecer...", file=sys.stderr, flush=True)
-                    
-                    # Usar WebDriverWait para esperar pelo dropdown
-                    dropdown_clicked = False
+                    # Clicar no dropdown via JS diretamente (mais confiável)
                     try:
-                        # Esperar até 10 segundos pelo dropdown
-                        dropdown_item = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "#recogida_lista li a"))
-                        )
-                        print(f"[SELENIUM] ✓ Dropdown apareceu: {dropdown_item.text[:50] if dropdown_item.text else 'sem texto'}", file=sys.stderr, flush=True)
-                        
-                        # Clicar no primeiro item
-                        dropdown_item.click()
-                        dropdown_clicked = True
-                        print(f"[SELENIUM] ✅ Dropdown clicado com WebDriverWait!", file=sys.stderr, flush=True)
-                    except Exception as e:
-                        print(f"[SELENIUM] ⚠️ WebDriverWait falhou: {e}", file=sys.stderr, flush=True)
-                        
-                        # Fallback: tentar via JavaScript
-                        for attempt in range(5):
-                            time.sleep(1)
-                            try:
-                                js_result = driver.execute_script("""
-                                    const selectors = ['#recogida_lista li a', '#recogida_lista li', '.ui-autocomplete li a', '.ui-autocomplete li'];
-                                    for (const sel of selectors) {
-                                        const items = document.querySelectorAll(sel);
-                                        if (items.length > 0) {
-                                            items[0].click();
-                                            return {success: true, selector: sel, text: items[0].textContent?.substring(0, 50)};
-                                        }
-                                    }
-                                    // Mostrar HTML do dropdown para debug
-                                    const lista = document.querySelector('#recogida_lista');
-                                    return {success: false, html: lista ? lista.innerHTML.substring(0, 200) : 'lista não encontrada'};
-                                """)
-                                
-                                if js_result.get('success'):
-                                    print(f"[SELENIUM] ✅ Dropdown clicado via JS: {js_result}", file=sys.stderr, flush=True)
-                                    dropdown_clicked = True
-                                    break
-                                else:
-                                    print(f"[SELENIUM] Tentativa {attempt+1}/5: {js_result}", file=sys.stderr, flush=True)
-                            except Exception as e2:
-                                print(f"[SELENIUM] Erro tentativa {attempt+1}: {e2}", file=sys.stderr, flush=True)
+                        driver.set_script_timeout(5)  # Timeout de 5s para scripts
+                        js_result = driver.execute_script("""
+                            try {
+                                const items = document.querySelectorAll('#recogida_lista li');
+                                if (items.length > 0) {
+                                    items[0].querySelector('a')?.click() || items[0].click();
+                                    return 'clicked:' + items.length;
+                                }
+                                return 'no_items';
+                            } catch(e) {
+                                return 'error:' + e.message;
+                            }
+                        """)
+                        print(f"[SELENIUM] ✓ Dropdown: {js_result}", file=sys.stderr, flush=True)
+                    except Exception as dropdown_err:
+                        print(f"[SELENIUM] ⚠️ Dropdown falhou: {dropdown_err}", file=sys.stderr, flush=True)
+                        # Continuar mesmo assim - o dropdown pode não ser necessário
                     
-                    # SE DROPDOWN NÃO FOI CLICADO, NÃO CONTINUAR
-                    if not dropdown_clicked:
-                        print(f"[SELENIUM] ❌ ERRO CRÍTICO: Dropdown não clicado - abortando", file=sys.stderr, flush=True)
-                        raise Exception("Dropdown não clicado - local não selecionado")
+                    time.sleep(0.5)
                     
-                    time.sleep(1)  # Esperar após clicar no dropdown
+                    # PASSO 3: Preencher datas via DROPDOWNS MyBooking (mais fiável que campos hidden)
+                    print(f"[SELENIUM] PASSO 3: Preenchendo datas via dropdowns MyBooking...", file=sys.stderr, flush=True)
                     
-                    # PASSO 3: Preencher datas e horas (DEPOIS do dropdown!)
-                    print(f"[SELENIUM] PASSO 3: Preenchendo datas e horas...", file=sys.stderr, flush=True)
+                    # Formato: YYYYMM para dropdown mês/ano
+                    month_year_pickup = start_dt.strftime("%Y%m")
+                    month_year_dropoff = end_dt.strftime("%Y%m")
+                    day_pickup = start_dt.strftime("%d")
+                    day_dropoff = end_dt.strftime("%d")
+                    hour_pickup = start_dt.strftime("%H:%M")
+                    hour_dropoff = end_dt.strftime("%H:%M")
                     
                     result = driver.execute_script("""
-                        function fill(sel, val) {
-                            const el = document.querySelector(sel);
-                            if (el) { 
-                                el.value = val; 
-                                el.dispatchEvent(new Event('input', {bubbles: true}));
-                                el.dispatchEvent(new Event('change', {bubbles: true}));
-                                el.dispatchEvent(new Event('blur', {bubbles: true}));  // ← IGUAL AO TESTE!
-                                console.log('Preenchido:', sel, '=', val);
-                                return true;
-                            }
-                            console.error('Não encontrado:', sel);
-                            return false;
+                        const monthYearPickup = arguments[0];
+                        const monthYearDropoff = arguments[1];
+                        const dayPickup = arguments[2];
+                        const dayDropoff = arguments[3];
+                        const hourPickup = arguments[4];
+                        const hourDropoff = arguments[5];
+                        
+                        // RECOLHA - Mês/Ano via dropdown MyBooking
+                        const monthSelect1 = document.querySelector('#fechaRecogidaMyBookingMonthYear');
+                        if (monthSelect1) {
+                            monthSelect1.value = monthYearPickup;
+                            monthSelect1.dispatchEvent(new Event('change', {bubbles: true}));
                         }
                         
-                        // Preencher datas
-                        const r1 = fill('input[id="fechaRecogida"]', arguments[0]);
-                        const r2 = fill('input[id="fechaDevolucion"]', arguments[1]);
+                        // RECOLHA - Dia via dropdown MyBooking
+                        const daySelect1 = document.querySelector('#fechaRecogidaMyBookingDay');
+                        if (daySelect1) {
+                            daySelect1.value = dayPickup;
+                            daySelect1.dispatchEvent(new Event('change', {bubbles: true}));
+                        }
+                        
+                        // DEVOLUÇÃO - Mês/Ano via dropdown MyBooking
+                        const monthSelect2 = document.querySelector('#fechaDevolucionMyBookingMonthYear');
+                        if (monthSelect2) {
+                            monthSelect2.value = monthYearDropoff;
+                            monthSelect2.dispatchEvent(new Event('change', {bubbles: true}));
+                        }
+                        
+                        // DEVOLUÇÃO - Dia via dropdown MyBooking
+                        const daySelect2 = document.querySelector('#fechaDevolucionMyBookingDay');
+                        if (daySelect2) {
+                            daySelect2.value = dayDropoff;
+                            daySelect2.dispatchEvent(new Event('change', {bubbles: true}));
+                        }
+                        
+                        // Também preencher campos hidden como backup
+                        const fechaRec = document.querySelector('#fechaRecogida');
+                        const fechaDev = document.querySelector('#fechaDevolucion');
+                        if (fechaRec) fechaRec.value = dayPickup + '/' + monthYearPickup.substring(4,6) + '/' + monthYearPickup.substring(0,4);
+                        if (fechaDev) fechaDev.value = dayDropoff + '/' + monthYearDropoff.substring(4,6) + '/' + monthYearDropoff.substring(0,4);
                         
                         // Preencher horas
                         const h1 = document.querySelector('select[id="fechaRecogidaSelHour"]');
-                        let h1_ok = false;
-                        if (h1) { 
-                            h1.value = arguments[2]; 
-                            h1.dispatchEvent(new Event('change', {bubbles: true}));
-                            console.log('Hora recolha:', h1.value);
-                            h1_ok = true;
-                        }
+                        if (h1) { h1.value = hourPickup; h1.dispatchEvent(new Event('change', {bubbles: true})); }
                         
                         const h2 = document.querySelector('select[id="fechaDevolucionSelHour"]');
-                        let h2_ok = false;
-                        if (h2) { 
-                            h2.value = arguments[3]; 
-                            h2.dispatchEvent(new Event('change', {bubbles: true}));
-                            console.log('Hora devolução:', h2.value);
-                            h2_ok = true;
-                        }
+                        if (h2) { h2.value = hourDropoff; h2.dispatchEvent(new Event('change', {bubbles: true})); }
                         
                         return {
-                            fechaRecogida: r1,
-                            fechaDevolucion: r2,
-                            horaRecogida: h1_ok,
-                            horaDevolucion: h2_ok,
-                            allFilled: r1 && r2 && h1_ok && h2_ok
+                            monthSelect1: monthSelect1?.value,
+                            daySelect1: daySelect1?.value,
+                            monthSelect2: monthSelect2?.value,
+                            daySelect2: daySelect2?.value,
+                            fechaRec: fechaRec?.value,
+                            fechaDev: fechaDev?.value,
+                            h1: h1?.value,
+                            h2: h2?.value
                         };
-                    """, start_dt.strftime("%d/%m/%Y"), end_dt.strftime("%d/%m/%Y"), start_dt.strftime("%H:%M"), start_dt.strftime("%H:%M"))
+                    """, month_year_pickup, month_year_dropoff, day_pickup, day_dropoff, hour_pickup, hour_dropoff)
                     
                     print(f"[SELENIUM] ✓ Datas e horas preenchidas: {result}", file=sys.stderr, flush=True)
                     
@@ -14593,246 +14586,236 @@ def try_direct_carjet(location_name: str, start_dt, end_dt, lang: str = "pt", cu
     MÉTODO PRINCIPAL: carjet_requests (sessão persistente com polling)
     FALLBACK: Método antigo urllib (se requests falhar)
     
-    Uses semaphore to limit concurrent scraping requests (prevents Render crashes)
-    
     Returns:
         HTML string com resultados ou "" se falhar
     """
     import sys
     
-    # Acquire semaphore to limit concurrent scraping (prevents memory exhaustion)
-    acquired = _scraping_semaphore.acquire(timeout=_scraping_queue_timeout)
-    if not acquired:
-        print(f"[DIRECT] ⚠️ Timeout aguardando semaphore ({_scraping_queue_timeout}s) - muitas requisições simultâneas", file=sys.stderr, flush=True)
-        return ""
+    # =============================================================================
+    # MÉTODO 1 (PRINCIPAL): carjet_requests com sessão persistente
+    # =============================================================================
+    if _HAS_CARJET_REQUESTS:
+        try:
+            print("[DIRECT] 🔵 Tentando método 1: requests com sessão persistente", file=sys.stderr, flush=True)
+            
+            # Usar scrape_carjet_requests que retorna lista de carros
+            results = scrape_carjet_requests(location_name, start_dt, end_dt)
+            
+            if results and len(results) > 0:
+                print(f"[DIRECT] ✅ Método 1 funcionou: {len(results)} carros encontrados", file=sys.stderr, flush=True)
+                
+                # Converter resultados para HTML fake para compatibilidade
+                # (o código existente espera HTML string)
+                # Mas primeiro vamos tentar retornar os dados diretamente
+                # NOTA: Como o código espera HTML, vamos serializar como JSON no HTML
+                import json
+                fake_html = f"<!--CARJET_REQUESTS_DATA-->{json.dumps(results)}<!--END_DATA-->"
+                return fake_html
+            else:
+                print(f"[DIRECT] ⚠️ Método 1 retornou 0 resultados, tentando fallback...", file=sys.stderr, flush=True)
+        
+        except Exception as e:
+            print(f"[DIRECT] ⚠️ Método 1 falhou: {e}, tentando fallback...", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+    
+    # =============================================================================
+    # MÉTODO 2 (FALLBACK): urllib antigo
+    # =============================================================================
+    print("[DIRECT] 🟡 Usando método 2 (fallback): urllib antigo", file=sys.stderr, flush=True)
     
     try:
-        # =============================================================================
-        # MÉTODO 1 (PRINCIPAL): carjet_requests com sessão persistente
-        # =============================================================================
-        if _HAS_CARJET_REQUESTS:
-            try:
-                print("[DIRECT] 🔵 Tentando método 1: requests com sessão persistente", file=sys.stderr, flush=True)
-                
-                # Usar scrape_carjet_requests que retorna lista de carros
-                results = scrape_carjet_requests(location_name, start_dt, end_dt)
-                
-                if results and len(results) > 0:
-                    print(f"[DIRECT] ✅ Método 1 funcionou: {len(results)} carros encontrados", file=sys.stderr, flush=True)
-                    
-                    # Converter resultados para HTML fake para compatibilidade
-                    # (o código existente espera HTML string)
-                    # Mas primeiro vamos tentar retornar os dados diretamente
-                    # NOTA: Como o código espera HTML, vamos serializar como JSON no HTML
-                    import json
-                    fake_html = f"<!--CARJET_REQUESTS_DATA-->{json.dumps(results)}<!--END_DATA-->"
-                    return fake_html
-                else:
-                    print(f"[DIRECT] ⚠️ Método 1 retornou 0 resultados, tentando fallback...", file=sys.stderr, flush=True)
-            
-            except Exception as e:
-                print(f"[DIRECT] ⚠️ Método 1 falhou: {e}, tentando fallback...", file=sys.stderr, flush=True)
-                import traceback
-                traceback.print_exc(file=sys.stderr)
-        
-        # =============================================================================
-        # MÉTODO 2 (FALLBACK): urllib antigo
-        # =============================================================================
-        print("[DIRECT] 🟡 Usando método 2 (fallback): urllib antigo", file=sys.stderr, flush=True)
-    
+        sess = requests.Session()
+        ua = {
+            "User-Agent": "Mozilla/5.0 (compatible; PriceTracker/1.0)",
+            "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.6",
+            "X-Forwarded-For": "185.23.160.1",
+            "Referer": "https://www.carjet.com/do/list/pt",
+        }
+        lang = (lang or "pt").lower()
+        # Pre-seed cookies to bias locale
         try:
-            sess = requests.Session()
-            ua = {
-                "User-Agent": "Mozilla/5.0 (compatible; PriceTracker/1.0)",
-                "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.6",
-                "X-Forwarded-For": "185.23.160.1",
-                "Referer": "https://www.carjet.com/do/list/pt",
-            }
-            lang = (lang or "pt").lower()
-            # Pre-seed cookies to bias locale
-            try:
-                sess.cookies.set("monedaForzada", currency)
-                sess.cookies.set("moneda", currency)
-                sess.cookies.set("currency", currency)
-                sess.cookies.set("idioma", lang.upper())
-                sess.cookies.set("lang", lang)
-                sess.cookies.set("country", "PT")
-            except Exception:
-                pass
-
-            # 1) GET locale homepage to mint session and try to capture s/b tokens
-            if lang == "pt":
-                home_path = "aluguel-carros/index.htm"
-            elif lang == "es":
-                home_path = "alquiler-coches/index.htm"
-            elif lang == "fr":
-                home_path = "location-voitures/index.htm"
-            elif lang == "de":
-                home_path = "mietwagen/index.htm"
-            elif lang == "it":
-                home_path = "autonoleggio/index.htm"
-            elif lang == "nl":
-                home_path = "autohuur/index.htm"
-            else:
-                home_path = "index.htm"
-            home_url = f"https://www.carjet.com/{home_path}"
-            home = sess.get(home_url, headers=ua, timeout=20)
-            s_token = None
-            b_token = None
-            try:
-                m = re.search(r"[?&]s=([A-Za-z0-9]+)", home.text)
-                if m:
-                    s_token = m.group(1)
-                m = re.search(r"[?&]b=([A-Za-z0-9]+)", home.text)
-                if m:
-                    b_token = m.group(1)
-            except Exception:
-                pass
-
-            # 2) Prefer submitting the actual homepage form with all hidden fields preserved
-            try:
-                soup = BeautifulSoup(home.text, "lxml")
-                form = soup.select_one("form[name='menu_tarifas'], form#booking_form")
-                if form:
-                    action = form.get("action") or f"/do/list/{lang}"
-                    post_url = action if action.startswith("http") else requests.compat.urljoin(home_url, action)
-                    payload: Dict[str, Any] = {}
-                    # include all inputs
-                    for inp in form.select("input[name]"):
-                        name = inp.get("name")
-                        if not name:
-                            continue
-                        val = inp.get("value", "")
-                        payload[name] = val
-                    # include selects
-                    for sel in form.select("select[name]"):
-                        name = sel.get("name")
-                        if not name:
-                            continue
-                        # take selected option or first
-                        opt = sel.select_one("option[selected]") or sel.select_one("option")
-                        payload[name] = opt.get("value") if opt else ""
-
-                    # override with our values
-                    override = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
-                    payload.update({k: v for k, v in override.items() if v is not None})
-                    if s_token:
-                        payload["s"] = s_token
-                    if b_token:
-                        payload["b"] = b_token
-
-                    headers = {
-                        "User-Agent": ua["User-Agent"],
-                        "Origin": "https://www.carjet.com",
-                        "Referer": home_url,
-                    }
-                    resp = sess.post(post_url, data=payload, headers=headers, timeout=25)
-                    if resp.status_code == 200 and resp.text:
-                        return resp.text
-            except Exception:
-                pass
-
-            # 3) Fallback: POST to /do/list/{lang} with our constructed payload
-            data = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
-            if s_token:
-                data["s"] = s_token
-            if b_token:
-                data["b"] = b_token
-
-            headers = {
-                "User-Agent": ua["User-Agent"],
-                "Origin": "https://www.carjet.com",
-                "Referer": home_url,
-                "Accept-Language": ua.get("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.6"),
-                "X-Forwarded-For": ua.get("X-Forwarded-For", "185.23.160.1"),
-            }
-            url = f"https://www.carjet.com/do/list/{lang}"
-            resp = sess.post(url, data=data, headers=headers, timeout=25)
-            if resp.status_code == 200 and resp.text:
-                print(f"[URLLIB] POST: {resp.status_code} - URL final: {resp.url}", file=sys.stderr, flush=True)
-                print(f"[URLLIB] HTML: {len(resp.text)} bytes", file=sys.stderr, flush=True)
-                
-                # Verificar se CarJet retornou erro war=
-                if 'war=' in resp.url:
-                    print(f"[URLLIB] ❌ CarJet retornou erro: {resp.url}", file=sys.stderr, flush=True)
-                    return ""
-                
-                # Detect if we were redirected to a generic homepage (wrong locale)
-                homepage_like = False
-                try:
-                    homepage_like = bool(re.search(r'hrental_pagetype"\s*:\s*"home"', resp.text) or re.search(r'data-steplist="home"', resp.text))
-                except Exception:
-                    homepage_like = False
-                
-                # Verificar se tem carros no HTML
-                has_cars = 'class="carCardWeb"' in resp.text or 'price pr-euros' in resp.text
-                print(f"[URLLIB] homepage_like={homepage_like}, has_cars={has_cars}", file=sys.stderr, flush=True)
-                
-                if not homepage_like:
-                    if has_cars:
-                        print(f"[URLLIB] ✅ HTML contém carros, retornando", file=sys.stderr, flush=True)
-                    else:
-                        print(f"[URLLIB] ⚠️ HTML sem carros detectados", file=sys.stderr, flush=True)
-                        # Salvar para debug
-                        try:
-                            with open('urllib_no_cars_debug.html', 'w', encoding='utf-8') as f:
-                                f.write(resp.text)
-                            print(f"[URLLIB] 💾 HTML salvo: urllib_no_cars_debug.html", file=sys.stderr, flush=True)
-                        except:
-                            pass
-                    return resp.text
-                # Fallback path observed on results pages: modalFilter.asp then carList.asp
-                try:
-                    mf_url = f"https://www.carjet.com/modalFilter.asp"
-                    # Minimal payload aligning with page
-                    mf_payload = {
-                        "frmDestino": data.get("frmDestino") or data.get("dst_id") or data.get("pickupId") or "",
-                        "frmFechaRecogida": f"{start_dt.strftime('%d/%m/%Y')} {start_dt.strftime('%H:%M')}",
-                        "frmFechaDevolucion": f"{end_dt.strftime('%d/%m/%Y')} {end_dt.strftime('%H:%M')}",
-                        "idioma": lang.upper(),
-                        "frmMoneda": currency,
-                        "frmTipoVeh": "CAR",
-                    }
-                    _ = sess.post(mf_url, data=mf_payload, headers=headers, timeout=20)
-                except Exception:
-                    pass
-                try:
-                    # Keep session tokens if available
-                    _q = f"idioma={lang.upper()}&case=2"
-                    if s_token:
-                        _q += f"&s={s_token}"
-                    if b_token:
-                        _q += f"&b={b_token}"
-                    cl_url = f"https://www.carjet.com/carList.asp?{_q}"
-                    rlist = sess.get(cl_url, headers=headers, timeout=25)
-                    if rlist.status_code == 200 and rlist.text:
-                        return rlist.text
-                except Exception:
-                    pass
-
-            # If not OK or homepage detected, retry with PT-Portugal homepage and forced params on POST URL
-            try:
-                # Visit PT-Portugal homepage spelling (aluguer vs aluguel)
-                home_url_ptpt = "https://www.carjet.com/aluguer-carros/index.htm"
-                _ = sess.get(home_url_ptpt, headers=ua, timeout=20)
-                headers2 = dict(headers)
-                post_url2 = f"https://www.carjet.com/do/list/{lang}?idioma=PT&moneda=EUR&currency=EUR"
-                resp2 = sess.post(post_url2, data=data, headers=headers2, timeout=25)
-                if resp2.status_code == 200 and resp2.text:
-                    try:
-                        if re.search(r'hrental_pagetype\"\s*:\s*\"home\"', resp2.text) or re.search(r'data-steplist=\"home\"', resp2.text):
-                            pass
-                        else:
-                            return resp2.text
-                    except Exception:
-                        return resp2.text
-            except Exception:
-                pass
+            sess.cookies.set("monedaForzada", currency)
+            sess.cookies.set("moneda", currency)
+            sess.cookies.set("currency", currency)
+            sess.cookies.set("idioma", lang.upper())
+            sess.cookies.set("lang", lang)
+            sess.cookies.set("country", "PT")
         except Exception:
             pass
-        return ""
-    finally:
-        _scraping_semaphore.release()
+
+        # 1) GET locale homepage to mint session and try to capture s/b tokens
+        if lang == "pt":
+            home_path = "aluguel-carros/index.htm"
+        elif lang == "es":
+            home_path = "alquiler-coches/index.htm"
+        elif lang == "fr":
+            home_path = "location-voitures/index.htm"
+        elif lang == "de":
+            home_path = "mietwagen/index.htm"
+        elif lang == "it":
+            home_path = "autonoleggio/index.htm"
+        elif lang == "nl":
+            home_path = "autohuur/index.htm"
+        else:
+            home_path = "index.htm"
+        home_url = f"https://www.carjet.com/{home_path}"
+        home = sess.get(home_url, headers=ua, timeout=20)
+        s_token = None
+        b_token = None
+        try:
+            m = re.search(r"[?&]s=([A-Za-z0-9]+)", home.text)
+            if m:
+                s_token = m.group(1)
+            m = re.search(r"[?&]b=([A-Za-z0-9]+)", home.text)
+            if m:
+                b_token = m.group(1)
+        except Exception:
+            pass
+
+        # 2) Prefer submitting the actual homepage form with all hidden fields preserved
+        try:
+            soup = BeautifulSoup(home.text, "lxml")
+            form = soup.select_one("form[name='menu_tarifas'], form#booking_form")
+            if form:
+                action = form.get("action") or f"/do/list/{lang}"
+                post_url = action if action.startswith("http") else requests.compat.urljoin(home_url, action)
+                payload: Dict[str, Any] = {}
+                # include all inputs
+                for inp in form.select("input[name]"):
+                    name = inp.get("name")
+                    if not name:
+                        continue
+                    val = inp.get("value", "")
+                    payload[name] = val
+                # include selects
+                for sel in form.select("select[name]"):
+                    name = sel.get("name")
+                    if not name:
+                        continue
+                    # take selected option or first
+                    opt = sel.select_one("option[selected]") or sel.select_one("option")
+                    payload[name] = opt.get("value") if opt else ""
+
+                # override with our values
+                override = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
+                payload.update({k: v for k, v in override.items() if v is not None})
+                if s_token:
+                    payload["s"] = s_token
+                if b_token:
+                    payload["b"] = b_token
+
+                headers = {
+                    "User-Agent": ua["User-Agent"],
+                    "Origin": "https://www.carjet.com",
+                    "Referer": home_url,
+                }
+                resp = sess.post(post_url, data=payload, headers=headers, timeout=25)
+                if resp.status_code == 200 and resp.text:
+                    return resp.text
+        except Exception:
+            pass
+
+        # 3) Fallback: POST to /do/list/{lang} with our constructed payload
+        data = build_carjet_form(location_name, start_dt, end_dt, lang=lang, currency=currency)
+        if s_token:
+            data["s"] = s_token
+        if b_token:
+            data["b"] = b_token
+
+        headers = {
+            "User-Agent": ua["User-Agent"],
+            "Origin": "https://www.carjet.com",
+            "Referer": home_url,
+            "Accept-Language": ua.get("Accept-Language", "pt-PT,pt;q=0.9,en;q=0.6"),
+            "X-Forwarded-For": ua.get("X-Forwarded-For", "185.23.160.1"),
+        }
+        url = f"https://www.carjet.com/do/list/{lang}"
+        resp = sess.post(url, data=data, headers=headers, timeout=25)
+        if resp.status_code == 200 and resp.text:
+            import sys
+            print(f"[URLLIB] POST: {resp.status_code} - URL final: {resp.url}", file=sys.stderr, flush=True)
+            print(f"[URLLIB] HTML: {len(resp.text)} bytes", file=sys.stderr, flush=True)
+            
+            # Verificar se CarJet retornou erro war=
+            if 'war=' in resp.url:
+                print(f"[URLLIB] ❌ CarJet retornou erro: {resp.url}", file=sys.stderr, flush=True)
+                return ""
+            
+            # Detect if we were redirected to a generic homepage (wrong locale)
+            homepage_like = False
+            try:
+                homepage_like = bool(re.search(r'hrental_pagetype"\s*:\s*"home"', resp.text) or re.search(r'data-steplist="home"', resp.text))
+            except Exception:
+                homepage_like = False
+            
+            # Verificar se tem carros no HTML
+            has_cars = 'class="carCardWeb"' in resp.text or 'price pr-euros' in resp.text
+            print(f"[URLLIB] homepage_like={homepage_like}, has_cars={has_cars}", file=sys.stderr, flush=True)
+            
+            if not homepage_like:
+                if has_cars:
+                    print(f"[URLLIB] ✅ HTML contém carros, retornando", file=sys.stderr, flush=True)
+                else:
+                    print(f"[URLLIB] ⚠️ HTML sem carros detectados", file=sys.stderr, flush=True)
+                    # Salvar para debug
+                    try:
+                        with open('urllib_no_cars_debug.html', 'w', encoding='utf-8') as f:
+                            f.write(resp.text)
+                        print(f"[URLLIB] 💾 HTML salvo: urllib_no_cars_debug.html", file=sys.stderr, flush=True)
+                    except:
+                        pass
+                return resp.text
+            # Fallback path observed on results pages: modalFilter.asp then carList.asp
+            try:
+                mf_url = f"https://www.carjet.com/modalFilter.asp"
+                # Minimal payload aligning with page
+                mf_payload = {
+                    "frmDestino": data.get("frmDestino") or data.get("dst_id") or data.get("pickupId") or "",
+                    "frmFechaRecogida": f"{start_dt.strftime('%d/%m/%Y')} {start_dt.strftime('%H:%M')}",
+                    "frmFechaDevolucion": f"{end_dt.strftime('%d/%m/%Y')} {end_dt.strftime('%H:%M')}",
+                    "idioma": lang.upper(),
+                    "frmMoneda": currency,
+                    "frmTipoVeh": "CAR",
+                }
+                _ = sess.post(mf_url, data=mf_payload, headers=headers, timeout=20)
+            except Exception:
+                pass
+            try:
+                # Keep session tokens if available
+                _q = f"idioma={lang.upper()}&case=2"
+                if s_token:
+                    _q += f"&s={s_token}"
+                if b_token:
+                    _q += f"&b={b_token}"
+                cl_url = f"https://www.carjet.com/carList.asp?{_q}"
+                rlist = sess.get(cl_url, headers=headers, timeout=25)
+                if rlist.status_code == 200 and rlist.text:
+                    return rlist.text
+            except Exception:
+                pass
+
+        # If not OK or homepage detected, retry with PT-Portugal homepage and forced params on POST URL
+        try:
+            # Visit PT-Portugal homepage spelling (aluguer vs aluguel)
+            home_url_ptpt = "https://www.carjet.com/aluguer-carros/index.htm"
+            _ = sess.get(home_url_ptpt, headers=ua, timeout=20)
+            headers2 = dict(headers)
+            post_url2 = f"https://www.carjet.com/do/list/{lang}?idioma=PT&moneda=EUR&currency=EUR"
+            resp2 = sess.post(post_url2, data=data, headers=headers2, timeout=25)
+            if resp2.status_code == 200 and resp2.text:
+                try:
+                    if re.search(r'hrental_pagetype\"\s*:\s*\"home\"', resp2.text) or re.search(r'data-steplist=\"home\"', resp2.text):
+                        pass
+                    else:
+                        return resp2.text
+                except Exception:
+                    return resp2.text
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return ""
 
 
 def filter_automatic_only(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -29084,21 +29067,31 @@ def _ensure_recent_searches_table():
                     """)
                     
                     # CRITICAL MIGRATION: Add source column if table already exists without it
-                    # Use IF NOT EXISTS to avoid errors (PostgreSQL 9.6+)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
                         conn.commit()
+                        logging.info("✅ Added 'source' column to recent_searches (PostgreSQL)")
                     except Exception as e:
-                        conn.rollback()
-                        logging.debug(f"Migration source column: {e}")
+                        conn.rollback()  # MUST rollback on error
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            # Column already exists - this is expected, not an error
+                            logging.debug("Column 'source' already exists (expected)")
+                        else:
+                            logging.warning(f"⚠️ Failed to add 'source' column: {e}")
 
                     # Ensure username column exists (migration from old 'user' column)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS username TEXT")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
                         conn.commit()
+                        logging.info("✅ Added 'username' column to recent_searches (PostgreSQL)")
                     except Exception as e:
                         conn.rollback()
-                        logging.debug(f"Migration username column: {e}")
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            logging.info("ℹ️ Column 'username' already exists in recent_searches")
+                        else:
+                            logging.error(f"⚠️ Failed to add 'username' column: {e}")
                 else:
                     # SQLite syntax
                     conn.execute("""
@@ -29660,19 +29653,30 @@ async def save_recent_searches(request: Request):
                     """)
                     # Add source column if it doesn't exist (migration)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'")
+                        # Try to add column directly - will fail if already exists
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN source TEXT DEFAULT 'manual'")
                         conn.commit()
+                        logging.info("✅ Added 'source' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()
-                        logging.debug(f"Migration source column: {e}")
+                        conn.rollback()  # MUST rollback to clear failed transaction
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            pass
+                        else:
+                            logging.warning(f"⚠️ Failed to add 'source' column to recent_searches: {e}")
                     
                     # Ensure username column exists (migration from old 'user' column)
                     try:
-                        conn.execute("ALTER TABLE recent_searches ADD COLUMN IF NOT EXISTS username TEXT")
+                        conn.execute("ALTER TABLE recent_searches ADD COLUMN username TEXT")
                         conn.commit()
+                        logging.info("✅ Added 'username' column to recent_searches table")
                     except Exception as e:
-                        conn.rollback()
-                        logging.debug(f"Migration username column: {e}")
+                        conn.rollback()  # MUST rollback to clear failed transaction
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate column' in error_msg:
+                            pass
+                        else:
+                            logging.error(f"Failed to add 'username' column to recent_searches: {e}")
                 else:
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS recent_searches (

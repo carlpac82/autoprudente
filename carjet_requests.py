@@ -115,11 +115,11 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         # PASSO 1: Visitar homepage para obter cookies iniciais
         print("[REQUESTS] Passo 1: Visitando homepage...")
         home_url = 'https://www.carjet.com/aluguel-carros/index.htm'
-        resp_home = session.get(home_url, timeout=10)
+        resp_home = session.get(home_url, timeout=15)
         print(f"[REQUESTS] Homepage: {resp_home.status_code} - Cookies: {len(session.cookies)}")
         
-        # Aguardar menos tempo (otimizado)
-        time.sleep(0.5)
+        # Aguardar um pouco (simular comportamento humano)
+        time.sleep(2)
         
         # PASSO 2: Fazer POST do formulário
         print("[REQUESTS] Passo 2: Submetendo formulário...", file=sys.stderr, flush=True)
@@ -202,9 +202,8 @@ def scrape_carjet_requests(location: str, start_dt: datetime, end_dt: datetime) 
         print(f"[REQUESTS] Redirect URL: {redirect_url[:100]}...")
         
         # PASSO 4: POLLING - Fazer GET múltiplas vezes até resultados aparecerem
-        # OTIMIZADO: Delays reduzidos de 61s para ~18s total
-        max_attempts = 5
-        delays = [2, 3, 4, 5, 4]  # Total: ~18s
+        max_attempts = 8
+        delays = [4, 5, 6, 7, 8, 9, 10, 12]  # Total: ~61s
         
         html_results = None
         
