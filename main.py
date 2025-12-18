@@ -11315,18 +11315,11 @@ async def track_by_params(request: Request):
             print(f"[SELENIUM] Local: {carjet_location}", file=sys.stderr, flush=True)
             
             # ============================================
-            # ROTAÇÃO DE DATAS (0-4 dias aleatório)
+            # ROTAÇÃO DE DATAS - DESATIVADA (já feita no nível da API)
             # ============================================
-            # random já importado globalmente
-            from datetime import timedelta as td
-            
-            # Adicionar offset aleatório de 0-4 dias às datas
-            date_offset = random.randint(0, 4)
-            start_dt = start_dt + td(days=date_offset)
-            end_dt = end_dt + td(days=date_offset)
-            
-            print(f"[SELENIUM] Offset de datas: +{date_offset} dias", file=sys.stderr, flush=True)
-            print(f"[SELENIUM] Datas ajustadas: {start_dt.date()} - {end_dt.date()}", file=sys.stderr, flush=True)
+            # A rotação de datas já é feita em DATE_ROTATION no início da função
+            # Fazer aqui novamente causava dupla rotação e erros war=28
+            print(f"[SELENIUM] Datas recebidas: {start_dt.date()} - {end_dt.date()}", file=sys.stderr, flush=True)
             
             # ============================================
             # ROTAÇÃO DE HORAS (14:30-17:00 aleatório)
