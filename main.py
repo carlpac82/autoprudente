@@ -11575,39 +11575,74 @@ async def track_by_params(request: Request):
                     # ========== ORDEM CORRETA DO TESTE: LOCAL → DROPDOWN → DATAS ==========
                     
                     # PASSO 1: Escrever local (IGUAL AO TESTE)
-                    print(f"[SELENIUM] PASSO 1: Escrevendo local...", file=sys.stderr, flush=True)
+                    print(f"[SELENIUM] PASSO 1: Escrevendo local '{carjet_location}'...", file=sys.stderr, flush=True)
                     pickup_input = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.ID, "pickup"))
                     )
+                    pickup_input.click()
+                    time.sleep(0.3)
                     pickup_input.clear()
-                    pickup_input.send_keys(carjet_location)
-                    print(f"[SELENIUM] ✓ Local digitado", file=sys.stderr, flush=True)
+                    time.sleep(0.3)
                     
-                    # PASSO 2: Aguardar dropdown e clicar (SIMPLIFICADO)
-                    print(f"[SELENIUM] PASSO 2: Aguardando dropdown...", file=sys.stderr, flush=True)
-                    time.sleep(1.5)  # Reduzido para 1.5s
+                    # Digitar letra por letra para acionar o autocomplete
+                    for char in carjet_location:
+                        pickup_input.send_keys(char)
+                        time.sleep(0.05)
                     
-                    # Clicar no dropdown via JS diretamente (mais confiável)
+                    print(f"[SELENIUM] ✓ Local digitado: {carjet_location}", file=sys.stderr, flush=True)
+                    
+                    # PASSO 2: ESPERAR e CLICAR no dropdown (OBRIGATÓRIO - sem isto dá war=11)
+                    print(f"[SELENIUM] PASSO 2: Aguardando dropdown aparecer...", file=sys.stderr, flush=True)
+                    
+                    # Usar WebDriverWait para esperar pelo dropdown
+                    dropdown_clicked = False
                     try:
-                        driver.set_script_timeout(5)  # Timeout de 5s para scripts
-                        js_result = driver.execute_script("""
-                            try {
-                                const items = document.querySelectorAll('#recogida_lista li');
-                                if (items.length > 0) {
-                                    items[0].querySelector('a')?.click() || items[0].click();
-                                    return 'clicked:' + items.length;
-                                }
-                                return 'no_items';
-                            } catch(e) {
-                                return 'error:' + e.message;
-                            }
-                        """)
-                        print(f"[SELENIUM] ✓ Dropdown: {js_result}", file=sys.stderr, flush=True)
-                    except Exception as dropdown_err:
-                        print(f"[SELENIUM] ⚠️ Dropdown falhou: {dropdown_err}", file=sys.stderr, flush=True)
-                        # Continuar mesmo assim - o dropdown pode não ser necessário
+                        # Esperar até 10 segundos pelo dropdown
+                        dropdown_item = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "#recogida_lista li a"))
+                        )
+                        print(f"[SELENIUM] ✓ Dropdown apareceu: {dropdown_item.text[:50] if dropdown_item.text else 'sem texto'}", file=sys.stderr, flush=True)
+                        
+                        # Clicar no primeiro item
+                        dropdown_item.click()
+                        dropdown_clicked = True
+                        print(f"[SELENIUM] ✅ Dropdown clicado com WebDriverWait!", file=sys.stderr, flush=True)
+                    except Exception as e:
+                        print(f"[SELENIUM] ⚠️ WebDriverWait falhou: {e}", file=sys.stderr, flush=True)
+                        
+                        # Fallback: tentar via JavaScript
+                        for attempt in range(5):
+                            time.sleep(1)
+                            try:
+                                js_result = driver.execute_script("""
+                                    const selectors = ['#recogida_lista li a', '#recogida_lista li', '.ui-autocomplete li a', '.ui-autocomplete li'];
+                                    for (const sel of selectors) {
+                                        const items = document.querySelectorAll(sel);
+                                        if (items.length > 0) {
+                                            items[0].click();
+                                            return {success: true, selector: sel, text: items[0].textContent?.substring(0, 50)};
+                                        }
+                                    }
+                                    // Mostrar HTML do dropdown para debug
+                                    const lista = document.querySelector('#recogida_lista');
+                                    return {success: false, html: lista ? lista.innerHTML.substring(0, 200) : 'lista não encontrada'};
+                                """)
+                                
+                                if js_result.get('success'):
+                                    print(f"[SELENIUM] ✅ Dropdown clicado via JS: {js_result}", file=sys.stderr, flush=True)
+                                    dropdown_clicked = True
+                                    break
+                                else:
+                                    print(f"[SELENIUM] Tentativa {attempt+1}/5: {js_result}", file=sys.stderr, flush=True)
+                            except Exception as e2:
+                                print(f"[SELENIUM] Erro tentativa {attempt+1}: {e2}", file=sys.stderr, flush=True)
                     
-                    time.sleep(0.5)
+                    # SE DROPDOWN NÃO FOI CLICADO, NÃO CONTINUAR
+                    if not dropdown_clicked:
+                        print(f"[SELENIUM] ❌ ERRO CRÍTICO: Dropdown não clicado - abortando", file=sys.stderr, flush=True)
+                        raise Exception("Dropdown não clicado - local não selecionado")
+                    
+                    time.sleep(1)  # Esperar após clicar no dropdown
                     
                     # PASSO 3: Preencher datas e horas (DEPOIS do dropdown!)
                     print(f"[SELENIUM] PASSO 3: Preenchendo datas e horas...", file=sys.stderr, flush=True)
