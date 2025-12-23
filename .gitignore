@@ -32,3 +32,9 @@ cache/
 __pycache__/
 backups/
 WHATSAPP_CREDENTIALS.txt
+
+# Ficheiros de teste local
+teste_visual.py
+teste_visual_novo.py
+chrome_profile/
+screenshots/
