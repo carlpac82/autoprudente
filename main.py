@@ -13032,7 +13032,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 except Exception:
                     _txt_final = ''
                 if re.search(r"\brenault\s*clio\b", _nm) and re.search(r"\b(sw|st|sport\s*tourer|tourer|break|estate|kombi|grandtour|grand\s*tour|sporter|wagon)\b", _nm):
-                    if _is_auto_flag(_nm, _txt_final, transmission_label):
+                    if _is_auto_flag(_nm, '', card_transmission):
                         category = 'Station Wagon Automatic'
                     else:
                         category = 'Estate/Station Wagon'
@@ -13782,7 +13782,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 cn = (car_name or "").lower()
                 # Mini Countryman (incl. Cooper Countryman): E2 if Auto, else D (Economy)
                 if re.search(r"\bmini\s+(cooper\s+)?countryman\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                     else:
                         category = "Economy"
@@ -13816,32 +13816,32 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 # Peugeot 308 SW: Auto -> L2, else J2; Peugeot 308 base -> D (Economy)
                 if re.search(r"\bpeugeot\s*308\b", cn):
                     if re.search(r"\bsw\b", cn):
-                        if _is_auto_flag(cn, _page_text, transmission_label):
+                        if _is_auto_flag(cn, '', card_transmission):
                             category = "Station Wagon Automatic"
                         else:
                             category = "Estate/Station Wagon"
                     # else: base 308 is Economy (D/E2), not Crossover - no override needed
                 # VW Golf SW/Variant: Auto -> L2, else J2
                 if re.search(r"\b(vw|volkswagen)\s*golf\b", cn) and re.search(r"\b(sw|variant)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # VW Passat: base & Variant -> J2; Auto -> L2
                 if re.search(r"\b(vw|volkswagen)\s*passat\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Seat Leon SW/ST/Variant/Estate: Auto -> L2, else J2
                 if re.search(r"\bseat\s*leon\b", cn) and re.search(r"\b(sw|st|variant|sport\s*tourer|sportstourer|estate)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Skoda Scala: base -> J2; Auto -> L2
                 if re.search(r"\b(skoda|škoda)\s*scala\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
@@ -13856,76 +13856,71 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     category = "Estate/Station Wagon"
                 # Toyota Corolla SW/TS/Touring Sports: Auto -> L2 else J2
                 if re.search(r"\btoyota\s*corolla\b", cn) and re.search(r"\b(sw|ts|touring\s*sports?|sport\s*touring|estate|wagon)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Toyota Corolla base (non-wagon) Auto -> E2
                 if re.search(r"\btoyota\s*corolla\b", cn) and not re.search(r"\b(sw|ts|touring\s*sports?|sport\s*touring|estate|wagon)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                 # Peugeot 508 -> J2; Auto -> L2 (Station Wagon Automatic)
                 if re.search(r"\bpeugeot\s*508\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Hyundai i30 -> J2; Auto -> L2
                 if re.search(r"\bhyundai\s*i30\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Cupra Formentor Auto -> L1
-                if re.search(r"\bcupra\s*formentor\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\bcupra\s*formentor\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "SUV Automatic"
                 # Renault Megane Sedan Auto -> L2
-                if re.search(r"\brenault\s*megane\b", cn) and re.search(r"\bsedan\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\brenault\s*megane\b", cn) and re.search(r"\bsedan\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "Station Wagon Automatic"
                 # Renault Megane SW/Estate/Wagon: J2; Auto -> L2
                 if re.search(r"\brenault\s*megane\b", cn) and re.search(r"\b(sw|estate|wagon|sport\s*tourer|sport\s*tourismo|tourer)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Cupra Leon SW Auto -> L2
-                if re.search(r"\bcupra\s*leon\b", cn) and re.search(r"\b(sw|st|sport\s*tourer|sportstourer|estate|variant)\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\bcupra\s*leon\b", cn) and re.search(r"\b(sw|st|sport\s*tourer|sportstourer|estate|variant)\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "Station Wagon Automatic"
                 # ❌ REMOVIDO: Toyota Yaris Cross Auto -> Agora controlado pelo VEHICLES
-                # if re.search(r"\btoyota\s*yaris\s*cross\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                # if re.search(r"\btoyota\s*yaris\s*cross\b", cn) and _is_auto_flag(cn, '', card_transmission):
                 #     category = "SUV Automatic"
                 # Nissan Juke -> F (SUV) regardless of transmission
                 if re.search(r"\bnissan\s*juke\b", cn):
                     category = "SUV"
                 # Toyota Yaris Auto -> E1
-                if re.search(r"\btoyota\s*yaris\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\btoyota\s*yaris\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "Mini Automatic"
                 # Kia Picanto Auto -> E1
-                if re.search(r"\bkia\s*picanto\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\bkia\s*picanto\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "Mini Automatic"
                 # VW Taigo -> F (SUV) regardless of transmission
                 if re.search(r"\b(vw|volkswagen)\s*taigo\b", cn):
                     category = "SUV"
                 # Mitsubishi Spacestar Auto -> E1
-                if re.search(r"\bmitsubishi\s*space\s*star|spacestar\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\bmitsubishi\s*space\s*star|spacestar\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "Mini Automatic"
-                # Renault Megane Auto -> E2 (use card-level text)
+                # Renault Megane Auto -> E2
                 if re.search(r"\brenault\s*megane\b", cn):
-                    _ct = ""
-                    try:
-                        _ct = card.get_text(" ", strip=True).lower()
-                    except Exception:
-                        _ct = ""
-                    if _is_auto_flag(cn, _ct, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                 # Ford Puma -> F (SUV) regardless of transmission
                 if re.search(r"\bford\s*puma\b", cn):
                     category = "SUV"
                 # Citroen C5 Aircross Auto -> L1
-                if re.search(r"\bcitro[eë]n\s*c5\s*aircross\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\bcitro[eë]n\s*c5\s*aircross\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "SUV Automatic"
                 # Toyota C-HR Auto -> L1
-                if re.search(r"\btoyota\s*c[-\s]?hr\b|\btoyota\s*chr\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\btoyota\s*c[-\s]?hr\b|\btoyota\s*chr\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "SUV Automatic"
                 # Kia Stonic -> F (SUV) regardless of transmission
                 if re.search(r"\bkia\s*stonic\b", cn):
@@ -13938,57 +13933,47 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     category = "SUV"
                 # Ford Focus SW/Estate/Wagon variants: J2; Auto -> L2
                 if re.search(r"\bford\s*focus\b", cn) and re.search(r"\b(sw|estate|wagon|turnier|kombi|sportbreak|sport\s*brake|tourer|touring)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Ford Focus base (non-wagon): D or E2
                 if re.search(r"\bford\s*focus\b", cn) and not re.search(r"\b(sw|estate|wagon)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                     else:
                         category = "Economy"
-                # Seat Leon base (non-wagon): D or E2 (use card-level text)
+                # Seat Leon base (non-wagon): D or E2
                 if re.search(r"\bseat\s*leon\b", cn) and not re.search(r"\b(sw|st|variant|sport\s*tourer|sportstourer|estate|wagon)\b", cn):
-                    _ct = ""
-                    try:
-                        _ct = card.get_text(" ", strip=True).lower()
-                    except Exception:
-                        _ct = ""
-                    if _is_auto_flag(cn, _ct, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                     else:
                         category = "Economy"
                 # Kia Ceed base (non-wagon): D or E2
                 if re.search(r"\bkia\s*ceed\b", cn) and not re.search(r"\b(sw|estate|wagon|sportswagon|sports\s*wagon)\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                     else:
                         category = "Economy"
                 # Opel/Vauxhall Astra: base & SW -> J2; Auto -> L2
                 if re.search(r"\b(opel|vauxhall)\s*astra\b", cn):
-                    if _is_auto_flag(cn, _page_text, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # VW T-Cross Auto -> L1 (unchanged)
-                if re.search(r"\b(vw|volkswagen)\s*t[-\s]?cross\b", cn) and _is_auto_flag(cn, _page_text, transmission_label):
+                if re.search(r"\b(vw|volkswagen)\s*t[-\s]?cross\b", cn) and _is_auto_flag(cn, '', card_transmission):
                     category = "SUV Automatic"
-                # VW Golf Auto (hatch) -> E2 (use card-level text)
+                # VW Golf Auto (hatch) -> E2
                 if re.search(r"\b(vw|volkswagen)\s*golf\b", cn) and not re.search(r"\b(sw|variant|estate|wagon)\b", cn):
-                    _ct = ""
-                    try:
-                        _ct = card.get_text(" ", strip=True).lower()
-                    except Exception:
-                        _ct = ""
-                    if _is_auto_flag(cn, _ct, transmission_label):
+                    if _is_auto_flag(cn, '', card_transmission):
                         category = "Economy Automatic"
                 # Dacia Jogger -> M1 (7 Seater); automatic will auto-suffix to M2 later
                 if re.search(r"\bdacia\s*jogger\b", cn):
                     category = "7 Seater"
                 # ❌ REMOVIDO: Fiat 500X -> Agora controlado pelo VEHICLES
                 # if re.search(r"\bfiat\s*500x\b", cn):
-                #     if _is_auto_flag(cn, _page_text, transmission_label):
+                #     if _is_auto_flag(cn, '', card_transmission):
                 #         category = "SUV Automatic"
                 #     else:
                 #         category = "Crossover"
@@ -14002,7 +13987,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                         _card_txt = card.get_text(" ", strip=True).lower()
                     except Exception:
                         _card_txt = ""
-                    is_auto = _is_auto_flag(cn, _card_txt, transmission_label)
+                    is_auto = _is_auto_flag(cn, '', card_transmission)
                     # Only keep intended L1 autos; others remain F per latest rules
                     is_l1_model = (
                         re.search(r"\bpeugeot\s*(3008|2008|5008)\b", cn) or
@@ -14057,7 +14042,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     _ct = card.get_text(" ", strip=True).lower()
                 except Exception:
                     _ct = ""
-                if _is_auto_flag(cn, _ct, transmission_label):
+                if _is_auto_flag(cn, '', card_transmission):
                     category = "Economy Automatic"
                 else:
                     category = "Economy"
@@ -14071,7 +14056,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 _cn = (car_name or "").lower()
                 if any(m in _cn for m in _b1_models):
                     # do not apply B1 if auto/automatic (multi-language/abbrev) or cabrio/convertible/cabriolet
-                    if (not _is_auto_flag(_cn, _page_text, transmission_label)) and not re.search(r"\b(cabrio|convertible|cabriolet)\b", _cn, re.I):
+                    if (not _is_auto_flag(_cn, '', card_transmission)) and not re.search(r"\b(cabrio|convertible|cabriolet)\b", _cn, re.I):
                         # exclude variants that map elsewhere: 500X/500L, Aygo X, Aircross
                         if not re.search(r"\b(500x|500l|aygo\s*x|aircross|countryman)\b", _cn):
                             # and only when category is not already a non-Mini mapping
@@ -14134,7 +14119,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 pass
             # Automatic suffix for selected groups
             try:
-                if transmission_label == "Automatic" and category in ("Mini", "Economy", "SUV", "Estate/Station Wagon", "7 Seater"):
+                if card_transmission == "Automatic" and category in ("Mini", "Economy", "SUV", "Estate/Station Wagon", "7 Seater"):
                     if category == "Estate/Station Wagon":
                         category = "Station Wagon Automatic"
                     elif category == "7 Seater":
@@ -14165,7 +14150,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 # do not override if we already mapped to protected groups (wagon/crossover/suv)
                 is_protected = category in ("Estate/Station Wagon", "Station Wagon Automatic", "Crossover", "SUV", "SUV Automatic")
                 if (not is_protected) and any(re.search(p, cn2) for p in d_models_final):
-                    if _is_auto_flag(cn2, _txt, transmission_label):
+                    if _is_auto_flag(cn2, '', card_transmission):
                         category = "Economy Automatic"
                     else:
                         category = "Economy"
@@ -14186,7 +14171,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     _txt2 = card.get_text(" ", strip=True).lower()
                 except Exception:
                     _txt2 = ""
-                is_manual = (str(transmission_label or '').lower() == 'manual') or bool(re.search(r"\bmanual\b", _txt2))
+                is_manual = (str(card_transmission or '').lower() == 'manual') or bool(re.search(r"\bmanual\b", _txt2))
                 if is_d_family and is_manual and category not in ("Estate/Station Wagon", "Station Wagon Automatic"):
                     category = "Economy"
             except Exception:
@@ -14201,12 +14186,12 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     _txt = ""
                 # Renault Clio SW: force to wagon groups
                 if re.search(r"\brenault\s*clio\b", cnf) and re.search(r"\b(sw|st|sport\s*tourer|tourer|break|estate|kombi|grandtour|grand\s*tour|sporter|wagon)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 cn3 = (car_name or "").lower()
-                is_auto_any = _is_auto_flag(cn3, _txt, transmission_label)
+                is_auto_any = _is_auto_flag(cn3, '', card_transmission)
                 l1_model = (
                     re.search(r"\bpeugeot\s*(3008|2008|5008)\b", cn3) or
                     re.search(r"\bnissan\s*qashqai\b", cn3) or
@@ -14238,71 +14223,71 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             try:
                 cnf = (car_name or "").lower()
                 if re.search(r"\bford\s*focus\b", cnf) and re.search(r"\b(sw|estate|wagon|turnier|kombi|sportbreak|sport\s*brake|tourer|touring)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\b(vw|volkswagen)\s*golf\b", cnf) and re.search(r"\b(sw|variant)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\bfiat\s*500l\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\b(vw|volkswagen)\s*passat\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\bpeugeot\s*508\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\bhyundai\s*i30\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\btoyota\s*corolla\b", cnf) and re.search(r"\b(sw|ts|touring\s*sports?|sport\s*touring|estate|wagon)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # Enforce E2 for Toyota Corolla base Auto
                 if re.search(r"\btoyota\s*corolla\b", cnf) and not re.search(r"\b(sw|ts|touring\s*sports?|sport\s*touring|estate|wagon)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Economy Automatic"
                 if re.search(r"\bseat\s*leon\b", cnf) and re.search(r"\b(sw|st|variant|sport\s*tourer|sportstourer|estate)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 if re.search(r"\b(skoda|škoda)\s*scala\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
-                if re.search(r"\bford\s*focus\b", cnf) and re.search(r"\b(sw|estate|wagon)\b", cnf) and _is_auto_flag(cnf, _txt, transmission_label):
+                if re.search(r"\bford\s*focus\b", cnf) and re.search(r"\b(sw|estate|wagon)\b", cnf) and _is_auto_flag(cnf, '', card_transmission):
                     category = "Station Wagon Automatic"
                 if re.search(r"\b(opel|vauxhall)\s*astra\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
-                if re.search(r"\brenault\s*megane\b", cnf) and re.search(r"\bsedan\b", cnf) and _is_auto_flag(cnf, _txt, transmission_label):
+                if re.search(r"\brenault\s*megane\b", cnf) and re.search(r"\bsedan\b", cnf) and _is_auto_flag(cnf, '', card_transmission):
                     category = "Station Wagon Automatic"
                 if re.search(r"\brenault\s*megane\b", cnf) and re.search(r"\b(sw|estate|wagon|sport\s*tourer|sport\s*tourismo|tourer)\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
                 # ADDED: Skoda Octavia SW -> L2/J2
                 if re.search(r"\b(skoda|škoda)\s*octavia\b", cnf):
-                    if _is_auto_flag(cnf, _txt, transmission_label):
+                    if _is_auto_flag(cnf, '', card_transmission):
                         category = "Station Wagon Automatic"
                     else:
                         category = "Estate/Station Wagon"
@@ -14346,7 +14331,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     r"\bdacia\s*jogger\b",  # ADDED: Dacia Jogger é M2 quando auto
                     r"\bopel\s*zafira\b",  # ADDED: Opel Zafira é M2 quando auto
                 ]
-                if any(re.search(p, cn4) for p in m2_patterns) and _is_auto_flag(cn4, _txt, transmission_label):
+                if any(re.search(p, cn4) for p in m2_patterns) and _is_auto_flag(cn4, '', card_transmission):
                     category = "7 Seater Automatic"
                     logging.info(f"🚗 [M2-OVERRIDE] Detected M2 car: {car_name}")
             except Exception:
@@ -14364,14 +14349,14 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     r"\bcitro[eë]n\s*c1\b",
                     r"\b(vw|volkswagen)\s*up\b",
                 ]
-                if any(re.search(p, cn5) for p in e1_patterns) and _is_auto_flag(cn5, _txt, transmission_label):
+                if any(re.search(p, cn5) for p in e1_patterns) and _is_auto_flag(cn5, '', card_transmission):
                     category = "Mini Automatic"
                     logging.info(f"🚗 [E1-OVERRIDE] Detected E1 Mini Auto: {car_name}")
             except Exception:
                 pass
             # FINAL B2 OVERRIDE: Hyundai i10 Manual -> B2 (5 lugares, não 4!)
             try:
-                if re.search(r"\bhyundai\s*i10\b", (car_name or "").lower()) and not _is_auto_flag((car_name or "").lower(), _txt, transmission_label):
+                if re.search(r"\bhyundai\s*i10\b", (car_name or "").lower()) and not _is_auto_flag((car_name or "").lower(), '', card_transmission):
                     category = "Mini 5 Doors"
                     logging.info(f"🚗 [B2-OVERRIDE] Hyundai i10 Manual → B2 (5 lugares)")
             except Exception:
@@ -14405,7 +14390,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     if any(re.search(p, _name) for p in b2_guard):
                         raise Exception("skip B1 for i10 - it's B2")
                     # exclude autos and cabrio and special variants
-                    if (not _is_auto_flag(_name, _txt, transmission_label)) \
+                    if (not _is_auto_flag(_name, '', card_transmission)) \
                         and not re.search(r"\b(cabrio|convertible|cabriolet)\b", _name) \
                         and not re.search(r"\b(500x|500l|aygo\s*x|aircross|countryman)\b", _name):
                         category = "Mini 4 Doors"
