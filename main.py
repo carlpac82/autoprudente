@@ -13599,19 +13599,21 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     logging.info(f"      Ícone {idx+1}: <i class=\"{classes}\">")
             
             try:
-                # MÉTODO PRINCIPAL: Usar atributo value do <li> (mais confiável!)
+                # MÉTODO 1: Usar atributo value do <li> (mais confiável!)
                 # <li value="A"> = Automático, <li value="M"> = Manual
-                trans_li_auto = card.select_one("li[value='A']")
-                trans_li_manual = card.select_one("li[value='M']")
+                # SÓ usar se card_transmission ainda não foi definido (pelo ALT ou nome)
+                if not card_transmission:
+                    trans_li_auto = card.select_one("li[value='A']")
+                    trans_li_manual = card.select_one("li[value='M']")
+                    
+                    if trans_li_auto:
+                        card_transmission = "Automatic"
+                        logging.info(f"✅ [LI-VALUE] {car_name} → AUTOMATIC (li value='A' encontrado)")
+                    elif trans_li_manual:
+                        card_transmission = "Manual"
+                        logging.info(f"✅ [LI-VALUE] {car_name} → MANUAL (li value='M' encontrado)")
                 
-                if trans_li_auto:
-                    card_transmission = "Automatic"
-                    logging.info(f"✅ [LI-VALUE] {car_name} → AUTOMATIC (li value='A' encontrado)")
-                elif trans_li_manual:
-                    card_transmission = "Manual"
-                    logging.info(f"✅ [LI-VALUE] {car_name} → MANUAL (li value='M' encontrado)")
-                
-                # FALLBACK 1: Se não encontrou por li value, tentar por ícone
+                # MÉTODO 2: Se não encontrou, tentar por ícone
                 if not card_transmission:
                     trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
                     if trans_icon:
@@ -13625,7 +13627,7 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                                 card_transmission = "Manual"
                                 logging.info(f"✅ [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto)")
                 
-                # FALLBACK 2: Se não encontrou por ícone, procurar por texto
+                # MÉTODO 3: Se não encontrou por ícone, procurar por texto
                 if not card_transmission:
                     card_text = card.get_text(' ', strip=True).lower()
                     if 'automático' in card_text or 'automatic' in card_text:
@@ -13635,6 +13637,25 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                     elif 'manual' in card_text:
                         card_transmission = "Manual"
                         logging.info(f"✅ [TEXT-TRANS] {car_name} → MANUAL (texto)")
+                
+                # MÉTODO 4: Verificar span.cl--name-type (CarJet específico)
+                if not card_transmission:
+                    name_type_el = card.select_one("span.cl--name-type")
+                    if name_type_el:
+                        name_type_text = name_type_el.get_text(strip=True).lower()
+                        if 'automático' in name_type_text or 'automatic' in name_type_text:
+                            card_transmission = "Automatic"
+                            logging.info(f"✅ [NAME-TYPE] {car_name} → AUTOMATIC (span.cl--name-type)")
+                        elif 'manual' in name_type_text:
+                            card_transmission = "Manual"
+                            logging.info(f"✅ [NAME-TYPE] {car_name} → MANUAL (span.cl--name-type)")
+                
+                # LOG FINAL da transmissão detectada
+                if card_transmission:
+                    logging.info(f"🎯 [TRANS-FINAL] {car_name} → {card_transmission}")
+                else:
+                    logging.warning(f"⚠️ [TRANS-NONE] {car_name} → Transmissão NÃO detectada, assumindo Manual")
+                    card_transmission = "Manual"  # Default para Manual se não detectado
             except Exception as e:
                 logging.error(f"❌ [TRANS-DETECT] Erro: {e}")
             
