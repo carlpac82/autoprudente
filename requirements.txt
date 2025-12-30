@@ -16,6 +16,7 @@ playwright==1.55.0
 # Selenium for web scraping fallback
 selenium==4.36.0
 webdriver-manager==4.0.2
+selenium-stealth==1.0.6
 
 # Excel export
 openpyxl==3.1.2
