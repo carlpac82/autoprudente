@@ -11292,6 +11292,7 @@ async def track_by_params(request: Request):
             from selenium.webdriver.common.by import By
             from selenium.webdriver.support.ui import WebDriverWait
             from selenium.webdriver.support import expected_conditions as EC
+            from selenium_stealth import stealth
             import time
             
             # ============================================
@@ -11508,6 +11509,18 @@ async def track_by_params(request: Request):
                 if driver is None:
                     raise Exception(f"Não foi possível iniciar Chrome após 3 tentativas. Último erro: {last_error}")
                 
+                # APLICAR SELENIUM-STEALTH para evitar detecção de bot
+                print(f"[SELENIUM] Aplicando selenium-stealth...", file=sys.stderr, flush=True)
+                stealth(driver,
+                    languages=["pt-PT", "pt", "en"],
+                    vendor="Apple Computer, Inc.",
+                    platform="iPhone",
+                    webgl_vendor="Apple Inc.",
+                    renderer="Apple GPU",
+                    fix_hairline=True,
+                )
+                print(f"[SELENIUM] ✅ Stealth aplicado!", file=sys.stderr, flush=True)
+                
                 # FUNÇÃO HELPER: Autodetectar e REJEITAR cookies (mais simples!)
                 def reject_cookies_if_present(step_name=""):
                     """Detecta e REJEITA cookies automaticamente. Retorna True se encontrou cookies."""
@@ -11642,20 +11655,25 @@ async def track_by_params(request: Request):
                             }
                         """)
                         print(f"[SELENIUM] ✓ Dropdown: {js_result}", file=sys.stderr, flush=True)
+                        
+                        # IMPORTANTE: Clicar na página para confirmar o local
+                        time.sleep(0.5)
+                        print(f"[SELENIUM] Clicando na página para confirmar local...", file=sys.stderr, flush=True)
+                        driver.find_element(By.CSS_SELECTOR, "h1, h2, .title, header").click()
+                        print(f"[SELENIUM] ✓ Local confirmado", file=sys.stderr, flush=True)
+                        
                     except Exception as dropdown_err:
                         print(f"[SELENIUM] ⚠️ Dropdown falhou: {dropdown_err}", file=sys.stderr, flush=True)
                         # Continuar mesmo assim - o dropdown pode não ser necessário
                     
-                    time.sleep(0.5)
+                    time.sleep(1)
                     
-                    # PASSO 3: Preencher datas via DROPDOWNS MyBooking (mais fiável que campos hidden)
-                    print(f"[SELENIUM] PASSO 3: Preenchendo datas via dropdowns MyBooking...", file=sys.stderr, flush=True)
+                    # PASSO 3: Preencher datas via campos hidden (versão mobile)
+                    print(f"[SELENIUM] PASSO 3: Preenchendo datas via campos hidden...", file=sys.stderr, flush=True)
                     
-                    # Formato: YYYYMM para dropdown mês/ano
-                    month_year_pickup = start_dt.strftime("%Y%m")
-                    month_year_dropoff = end_dt.strftime("%Y%m")
-                    day_pickup = start_dt.strftime("%d")
-                    day_dropoff = end_dt.strftime("%d")
+                    # Formato dd/mm/yyyy para campos hidden
+                    fecha_recogida = start_dt.strftime("%d/%m/%Y")
+                    fecha_devolucion = end_dt.strftime("%d/%m/%Y")
                     hour_pickup = start_dt.strftime("%H:%M")
                     hour_dropoff = end_dt.strftime("%H:%M")
                     
@@ -11663,65 +11681,43 @@ async def track_by_params(request: Request):
                     driver.set_script_timeout(10)
                     
                     result = driver.execute_script("""
-                        const monthYearPickup = arguments[0];
-                        const monthYearDropoff = arguments[1];
-                        const dayPickup = arguments[2];
-                        const dayDropoff = arguments[3];
-                        const hourPickup = arguments[4];
-                        const hourDropoff = arguments[5];
+                        const fechaRecogida = arguments[0];
+                        const fechaDevolucion = arguments[1];
+                        const hourPickup = arguments[2];
+                        const hourDropoff = arguments[3];
                         
-                        // RECOLHA - Mês/Ano via dropdown MyBooking
-                        const monthSelect1 = document.querySelector('#fechaRecogidaMyBookingMonthYear');
-                        if (monthSelect1) {
-                            monthSelect1.value = monthYearPickup;
-                            monthSelect1.dispatchEvent(new Event('change', {bubbles: true}));
-                        }
+                        let filled = {};
                         
-                        // RECOLHA - Dia via dropdown MyBooking
-                        const daySelect1 = document.querySelector('#fechaRecogidaMyBookingDay');
-                        if (daySelect1) {
-                            daySelect1.value = dayPickup;
-                            daySelect1.dispatchEvent(new Event('change', {bubbles: true}));
-                        }
-                        
-                        // DEVOLUÇÃO - Mês/Ano via dropdown MyBooking
-                        const monthSelect2 = document.querySelector('#fechaDevolucionMyBookingMonthYear');
-                        if (monthSelect2) {
-                            monthSelect2.value = monthYearDropoff;
-                            monthSelect2.dispatchEvent(new Event('change', {bubbles: true}));
-                        }
-                        
-                        // DEVOLUÇÃO - Dia via dropdown MyBooking
-                        const daySelect2 = document.querySelector('#fechaDevolucionMyBookingDay');
-                        if (daySelect2) {
-                            daySelect2.value = dayDropoff;
-                            daySelect2.dispatchEvent(new Event('change', {bubbles: true}));
-                        }
-                        
-                        // Também preencher campos hidden como backup
+                        // Campos hidden de data (formato dd/mm/yyyy) - PRINCIPAL na versão mobile
                         const fechaRec = document.querySelector('#fechaRecogida');
                         const fechaDev = document.querySelector('#fechaDevolucion');
-                        if (fechaRec) fechaRec.value = dayPickup + '/' + monthYearPickup.substring(4,6) + '/' + monthYearPickup.substring(0,4);
-                        if (fechaDev) fechaDev.value = dayDropoff + '/' + monthYearDropoff.substring(4,6) + '/' + monthYearDropoff.substring(0,4);
                         
-                        // Preencher horas
-                        const h1 = document.querySelector('select[id="fechaRecogidaSelHour"]');
-                        if (h1) { h1.value = hourPickup; h1.dispatchEvent(new Event('change', {bubbles: true})); }
+                        if (fechaRec) { 
+                            fechaRec.value = fechaRecogida; 
+                            filled.fechaRec = fechaRec.value; 
+                        }
+                        if (fechaDev) { 
+                            fechaDev.value = fechaDevolucion; 
+                            filled.fechaDev = fechaDev.value; 
+                        }
                         
-                        const h2 = document.querySelector('select[id="fechaDevolucionSelHour"]');
-                        if (h2) { h2.value = hourDropoff; h2.dispatchEvent(new Event('change', {bubbles: true})); }
+                        // Horas (selects)
+                        const h1 = document.querySelector('#fechaRecogidaSelHour');
+                        if (h1) { 
+                            h1.value = hourPickup; 
+                            h1.dispatchEvent(new Event('change', {bubbles: true})); 
+                            filled.h1 = h1.value; 
+                        }
                         
-                        return {
-                            monthSelect1: monthSelect1?.value,
-                            daySelect1: daySelect1?.value,
-                            monthSelect2: monthSelect2?.value,
-                            daySelect2: daySelect2?.value,
-                            fechaRec: fechaRec?.value,
-                            fechaDev: fechaDev?.value,
-                            h1: h1?.value,
-                            h2: h2?.value
-                        };
-                    """, month_year_pickup, month_year_dropoff, day_pickup, day_dropoff, hour_pickup, hour_dropoff)
+                        const h2 = document.querySelector('#fechaDevolucionSelHour');
+                        if (h2) { 
+                            h2.value = hourDropoff; 
+                            h2.dispatchEvent(new Event('change', {bubbles: true})); 
+                            filled.h2 = h2.value; 
+                        }
+                        
+                        return filled;
+                    """, fecha_recogida, fecha_devolucion, hour_pickup, hour_dropoff)
                     
                     print(f"[SELENIUM] ✓ Datas e horas preenchidas: {result}", file=sys.stderr, flush=True)
                     
@@ -11745,24 +11741,28 @@ async def track_by_params(request: Request):
                     pass
                 time.sleep(0.3)
                 
-                # Submit via JavaScript (mais confiável que procurar botão)
+                # Submit via botão btnBuscar (versão mobile usa searchCars())
                 try:
-                    # Tentar encontrar e submeter o form diretamente
                     submit_result = driver.execute_script("""
-                        // Procurar form pelo name ou tag
-                        let form = document.querySelector('form[name="menu_tarifas"]') || 
-                                   document.querySelector('form#booking_form') ||
-                                   document.querySelector('form');
-                        
+                        // Tentar clicar no botão Pesquisar (versão mobile)
+                        const btn = document.querySelector('#btnBuscar');
+                        if (btn) { 
+                            btn.click(); 
+                            return 'OK_BTN';
+                        }
+                        // Fallback: submeter formulário
+                        const form = document.querySelector('#frm_search_cars') || 
+                                     document.querySelector('form[name="menu_tarifas"]') ||
+                                     document.querySelector('form');
                         if (form) {
                             form.submit();
-                            return 'OK';
+                            return 'OK_FORM';
                         }
                         return 'NO_FORM';
                     """)
                     
-                    if submit_result == 'OK':
-                        print(f"[SELENIUM] ✅ Form submetido via JS", file=sys.stderr, flush=True)
+                    if submit_result.startswith('OK'):
+                        print(f"[SELENIUM] ✅ Submetido via: {submit_result}", file=sys.stderr, flush=True)
                     else:
                         print(f"[SELENIUM] ❌ Form não encontrado", file=sys.stderr, flush=True)
                         raise Exception("Form não encontrado")
