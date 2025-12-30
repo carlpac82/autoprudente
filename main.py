@@ -12889,11 +12889,19 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         _page_text = ""
 
     # Helper: detect automatic transmission markers from name or card text or explicit label
+    # PRIORIDADE: trans_label (detectado do card) > nome do carro > card_text
     def _is_auto_flag(name_lc: str, card_text_lc: str, trans_label: str) -> bool:
         try:
-            if (trans_label or '').lower() == 'automatic':
+            trans_lower = (trans_label or '').lower()
+            # Se trans_label foi detectado explicitamente, USAR ESSE VALOR!
+            # Isso evita falsos positivos de "automático" no texto da página
+            if trans_lower == 'automatic':
                 return True
-            return bool(AUTO_RX.search(name_lc or '') or AUTO_RX.search(card_text_lc or ''))
+            if trans_lower == 'manual':
+                return False  # EXPLICITAMENTE manual - não verificar texto!
+            # Só verificar nome/texto se trans_label não foi detectado
+            # E APENAS no nome do carro, NÃO no card_text (que pode ser _page_text)
+            return bool(AUTO_RX.search(name_lc or ''))
         except Exception:
             return False
 
