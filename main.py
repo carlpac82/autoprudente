@@ -13800,13 +13800,16 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 if re.search(r"\bpeugeot\s*108\b.*\b(cabrio|convertible|cabriolet)\b", cn):
                     category = "Premium"
                 # Fiat 500 Auto -> E1 (Mini Automatic) unless Cabrio already handled
-                if re.search(r"\bfiat\s*500\b.*\b(auto|automatic)\b", cn) and not re.search(r"\b(cabrio|convertible|cabriolet)\b", cn):
+                # CORRECÇÃO: Usar _is_auto_flag com card_transmission, não apenas nome
+                if re.search(r"\bfiat\s*500\b", cn) and _is_auto_flag(cn, '', card_transmission) and not re.search(r"\b(cabrio|convertible|cabriolet)\b", cn):
                     category = "Mini Automatic"
                 # Citroen C3 Auto -> E2 (Economy Automatic)
-                if re.search(r"\bcitro[eë]n\s*c3\b.*\b(auto|automatic)\b", cn) and not re.search(r"\bc3\s*aircross\b", cn):
+                # CORRECÇÃO: Usar _is_auto_flag com card_transmission, não apenas nome
+                if re.search(r"\bcitro[eë]n\s*c3\b", cn) and _is_auto_flag(cn, '', card_transmission) and not re.search(r"\bc3\s*aircross\b", cn):
                     category = "Economy Automatic"
                 # Citroen C3 (non-Aircross, non-Auto) -> D (Economy)
-                if re.search(r"\bcitro[eë]n\s*c3\b", cn) and not re.search(r"\b(auto|automatic)\b", cn) and not re.search(r"\bc3\s*aircross\b", cn):
+                # CORRECÇÃO: Usar _is_auto_flag com card_transmission, não apenas nome
+                if re.search(r"\bcitro[eë]n\s*c3\b", cn) and not _is_auto_flag(cn, '', card_transmission) and not re.search(r"\bc3\s*aircross\b", cn):
                     category = "Economy"
                 # ❌ REMOVIDO: Citroen C3 Aircross Auto -> Agora controlado pelo VEHICLES
                 # if re.search(r"\bcitro[eë]n\s*c3\s*aircross\b.*\b(auto|automatic)\b", cn):
