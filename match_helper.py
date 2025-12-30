@@ -1,7 +1,7 @@
 def match_vehicle_group_by_characteristics(category: str, car_name: str, transmission: str, vehicle_groups: dict, fallback_func) -> str:
     """Match inteligente baseado nas características parametrizadas no Admin Vehicles"""
     if not vehicle_groups:
-        return fallback_func(category, car_name)
+        return fallback_func(category, car_name, transmission)
     
     category_lower = (category or '').lower()
     transmission_lower = (transmission or '').lower()
@@ -46,5 +46,5 @@ def match_vehicle_group_by_characteristics(category: str, car_name: str, transmi
     if best_match and best_score >= 2:
         return best_match
     
-    # Fallback
-    return fallback_func(category, car_name)
+    # Fallback - IMPORTANTE: passar transmissão para mapeamento correto M1/M2, L1/L2, etc
+    return fallback_func(category, car_name, transmission)
