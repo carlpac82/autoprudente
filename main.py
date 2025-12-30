@@ -13606,56 +13606,30 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             except Exception:
                 pass
             
-            # 🔧 DETECTAR TRANSMISSÃO (MÚLTIPLOS MÉTODOS)
-            # Método 0: NOME do carro termina com " Auto" (ex: "VW Polo Auto")
-            # Método 1: ALT da imagem "... | Automático" (já extraído acima)
-            # Método 2: Ícone <i class="icon icon-transm-auto">
-            # Método 3: Texto "Automático" no card
-            logging.info(f"🔍 [TRANS-DETECT-START] Analisando carro: '{car_name}' | ALT já definiu: '{card_transmission}'")
+            # 🔧 DETECTAR TRANSMISSÃO - PRIORIDADE: <li value> é a fonte MAIS CONFIÁVEL!
+            # O HTML do CarJet tem: <li value="A"> para Automático, <li value="M"> para Manual
+            # Esta é a fonte mais confiável porque vem diretamente do ícone de transmissão
+            logging.info(f"🔍 [TRANS-DETECT-START] Analisando carro: '{car_name}' | ALT pré-definiu: '{card_transmission}'")
             
-            # MÉTODO 0: Detectar pelo NOME do carro (mais confiável!)
-            # CarJet adiciona " Auto" no final do nome quando é automático
-            # Exemplos: "VW Polo Auto", "Kia Niro Auto, Hybrid"
-            if not card_transmission and car_name:
-                name_lower = car_name.lower()
-                # Verificar se termina com " auto" (pode ter vírgula depois: "Auto,")
-                if ' auto' in name_lower:
-                    # Verificar se é realmente "Auto" e não parte de outra palavra
-                    words = name_lower.split()
-                    if 'auto' in words or any(w.startswith('auto,') for w in words):
-                        card_transmission = "Automatic"
-                        logging.info(f"✅ [NAME-TRANS] {car_name} → AUTOMATIC (nome contém ' Auto')")
-                        print(f"[SCRAPING] Transmissão detectada pelo nome: Automatic")
-                # Verificar se tem "Manual" no nome (menos comum mas possível)
-                elif 'manual' in name_lower:
-                    card_transmission = "Manual"
-                    logging.info(f"✅ [NAME-TRANS] {car_name} → MANUAL (nome contém 'Manual')")
-                    print(f"[SCRAPING] Transmissão detectada pelo nome: Manual")
-            
-            # DEBUG: Listar TODOS os ícones do card
-            all_icons = card.find_all('i')
-            logging.info(f"   📊 Total de ícones <i> no card: {len(all_icons)}")
-            if all_icons:
-                for idx, icon in enumerate(all_icons[:5]):  # Primeiros 5
-                    classes = ' '.join(icon.get('class', []))
-                    logging.info(f"      Ícone {idx+1}: <i class=\"{classes}\">")
+            # RESET card_transmission - vamos detectar de novo com prioridade correta
+            # O ALT pode ter definido incorretamente (ex: "Pequeno" não é transmissão)
+            card_transmission = None
             
             try:
-                # MÉTODO 1: Usar atributo value do <li> (mais confiável!)
+                # MÉTODO 1 (PRIORITÁRIO): Usar atributo value do <li>
                 # <li value="A"> = Automático, <li value="M"> = Manual
-                # SÓ usar se card_transmission ainda não foi definido (pelo ALT ou nome)
-                if not card_transmission:
-                    trans_li_auto = card.select_one("li[value='A']")
-                    trans_li_manual = card.select_one("li[value='M']")
-                    
-                    if trans_li_auto:
-                        card_transmission = "Automatic"
-                        logging.info(f"✅ [LI-VALUE] {car_name} → AUTOMATIC (li value='A' encontrado)")
-                    elif trans_li_manual:
-                        card_transmission = "Manual"
-                        logging.info(f"✅ [LI-VALUE] {car_name} → MANUAL (li value='M' encontrado)")
+                # Esta é a fonte MAIS CONFIÁVEL - vem do ícone de transmissão do CarJet
+                trans_li_auto = card.select_one("li[value='A']")
+                trans_li_manual = card.select_one("li[value='M']")
                 
-                # MÉTODO 2: Se não encontrou, tentar por ícone
+                if trans_li_auto:
+                    card_transmission = "Automatic"
+                    logging.info(f"✅ [LI-VALUE] {car_name} → AUTOMATIC (li value='A' encontrado)")
+                elif trans_li_manual:
+                    card_transmission = "Manual"
+                    logging.info(f"✅ [LI-VALUE] {car_name} → MANUAL (li value='M' encontrado)")
+                
+                # MÉTODO 2: Se <li value> não encontrado, tentar por ícone
                 if not card_transmission:
                     trans_icon = card.select_one("i.icon-transm-auto, i.icon.icon-transm-auto")
                     if trans_icon:
@@ -13669,18 +13643,17 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                                 card_transmission = "Manual"
                                 logging.info(f"✅ [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto)")
                 
-                # MÉTODO 3: DESATIVADO - Este método causava falsos positivos!
-                # Procurar por "automático" em TODO o texto do card é muito genérico
-                # e pode capturar texto da categoria, descrição, etc.
-                # if not card_transmission:
-                #     card_text = card.get_text(' ', strip=True).lower()
-                #     if 'automático' in card_text or 'automatic' in card_text:
-                #         if 'semi' not in card_text:
-                #             card_transmission = "Automatic"
-                #             logging.info(f"✅ [TEXT-TRANS] {car_name} → AUTOMATIC (texto)")
-                #     elif 'manual' in card_text:
-                #         card_transmission = "Manual"
-                #         logging.info(f"✅ [TEXT-TRANS] {car_name} → MANUAL (texto)")
+                # MÉTODO 3: Se ainda não detectou, verificar nome do carro
+                if not card_transmission and car_name:
+                    name_lower = car_name.lower()
+                    if ' auto' in name_lower:
+                        words = name_lower.split()
+                        if 'auto' in words or any(w.startswith('auto,') for w in words):
+                            card_transmission = "Automatic"
+                            logging.info(f"✅ [NAME-TRANS] {car_name} → AUTOMATIC (nome contém ' Auto')")
+                    elif 'manual' in name_lower:
+                        card_transmission = "Manual"
+                        logging.info(f"✅ [NAME-TRANS] {car_name} → MANUAL (nome contém 'Manual')")
                 
                 # MÉTODO 4: Verificar span.cl--name-type (CarJet específico)
                 if not card_transmission:
@@ -14471,16 +14444,16 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                         else:
                             vehicles_transmission = 'Manual'
                         
-                        # CORRECÇÃO: Se VEHICLES diz Manual mas detectamos Automatic, USAR VEHICLES!
-                        # VEHICLES é mais confiável porque é parametrizado manualmente
+                        # NOTA: A transmissão detectada pelo <li value="A/M"> é MAIS CONFIÁVEL
+                        # que o VEHICLES, porque vem diretamente do HTML do CarJet
+                        # NÃO sobrescrever final_transmission com vehicles_transmission
                         if vehicles_transmission and final_transmission:
                             if vehicles_transmission != final_transmission:
                                 logging.warning(f"⚠️  [VEHICLES-CONFLICT] {car_name}:")
                                 logging.warning(f"      VEHICLES diz: {vehicles_transmission} (grupo {vehicles_group})")
                                 logging.warning(f"      DETECTADO: {final_transmission}")
-                                logging.warning(f"      → USANDO VEHICLES (mais confiável)")
-                                # SOBRESCREVER com transmissão do VEHICLES
-                                final_transmission = vehicles_transmission
+                                logging.warning(f"      → USANDO DETECTADO (li value é mais confiável)")
+                                # NÃO sobrescrever - manter final_transmission detectado
                         break
             except Exception as e:
                 pass  # VEHICLES pode não existir
