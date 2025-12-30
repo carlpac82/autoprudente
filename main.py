@@ -2210,24 +2210,34 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                             logging.info(f"✅ [ELECTRIC-PRIORITY] {car_name} → {electric_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
-            # ✅ PRIORIDADE MÁXIMA 3: Carros AUTO ANTES de match parcial
-            # Garantir que "Mercedes V Class Auto" não é mapeado como "Mercedes V Class" (M1)
-            # CORRECÇÃO: Só fazer match com versão AUTO se o NOME do carro tem "auto"
-            # NÃO usar transmissão detectada para forçar match com versão AUTO!
-            # Isso evita que "Volkswagen Up" (manual) faça match com "volkswagen up auto"
+            # ✅ PRIORIDADE MÁXIMA 3: Usar TRANSMISSÃO DETECTADA para escolher versão AUTO ou MANUAL
+            # CORRECÇÃO CRÍTICA: Usar transmission (detectada pelo <li value>) em vez do nome!
+            # Isso garante que "Citroen C4 Picasso" (automático mas sem "Auto" no nome) vai para M2
+            is_transmission_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
             has_auto_in_name = re.search(r'\b(auto|automatic|automático|automatico)\b', car_clean_lower)
             
-            if has_auto_in_name:
-                # Verificar se existe match exato com versão AUTO no VEHICLES
-                # Tentar matches mais específicos primeiro (ordenar por tamanho decrescente)
+            # Se transmissão detectada é Automatic, procurar versão AUTO no VEHICLES
+            if is_transmission_auto:
+                # Tentar encontrar versão AUTO do carro no VEHICLES
+                # Ex: "citroen c4 picasso" + transmission=Automatic → procurar "citroen c4 picasso auto"
                 for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
-                    # Match: APENAS se key está no nome do carro
-                    # NÃO fazer match baseado na transmissão detectada!
+                    # Extrair nome base do auto_key (sem " auto")
+                    base_key = auto_key.replace(' auto', '').strip()
+                    # Match se o nome do carro contém o nome base
+                    if base_key in car_clean_lower or car_clean_lower in base_key:
+                        category_from_vehicles = VEHICLES[auto_key]
+                        grupo_code = _map_category_to_group_code(category_from_vehicles)
+                        if grupo_code:
+                            logging.info(f"✅ [TRANS-AUTO-MATCH] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
+                            return grupo_code
+            elif has_auto_in_name:
+                # Se o nome tem "Auto" mas transmissão não foi detectada como Automatic, usar nome
+                for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
                     if auto_key in car_clean_lower:
                         category_from_vehicles = VEHICLES[auto_key]
                         grupo_code = _map_category_to_group_code(category_from_vehicles)
                         if grupo_code:
-                            logging.info(f"✅ [AUTO-PRIORITY] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
+                            logging.info(f"✅ [NAME-AUTO-MATCH] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
             # Remover sufixos comuns que impedem match
