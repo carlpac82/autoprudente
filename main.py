@@ -2708,15 +2708,19 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         
         # Ajustar grupo baseado na transmissão
         # Manual → Automático: B1→E1, B2→E1, D→E2, F→L1, J2→L2, M1→M2
+        # Grupos SEM versão automática separada: G (Cabrio), J1 (Crossover), N (9 Seater), X (Luxury)
         if is_auto:
             grupo_ajustado = {
                 'B1': 'E1',  # Mini 4 lugares → Mini Auto
                 'B2': 'E1',  # Mini 5 lugares → Mini Auto
                 'D': 'E2',   # Economy → Economy Auto
                 'F': 'L1',   # SUV → SUV Auto
+                'G': 'G',    # Cabrio (sem versão auto separada)
                 'J1': 'J1',  # Crossover (sem versão auto separada)
                 'J2': 'L2',  # Station Wagon → SW Auto
                 'M1': 'M2',  # 7 Seater → 7 Seater Auto
+                'N': 'N',    # 9 Seater (sem versão auto separada)
+                'X': 'X',    # Luxury (sem versão auto separada)
             }.get(grupo_base, grupo_base)
             grupo = grupo_ajustado
         else:
