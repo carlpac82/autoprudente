@@ -12893,19 +12893,29 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         _page_text = ""
 
     # Helper: detect automatic transmission markers from name or card text or explicit label
-    # PRIORIDADE: trans_label (detectado do card) > nome do carro > card_text
+    # PRIORIDADE: trans_label (detectado do card) é a ÚNICA fonte confiável
+    # Se trans_label não foi detectado, assumir MANUAL (não automático!)
     def _is_auto_flag(name_lc: str, card_text_lc: str, trans_label: str) -> bool:
         try:
             trans_lower = (trans_label or '').lower()
             # Se trans_label foi detectado explicitamente, USAR ESSE VALOR!
-            # Isso evita falsos positivos de "automático" no texto da página
             if trans_lower == 'automatic':
                 return True
             if trans_lower == 'manual':
-                return False  # EXPLICITAMENTE manual - não verificar texto!
-            # Só verificar nome/texto se trans_label não foi detectado
-            # E APENAS no nome do carro, NÃO no card_text (que pode ser _page_text)
-            return bool(AUTO_RX.search(name_lc or ''))
+                return False
+            # IMPORTANTE: Se trans_label não foi detectado, verificar APENAS se o nome
+            # termina com " Auto" (padrão CarJet) - NÃO usar AUTO_RX genérico!
+            # Isso evita falsos positivos com "at", "eat", etc.
+            if name_lc:
+                # Padrão CarJet: nome termina com " auto" ou " auto,"
+                words = name_lc.split()
+                if words and (words[-1] == 'auto' or words[-1].startswith('auto,')):
+                    return True
+                # Verificar também "auto" como palavra isolada no meio
+                if ' auto ' in name_lc or ' auto,' in name_lc:
+                    return True
+            # Se não detectou transmissão explícita e não tem "Auto" no nome, assumir MANUAL
+            return False
         except Exception:
             return False
 
