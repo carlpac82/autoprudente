@@ -14431,12 +14431,29 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                 sorted_vehicles = sorted(VEHICLES.items(), key=lambda x: len(x[0]), reverse=True)
                 for veh_name, veh_cat in sorted_vehicles:
                     veh_name_lower = veh_name.lower()
-                    if veh_name_lower in car_name_lower or car_name_lower in veh_name_lower:
+                    # CORRECÇÃO: Só fazer match se veh_name está contido no car_name
+                    # NÃO o contrário! Senão "volkswagen up" (manual) faz match com "volkswagen up auto"
+                    # Também verificar se é match EXATO de palavras (não substring parcial)
+                    if veh_name_lower in car_name_lower:
+                        # Verificar se "auto" no VEHICLES corresponde à transmissão detectada
+                        veh_has_auto = 'auto' in veh_name_lower or 'Auto' in str(veh_cat)
+                        car_has_auto = ' auto' in car_name_lower or car_name_lower.endswith(' auto')
+                        
+                        # Se VEHICLES tem "auto" mas carro não tem "auto" no nome, SKIP este match
+                        # Isso evita que "volkswagen up" (manual) faça match com "volkswagen up auto"
+                        if veh_has_auto and not car_has_auto:
+                            continue  # Procurar outro match mais adequado
+                        
+                        # Se carro tem "auto" no nome mas VEHICLES não tem, SKIP
+                        # Isso evita que "volkswagen up auto" faça match com "volkswagen up" (manual)
+                        if car_has_auto and not veh_has_auto:
+                            continue  # Procurar outro match mais adequado
+                        
                         vehicles_match = veh_name
                         vehicles_category = veh_cat  # VEHICLES values são strings de categoria
                         vehicles_group = _map_category_to_group_code(veh_cat) if veh_cat else 'Unknown'
                         # Derivar transmissão do nome ou categoria
-                        if 'auto' in veh_name_lower or 'Auto' in str(veh_cat):
+                        if veh_has_auto:
                             vehicles_transmission = 'Automatic'
                         else:
                             vehicles_transmission = 'Manual'
