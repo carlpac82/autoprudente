@@ -11387,6 +11387,34 @@ async def track_by_params(request: Request):
             chrome_options.add_argument('--disable-setuid-sandbox')
             chrome_options.add_argument(f'user-agent={selected_device["ua"]}')
             
+            # FLAGS ADICIONAIS DE ESTABILIDADE (evitar crashes no renderer)
+            chrome_options.add_argument('--disable-features=VizDisplayCompositor')
+            chrome_options.add_argument('--disable-site-isolation-trials')
+            chrome_options.add_argument('--disable-renderer-backgrounding')
+            chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+            chrome_options.add_argument('--disable-ipc-flooding-protection')
+            chrome_options.add_argument('--disable-hang-monitor')
+            chrome_options.add_argument('--disable-popup-blocking')
+            chrome_options.add_argument('--disable-prompt-on-repost')
+            chrome_options.add_argument('--disable-sync')
+            chrome_options.add_argument('--disable-translate')
+            chrome_options.add_argument('--metrics-recording-only')
+            chrome_options.add_argument('--no-first-run')
+            chrome_options.add_argument('--safebrowsing-disable-auto-update')
+            chrome_options.add_argument('--enable-features=NetworkService,NetworkServiceInProcess')
+            chrome_options.add_argument('--force-color-profile=srgb')
+            # Flags para ambientes com pouca memória (Render/Docker)
+            chrome_options.add_argument('--single-process')  # Usar processo único (mais estável em containers)
+            chrome_options.add_argument('--disable-crash-reporter')
+            chrome_options.add_argument('--disable-in-process-stack-traces')
+            chrome_options.add_argument('--disable-logging')
+            chrome_options.add_argument('--disable-default-apps')
+            chrome_options.add_argument('--disable-breakpad')
+            chrome_options.add_argument('--disable-component-update')
+            chrome_options.add_argument('--disable-domain-reliability')
+            chrome_options.add_argument('--disable-client-side-phishing-detection')
+            chrome_options.add_argument('--js-flags=--max-old-space-size=256')
+            
             # Window size (necessário em headless)
             chrome_options.add_argument(f'--window-size={selected_device["width"]},{selected_device["height"]}')
             
@@ -11631,6 +11659,9 @@ async def track_by_params(request: Request):
                     hour_pickup = start_dt.strftime("%H:%M")
                     hour_dropoff = end_dt.strftime("%H:%M")
                     
+                    # Definir timeout curto para evitar hang
+                    driver.set_script_timeout(10)
+                    
                     result = driver.execute_script("""
                         const monthYearPickup = arguments[0];
                         const monthYearDropoff = arguments[1];
@@ -11699,10 +11730,20 @@ async def track_by_params(request: Request):
                 
                 # PASSO 4: Submit via form.submit() (botão pode não existir)
                 print(f"[SELENIUM] PASSO 4: Submetendo...", file=sys.stderr, flush=True)
-                driver.execute_script("window.scrollBy(0, 300);")
-                time.sleep(0.5)
-                driver.execute_script("window.scrollTo(0, 0);")
-                time.sleep(0.5)
+                
+                # Definir timeout curto para scripts de scroll/submit
+                driver.set_script_timeout(5)
+                
+                try:
+                    driver.execute_script("window.scrollBy(0, 300);")
+                except:
+                    pass
+                time.sleep(0.3)
+                try:
+                    driver.execute_script("window.scrollTo(0, 0);")
+                except:
+                    pass
+                time.sleep(0.3)
                 
                 # Submit via JavaScript (mais confiável que procurar botão)
                 try:
@@ -11927,6 +11968,12 @@ async def track_by_params(request: Request):
                     "days": days,
                 })
             finally:
+                # Cancelar o alarm para evitar que dispare depois
+                try:
+                    signal.alarm(0)
+                except:
+                    pass
+                
                 # CRÍTICO: SEMPRE fechar driver, mesmo se houver erro
                 # Isso previne vazamento de memória (browsers Chrome órfãos consumindo RAM)
                 if driver is not None:
