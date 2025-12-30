@@ -14419,7 +14419,14 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             # 3º: Categoria do CarJet
             # 4º: Fallback
             # USAR card_transmission (do ícone individual) em vez de transmission_label (global)
-            final_transmission = card_transmission or transmission_label
+            # CORRECÇÃO CRÍTICA: Se card_transmission está vazio, usar "Manual" como default
+            # NUNCA usar transmission_label (global) porque pode ser do filtro de pesquisa!
+            # Se o utilizador pesquisou com filtro "Automático", transmission_label="Automatic"
+            # para TODOS os carros, mesmo os manuais!
+            if not card_transmission:
+                card_transmission = "Manual"  # Default seguro
+                logging.warning(f"⚠️ [TRANS-DEFAULT] {car_name} → Transmissão não detectada, usando Manual")
+            final_transmission = card_transmission
             
             # 🔍 VERIFICAR VEHICLES (carjet_direct.py) - Comparar com transmissão detectada
             vehicles_match = None
@@ -14652,7 +14659,9 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
         curr = "EUR" if re.search(r"EUR", price_text, re.I) else ("EUR" if "€" in price_text else "")
         # Mapear categoria para código de grupo
         # USAR container_transmission (do ícone) em vez de transmission_label (global)
-        final_transmission_fallback = container_transmission or transmission_label
+        # CORRECÇÃO: Se container_transmission está vazio, usar "Manual" como default
+        # NUNCA usar transmission_label (global) porque pode ser do filtro de pesquisa!
+        final_transmission_fallback = container_transmission or "Manual"
         group_code = map_category_to_group(category, car_name, final_transmission_fallback)
         items.append({
             "id": idx,
