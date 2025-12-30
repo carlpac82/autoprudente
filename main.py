@@ -2701,10 +2701,29 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     }
     
     # Tentar match direto primeiro
+    # MAS verificar transmissão para grupos que têm versão manual/automático
     if cat in category_map:
-        grupo = category_map[cat]
+        grupo_base = category_map[cat]
+        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        
+        # Ajustar grupo baseado na transmissão
+        # Manual → Automático: B1→E1, B2→E1, D→E2, F→L1, J2→L2, M1→M2
+        if is_auto:
+            grupo_ajustado = {
+                'B1': 'E1',  # Mini 4 lugares → Mini Auto
+                'B2': 'E1',  # Mini 5 lugares → Mini Auto
+                'D': 'E2',   # Economy → Economy Auto
+                'F': 'L1',   # SUV → SUV Auto
+                'J1': 'J1',  # Crossover (sem versão auto separada)
+                'J2': 'L2',  # Station Wagon → SW Auto
+                'M1': 'M2',  # 7 Seater → 7 Seater Auto
+            }.get(grupo_base, grupo_base)
+            grupo = grupo_ajustado
+        else:
+            grupo = grupo_base
+        
         trans_info = f"[{transmission if transmission else 'N/A'}]"
-        logging.info(f"✅ [MAP] SUCESSO (direto): car='{car_name}' {trans_info} → grupo '{grupo}'")
+        logging.info(f"✅ [MAP] SUCESSO (direto): car='{car_name}' {trans_info} → grupo '{grupo}' (base: {grupo_base})")
         return grupo
     
     # FALLBACK: Análise inteligente por palavras-chave
