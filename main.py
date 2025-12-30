@@ -13669,16 +13669,18 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
                                 card_transmission = "Manual"
                                 logging.info(f"✅ [ICON-TRANS] {car_name} → MANUAL (icon-transm sem auto)")
                 
-                # MÉTODO 3: Se não encontrou por ícone, procurar por texto
-                if not card_transmission:
-                    card_text = card.get_text(' ', strip=True).lower()
-                    if 'automático' in card_text or 'automatic' in card_text:
-                        if 'semi' not in card_text:
-                            card_transmission = "Automatic"
-                            logging.info(f"✅ [TEXT-TRANS] {car_name} → AUTOMATIC (texto)")
-                    elif 'manual' in card_text:
-                        card_transmission = "Manual"
-                        logging.info(f"✅ [TEXT-TRANS] {car_name} → MANUAL (texto)")
+                # MÉTODO 3: DESATIVADO - Este método causava falsos positivos!
+                # Procurar por "automático" em TODO o texto do card é muito genérico
+                # e pode capturar texto da categoria, descrição, etc.
+                # if not card_transmission:
+                #     card_text = card.get_text(' ', strip=True).lower()
+                #     if 'automático' in card_text or 'automatic' in card_text:
+                #         if 'semi' not in card_text:
+                #             card_transmission = "Automatic"
+                #             logging.info(f"✅ [TEXT-TRANS] {car_name} → AUTOMATIC (texto)")
+                #     elif 'manual' in card_text:
+                #         card_transmission = "Manual"
+                #         logging.info(f"✅ [TEXT-TRANS] {car_name} → MANUAL (texto)")
                 
                 # MÉTODO 4: Verificar span.cl--name-type (CarJet específico)
                 if not card_transmission:
