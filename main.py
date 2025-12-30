@@ -1,3 +1,4 @@
+# DEPLOY FORCE: 2025-12-30 20:20 UTC - Fix transmission detection
 from __future__ import annotations
 
 def _no_store_json(payload: Dict[str, Any], status_code: int = 200) -> JSONResponse:
