@@ -296,6 +296,7 @@ VEHICLES = {
     'seat ibiza': 'ECONOMY',
     'seat leon': 'ECONOMY',
     'skoda fabia': 'ECONOMY',
+    'skoda scala': 'ECONOMY',
     'toyota corolla': 'ECONOMY',
     'volkswagen golf': 'ECONOMY',
     'vw golf': 'ECONOMY',
@@ -323,6 +324,7 @@ VEHICLES = {
     'renault megane auto': 'ECONOMY Auto',
     'seat ibiza auto': 'ECONOMY Auto',
     'seat leon auto': 'ECONOMY Auto',
+    'skoda scala auto': 'ECONOMY Auto',
     'toyota corolla auto': 'ECONOMY Auto',
     'volkswagen golf auto': 'ECONOMY Auto',
     'vw golf auto': 'ECONOMY Auto',
@@ -442,7 +444,7 @@ VEHICLES = {
     'skoda fabia sw': 'Station Wagon',
     'skoda octavia': 'Station Wagon',
     'skoda octavia sw': 'Station Wagon',
-    'skoda scala': 'Station Wagon',
+    # 'skoda scala': REMOVIDO - Scala é Economy, não Station Wagon
     'volkswagen golf sw': 'Station Wagon',
     'vw golf sw': 'Station Wagon',
     'volkswagen passat': 'Station Wagon',
@@ -549,7 +551,7 @@ VEHICLES = {
     'seat leon sw auto': 'Station Wagon Auto',
     'skoda fabia sw auto': 'Station Wagon Auto',
     'skoda octavia sw auto': 'Station Wagon Auto',
-    'skoda scala auto': 'Station Wagon Auto',
+    # 'skoda scala auto': REMOVIDO - Scala é Economy Auto, não Station Wagon Auto
     'toyota corolla sw': 'Station Wagon Auto',
     'toyota corolla sw auto': 'Station Wagon Auto',
     'toyota corolla sw hybrid': 'Station Wagon Auto',
