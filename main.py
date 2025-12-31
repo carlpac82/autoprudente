@@ -2178,6 +2178,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             car_clean = clean_car_name(car_name)
             car_clean_lower = car_clean.lower().strip()
             
+            # ✅ NORMALIZAÇÃO CRÍTICA: "Aut." → "Auto" para matching com VEHICLES
+            # CarJet usa "Toyota Aygo Aut." mas VEHICLES tem "toyota aygo auto"
+            car_clean_lower = re.sub(r'\baut\.?\b', 'auto', car_clean_lower)
+            
             # ✅ PRIORIDADE MÁXIMA 1: Station Wagons (SW) ANTES de qualquer normalização
             # Garantir que "Ford Focus SW" nunca é mapeado como "Ford Focus" (Economy)
             # Suportar variações: SW, S W, S.W., S. W.
@@ -14421,7 +14425,10 @@ def parse_prices(html: str, base_url: str) -> List[Dict[str, Any]]:
             vehicles_category = None
             try:
                 from carjet_direct import VEHICLES
+                import re as re_local
                 car_name_lower = car_name.lower()
+                # ✅ NORMALIZAÇÃO CRÍTICA: "Aut." → "Auto" para matching com VEHICLES
+                car_name_lower = re_local.sub(r'\baut\.?\b', 'auto', car_name_lower)
                 # IMPORTANTE: Ordenar por tamanho decrescente para dar prioridade a matches mais específicos
                 # Ex: "vw polo auto" (13 chars) deve ser encontrado antes de "vw polo" (7 chars)
                 sorted_vehicles = sorted(VEHICLES.items(), key=lambda x: len(x[0]), reverse=True)
