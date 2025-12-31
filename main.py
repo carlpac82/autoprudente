@@ -2199,8 +2199,21 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             has_sw_word = bool(re.search(r'\bsw\b', car_normalized_sw, re.IGNORECASE))
             if has_sw_word:
                 logging.info(f"[SW-DETECT] Detectado SW em: {car_name} (normalizado: {car_normalized_sw})")
-                # Verificar se existe match exato com SW no VEHICLES
-                for sw_key in sorted([k for k in VEHICLES.keys() if 'sw' in k.lower()], key=len, reverse=True):
+                # ✅ CORRECÇÃO: Verificar se carro tem "Auto" no nome ANTES de fazer match
+                car_has_auto_in_name = bool(re.search(r'\b(auto|aut\.?)\b', car_normalized_sw, re.IGNORECASE))
+                
+                # Filtrar keys SW: se carro NÃO tem auto, excluir keys com "auto"
+                # Se carro TEM auto, preferir keys com "auto"
+                sw_keys = [k for k in VEHICLES.keys() if 'sw' in k.lower()]
+                if car_has_auto_in_name:
+                    # Preferir versões com "auto" primeiro
+                    sw_keys = sorted(sw_keys, key=lambda k: ('auto' not in k.lower(), -len(k)))
+                else:
+                    # Excluir versões com "auto" - carro manual não deve ir para grupo auto
+                    sw_keys = [k for k in sw_keys if 'auto' not in k.lower()]
+                    sw_keys = sorted(sw_keys, key=len, reverse=True)
+                
+                for sw_key in sw_keys:
                     # Remover SW da key para match base
                     base_key = sw_key.replace(' sw', '').strip()
                     if (sw_key in car_normalized_sw or 
