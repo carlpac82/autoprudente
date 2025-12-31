@@ -2086,7 +2086,17 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     car_lower = car_name.lower() if car_name else ""
     trans_lower = transmission.lower() if transmission else ""
     
-    logging.info(f"📋 [MAP] ENTRADA: car='{car_name}', category='{category}', transmission='{transmission}'")
+    # ✅ CORRECÇÃO CRÍTICA: Verificar se é automático pelo NOME, não pela transmissão detectada!
+    # A transmissão detectada pelo <li value> pode estar incorreta
+    # Usar o nome do carro como fonte de verdade para decidir Manual vs Automático
+    import re
+    _has_auto_in_name = bool(re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower))
+    
+    # OVERRIDE: Se o nome tem "Auto/Aut.", considerar automático
+    # Se não tem, considerar manual (ignorar trans_lower)
+    is_auto = _has_auto_in_name
+    
+    logging.info(f"📋 [MAP] ENTRADA: car='{car_name}', category='{category}', transmission='{transmission}' | is_auto_by_name={is_auto}")
     
     # PRIORIDADE -1: CABRIO/CABRIOLET no NOME → SEMPRE Grupo G
     # Independente da categoria (Luxury, Mini, SUV, etc), se tem "cabrio" no nome = G
@@ -2129,12 +2139,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     # PRIORIDADE -0.4: VEÍCULOS 7 LUGARES → SEMPRE M1/M2
     # Independente da categoria que CarJet envie!
     # Estes carros são 7 lugares mas CarJet pode categorizá-los como SUV, Intermediate, etc
-    # 🔍 IMPORTANTE: Verificar APENAS transmission, NÃO o nome!
-    # Se o nome tem "Auto", já está no VEHICLES como "volkswagen sharan auto"
-    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+    # 🔍 is_auto já foi definido no início da função baseado no NOME do carro
     
     # DEBUG: Log da decisão M1/M2
-    logging.info(f"🔍 [7-SEATER-CHECK] car='{car_name}' | transmission='{transmission}' | is_auto={is_auto}")
+    logging.info(f"🔍 [7-SEATER-CHECK] car='{car_name}' | transmission='{transmission}' | is_auto_by_name={is_auto}")
     
     seven_seater_patterns = [
         r'\bpeugeot\s*5008\b',
@@ -2214,28 +2222,13 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                             logging.info(f"✅ [ELECTRIC-PRIORITY] {car_name} → {electric_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
-            # ✅ PRIORIDADE MÁXIMA 3: Usar TRANSMISSÃO DETECTADA para escolher versão AUTO ou MANUAL
-            # CORRECÇÃO CRÍTICA: Usar transmission (detectada pelo <li value>) em vez do nome!
-            # Isso garante que "Citroen C4 Picasso" (automático mas sem "Auto" no nome) vai para M2
-            is_transmission_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
-            has_auto_in_name = re.search(r'\b(auto|automatic|automático|automatico)\b', car_clean_lower)
+            # ✅ PRIORIDADE MÁXIMA 3: Usar NOME DO CARRO para escolher versão AUTO ou MANUAL
+            # CORRECÇÃO: NÃO usar transmissão detectada porque pode estar incorreta!
+            # Usar apenas o nome do carro - se tem "Auto" ou "Aut." no nome, procurar versão AUTO
+            has_auto_in_name = re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_clean_lower)
             
-            # Se transmissão detectada é Automatic, procurar versão AUTO no VEHICLES
-            if is_transmission_auto:
-                # Tentar encontrar versão AUTO do carro no VEHICLES
-                # Ex: "citroen c4 picasso" + transmission=Automatic → procurar "citroen c4 picasso auto"
-                for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
-                    # Extrair nome base do auto_key (sem " auto")
-                    base_key = auto_key.replace(' auto', '').strip()
-                    # Match se o nome do carro contém o nome base
-                    if base_key in car_clean_lower or car_clean_lower in base_key:
-                        category_from_vehicles = VEHICLES[auto_key]
-                        grupo_code = _map_category_to_group_code(category_from_vehicles)
-                        if grupo_code:
-                            logging.info(f"✅ [TRANS-AUTO-MATCH] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
-                            return grupo_code
-            elif has_auto_in_name:
-                # Se o nome tem "Auto" mas transmissão não foi detectada como Automatic, usar nome
+            if has_auto_in_name:
+                # Se o nome tem "Auto/Aut.", procurar versão AUTO no VEHICLES
                 for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
                     if auto_key in car_clean_lower:
                         category_from_vehicles = VEHICLES[auto_key]
@@ -2321,16 +2314,14 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # Mini 4 Seats / Mini 4 Lugares → B1 ou E1 (se automático)
     if cat in ['mini 4 seats', 'mini 4 doors', 'mini 4 portas', 'mini 4 lugares']:
-        # 🔍 APENAS verificar transmission, NÃO o nome!
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # 🔍 is_auto já foi definido no início da função baseado no NOME do carro
         if is_auto:
             return "E1"
         return "B1"
     
     # Mini 5 Seats / Mini 5 Lugares → B2 ou E1 (se automático)
     if cat in ['mini 5 seats', 'mini 5 doors', 'mini 5 portas', 'mini 5 lugares']:
-        # 🔍 APENAS verificar transmission, NÃO o nome!
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # 🔍 is_auto já foi definido no início da função baseado no NOME do carro
         if is_auto:
             return "E1"
         return "B2"
@@ -2361,11 +2352,11 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         
         for pattern in sw_patterns:
             if re.search(pattern, car_lower, re.IGNORECASE):
-                is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+                # is_auto já foi definido no início da função baseado no NOME do carro
                 return "L2" if is_auto else "J2"  # Station Wagon
         
         # Normal Economy logic (só se não for SW)
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # is_auto já foi definido no início da função baseado no NOME do carro
         return "E2" if is_auto else "D"
     
     # Economy Automatic / Economy Auto → E2
@@ -2399,8 +2390,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     # EXCEÇÕES: Veículos 7 lugares que CarJet categoriza como SUV
     # Estes modelos SÃO 7 lugares mas CarJet os categoriza incorretamente como SUV!
     if cat in ['suv', 'jeep']:
-        import re
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # is_auto já foi definido no início da função baseado no NOME do carro
         
         # Verificar TODOS os modelos 7 lugares conhecidos
         seven_seater_models = [
@@ -2460,7 +2450,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # Station Wagon / Estate / Carrinha → J2 ou L2 (se automático)
     if cat in ['station wagon', 'estate', 'carrinha', 'estate/station wagon', 'sw', 'touring']:
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # is_auto já foi definido no início da função baseado no NOME do carro
         return "L2" if is_auto else "J2"
     
     # Station Wagon Automatic → L2
@@ -2476,7 +2466,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     
     # 7 Seater / 7 Seats → M1 ou M2 (se automático)
     if cat in ['7 seater', '7 seats', '7 lugares', 'people carrier', 'mpv']:
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # is_auto já foi definido no início da função baseado no NOME do carro
         return "M2" if is_auto else "M1"
     
     # 7 Seater Automatic / 7 Seats Auto → M2
@@ -2566,9 +2556,11 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             for model in b2_5_lugares_models:
                 if model in car_lower:
                     # Se é automático de 5 lugares → E1 (Mini Automatic)
-                    # 🔍 APENAS verificar transmission, NÃO o nome!
-                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
-                    if is_auto:
+                    # 🔍 CORRECÇÃO: Verificar NOME do carro, não transmissão detectada!
+                    # A transmissão detectada pode estar incorreta
+                    import re
+                    has_auto_in_name = re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower)
+                    if has_auto_in_name:
                         return "E1"
                     # Se é manual de 5 lugares → B2
                     return "B2"
@@ -2577,9 +2569,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             for model in b1_4_lugares_models:
                 if model in car_lower:
                     # Se é automático de 4 lugares → E1 (Mini Automatic)
-                    # 🔍 APENAS verificar transmission, NÃO o nome!
-                    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
-                    if is_auto:
+                    # 🔍 CORRECÇÃO: Verificar NOME do carro, não transmissão detectada!
+                    import re
+                    has_auto_in_name = re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower)
+                    if has_auto_in_name:
                         return "E1"
                     # Se é manual de 4 lugares → B1
                     return "B1"
@@ -2719,7 +2712,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     # MAS verificar transmissão para grupos que têm versão manual/automático
     if cat in category_map:
         grupo_base = category_map[cat]
-        is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico'])
+        # is_auto já foi definido no início da função baseado no NOME do carro
         
         # Ajustar grupo baseado na transmissão
         # Manual → Automático: B1→E1, B2→E1, D→E2, F→L1, J2→L2, M1→M2
@@ -2746,9 +2739,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return grupo
     
     # FALLBACK: Análise inteligente por palavras-chave
-    # 🔍 Verificar se é automático: transmission OU category (NÃO car_name!)
-    is_auto = any(word in trans_lower for word in ['auto', 'automatic', 'automático', 'automatico']) or \
-              any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico'])
+    # 🔍 is_auto já foi definido no início da função baseado no NOME do carro
+    # Também verificar se a categoria tem "auto" (ex: "economy auto")
+    if any(word in cat for word in ['auto', 'automatic', 'automático', 'automatico']):
+        is_auto = True
     
     # Verificar tipo de veículo por palavras-chave
     if '9' in cat or 'minivan' in cat or 'van' in cat:
