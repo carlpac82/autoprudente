@@ -2206,9 +2206,9 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 # Filtrar keys SW baseado nas características do carro
                 sw_keys = [k for k in VEHICLES.keys() if 'sw' in k.lower()]
                 
-                # Filtrar por "auto" - se carro NÃO tem auto, excluir keys com "auto"
+                # Filtrar por "auto/aut" - se carro NÃO tem auto, excluir keys com "auto" ou "aut"
                 if not car_has_auto_in_name:
-                    sw_keys = [k for k in sw_keys if 'auto' not in k.lower()]
+                    sw_keys = [k for k in sw_keys if not re.search(r'\b(auto|aut)\b', k.lower())]
                 
                 # Filtrar por "hybrid" - se carro NÃO tem hybrid, excluir keys com "hybrid"
                 if not car_has_hybrid_in_name:
@@ -2777,8 +2777,9 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
         return grupo  # Station Wagon
     
     if 'crossover' in cat:
-        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo 'J1' (Crossover)")
-        return "J1"  # Crossover
+        grupo = "L1" if is_auto else "J1"
+        logging.info(f"✅ [MAP] SUCESSO (fallback): car='{car_name}' → grupo '{grupo}' (Crossover)")
+        return grupo  # Crossover → L1 se Auto, J1 se Manual
     
     if any(word in cat for word in ['suv', 'jeep', '4x4', '4wd']):
         grupo = "L1" if is_auto else "F"

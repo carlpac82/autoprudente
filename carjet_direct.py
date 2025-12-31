@@ -235,10 +235,10 @@ VEHICLES = {
     'kia picanto': 'MINI 4 Lugares',
     'opel adam': 'MINI 4 Lugares',
     'peugeot 108': 'MINI 4 Lugares',
-    'renault twingo': 'MINI 4 Lugares',
+    'renault twingo': 'MINI 5 Lugares',  # Twingo tem 5 lugares
     'seat mii': 'MINI 4 Lugares',
     'toyota aygo': 'MINI 4 Lugares',
-    'toyota yaris': 'MINI 4 Lugares',
+    'toyota yaris': 'MINI 5 Lugares',  # Yaris tem 5 lugares
     'volkswagen up': 'MINI 4 Lugares',
 
     # ========== B2: MINI 5 Lugares ==========
@@ -343,6 +343,8 @@ VEHICLES = {
     'mitsubishi asx': 'SUV',
     'nissan juke': 'Crossover',  # J1
     'renault captur': 'SUV',
+    'renault captur auto': 'SUV Auto',
+    'renault captur aut': 'SUV Auto',
     'seat arona': 'SUV',
     'toyota chr': 'SUV',
     'volkswagen taigo': 'SUV',
@@ -552,8 +554,9 @@ VEHICLES = {
     'skoda fabia sw auto': 'Station Wagon Auto',
     'skoda octavia sw auto': 'Station Wagon Auto',
     # 'skoda scala auto': REMOVIDO - Scala é Economy Auto, não Station Wagon Auto
-    'toyota corolla sw': 'Station Wagon Auto',
+    'toyota corolla sw': 'Station Wagon',  # CORRIGIDO: SW sem Auto = Manual
     'toyota corolla sw auto': 'Station Wagon Auto',
+    'toyota corolla sw aut': 'Station Wagon Auto',
     'toyota corolla sw hybrid': 'Station Wagon Auto',
     'toyota corolla sw  hybrid': 'Station Wagon Auto',
     'renault megane sw hybrid': 'Station Wagon Auto',
