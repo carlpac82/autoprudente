@@ -1972,6 +1972,30 @@ def map_category_to_group(category: str, car_name: str = "", transmission: str =
     logging.info(f"📤 [MAP-OUT] car='{car_name}' → grupo '{final_group}' | original category='{category}'")
     return final_group
 
+def _adjust_group_for_transmission(grupo_base: str, is_auto: bool) -> str:
+    """
+    Ajusta o grupo baseado na transmissão detectada.
+    Se is_auto=True, converte grupos manuais para automáticos.
+    """
+    if not is_auto:
+        return grupo_base
+    
+    # Mapeamento: Manual → Automático
+    grupo_ajustado = {
+        'B1': 'E1',  # Mini 4 lugares → Mini Auto
+        'B2': 'E1',  # Mini 5 lugares → Mini Auto
+        'D': 'E2',   # Economy → Economy Auto
+        'F': 'L1',   # SUV → SUV Auto
+        'G': 'G',    # Cabrio (sem versão auto separada)
+        'J1': 'L1',  # Crossover → SUV Auto (mesma categoria que SUV Auto)
+        'J2': 'L2',  # Station Wagon → SW Auto
+        'M1': 'M2',  # 7 Seater → 7 Seater Auto
+        'N': 'N',    # 9 Seater (sem versão auto separada)
+        'X': 'X',    # Luxury (sem versão auto separada)
+    }.get(grupo_base, grupo_base)
+    
+    return grupo_ajustado
+
 def _map_category_to_group_code(category: str) -> str:
     """
     Mapeia categoria descritiva (do VEHICLES ou CarJet) para código de grupo.
@@ -2086,19 +2110,20 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     car_lower = car_name.lower() if car_name else ""
     trans_lower = transmission.lower() if transmission else ""
     
-    # ✅ CORRECÇÃO CRÍTICA: Verificar se é automático pelo NOME primeiro
-    # Se o nome estiver vazio, usar a transmissão detectada como fallback
+    # ✅ CORRECÇÃO CRÍTICA: A transmissão detectada pelo ícone <li value="A/M"> é a fonte MAIS CONFIÁVEL!
+    # O parsing já detecta a transmissão corretamente do HTML do CarJet
+    # Devemos usar essa informação em vez de depender apenas do nome do carro
     import re
     _has_auto_in_name = bool(re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower))
     _has_auto_in_category = bool(re.search(r'\b(auto|automatic)\b', cat))
     _trans_is_auto = trans_lower in ('automatic', 'auto', 'automático', 'automatico')
     
-    # PRIORIDADE:
-    # 1. Se nome tem "Auto/Aut." → automático
-    # 2. Se nome está vazio E transmissão é "Automatic" → automático
+    # PRIORIDADE (CORRIGIDA):
+    # 1. Se transmissão detectada é "Automatic" → automático (fonte mais confiável: ícone <li value="A">)
+    # 2. Se nome tem "Auto/Aut." → automático
     # 3. Se categoria tem "Automatic" → automático
     # 4. Caso contrário → manual
-    is_auto = _has_auto_in_name or (not car_lower and _trans_is_auto) or _has_auto_in_category
+    is_auto = _trans_is_auto or _has_auto_in_name or _has_auto_in_category
     
     logging.info(f"📋 [MAP] ENTRADA: car='{car_name}', category='{category}', transmission='{transmission}' | is_auto_by_name={is_auto}")
     
@@ -2227,8 +2252,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                         category_from_vehicles = VEHICLES[sw_key]
                         grupo_code = _map_category_to_group_code(category_from_vehicles)
                         if grupo_code:
-                            logging.info(f"✅ [SW-PRIORITY] {car_name} → {sw_key} → {category_from_vehicles} → {grupo_code}")
-                            return grupo_code
+                            # ✅ AJUSTAR grupo baseado em is_auto
+                            grupo_ajustado = _adjust_group_for_transmission(grupo_code, is_auto)
+                            logging.info(f"✅ [SW-PRIORITY] {car_name} → {sw_key} → {category_from_vehicles} → {grupo_ajustado} (is_auto={is_auto})")
+                            return grupo_ajustado
             
             # ✅ PRIORIDADE MÁXIMA 2: Carros ELECTRIC ANTES de AUTO (mais específico)
             # Garantir que "Peugeot 2008 Electric" não é mapeado como "Peugeot 2008" (J1)
@@ -2240,22 +2267,24 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                         category_from_vehicles = VEHICLES[electric_key]
                         grupo_code = _map_category_to_group_code(category_from_vehicles)
                         if grupo_code:
-                            logging.info(f"✅ [ELECTRIC-PRIORITY] {car_name} → {electric_key} → {category_from_vehicles} → {grupo_code}")
-                            return grupo_code
+                            # ✅ AJUSTAR grupo baseado em is_auto
+                            grupo_ajustado = _adjust_group_for_transmission(grupo_code, is_auto)
+                            logging.info(f"✅ [ELECTRIC-PRIORITY] {car_name} → {electric_key} → {category_from_vehicles} → {grupo_ajustado} (is_auto={is_auto})")
+                            return grupo_ajustado
             
-            # ✅ PRIORIDADE MÁXIMA 3: Usar NOME DO CARRO para escolher versão AUTO ou MANUAL
-            # CORRECÇÃO: NÃO usar transmissão detectada porque pode estar incorreta!
-            # Usar apenas o nome do carro - se tem "Auto" ou "Aut." no nome, procurar versão AUTO
-            has_auto_in_name = re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_clean_lower)
+            # ✅ PRIORIDADE MÁXIMA 3: Usar is_auto (transmissão detectada pelo ícone) para escolher versão AUTO ou MANUAL
+            # CORRECÇÃO: A transmissão detectada pelo ícone <li value="A/M"> é a fonte MAIS CONFIÁVEL!
+            # is_auto já foi calculado no início da função com a prioridade correta
             
-            if has_auto_in_name:
-                # Se o nome tem "Auto/Aut.", procurar versão AUTO no VEHICLES
+            if is_auto:
+                # Se is_auto=True, procurar versão AUTO no VEHICLES
                 for auto_key in sorted([k for k in VEHICLES.keys() if 'auto' in k.lower()], key=len, reverse=True):
                     if auto_key in car_clean_lower:
                         category_from_vehicles = VEHICLES[auto_key]
                         grupo_code = _map_category_to_group_code(category_from_vehicles)
                         if grupo_code:
-                            logging.info(f"✅ [NAME-AUTO-MATCH] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
+                            # Já é versão AUTO, não precisa ajustar
+                            logging.info(f"✅ [AUTO-MATCH] {car_name} (trans={transmission}) → {auto_key} → {category_from_vehicles} → {grupo_code}")
                             return grupo_code
             
             # Remover sufixos comuns que impedem match
@@ -2269,8 +2298,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 category_from_vehicles = VEHICLES[car_normalized]
                 grupo_code = _map_category_to_group_code(category_from_vehicles)
                 if grupo_code:
-                    logging.info(f"✅ [VEHICLES-DIRECT] {car_name} → {category_from_vehicles} → {grupo_code}")
-                    return grupo_code
+                    # ✅ AJUSTAR grupo baseado em is_auto (transmissão detectada pelo ícone)
+                    grupo_ajustado = _adjust_group_for_transmission(grupo_code, is_auto)
+                    logging.info(f"✅ [VEHICLES-DIRECT] {car_name} → {category_from_vehicles} → {grupo_code} → {grupo_ajustado} (is_auto={is_auto})")
+                    return grupo_ajustado
             
             # Se não encontrar, remover sufixos para tentar match parcial
             car_normalized = re.sub(r'\s+(electric|hybrid|diesel|petrol|plug-in|phev)$', '', car_normalized, flags=re.IGNORECASE)
@@ -2287,8 +2318,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 # NÃO passar por fallback que pode sobrescrever!
                 grupo_code = _map_category_to_group_code(category_from_vehicles)
                 if grupo_code:
-                    logging.info(f"✅ [VEHICLES-DIRECT] {car_name} → {category_from_vehicles} → {grupo_code} (ignoring CarJet: {category})")
-                    return grupo_code
+                    # ✅ AJUSTAR grupo baseado em is_auto (transmissão detectada pelo ícone)
+                    grupo_ajustado = _adjust_group_for_transmission(grupo_code, is_auto)
+                    logging.info(f"✅ [VEHICLES-DIRECT] {car_name} → {category_from_vehicles} → {grupo_code} → {grupo_ajustado} (is_auto={is_auto})")
+                    return grupo_ajustado
                 else:
                     # Se não conseguir mapear direto, usar fallback
                     logging.info(f"🎯 VEHICLES MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
@@ -2318,8 +2351,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                     # ✅ MAPEAR DIRETAMENTE para código de grupo
                     grupo_code = _map_category_to_group_code(category_from_vehicles)
                     if grupo_code:
-                        logging.info(f"✅ [VEHICLES-PARTIAL-DIRECT] {car_name} (matched: {vehicle_key}) → {category_from_vehicles} → {grupo_code} (ignoring CarJet: {category})")
-                        return grupo_code
+                        # ✅ AJUSTAR grupo baseado em is_auto (transmissão detectada pelo ícone)
+                        grupo_ajustado = _adjust_group_for_transmission(grupo_code, is_auto)
+                        logging.info(f"✅ [VEHICLES-PARTIAL-DIRECT] {car_name} (matched: {vehicle_key}) → {category_from_vehicles} → {grupo_ajustado} (is_auto={is_auto})")
+                        return grupo_ajustado
                     else:
                         # Se não conseguir mapear direto, usar fallback
                         logging.info(f"🎯 VEHICLES PARTIAL MATCH: {car_name} → {category_from_vehicles} (ignoring CarJet: {category})")
@@ -2577,11 +2612,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             for model in b2_5_lugares_models:
                 if model in car_lower:
                     # Se é automático de 5 lugares → E1 (Mini Automatic)
-                    # 🔍 CORRECÇÃO: Verificar NOME do carro, não transmissão detectada!
-                    # A transmissão detectada pode estar incorreta
-                    import re
-                    has_auto_in_name = re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower)
-                    if has_auto_in_name:
+                    # ✅ CORRECÇÃO: Usar is_auto que já inclui transmissão detectada pelo ícone!
+                    if is_auto:
                         return "E1"
                     # Se é manual de 5 lugares → B2
                     return "B2"
@@ -2590,10 +2622,8 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             for model in b1_4_lugares_models:
                 if model in car_lower:
                     # Se é automático de 4 lugares → E1 (Mini Automatic)
-                    # 🔍 CORRECÇÃO: Verificar NOME do carro, não transmissão detectada!
-                    import re
-                    has_auto_in_name = re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower)
-                    if has_auto_in_name:
+                    # ✅ CORRECÇÃO: Usar is_auto que já inclui transmissão detectada pelo ícone!
+                    if is_auto:
                         return "E1"
                     # Se é manual de 4 lugares → B1
                     return "B1"
