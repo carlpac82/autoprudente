@@ -255,8 +255,8 @@ VEHICLES = {
     'fiat 500 e': 'MINI Auto',
     'fiat 500 hybrid aut': 'MINI Auto',  # FIX: Fiat 500 Hybrid automático (ponto removido na normalização)
     'fiat 500 hybrid auto': 'MINI Auto',  # FIX: Variação com "auto"
-    'fiat panda hybrid aut': 'MINI Auto',  # FIX: Fiat Panda Hybrid automático (ponto removido na normalização)
-    'fiat panda hybrid auto': 'MINI Auto',  # FIX: Variação com "auto"
+    'fiat panda hybrid aut': 'MINI Auto',  # Fiat Panda Hybrid Aut. = Automático
+    'fiat panda hybrid auto': 'MINI Auto',  # Fiat Panda Hybrid Auto = Automático
     'fiat panda auto': 'MINI Auto',  # FIX: Fiat Panda automático
     'kia picanto auto': 'MINI Auto',
     'mitsubishi spacestar auto': 'MINI Auto',
@@ -273,7 +273,7 @@ VEHICLES = {
     'toyota yaris hybrid': 'MINI Auto',
     'toyota yaris  hybrid': 'MINI Auto',
     'volkswagen up auto': 'MINI Auto',
-    'fiat panda hybrid': 'MINI Auto',
+    'fiat panda hybrid': 'MINI 5 Lugares',  # CORRIGIDO: Hybrid sem Auto no nome = Manual
     'fiat panda hybrid auto': 'MINI Auto',
     'fiat 500 electric': 'MINI Auto',
     'fiat 500  electric': 'MINI Auto',

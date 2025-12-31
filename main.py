@@ -2193,8 +2193,11 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
             # ✅ PRIORIDADE MÁXIMA 1: Station Wagons (SW) ANTES de qualquer normalização
             # Garantir que "Ford Focus SW" nunca é mapeado como "Ford Focus" (Economy)
             # Suportar variações: SW, S W, S.W., S. W.
+            # IMPORTANTE: Usar regex com word boundary para não detectar "sw" dentro de "volkswagen"!
             car_normalized_sw = re.sub(r'\bs[\.\s]*w\b', 'sw', car_clean_lower, flags=re.IGNORECASE)
-            if 'sw' in car_normalized_sw:
+            # Verificar se tem SW como palavra separada (não dentro de outra palavra como "volkswagen")
+            has_sw_word = bool(re.search(r'\bsw\b', car_normalized_sw, re.IGNORECASE))
+            if has_sw_word:
                 logging.info(f"[SW-DETECT] Detectado SW em: {car_name} (normalizado: {car_normalized_sw})")
                 # Verificar se existe match exato com SW no VEHICLES
                 for sw_key in sorted([k for k in VEHICLES.keys() if 'sw' in k.lower()], key=len, reverse=True):
