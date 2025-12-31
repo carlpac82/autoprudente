@@ -2086,15 +2086,19 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
     car_lower = car_name.lower() if car_name else ""
     trans_lower = transmission.lower() if transmission else ""
     
-    # ✅ CORRECÇÃO CRÍTICA: Verificar se é automático pelo NOME, não pela transmissão detectada!
-    # A transmissão detectada pelo <li value> pode estar incorreta
-    # Usar o nome do carro como fonte de verdade para decidir Manual vs Automático
+    # ✅ CORRECÇÃO CRÍTICA: Verificar se é automático pelo NOME primeiro
+    # Se o nome estiver vazio, usar a transmissão detectada como fallback
     import re
     _has_auto_in_name = bool(re.search(r'\b(auto|aut\.?|automatic|automático|automatico)\b', car_lower))
+    _has_auto_in_category = bool(re.search(r'\b(auto|automatic)\b', cat))
+    _trans_is_auto = trans_lower in ('automatic', 'auto', 'automático', 'automatico')
     
-    # OVERRIDE: Se o nome tem "Auto/Aut.", considerar automático
-    # Se não tem, considerar manual (ignorar trans_lower)
-    is_auto = _has_auto_in_name
+    # PRIORIDADE:
+    # 1. Se nome tem "Auto/Aut." → automático
+    # 2. Se nome está vazio E transmissão é "Automatic" → automático
+    # 3. Se categoria tem "Automatic" → automático
+    # 4. Caso contrário → manual
+    is_auto = _has_auto_in_name or (not car_lower and _trans_is_auto) or _has_auto_in_category
     
     logging.info(f"📋 [MAP] ENTRADA: car='{car_name}', category='{category}', transmission='{transmission}' | is_auto_by_name={is_auto}")
     
@@ -2593,8 +2597,10 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                         return "E1"
                     # Se é manual de 4 lugares → B1
                     return "B1"
-            # Se não é B1 nem B2 específico, default é B2 (5 lugares)
-            # Modelos B2 genéricos: qualquer mini não identificado acima
+            # Se não é B1 nem B2 específico, verificar is_auto
+            # Se automático → E1, senão → B2 (5 lugares default)
+            if is_auto:
+                return "E1"
             return "B2"
     
     # Mapeamento direto (TUDO EM LOWERCASE)
@@ -2741,7 +2747,7 @@ def _map_category_fallback(category: str, car_name: str = "", transmission: str 
                 'D': 'E2',   # Economy → Economy Auto
                 'F': 'L1',   # SUV → SUV Auto
                 'G': 'G',    # Cabrio (sem versão auto separada)
-                'J1': 'J1',  # Crossover (sem versão auto separada)
+                'J1': 'L1',  # Crossover → SUV Auto (mesma categoria que SUV Auto)
                 'J2': 'L2',  # Station Wagon → SW Auto
                 'M1': 'M2',  # 7 Seater → 7 Seater Auto
                 'N': 'N',    # 9 Seater (sem versão auto separada)
