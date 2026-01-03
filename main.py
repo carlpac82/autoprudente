@@ -11667,7 +11667,7 @@ async def track_by_params(request: Request):
                 })
                 
                 print(f"[SELENIUM] Configurando Chrome com mobile UA...", file=sys.stderr, flush=True)
-                driver.set_page_load_timeout(20)  # Igual ao teste manual
+                driver.set_page_load_timeout(60)  # Aumentado para 60s - CarJet pode demorar
                 
                 # LIMPAR CACHE E COOKIES (anti-detecção + fresh state)
                 print(f"[SELENIUM] Limpando cache e cookies...", file=sys.stderr, flush=True)
